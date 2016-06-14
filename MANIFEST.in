@@ -1,2 +1,2 @@
 include versioneer.py
-include chxtools/_version.py
+include chxanalys/_version.py
