@@ -1,8 +1,0 @@
-MANIFEST.in
-setup.cfg
-setup.py
-versioneer.py
-chxanalys.egg-info/PKG-INFO
-chxanalys.egg-info/SOURCES.txt
-chxanalys.egg-info/dependency_links.txt
-chxanalys.egg-info/top_level.txt
