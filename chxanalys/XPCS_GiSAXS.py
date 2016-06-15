@@ -381,7 +381,7 @@ def get_qr_tick_label( qr, label_array_qr, inc_x0, interp=True):
     rticks_label = []
     num =  len( np.unique( label_array_qr ) )
     for i in range( 1, num   ):
-        ind =  np.where( label_array_qr==i )[1]
+        ind =  np.sort( np.where( label_array_qr==i )[1] )
         #tick = round( qr[label_array_qr==i].mean(),2)
         tick =  qr[label_array_qr==i].mean()
         if ind[0] < inc_x0 and ind[-1]>inc_x0:
