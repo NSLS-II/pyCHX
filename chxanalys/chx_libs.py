@@ -27,6 +27,7 @@ import h5py
 import pims
 from pandas import DataFrame
 import os, sys, time
+import  getpass
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
