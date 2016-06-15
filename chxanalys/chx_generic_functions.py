@@ -3,6 +3,9 @@ from .chx_libs import *
 #####
 #load data by databroker    
 
+def get_detector( header ):
+    keys = [k for k, v in header.descriptors[0]['data_keys'].items()     if 'external' in v]
+    return keys[0]
     
 def get_sid_filenames(header, fill=True):
     """get a bluesky scan_id, unique_id, filename by giveing uid and detector
