@@ -175,6 +175,17 @@ def reverse_updown( imgs):
     '''
     return pims.pipeline(lambda img: img[::-1,:])(imgs)  # lazily apply mask
 
+
+def RemoveHot( img,threshold= 1E7, plot_=True ):
+    mask = np.ones_like( np.array( img )    )
+    badp = np.where(  np.array(img) >= threshold )
+    if len(badp[0])!=0:                
+        mask[badp] = 0  
+    if plot_:
+        show_img( mask )
+    return mask
+
+
 ############
 ###plot data
 
