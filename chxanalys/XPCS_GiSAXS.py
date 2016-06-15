@@ -957,6 +957,9 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
     an example:
         result = fit_g2( g2, res_pargs, function = 'simple')
         result = fit_g2( g2, res_pargs, function = 'stretched')
+        
+   TO DO:
+       add variables to options
     '''
     
         
