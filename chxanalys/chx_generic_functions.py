@@ -6,6 +6,7 @@ from .chx_libs import *
 def get_detector( header ):
     keys = [k for k, v in header.descriptors[0]['data_keys'].items()     if 'external' in v]
     return keys[0]
+
     
 def get_sid_filenames(header, fill=True):
     """get a bluesky scan_id, unique_id, filename by giveing uid and detector
@@ -35,7 +36,7 @@ def get_sid_filenames(header, fill=True):
     return sid,uid, filenames   
 
 
-def load_data( uid , detector = 'eiger4m_single_image', fill=True  ):
+def load_data( uid , detector = 'eiger4m_single_image', fill=True):
     """load bluesky scan data by giveing uid and detector
         
     Parameters
@@ -56,7 +57,7 @@ def load_data( uid , detector = 'eiger4m_single_image', fill=True  ):
     flag =1
     while flag<2 and flag !=0:    
         try:
-            ev, = get_events(hdr, [detector], fill=fill)
+            ev, = get_events(hdr, [detector], fill=fill) 
             flag = 0 
             
         except:
@@ -537,7 +538,7 @@ def check_ROI_intensity( avg_img, ring_mask, ring_number=3 ,  *argv,**kwargs):
     plt.show()
     return pixel[0][0]
 
-from tqdm import tqdm
+#from tqdm import tqdm
 
 def cal_g2( image_series, ring_mask, bad_image_process,
            bad_frame_list=None,good_start=0, num_buf = 8 ):
@@ -564,7 +565,7 @@ def cal_g2( image_series, ring_mask, bad_image_process,
         num_lev = int(np.log( noframes/(num_buf-1))/np.log(2) +1) +1
         print ('In this g2 calculation, the buf and lev number are: %s--%s--'%(num_buf,num_lev))
         print ('%s frames will be processed...'%(noframes))
-        g2, lag_steps = corr.multi_tau_auto_corr(num_lev, num_buf,   ring_mask, image_series )
+        g2, lag_steps = corr.multi_tau_auto_corr(num_lev, num_buf,   ring_mask, tqdm(image_series) )
         print( 'G2 calculation DONE!')
         
     return g2, lag_steps
