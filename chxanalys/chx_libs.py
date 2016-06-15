@@ -40,7 +40,7 @@ from lmfit import  Model
 from matplotlib import gridspec
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
+from tqdm import tqdm
 
 import itertools 
 mcolors = itertools.cycle(['b', 'g', 'r', 'c', 'm', 'y', 'k','darkgoldenrod','oldlace', 'brown','dodgerblue'   ])
