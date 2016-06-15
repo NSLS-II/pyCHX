@@ -4,7 +4,7 @@ from .chx_libs import *
 #load data by databroker    
 
     
-def get_sid_filenames(header):
+def get_sid_filenames(header, fill=True):
     """get a bluesky scan_id, unique_id, filename by giveing uid and detector
         
     Parameters
@@ -23,7 +23,7 @@ def get_sid_filenames(header):
     """   
     
     keys = [k for k, v in header.descriptors[0]['data_keys'].items()     if 'external' in v]
-    events = get_events( header, keys, handler_overrides={key: RawHandler for key in keys})
+    events = get_events( header, keys, handler_overrides={key: RawHandler for key in keys}, fill=fill)
     key, = keys   
     filenames =  [  str( ev['data'][key][0]) + '_'+ str(ev['data'][key][2]['seq_id']) for ev in events]     
     sid = header['start']['scan_id']
@@ -32,7 +32,7 @@ def get_sid_filenames(header):
     return sid,uid, filenames   
 
 
-def load_data( uid , detector = 'eiger4m_single_image'  ):
+def load_data( uid , detector = 'eiger4m_single_image', fill=True  ):
     """load bluesky scan data by giveing uid and detector
         
     Parameters
@@ -53,7 +53,7 @@ def load_data( uid , detector = 'eiger4m_single_image'  ):
     flag =1
     while flag<2 and flag !=0:    
         try:
-            ev, = get_events(hdr, [detector]) 
+            ev, = get_events(hdr, [detector], fill=fill)
             flag = 0 
             
         except:
