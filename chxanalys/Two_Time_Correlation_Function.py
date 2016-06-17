@@ -12,6 +12,7 @@ import skbeam.core.roi as roi
 from matplotlib import gridspec
 from datetime import datetime
 
+from tqdm import tqdm
 
 import itertools
 import matplotlib.pyplot as plt
@@ -76,7 +77,7 @@ class Get_Pixel_Array(object):
         
         #print (self.length)
         data_array = np.zeros([ self.length,len(self.pixelist)])
-        for key in range(self.length ):
+        for key in tqdm( range(self.length )):
             data_array[key] = np.ravel( self.indexable[key])[self.pixelist]  
         return data_array
      
@@ -208,7 +209,7 @@ def auto_two_Array( data, rois, data_pixel=None  ):
     Unitq = (noqs/10)
     proi=0
     
-    for qi in range(1, noqs + 1 ):
+    for qi in tqdm( range(1, noqs + 1 )):
         pixelist_qi =  np.where( qind == qi)[0] 
         #print (pixelist_qi.shape,  data_pixel[qi].shape)
         data_pixel_qi =    data_pixel[:,pixelist_qi]   
@@ -218,11 +219,11 @@ def auto_two_Array( data, rois, data_pixel=None  ):
         
         g12b[:,:,qi -1 ] = np.dot(   data_pixel_qi, data_pixel_qi.T)  /sum1  / sum2  / nopr[qi -1]
         #print ( proi, int( qi //( Unitq) ) )
-        if  int( qi //( Unitq) ) == proi:
-            sys.stdout.write("#")
-            sys.stdout.flush() 
-            proi += 1
-            
+#        if  int( qi //( Unitq) ) == proi:
+#            sys.stdout.write("#")
+#            sys.stdout.flush() 
+#            proi += 1
+
     elapsed_time = time.time() - start_time
     print ('Total time: %.2f min' %(elapsed_time/60.))
     

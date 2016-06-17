@@ -1082,7 +1082,7 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
 def get_each_box_mean_intensity( data_series, box_mask, sampling, timeperframe, plot_ = True ,  *argv,**kwargs):   
     
     
-    mean_int_sets, index_list = roi.mean_intensity(np.array(data_series[::sampling]), box_mask) 
+    mean_int_sets, index_list = roi.mean_intensity(np.array(  data_series[::sampling]), box_mask) 
     try:
         N = len(data_series)
     except:

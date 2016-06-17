@@ -1,4 +1,5 @@
 from .chx_libs import *
+#from tqdm import *
 
 #####
 #load data by databroker    
@@ -330,8 +331,6 @@ def check_shutter_open( data_series,  min_inten=0, frame_edge = [0,100], plot_ =
 
 
 
-
-
 def get_each_frame_intensity( data_series, sampling = 50, bad_pixel_threshold=1e10,  plot_ = False,  *argv,**kwargs):   
     '''Get the total intensity of each frame by sampling every N frames
        Also get bad_frame_list by check whether above  bad_pixel_threshold  
@@ -342,7 +341,7 @@ def get_each_frame_intensity( data_series, sampling = 50, bad_pixel_threshold=1e
     '''
     
     #print ( argv, kwargs )
-    imgsum =  np.array(  [np.sum(img ) for img in data_series[::sampling]]  ) 
+    imgsum =  np.array(  [np.sum(img ) for img in tqdm( data_series[::sampling] , leave = True ) ] )  
     if plot_:
         uid = 'uid'
         if 'uid' in kwargs.keys():
