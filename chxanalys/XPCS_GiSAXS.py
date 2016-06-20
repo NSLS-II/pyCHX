@@ -355,6 +355,8 @@ def interp_zeros(  data ):
     return gf.reshape([dx,dy])     
 
 
+
+
 def get_qr_tick_label( qr, label_array_qr, inc_x0, interp=True):
     ''' 
     Dec 16, 2015, Y.G.@CHX
@@ -384,48 +386,55 @@ def get_qr_tick_label( qr, label_array_qr, inc_x0, interp=True):
         ind =  np.sort( np.where( label_array_qr==i )[1] )
         #tick = round( qr[label_array_qr==i].mean(),2)
         tick =  qr[label_array_qr==i].mean()
-        if ind[0] < inc_x0 and ind[-1]>inc_x0:
+        if ind[0] < inc_x0 and ind[-1]>inc_x0:  #
              
             #mean1 = int( (ind[np.where(ind < inc_x0)[0]]).mean() )
             #mean2 = int( (ind[np.where(ind > inc_x0)[0]]).mean() )
             
             mean1 = int( (ind[np.where(ind < inc_x0)[0]])[0] )
-            mean2 = int( (ind[np.where(ind > inc_x0)[0]])[0] )            
-            
-            
-            
+            mean2 = int( (ind[np.where(ind > inc_x0)[0]])[0] )             
             rticks.append( mean1)
-            rticks.append(mean2)
-             
+            rticks.append(mean2)             
             rticks_label.append( tick )
-            rticks_label.append( tick )
-             
+            rticks_label.append( tick )             
         else: 
             
             #print('here')
             #mean = int( ind.mean() )
             mean = int( ind[0] )
+            #mean = int( (ind[0] +ind[-1])/2 )
             rticks.append(mean)
             rticks_label.append( tick )
             #print (rticks)
-            #print (mean, tick)
-    
+            #print (mean, tick)    
+    n= len(rticks)
+    for i, rt in enumerate( rticks):    
+        if rt==0:
+            rticks[i] = n- i        
+        
     if interp: 
         rticks =  np.array(rticks)
-        rticks_label = np.array( rticks_label)        
-        w= np.where( rticks <= inc_x0)[0] 
-        rticks1 = np.int_(np.interp( np.round( rticks_label[w], 3), rticks_label[w], rticks[w]    )) 
-        rticks_label1 = np.round( rticks_label[w], 3)  
+        rticks_label = np.array( rticks_label)   
+        try:
+            w= np.where( rticks <= inc_x0)[0] 
+            rticks1 = np.int_(np.interp( np.round( rticks_label[w], 3), rticks_label[w], rticks[w]    )) 
+            rticks_label1 = np.round( rticks_label[w], 3)  
+        except:
+            rticks_label1 = []        
+        try:           
         
-        w= np.where( rticks > inc_x0)[0] 
-        rticks2 = np.int_(np.interp( np.round( rticks_label[w], 3), rticks_label[w], rticks[w]    ))       
-        rticks = np.append( rticks1, rticks2)   
-        rticks_label2 = np.round( rticks_label[w], 3)  
+            w= np.where( rticks > inc_x0)[0] 
+            rticks2 = np.int_(np.interp( np.round( rticks_label[w], 3), rticks_label[w], rticks[w]    ))       
+            rticks = np.append( rticks1, rticks2)   
+            rticks_label2 = np.round( rticks_label[w], 3)  
+        except:
+            rticks_label2 = []             
         
         rticks_label = np.append( rticks_label1, rticks_label2)    
         
     return rticks, rticks_label
 
+ 
 
 def get_qz_tick_label( qz, label_array_qz,interp=True):  
     ''' 
@@ -466,8 +475,7 @@ def get_qz_tick_label( qz, label_array_qz,interp=True):
 
 
 
-
-def show_qzr_map(  qr, qz, inc_x0, data=None, Nzline=10,Nrline=10  ):
+def show_qzr_map(  qr, qz, inc_x0, data=None, Nzline=10,Nrline=10 , interp=True):
     
     ''' 
     Dec 16, 2015, Y.G.@CHX
@@ -550,13 +558,15 @@ def show_qzr_map(  qr, qz, inc_x0, data=None, Nzline=10,Nrline=10  ):
     ax.set_xlabel(r'$q_r$', fontsize=18)
     ax.set_ylabel(r'$q_z$',fontsize=18)
  
+    
     zticks,zticks_label  = get_qz_tick_label(qz,label_array_qz)
     #rticks,rticks_label  = get_qr_tick_label(label_array_qr,inc_x0)
-
-    rticks,rticks_label = zip(*sorted(  zip( *get_qr_tick_label( qr, label_array_qr, inc_x0) ))  )
-
+    try:
+        rticks,rticks_label = zip(*np.sort(  zip( *get_qr_tick_label( qr, label_array_qr, inc_x0,interp=interp) ))  )
+    except:
+        rticks,rticks_label = zip(* sorted(  zip( *get_qr_tick_label( qr, label_array_qr, inc_x0,interp=interp) ))  )
     #stride = int(len(zticks)/10)
-    
+
     stride = 1
     ax.set_yticks( zticks[::stride] )
     yticks =  zticks_label[::stride] 
@@ -566,15 +576,11 @@ def show_qzr_map(  qr, qz, inc_x0, data=None, Nzline=10,Nrline=10  ):
     stride = 1
     ax.set_xticks( rticks[::stride] )
     xticks =  rticks_label[::stride]
-    ax.set_xticklabels(xticks, fontsize=7)
-
-    #print (xticks, yticks)
-    
+    ax.set_xticklabels(xticks, fontsize=7)    
 
     ax.set_title( 'Q-zr_Map', y=1.03,fontsize=18)
     plt.show()    
     return  zticks,zticks_label,rticks,rticks_label
-
 
 
  
