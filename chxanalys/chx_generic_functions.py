@@ -331,7 +331,10 @@ def check_shutter_open( data_series,  min_inten=0, frame_edge = [0,100], plot_ =
 
 
 
-def get_each_frame_intensity( data_series, sampling = 50, bad_pixel_threshold=1e10,  plot_ = False,  *argv,**kwargs):   
+def get_each_frame_intensity( data_series, sampling = 50, 
+                             bad_pixel_threshold=1e10,  
+                             hot_pixel_threshold=1e6,
+                             plot_ = False,  *argv,**kwargs):   
     '''Get the total intensity of each frame by sampling every N frames
        Also get bad_frame_list by check whether above  bad_pixel_threshold  
        
@@ -551,7 +554,7 @@ def check_ROI_intensity( avg_img, ring_mask, ring_number=3 ,  *argv,**kwargs):
 #from tqdm import tqdm
 
 def cal_g2( image_series, ring_mask, bad_image_process,
-           bad_frame_list=None,good_start=0, num_buf = 8 ):
+           bad_frame_list=None,good_start=0, num_buf = 8, num_lev = None ):
     '''calculation g2 by using a multi-tau algorithm'''
     
     noframes = len( image_series)  # number of frames, not "no frames"
@@ -562,7 +565,8 @@ def cal_g2( image_series, ring_mask, bad_image_process,
         bad_img_list = np.array( bad_frame_list) - good_start
         new_imgs = mask_image.bad_to_nan_gen( image_series, bad_img_list)        
 
-        num_lev = int(np.log( noframes/(num_buf-1))/np.log(2) +1) +1
+        if num_lev is None:
+            num_lev = int(np.log( noframes/(num_buf-1))/np.log(2) +1) +1
         print ('In this g2 calculation, the buf and lev number are: %s--%s--'%(num_buf,num_lev))
         print ('%s frames will be processed...'%(noframes))
         print( 'Bad Frames involved!')
@@ -572,7 +576,8 @@ def cal_g2( image_series, ring_mask, bad_image_process,
 
     else:
 
-        num_lev = int(np.log( noframes/(num_buf-1))/np.log(2) +1) +1
+        if num_lev is None:
+            num_lev = int(np.log( noframes/(num_buf-1))/np.log(2) +1) +1
         print ('In this g2 calculation, the buf and lev number are: %s--%s--'%(num_buf,num_lev))
         print ('%s frames will be processed...'%(noframes))
         g2, lag_steps = corr.multi_tau_auto_corr(num_lev, num_buf,   ring_mask, tqdm(image_series) )

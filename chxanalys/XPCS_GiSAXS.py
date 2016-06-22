@@ -101,9 +101,40 @@ def convert_gisaxs_pixel_to_q( inc_x0, inc_y0, refl_x0, refl_y0,
     return qx*pref  , qy*pref  , qr*pref  , qz*pref  
         
     
+
+    if edges is None:
+        if num_angles!=1:
+            spacing =  (outer_angle - inner_angle - num_angles* width )/(num_angles-1)      # spacing between rings
+        else:
+            spacing = 0
+        edges = roi.ring_edges(inner_angle, width, spacing, num_angles)
     
     
-def get_qedge( qstart,qend,qwidth,noqs,  ):
+
+def get_qedge( qstart,qend,qwidth,noqs ):
+    ''' DOCUMENT make_qlist( )
+    give qstart,qend,qwidth,noqs
+    return a qedge by giving the noqs, qstart,qend,qwidth.
+           a qcenter, which is center of each qedge 
+    KEYWORD:  None    ''' 
+    import numpy as np 
+
+    if noqs!=1:
+        spacing =  (qend - qstart - noqs* qwidth )/(noqs-1)      # spacing between rings
+    else:
+        spacing = 0
+    qedges = (roi.ring_edges(qstart,qwidth,spacing, noqs)).ravel()
+     
+    if noqs!=1:
+        qcenter = ( qedges[::2] + qedges[1::2] )/2
+    else:
+        qcenter = [( qedges[1] + qedges[0] )/2]
+
+    return qedges, qcenter 
+    
+    
+    
+def get_qedge2( qstart,qend,qwidth,noqs,  ):
     ''' DOCUMENT make_qlist( )
     give qstart,qend,qwidth,noqs
     return a qedge by giving the noqs, qstart,qend,qwidth.
@@ -245,17 +276,13 @@ def show_alphaf(alphaf,):
     plt.show()    
     
 
-
-
     
 ########################
 # get one-d of I(q) as a function of qr for different qz
 ##################### 
     
-
-    
-    
-def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,  ticks=None, alpha=0.3 ): 
+def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,
+              ticks=None, alpha=0.3, loglog=False, save=True, setup_pargs=None ): 
     '''
        plot one-d of I(q) as a function of qr for different qz
        data: a dataframe
@@ -268,6 +295,9 @@ def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,  ticks=N
        show_roi: boolean, if ture, show the interest ROI
        ticks: ticks for the plot, = zticks, zticks_label, rticks, rticks_label
        alpha: transparency of ROI
+       loglog: if True, plot in log-log scale
+       setup_pargs: gives path, filename...
+       
        Return: qr_1d, a dict, with keys as qz number
                       qr_1d[key]: 
                Plot 1D cureve as a function of Qr for each Qz  
@@ -317,6 +347,7 @@ def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,  ticks=N
 
     fig, ax = plt.subplots()
     qr_1d ={}
+    columns=[]
     for i,qzc_ in enumerate(qz_center):
         
         #print (i,qzc_)
@@ -331,17 +362,42 @@ def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,  ticks=N
         qr_ave = np.sum( qr_, axis=0)/roi_pixel_num
         data_ave = np.sum( data_, axis=0)/roi_pixel_num     
         qr_1d[i]= [qr_ave, data_ave]
-        ax.plot( qr_ave, data_ave,  '--o', label= 'qz= %f'%qzc_)
-        
+        columns.append( ['qr', str(qzc_)] )
+        if loglog:
+            ax.loglog( qr_ave, data_ave,  '--o', label= 'qz= %f'%qzc_)
+        else:
+            ax.plot( qr_ave, data_ave,  '--o', label= 'qz= %f'%qzc_)        
+        if i==0:
+            df =  np.hstack(  [ (qr_ave).reshape( len(qr_ave),1) ,  data_ave.reshape( len(qr_ave),1) ] )
+        else:
+            df = np.hstack(  [ df, (qr_ave).reshape( len(qr_ave),1) ,  data_ave.reshape( len(qr_ave),1) ] ) 
+                
+    
         
     #ax.set_xlabel( r'$q_r$', fontsize=15)
-    ax.set_xlabel('$q $'r'($\AA^{-1}$)', fontsize=18)
+    ax.set_xlabel('$qr $'r'($\AA^{-1}$)', fontsize=18)
     ax.set_ylabel('$Intensity (a.u.)$', fontsize=18)
     ax.set_yscale('log')
     #ax.set_xscale('log')
     ax.set_xlim(   qr.max(),qr.min()  )
     ax.legend(loc='best')
-    return qr_1d
+    
+    df = DataFrame( df  )
+    df.columns = np.concatenate( columns    ) 
+    
+    if save:
+        dt =datetime.now()
+        CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)  
+        path = setup_pargs['path']
+        uid = setup_pargs['uid']
+        filename = os.path.join(path, 'qr_1d-%s-%s.csv' % (uid,CurTime))
+        df.to_csv(filename)
+        print( 'The qr_1d of uid= %s is saved in %s with filename as qr_1d-%s-%s.csv'%(uid, path, uid, CurTime))
+        
+    return df
+    
+    
+ 
    
 def interp_zeros(  data ): 
     from scipy.interpolate import interp1d
