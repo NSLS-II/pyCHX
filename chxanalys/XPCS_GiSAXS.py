@@ -989,12 +989,11 @@ def save_gisaxs_g2(  g2,res_pargs , *argv,**kwargs):
     
     
 
-     
-def stretched_auto_corr_scat_factor(lags, beta, relaxation_rate, alpha=1.0, baseline=1):
-    return beta * (np.exp(-2 * relaxation_rate * lags))**alpha + baseline
+def stretched_auto_corr_scat_factor(x, beta, relaxation_rate, alpha=1.0, baseline=1):
+    return beta * (np.exp(-2 * relaxation_rate * x))**alpha + baseline
 
-def simple_exponential(lags, beta, relaxation_rate,  baseline=1):
-    return beta * np.exp(-2 * relaxation_rate * lags) + baseline
+def simple_exponential(x, beta, relaxation_rate,  baseline=1):
+    return beta * np.exp(-2 * relaxation_rate * x) + baseline
 
 
 def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs):     
@@ -1009,6 +1008,14 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
         taus: the time delay, with the same length as g2
         q_ring_center:  the center of q rings, for the title of each sub-plot
         uid: unique id, for the title of plot
+    kwargs:
+        variables: if exist, should be a dict, like 
+                { 'lags': True,  #always True
+                   'beta', Ture, # usually True
+                   'relaxation_rate': False, #always False
+                   'alpha':False, #False for simple exponential, True for stretched/compressed
+                   'baseline': True #sometimes be False, keep as 1
+                 }
         
     function: 
         'simple_exponential': fit by a simple exponential function, defined as  
@@ -1045,17 +1052,42 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
     rate = np.zeros(   num_rings )  #  relaxation rate
     alpha = np.zeros(   num_rings )  #  alpha
     baseline = np.zeros(   num_rings )  #  baseline
-
+    
+    if 'variables' in kwargs:
+        additional_var  = kwargs['variables']        
+        _vars =[ k for k in list( additional_var.keys()) if additional_var[k] is False]
+    else:
+        _vars = []
         
+                           
     if function=='simple_exponential' or function=='simple':
-        mod = Model(stretched_auto_corr_scat_factor,  independent_vars=['alpha', 'lags'])   
+        _vars = np.unique ( _vars + ['alpha']) 
+        mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars= list( _vars)   )
+        
         
     elif function=='stretched_exponential' or function=='stretched':
-        mod = Model(stretched_auto_corr_scat_factor,  independent_vars=[ 'lags'])   
+        
+        mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars=  _vars)   
+        
     else:
         print ("The %s is not supported.The supported functions include simple_exponential and stretched_exponential"%function)
     
+    #mod.set_param_hint( 'beta', value = 0.05 )
+    #mod.set_param_hint( 'alpha', value = 1.0 )
+    #mod.set_param_hint( 'relaxation_rate', value = 0.005 )
+    #mod.set_param_hint( 'baseline', value = 1.0, min=0.5, max= 1.5 )
+    mod.set_param_hint( 'baseline',   min=0.5, max= 1.5 )
+    mod.set_param_hint( 'beta',   min=0.0 )
+    mod.set_param_hint( 'alpha',   min=0.0 )
+    mod.set_param_hint( 'relaxation_rate',   min=0.0 )
     
+    
+    pars  = mod.make_params( beta=.05, alpha=1.0, relaxation_rate =0.005, baseline=1.0)    
+    for v in _vars:
+        pars['%s'%v].vary = False
+    
+    print (pars)
+     
     
     
     for qz_ind in range(num_qz):
@@ -1087,8 +1119,7 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
             i = sn + qz_ind * num_qr            
             y=g2[1:, i]
 
-            result1 = mod.fit(y, lags=taus[1:], beta=.05, alpha=1.0,
-                          relaxation_rate =0.005, baseline=1.0,   )
+            result1 = mod.fit(y, pars, x = taus[1:] )
 
             #print ( result1.best_values)
             rate[i] = result1.best_values['relaxation_rate']
