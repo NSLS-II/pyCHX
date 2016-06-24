@@ -298,9 +298,11 @@ def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,
        loglog: if True, plot in log-log scale
        setup_pargs: gives path, filename...
        
-       Return: qr_1d, a dict, with keys as qz number
-                      qr_1d[key]: 
+       Return: qr_1d, a dataframe, with columns as qr1, qz1 (float value), qr2, qz2,....                       
                Plot 1D cureve as a function of Qr for each Qz  
+               
+               
+               
                
     Examples:
         #to make two-qz, from 0.018 to 0.046, width as 0.008,
@@ -323,6 +325,9 @@ def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,
         qx, qy, qr, qz = convert_gisaxs_pixel_to_q( inc_x0, inc_y0,refl_x0,refl_y0, lamda=lamda, Lsd=Lsd )
         
         qr_1d = get_1d_qr( avg_imgr, Qr, Qz, qr, qz, inc_x0,  new_mask,  True, ticks, .8)
+        
+    A plot example:
+        plot1D( x= qr_1d['qr1'], y = qr_1d['0.0367'], logxy=True )
 
 
     '''               
@@ -364,21 +369,26 @@ def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,
         
         qr_ave,data_ave =   zip(* sorted(  zip( * [ qr_ave[~np.isnan(qr_ave)] ,   data_ave[~np.isnan( data_ave)] ]) ) )  
         
-        qr_ave_intp =  np.linspace( np.min( qr_ave ), np.max( qr_ave ), len(qr_ave ))
+        if i==0:
+            N_interp = len( qr_ave  )            
+            
+        qr_ave_intp =  np.linspace( np.min( qr_ave ), np.max( qr_ave ), N_interp)
         data_ave = np.interp(  qr_ave_intp, qr_ave, data_ave)
         
+
+        
         qr_1d[i]= [qr_ave_intp, data_ave]
-        columns.append( ['qr', str(qzc_)] )
+        columns.append( ['qr%s'%i, str(round(qzc_,4))] )
         if loglog:
             ax.loglog(qr_ave_intp, data_ave,  '--o', label= 'qz= %f'%qzc_, markersize=1)
         else:
             ax.plot( qr_ave_intp, data_ave,  '--o', label= 'qz= %f'%qzc_)        
         if i==0:
-            df =  np.hstack(  [ (qr_ave_intp).reshape( len(qr_ave_intp),1) , 
-                               data_ave.reshape( len(qr_ave_intp),1) ] )
+            df =  np.hstack(  [ (qr_ave_intp).reshape( N_interp,1) , 
+                               data_ave.reshape( N_interp,1) ] )
         else:
-            df = np.hstack(  [ df, (qr_ave_intp).reshape( len(qr_ave_intp),1) ,
-                              data_ave.reshape( len(qr_ave_intp),1) ] ) 
+            df = np.hstack(  [ df, (qr_ave_intp).reshape( N_interp,1) ,
+                              data_ave.reshape( N_interp,1) ] ) 
                 
     
         
@@ -403,6 +413,8 @@ def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,
         print( 'The qr_1d of uid= %s is saved in %s with filename as qr_1d-%s-%s.csv'%(uid, path, uid, CurTime))
         
     return df
+
+
 
 
    
