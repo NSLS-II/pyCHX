@@ -35,7 +35,7 @@ from matplotlib.colors import LogNorm
  
 
 from lmfit import  Model
-
+from lmfit import minimize, Parameters, Parameter, report_fit
  
 from matplotlib import gridspec
 
