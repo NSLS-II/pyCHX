@@ -1086,7 +1086,7 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
     for v in _vars:
         pars['%s'%v].vary = False
     
-    print (pars)
+    #print (pars)
      
     
     
