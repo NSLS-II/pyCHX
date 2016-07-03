@@ -1382,21 +1382,13 @@ def save_saxs_g2(  g2, res_pargs, taus=None, filename=None ):
     print( 'The g2 is saved in %s with filename as %s'%( path, filename))
 
     
-    
-    
 
-    
-def stretched_auto_corr_scat_factor(lags, beta, relaxation_rate, alpha=1.0, baseline=1):
-    beta=abs(beta)
-    relaxation_rate = abs( relaxation_rate )
-    baseline = abs( baseline )
-    return beta * (np.exp(-2 * relaxation_rate * lags))**alpha + baseline
+def stretched_auto_corr_scat_factor(x, beta, relaxation_rate, alpha=1.0, baseline=1):
+    return beta * (np.exp(-2 * relaxation_rate * x))**alpha + baseline
 
-def simple_exponential(lags, beta, relaxation_rate,  baseline=1):
-    beta=abs(beta)
-    relaxation_rate = abs( relaxation_rate )
-    baseline = abs( baseline )
-    return beta * np.exp(-2 * relaxation_rate * lags) + baseline
+def simple_exponential(x, beta, relaxation_rate,  baseline=1):
+    return beta * np.exp(-2 * relaxation_rate * x) + baseline
+
 
 
 def fit_saxs_g2( g2, res_pargs=None, function='simple_exponential', *argv,**kwargs):    
@@ -1532,6 +1524,7 @@ def fit_saxs_g2( g2, res_pargs=None, function='simple_exponential', *argv,**kwar
  
     for i in range(num_rings):
         ax = fig.add_subplot(sx, sy, i+1 )
+        
         if fit_range is not None:
             y=g2[1:, i][fit_range[0]:fit_range[1]]
             lags=taus[1:][fit_range[0]:fit_range[1]]
@@ -1540,7 +1533,7 @@ def fit_saxs_g2( g2, res_pargs=None, function='simple_exponential', *argv,**kwar
             lags=taus[1:]
 
         
-        result1 = mod.fit(y, pars, x = taus[1:] )
+        result1 = mod.fit(y, pars, x =lags )
         
 
         #print ( result1.best_values)
