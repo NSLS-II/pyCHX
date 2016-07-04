@@ -1409,6 +1409,15 @@ def fit_saxs_g2( g2, res_pargs=None, function='simple_exponential', *argv,**kwar
                     beta * np.exp(-2 * relaxation_rate * lags) + baseline
         'streched_exponential': fit by a streched exponential function, defined as  
                     beta * (np.exp(-2 * relaxation_rate * lags))**alpha + baseline
+    kwargs:
+        could contains:
+            'fit_variables': a dict, for vary or not, 
+                                keys are fitting para, including 
+                                    beta, relaxation_rate , alpha ,baseline
+                                values: a False or True, False for not vary
+            'guess_values': a dict, for initial value of the fitting para,
+                            the defalut values are 
+                                dict( beta=.1, alpha=1.0, relaxation_rate =0.005, baseline=1.0)
                     
     Returns
     -------        
@@ -1422,7 +1431,6 @@ def fit_saxs_g2( g2, res_pargs=None, function='simple_exponential', *argv,**kwar
         result = fit_g2( g2, res_pargs, function = 'stretched')
     '''
     
-            
     if res_pargs is not None:
         uid = res_pargs['uid'] 
         path = res_pargs['path'] 
@@ -1468,13 +1476,19 @@ def fit_saxs_g2( g2, res_pargs=None, function='simple_exponential', *argv,**kwar
         
         
         
-    if 'variables' in kwargs:
-        additional_var  = kwargs['variables']        
+    if 'fit_variables' in kwargs:
+        additional_var  = kwargs['fit_variables']        
         _vars =[ k for k in list( additional_var.keys()) if additional_var[k] is False]
     else:
         _vars = []
-        
-                           
+
+    _guess_val = dict( beta=.1, alpha=1.0, relaxation_rate =0.005, baseline=1.0)
+    
+    if 'guess_values' in kwargs:         
+        guess_values  = kwargs['guess_values']         
+        _guess_val.update( guess_values )  
+ 
+    
     if function=='simple_exponential' or function=='simple':
         _vars = np.unique ( _vars + ['alpha']) 
         mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars= list( _vars)   )
@@ -1496,15 +1510,15 @@ def fit_saxs_g2( g2, res_pargs=None, function='simple_exponential', *argv,**kwar
     mod.set_param_hint( 'alpha',   min=0.0 )
     mod.set_param_hint( 'relaxation_rate',   min=0.0 )
     
+    _beta=_guess_val['beta']
+    _alpha=_guess_val['alpha']
+    _relaxation_rate = _guess_val['relaxation_rate']
+    _baseline= _guess_val['baseline']
     
-    pars  = mod.make_params( beta=.05, alpha=1.0, relaxation_rate =0.005, baseline=1.0)    
+    pars  = mod.make_params( beta=_beta, alpha=_alpha, relaxation_rate =_relaxation_rate, baseline= _baseline)    
     for v in _vars:
         pars['%s'%v].vary = False
         
-
-        
-        
-    
     if num_rings!=1:
         
         #fig = plt.figure(figsize=(14, 10))
@@ -1591,6 +1605,10 @@ def fit_saxs_g2( g2, res_pargs=None, function='simple_exponential', *argv,**kwar
     result = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )
     
     return result
+
+
+
+
 
 
 def linear_fit( x,y):
