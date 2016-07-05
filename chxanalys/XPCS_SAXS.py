@@ -1608,7 +1608,78 @@ def fit_saxs_g2( g2, res_pargs=None, function='simple_exponential', *argv,**kwar
 
 
 
+def power_func(x, D0, power=2):
+    return D0 * x**power
 
+
+def fit_q_rate( q, rate, plot_=True, power_variable=False, *argv,**kwargs): 
+    '''
+    Option:
+        if power_variable = False, power =2 to fit q^2~rate, 
+                Otherwise, power is variable.
+    '''
+    x=q
+    y=rate
+        
+    if 'fit_range' in kwargs.keys():
+        fit_range = kwargs['fit_range']         
+    else:    
+        fit_range= None
+
+    if 'uid' in kwargs.keys():
+        uid = kwargs['uid'] 
+    else:
+        uid = 'uid' 
+
+    if 'path' in kwargs.keys():
+        path = kwargs['path'] 
+    else:
+        path = ''    
+
+    if fit_range is not None:
+        y=rate[fit_range[0]:fit_range[1]]
+        x=q[fit_range[0]:fit_range[1]] 
+        
+    mod = Model( power_func )
+    #mod.set_param_hint( 'power',   min=0.5, max= 10 )
+    #mod.set_param_hint( 'D0',   min=0 )
+    pars  = mod.make_params( power = 2, D0=1*10^(-5) )
+    if power_variable:
+        pars['power'].vary = True
+    else:
+        pars['power'].vary = False
+        
+    _result = mod.fit(y, pars, x = x )
+    
+    D0  = _result.best_values['D0']
+    power= _result.best_values['power']
+    
+    print ('The fitted diffusion coefficient D0 is:  %.3e   A^2S-1'%D0)
+    if plot_:
+        fig,ax = plt.subplots()
+        
+        plt.title('Q%s-Rate--uid= %s_Fit'%(power,uid),fontsize=20, y =1.06)   
+        
+        ax.plot(q**power,rate, 'bo')
+        ax.plot(x**power, _result.best_fit,  '-r')
+        
+        txts = r'$D0: %.3e$'%D0 + r' $A^2$' + r'$s^{-1}$'
+        
+        ax.text(x =0.15, y=.75, s=txts, fontsize=14, transform=ax.transAxes)       
+        
+        
+        ax.set_ylabel('Relaxation rate 'r'$\gamma$'"($s^{-1}$)")
+        ax.set_xlabel("$q^%s$"r'($\AA^{-2}$)'%power)
+              
+        dt =datetime.now()
+        CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)     
+        fp = path + 'Q%s-Rate--uid=%s'%(power,uid) + CurTime + '--Fit.png'
+        fig.savefig( fp, dpi=fig.dpi)    
+    
+        fig.tight_layout() 
+        plt.show()
+        
+    return D0
 
 
 def linear_fit( x,y):
