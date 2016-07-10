@@ -813,7 +813,9 @@ def plot_gisaxs_g2( g2, taus, res_pargs=None, *argv,**kwargs):
         title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$' 
         plt.title('uid= %s:--->'%uid + title_qz,fontsize=20, y =1.1) 
         #print (qz_ind,title_qz)
-        if num_qz!=1:plt.axis('off')
+        if num_qz!=1:
+            if num_qr!=1:
+                plt.axis('off')
         sx = int(round(np.sqrt(num_qr)) )
         if num_qr%sx == 0: 
             sy = int(num_qr/sx)
