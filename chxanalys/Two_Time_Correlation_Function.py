@@ -165,6 +165,40 @@ def run_time(t0):
 
 
 
+    
+def get_each_frame_ROI_intensity( data_pixel, 
+                             bad_pixel_threshold=1e10,                               
+                             plot_ = False,  *argv,**kwargs):   
+    '''Get the ROI intensity of each frame  
+       Also get bad_frame_list by check whether above  bad_pixel_threshold  
+       
+       Usuage:
+       imgsum, bad_frame_list = get_each_frame_intensity( data_pixel,
+                                bad_pixel_threshold=1e10,  plot_ = True)
+    '''
+    
+    #print ( argv, kwargs )
+    imgsum =  np.array(  [np.sum(img ) for img in tqdm( data_series[::sampling] , leave = True ) ] )  
+    if plot_:
+        uid = 'uid'
+        if 'uid' in kwargs.keys():
+            uid = kwargs['uid']        
+        fig, ax = plt.subplots()  
+        ax.plot(imgsum,'bo')
+        ax.set_title('Uid= %s--imgsum'%uid)
+        ax.set_xlabel( 'Frame_bin_%s'%sampling )
+        ax.set_ylabel( 'Total_Intensity' )
+        plt.show()        
+    bad_frame_list = np.where( np.array(imgsum) > bad_pixel_threshold )[0]
+    if len(bad_frame_list):
+        print ('Bad frame list are: %s' %bad_frame_list)
+    else:
+        print ('No bad frames are involved.')
+    return imgsum,bad_frame_list
+
+
+
+    
 
 
 def auto_two_Array( data, rois, data_pixel=None  ):
