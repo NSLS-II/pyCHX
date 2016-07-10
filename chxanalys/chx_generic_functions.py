@@ -659,6 +659,36 @@ def save_lists( data, label=None,  filename=None, path=None):
         filename = 'data'
     filename = os.path.join(path, filename +'.csv')
     df.to_csv(filename)
+
+def get_pos_val_overlap( p1, v1, p2,v2, Nl):
+    '''get the overlap of v1 and v2
+        p1: the index of array1 in array with total length as Nl
+        v1: the corresponding value of p1
+        p2: the index of array2 in array with total length as Nl
+        v2: the corresponding value of p2
+        Return:
+         The values in v1 with the position in overlap of p1 and p2
+         The values in v2 with the position in overlap of p1 and p2
+         
+         An example:
+            Nl =10
+            p1= np.array( [1,3,4,6,8] )
+            v1 = np.array( [10,20,30,40,50])
+            p2= np.array( [ 0,2,3,5,7,8])
+            v2=np.array( [10,20,30,40,50,60,70])
+            
+            get_pos_val_overlap( p1, v1, p2,v2, Nl)
+         
+    '''
+    ind = np.zeros( Nl, dtype=np.int32 )
+    ind[p1] = np.arange( len(p1) ) +1 
+    w2 = np.where( ind[p2] )[0]
+    w1 = ind[ p2[w2]] -1
+    return v1[w1], v2[w2]
+    
+    
+    
+    
     
     
 def save_arrays( data, label=None, dtype='array', filename=None, path=None):    
