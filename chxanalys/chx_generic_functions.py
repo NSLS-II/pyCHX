@@ -37,13 +37,15 @@ def get_sid_filenames(header, fill=True):
     return sid,uid, filenames   
 
 
-def load_data( uid , detector = 'eiger4m_single_image', fill=True):
+def load_data( uid , detector = 'eiger4m_single_image', fill=True, reverse=False):
     """load bluesky scan data by giveing uid and detector
         
     Parameters
     ----------
     uid: unique ID of a bluesky scan
     detector: the used area detector
+    fill: True to fill data
+    reverse: if True, reverse the image upside down to match the "real" image geometry (should always be True in the future)
     
     Returns
     -------
@@ -80,6 +82,10 @@ def load_data( uid , detector = 'eiger4m_single_image', fill=True):
     else:
         imgs = ev['data'][detector]
     #print (imgs)
+    if reverse:
+        md=imgs.md
+        imgs = reverse_updown( imgs )
+        imgs.md = md
     return imgs
 
 
@@ -300,7 +306,7 @@ def plot1D( y,x=None, ax=None,*argv,**kwargs):
         
 ###
 
-def check_shutter_open( data_series,  min_inten=0, frame_edge = [0,100], plot_ = False,  *argv,**kwargs):     
+def check_shutter_open( data_series,  min_inten=0, time_edge = [0,10], plot_ = False,  *argv,**kwargs):     
       
     '''Check the first frame with shutter open
     
@@ -308,7 +314,7 @@ def check_shutter_open( data_series,  min_inten=0, frame_edge = [0,100], plot_ =
         ----------
         data_series: a image series
         min_inten: the total intensity lower than min_inten is defined as shtter close
-        frame_edge: the searching frame number range
+        time_edge: the searching frame number range
         
         return:
         shutter_open_frame: a integer, the first frame number with open shutter     
@@ -317,7 +323,7 @@ def check_shutter_open( data_series,  min_inten=0, frame_edge = [0,100], plot_ =
         good_start = check_shutter_open( imgsa,  min_inten=5, time_edge = [0,20], plot_ = False )
        
     '''
-    imgsum =  np.array(  [np.sum(img ) for img in data_series[frame_edge[0]:frame_edge[1]:1]]  ) 
+    imgsum =  np.array(  [np.sum(img ) for img in data_series[time_edge[0]:time_edge[1]:1]]  ) 
     if plot_:
         fig, ax = plt.subplots()  
         ax.plot(imgsum,'bo')
@@ -333,7 +339,7 @@ def check_shutter_open( data_series,  min_inten=0, frame_edge = [0,100], plot_ =
 
 def get_each_frame_intensity( data_series, sampling = 50, 
                              bad_pixel_threshold=1e10,  
-                             hot_pixel_threshold=1e6,
+                             
                              plot_ = False,  *argv,**kwargs):   
     '''Get the total intensity of each frame by sampling every N frames
        Also get bad_frame_list by check whether above  bad_pixel_threshold  
@@ -669,4 +675,21 @@ def save_arrays( data, label=None, dtype='array', filename=None, path=None):
     df.to_csv(filename)
     #print( 'The g2 of uid= %s is saved in %s with filename as g2-%s-%s.csv'%(uid, path, uid, CurTime))
 
+def get_diffusion_coefficient( visocity, radius, T=298):
+    '''get diffusion_coefficient of a Brownian motion particle with radius in fuild with visocity
+        visocity: N*s/m^2
+        radius: m
+        T: K
+        k: 1.38064852(79)×10−23 J/T, Boltzmann constant   
+        
+        return diffusion_coefficient in unit of A^2/s
+        e.g., for a 250 nm sphere in glycerol/water (90:10) at RT (298K) gives:
+       1.38064852*10**(−23) *298  / ( 6*np.pi* 0.20871 * 250 *10**(-9)) * 10**20 /1e5 = 4.18*10^5 A2/s
+       
+       get_diffusion_coefficient( 0.20871, 250 *10**(-9), T=298) 
+       
+    '''
+    
+    k=  1.38064852*10**(-23)    
+    return k*T / ( 6*np.pi* visocity * radius) * 10**20 
         
