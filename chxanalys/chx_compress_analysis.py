@@ -1,13 +1,17 @@
+from __future__ import absolute_import, division, print_function
+
 from tqdm import tqdm
 import struct        
 
 import matplotlib.pyplot as plt
 
 from chxanalys.chx_libs import (np, roi, time, datetime, os,  getpass, db, get_images,LogNorm)
+#from chxanalys.chx_generic_functions import (get_circular_average)
+from chxanalys.XPCS_SAXS import (get_circular_average)
 
 import os
 
-from __future__ import absolute_import, division, print_function
+
 
 from skbeam.core.utils import multi_tau_lags
 from skbeam.core.roi import extract_label_indices
@@ -18,12 +22,340 @@ logger = logging.getLogger(__name__)
 
 
 
-def compress_eigerdata( images, md, filename, nobytes=2  ):    
-    '''Header contains 1024 bytes ['Magic value', 'beam_center_x', 'beam_center_y', 'count_time', 'detector_distance', 
+def get_avg_imgc( FD,  beg=None,end=None,sampling = 100, plot_ = False ,  *argv,**kwargs):   
+    '''Get average imagef from a data_series by every sampling number to save time'''
+    #avg_img = np.average(data_series[:: sampling], axis=0)
+    
+    if beg is None:
+        beg = FD.beg
+    if end is None:
+        end = FD.end
+        
+    avg_img = FD.rdframe(beg)
+    n=1
+    
+    for  i in tqdm(range( sampling-1 + beg , end, sampling  ), desc= 'Averaging images' ):  
+        (p,v) = FD.rdrawframe(i)
+        if len(p)>0:
+            np.ravel(avg_img )[p] +=   v
+            n += 1
+            
+    avg_img /= n 
+    
+    if plot_:
+        fig, ax = plt.subplots()
+        uid = 'uid'
+        if 'uid' in kwargs.keys():
+            uid = kwargs['uid'] 
+            
+        im = ax.imshow(avg_img , cmap='viridis',origin='lower',
+                   norm= LogNorm(vmin=0.001, vmax=1e2))
+        #ax.set_title("Masked Averaged Image")
+        ax.set_title('Uid= %s--Masked Averaged Image'%uid)
+        fig.colorbar(im)
+        plt.show()
+    return avg_img
+
+
+
+
+
+
+def mean_intensityc(FD, labeled_array,  sampling=1, index=None):
+    """Compute the mean intensity for each ROI in the compressed file (FD)
+
+    Parameters
+    ----------
+    FD: Multifile class
+        compressed file
+    labeled_array : array
+        labeled array; 0 is background.
+        Each ROI is represented by a nonzero integer. It is not required that
+        the ROI labels are contiguous
+    index : int, list, optional
+        The ROI's to use. If None, this function will extract averages for all
+        ROIs
+
+    Returns
+    -------
+    mean_intensity : array
+        The mean intensity of each ROI for all `images`
+        Dimensions:
+            len(mean_intensity) == len(index)
+            len(mean_intensity[0]) == len(images)
+    index : list
+        The labels for each element of the `mean_intensity` list
+    """
+    
+    qind, pixelist = roi.extract_label_indices(  labeled_array  ) 
+    
+    if labeled_array.shape != ( FD.md['ncols'],FD.md['nrows']):
+        raise ValueError(
+            " `image` shape (%d, %d) in FD is not equal to the labeled_array shape (%d, %d)" %( FD.md['ncols'],FD.md['nrows'], labeled_array.shape[0], labeled_array.shape[1]) )
+    # handle various input for `index`
+    if index is None:
+        index = list(np.unique(labeled_array))
+        index.remove(0)
+    else:
+        try:
+            len(index)
+        except TypeError:
+            index = [index]
+
+        index = np.array( index )
+        #print ('here')
+        good_ind  = np.zeros( max(qind), dtype= np.int32 )
+        good_ind[ index -1  ]   =    np.arange( len(index) ) +1 
+        w =  np.where( good_ind[qind -1 ]   )[0] 
+        qind = good_ind[ qind[w] -1 ]
+        pixelist = pixelist[w]
+
+          
+    # pre-allocate an array for performance
+    # might be able to use list comprehension to make this faster
+    
+    mean_intensity = np.zeros(   [ int( ( FD.end - FD.beg)/sampling ) , len(index)] )    
+    #fra_pix = np.zeros_like( pixelist, dtype=np.float64)
+    timg = np.zeros(    FD.md['ncols'] * FD.md['nrows']   , dtype=np.int32   ) 
+    timg[pixelist] =   np.arange( 1, len(pixelist) + 1  ) 
+    #maxqind = max(qind)    
+    norm = np.bincount( qind  )[1:]
+    n= 0         
+    #for  i in tqdm(range( FD.beg , FD.end )):        
+    for  i in tqdm(range( FD.beg, FD.end, sampling  ), desc= 'Get ROI intensity of each frame' ):    
+        (p,v) = FD.rdrawframe(i)
+        w = np.where( timg[p] )[0]
+        pxlist = timg[  p[w]   ] -1 
+        mean_intensity[n] = np.bincount( qind[pxlist], weights = v[w], minlength = len(index)+1 )[1:]
+        n +=1
+        
+    mean_intensity /= norm
+        
+    return mean_intensity, index, timg
+
+
+
+
+def get_each_ring_mean_intensityc( FD, ring_mask, sampling=1, timeperframe=None, plot_ = True , save=False, *argv,**kwargs):   
+    
+    """
+    get time dependent mean intensity of each ring
+    """
+    
+    mean_int_sets, index_list = mean_intensityc(FD, ring_mask, sampling, index=None) 
+    if timeperframe is None: 
+        times = np.arange( FD.end - FD.beg  ) # get the time for each frame
+    else:
+        times = np.arange( FD.end - FD.beg  )*timeperframe
+    num_rings = len( np.unique( ring_mask)[1:] )
+    
+    if plot_:
+        fig, ax = plt.subplots(figsize=(8, 8))
+        uid = 'uid'
+        if 'uid' in kwargs.keys():
+            uid = kwargs['uid'] 
+        
+        ax.set_title("Uid= %s--Mean intensity of each ROI"%uid)
+        for i in range(num_rings):
+            ax.plot( times, mean_int_sets[:,i], label="ROI "+str(i+1),marker = 'o', ls='-')
+            if timeperframe is not None:   
+                ax.set_xlabel("Time, sec")
+            else:
+                ax.set_xlabel("Frame")
+            ax.set_ylabel("Mean Intensity")
+        ax.legend(loc = 'best',fontsize='x-small') 
+                
+        if save:
+            dt =datetime.now()
+            CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
+            path = kwargs['path']              
+            fp = path + "Uid= %s--Mean intensity of each ring-"%uid + CurTime + '.png'         
+            fig.savefig( fp, dpi=fig.dpi)
+        
+        plt.show()
+        
+    return times, mean_int_sets
+
+
+ 
+
+def get_t_iqc( FD, frame_edge, mask, pargs, nx=1500, plot_ = False , save=False, *argv,**kwargs):   
+    '''Get t-dependent Iq 
+    
+        Parameters        
+        ----------
+        data_series:  a image series
+        frame_edge: list, the ROI frame regions, e.g., [  [0,100], [200,400] ]
+        mask:  a image mask 
+        
+        nx : int, optional
+            number of bins in x
+            defaults is 1500 bins
+        plot_: a boolen type, if True, plot the time~one-D curve with qp as x-axis
+
+        Returns
+        ---------
+        qp: q in pixel
+        iq: intensity of circular average
+        q: q in real unit (A-1)
+     
+    '''   
+       
+    Nt = len( frame_edge )
+    iqs = list( np.zeros( Nt ) )
+    for i in range(Nt):
+        t1,t2 = frame_edge[i]
+        #print (t1,t2)
+        
+        avg_img = get_avg_imgc( FD, beg=t1,end=t2, sampling = 1, plot_ = False )
+        qp, iqs[i], q = get_circular_average( avg_img, mask,pargs, nx=nx,
+                           plot_ = False)
+        
+    if plot_:
+        fig,ax = plt.subplots(figsize=(8, 6))
+        for i in range(  Nt ):
+            t1,t2 = frame_edge[i]
+            ax.semilogy(q, iqs[i], label="frame: %s--%s"%( t1,t2) )
+            #ax.set_xlabel("q in pixel")
+            ax.set_xlabel('Q 'r'($\AA^{-1}$)')
+            ax.set_ylabel("I(q)")
+            
+        if 'xlim' in kwargs.keys():
+            ax.set_xlim(    kwargs['xlim']  )    
+        if 'ylim' in kwargs.keys():
+            ax.set_ylim(    kwargs['ylim']  )
+ 
+
+        ax.legend(loc = 'best')  
+        
+        uid = pargs['uid']
+        title = ax.set_title('Uid= %s--t~I(q)'%uid)        
+        title.set_y(1.01)
+        if save:
+            dt =datetime.now()
+            CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.m%systemonth, dt.day,dt.hour,dt.minute)
+            path = pargs['path']
+            uid = pargs['uid']
+            fp = path + 'Uid= %s--Iq~t-'%uid + CurTime + '.png'         
+            fig.savefig( fp, dpi=fig.dpi)
+            
+        plt.show()
+        
+    
+    return qp, np.array( iqs ),q
+
+
+def get_each_frame_intensityc( FD, sampling = 50, hot_pixel_threshold=2**30,
+                             bad_pixel_threshold=1e10,                               
+                             plot_ = False,  *argv,**kwargs):   
+    '''Get the total intensity of each frame by sampling every N frames
+       Also get bad_frame_list by check whether above  bad_pixel_threshold  
+       
+       Usuage:
+       imgsum, bad_frame_list = get_each_frame_intensity(good_series ,sampling = 1000, 
+                                bad_pixel_threshold=1e10,  plot_ = True)
+    '''
+    
+    #print ( argv, kwargs )
+    #mask &= img < hot_pixel_threshold  
+    imgsum  =  np.zeros(  int(  (FD.end - FD.beg )/ sampling )  ) 
+    n=0
+    for  i in tqdm(range( FD.beg, FD.end, sampling  ), desc= 'Get each frame intensity' ): 
+        (p,v) = FD.rdrawframe(i)
+        if len(p)>0:
+            imgsum[n] = np.sum(  v )
+        n += 1
+    
+    if plot_:
+        uid = 'uid'
+        if 'uid' in kwargs.keys():
+            uid = kwargs['uid']        
+        fig, ax = plt.subplots()  
+        ax.plot(   imgsum,'bo')
+        ax.set_title('Uid= %s--imgsum'%uid)
+        ax.set_xlabel( 'Frame_bin_%s'%sampling )
+        ax.set_ylabel( 'Total_Intensity' )
+        plt.show()  
+        
+    bad_frame_list = np.where( (np.array(imgsum) > bad_pixel_threshold) |  (np.array(imgsum)==0) )[0]
+    
+    if len(bad_frame_list):
+        print ('Bad frame list are: %s' %bad_frame_list)
+    else:
+        print ('No bad frames are involved.')
+    return imgsum,bad_frame_list
+
+
+
+
+def compress_eigerdata( images, mask, md, filename, force_compress=False, 
+                       hot_pixel_threshold=2**30, bad_pixel_threshold=1e15, nobytes=4  ):
+    
+    
+    
+    if force_compress:
+        print ("Create a new compress file with filename as :%s."%filename)
+        return init_compress_eigerdata( images, mask, md, filename, 
+                       hot_pixel_threshold, bad_pixel_threshold, nobytes  )        
+    else:
+        if not os.path.exists( filename ):
+            print ("Create a new compress file with filename as :%s."%filename)
+            return init_compress_eigerdata( images, mask, md, filename, 
+                       hot_pixel_threshold, bad_pixel_threshold, nobytes  )
+        else:      
+            print ("Using already created compressed file with filename as :%s."%filename)
+            beg=0
+            end= len(images)
+            return read_compressed_eigerdata( mask, filename, beg, end, bad_pixel_threshold )
+
+
+        
+def read_compressed_eigerdata( mask, filename, beg, end,  hot_pixel_threshold=2**30, bad_pixel_threshold=1e15, ):    
+    '''
+        Read already compress eiger data           
+        Return 
+            mask
+            avg_img
+            imsum
+            bad_frame_list
+            
+    ''' 
+    FD = Multifile( filename, beg, end)    
+    imgsum  =  np.zeros(   FD.end- FD.beg, dtype= np.float  )     
+    avg_img = np.zeros(  [FD.md['ncols'], FD.md['nrows'] ] , dtype= np.float )
+    
+    avg_img = get_avg_imgc( FD,  beg=None,end=None,sampling = 1, plot_ = False ) 
+    
+    imgsum, bad_frame_list = get_each_frame_intensityc( FD, sampling = 1, hot_pixel_threshold=2**30,
+                             bad_pixel_threshold=bad_pixel_threshold, plot_ = False)    
+
+    FD.FID.close()
+    return   mask, avg_img, imgsum, bad_frame_list
+
+
+def init_compress_eigerdata( images, mask, md, filename, 
+                       hot_pixel_threshold=2**30, bad_pixel_threshold=1e15, nobytes=4  ):    
+    '''
+        Compress the eiger data 
+        
+        Create a new mask by remove hot_pixel
+        Do image average
+        Do each image sum
+        Find badframe_list for where image sum above bad_pixel_threshold
+        Generate a compressed data with filename
+        
+    
+        Header contains 1024 bytes ['Magic value', 'beam_center_x', 'beam_center_y', 'count_time', 'detector_distance', 
            'frame_time', 'incident_wavelength', 'x_pixel_size', 'y_pixel_size', 
            bytes per pixel (either 2 or 4 (Default)),
            Nrows, Ncols, Rows_Begin, Rows_End, Cols_Begin, Cols_End ]
            
+        Return 
+            mask
+            avg_img
+            imsum
+            bad_frame_list
+            
     ''' 
     fp = open( filename,'wb' )
     #Make Header 1024 bytes   
@@ -36,19 +368,70 @@ def compress_eigerdata( images, md, filename, nobytes=2  ):
                          0, md['pixel_mask'].shape[0]                
                     )
       
-    fp.write( Header)
+    fp.write( Header)  
     
-    for img in tqdm( images ):
-        p = np.where( (np.ravel(img)>0) &  (np.ravel(img)< 2**30 )  )[0]
-        v = np.ravel( np.array( img, dtype= np.int16 )) [p]
-        dlen = len(p) 
-        s_fmt ='@I{}i{}{}'.format( dlen,dlen,'ih'[nobytes==2])
-        fp.write(  struct.pack( '@I', dlen   ))
-        fp.write(  struct.pack( '@{}i'.format( dlen), *p))
-        fp.write(  struct.pack( '@{}{}'.format( dlen,'ih'[nobytes==2]), *v))
-    fp.close()                 
-     
+    imgsum  =  np.zeros(    len( images )  ) 
+    avg_img = np.zeros_like(    images[0], dtype= np.float ) 
+    Nopix =  float( avg_img.size )
+    n=0
+    good_count = 0
+    frac = 0.0
+    if nobytes==2:
+        dtype= np.int16
+    elif nobytes==4:
+        dtype= np.int32
+    else:
+        print ( "Wrong type of nobytes, only support 2 [np.int16] or 4 [np.int32]")
+        dtype= np.int32
+        
+    for img in tqdm( images ):       
+        
+        mask &= img < hot_pixel_threshold   
+        p = np.where( (np.ravel(img)>0) &  np.ravel(mask) )[0] #don't use masked data        
+        v = np.ravel( np.array( img, dtype= dtype )) [p]
+        dlen = len(p)         
+        imgsum[n] = v.sum()
+        
+        if imgsum[n] >=bad_pixel_threshold:
+            dlen = 0
+            fp.write(  struct.pack( '@I', dlen  ))    
+        else:      
+            np.ravel(avg_img )[p] +=   v
+            good_count +=1 
+            frac += dlen/Nopix
+            #s_fmt ='@I{}i{}{}'.format( dlen,dlen,'ih'[nobytes==2])
+            fp.write(  struct.pack( '@I', dlen   ))
+            fp.write(  struct.pack( '@{}i'.format( dlen), *p))
+            fp.write(  struct.pack( '@{}{}'.format( dlen,'ih'[nobytes==2]), *v))        
+        n +=1      
+    fp.close() 
+    frac /=good_count
+    print( "The fraction of pixel occupied by photon is %6.3f%% "%(100*frac) ) 
+    avg_img /= good_count
+    
+    bad_frame_list = np.where( np.array(imgsum) > bad_pixel_threshold )[0] 
+    
+    if len(bad_frame_list):
+        print ('Bad frame list are: %s' %bad_frame_list)
+    else:
+        print ('No bad frames are involved.')
+        
+    return   mask, avg_img, imgsum, bad_frame_list
 
+    
+
+
+
+
+
+
+
+
+
+
+        
+        
+        
  
 """    Description:
 
@@ -193,865 +576,10 @@ class Multifile:
              return(self._readImageRaw())
 
 
-        
-        
 
-def get_avg_imgc( FD, sampling = 100, plot_ = False ,  *argv,**kwargs):   
-    '''Get average imagef from a data_series by every sampling number to save time'''
-    #avg_img = np.average(data_series[:: sampling], axis=0)
-    
-    avg_img = FD.rdframe(FD.beg)
-    n=1
-    for  i in tqdm(range( sampling-1 + FD.beg , FD.end, sampling  )):
-        n += 1
-        (p,v) = FD.rdrawframe(i)
-        np.ravel(avg_img )[p] +=   v
-    avg_img /= n 
-    if plot_:
-        fig, ax = plt.subplots()
-        uid = 'uid'
-        if 'uid' in kwargs.keys():
-            uid = kwargs['uid'] 
             
-        im = ax.imshow(avg_img , cmap='viridis',origin='lower',
-                   norm= LogNorm(vmin=0.001, vmax=1e2))
-        #ax.set_title("Masked Averaged Image")
-        ax.set_title('Uid= %s--Masked Averaged Image'%uid)
-        fig.colorbar(im)
-        plt.show()
-    return avg_img
-
-
-
-def get_each_frame_intensityc( FD, sampling = 50, 
-                             bad_pixel_threshold=1e10,                               
-                             plot_ = False,  *argv,**kwargs):   
-    '''Get the total intensity of each frame by sampling every N frames
-       Also get bad_frame_list by check whether above  bad_pixel_threshold  
-       
-       Usuage:
-       imgsum, bad_frame_list = get_each_frame_intensity(good_series ,sampling = 1000, 
-                                bad_pixel_threshold=1e10,  plot_ = True)
-    '''
-    
-    #print ( argv, kwargs )
-    imgsum  =  np.zeros(  int(  (FD.end - FD.beg + 1)/ sampling )  ) 
-    n=0
-    for  i in tqdm(range( FD.beg, FD.end, sampling  )):        
-        (p,v) = FD.rdrawframe(i)
-        imgsum[n] = np.sum(  v )
-        n += 1
-    
-    if plot_:
-        uid = 'uid'
-        if 'uid' in kwargs.keys():
-            uid = kwargs['uid']        
-        fig, ax = plt.subplots()  
-        ax.plot(imgsum,'bo')
-        ax.set_title('Uid= %s--imgsum'%uid)
-        ax.set_xlabel( 'Frame_bin_%s'%sampling )
-        ax.set_ylabel( 'Total_Intensity' )
-        plt.show()        
-    bad_frame_list = np.where( np.array(imgsum) > bad_pixel_threshold )[0]
-    if len(bad_frame_list):
-        print ('Bad frame list are: %s' %bad_frame_list)
-    else:
-        print ('No bad frames are involved.')
-    return imgsum,bad_frame_list
-
-
-         
-        
-"""
-This module is for functions specific to time correlation
-"""
-
-
-
-def _one_time_process(buf, G, past_intensity_norm, future_intensity_norm,
-                      label_array, num_bufs, num_pixels, img_per_level,
-                      level, buf_no, norm, lev_len):
-    """Reference implementation of the inner loop of multi-tau one time
-    correlation
-    This helper function calculates G, past_intensity_norm and
-    future_intensity_norm at each level, symmetric normalization is used.
-    .. warning :: This modifies inputs in place.
-    Parameters
-    ----------
-    buf : array
-        image data array to use for correlation
-    G : array
-        matrix of auto-correlation function without normalizations
-    past_intensity_norm : array
-        matrix of past intensity normalizations
-    future_intensity_norm : array
-        matrix of future intensity normalizations
-    label_array : array
-        labeled array where all nonzero values are ROIs
-    num_bufs : int, even
-        number of buffers(channels)
-    num_pixels : array
-        number of pixels in certain ROI's
-        ROI's, dimensions are : [number of ROI's]X1
-    img_per_level : array
-        to track how many images processed in each level
-    level : int
-        the current multi-tau level
-    buf_no : int
-        the current buffer number
-    norm : dict
-        to track bad images
-    lev_len : array
-        length of each level
-    Notes
-    -----
-    .. math::
-        G = <I(\tau)I(\tau + delay)>
-    .. math::
-        past_intensity_norm = <I(\tau)>
-    .. math::
-        future_intensity_norm = <I(\tau + delay)>
-    """
-    img_per_level[level] += 1
-    # in multi-tau correlation, the subsequent levels have half as many
-    # buffers as the first
-    i_min = num_bufs // 2 if level else 0
-    for i in range(i_min, min(img_per_level[level], num_bufs)):
-        # compute the index into the autocorrelation matrix
-        t_index = level * num_bufs / 2 + i
-        delay_no = (buf_no - i) % num_bufs
-
-        # get the images for correlating
-        past_img = buf[level, delay_no]
-        future_img = buf[level, buf_no]
-
-        # find the normalization that can work both for bad_images
-        #  and good_images
-        ind = int(t_index - lev_len[:level].sum())
-        normalize = img_per_level[level] - i - norm[level+1][ind]
-
-        # take out the past_ing and future_img created using bad images
-        # (bad images are converted to np.nan array)
-        if np.isnan(past_img).any() or np.isnan(future_img).any():
-            norm[level + 1][ind] += 1
-        else:
-            for w, arr in zip([past_img*future_img, past_img, future_img],
-                              [G, past_intensity_norm, future_intensity_norm]):
-                binned = np.bincount(label_array, weights=w)[1:]
-                arr[t_index] += ((binned / num_pixels -
-                                  arr[t_index]) / normalize)
-    return None  # modifies arguments in place!
-
-
-results = namedtuple(
-    'correlation_results',
-    ['g2', 'lag_steps', 'internal_state']
-)
-
-_internal_state = namedtuple(
-    'correlation_state',
-    ['buf',
-     'G',
-     'past_intensity',
-     'future_intensity',
-     'img_per_level',
-     'label_array',
-     'track_level',
-     'cur',
-     'pixel_list',
-     'num_pixels',
-     'lag_steps',
-     'norm',
-     'lev_len']
-)
-
-_two_time_internal_state = namedtuple(
-    'two_time_correlation_state',
-    ['buf',
-     'img_per_level',
-     'label_array',
-     'track_level',
-     'cur',
-     'pixel_list',
-     'num_pixels',
-     'lag_steps',
-     'g2',
-     'count_level',
-     'current_img_time',
-     'time_ind',
-     'norm',
-     'lev_len']
-)
-
-
-def _init_state_one_time(num_levels, num_bufs, labels):
-    """Initialize a stateful namedtuple for the generator-based multi-tau
-     for one time correlation
-    Parameters
-    ----------
-    num_levels : int
-    num_bufs : int
-    labels : array
-        Two dimensional labeled array that contains ROI information
-    Returns
-    -------
-    internal_state : namedtuple
-        The namedtuple that contains all the state information that
-        `lazy_one_time` requires so that it can be used to pick up
-         processing after it was interrupted
-    """
-    (label_array, pixel_list, num_rois, num_pixels, lag_steps, buf,
-     img_per_level, track_level, cur, norm,
-     lev_len) = _validate_and_transform_inputs(num_bufs, num_levels, labels)
-
-    # G holds the un normalized auto- correlation result. We
-    # accumulate computations into G as the algorithm proceeds.
-    G = np.zeros(((num_levels + 1) * num_bufs / 2, num_rois),
-                 dtype=np.float64)
-    # matrix for normalizing G into g2
-    past_intensity = np.zeros_like(G)
-    # matrix for normalizing G into g2
-    future_intensity = np.zeros_like(G)
-
-    return _internal_state(
-        buf,
-        G,
-        past_intensity,
-        future_intensity,
-        img_per_level,
-        label_array,
-        track_level,
-        cur,
-        pixel_list,
-        num_pixels,
-        lag_steps,
-        norm,
-        lev_len,
-    )
-
-def fill_pixel( p, v, pixelist):    
-    fra_pix = np.zeros_like( pixelist )
-    fra_pix[ np.in1d(  pixelist,p  )  ] = v[np.in1d( p, pixelist  )]
-    return fra_pix        
-        
-
-    
-    
-def lazy_one_time(FD, num_levels, num_bufs, labels,
-                  internal_state=None, bad_frame_list=None ):
-    """Generator implementation of 1-time multi-tau correlation
-    If you do not want multi-tau correlation, set num_levels to 1 and
-    num_bufs to the number of images you wish to correlate
-    Parameters
-    ----------
-    image_iterable : FD, a compressed eiger file by Multifile class
-    num_levels : int
-        how many generations of downsampling to perform, i.e., the depth of
-        the binomial tree of averaged frames
-    num_bufs : int, must be even
-        maximum lag step to compute in each generation of downsampling
-    labels : array
-        Labeled array of the same shape as the image stack.
-        Each ROI is represented by sequential integers starting at one.  For
-        example, if you have four ROIs, they must be labeled 1, 2, 3,
-        4. Background is labeled as 0
-    internal_state : namedtuple, optional
-        internal_state is a bucket for all of the internal state of the
-        generator. It is part of the `results` object that is yielded from
-        this generator
-    Yields
-    ------
-    namedtuple
-        A `results` object is yielded after every image has been processed.
-        This `reults` object contains, in this order:
-        - `g2`: the normalized correlation
-          shape is (len(lag_steps), num_rois)
-        - `lag_steps`: the times at which the correlation was computed
-        - `_internal_state`: all of the internal state. Can be passed back in
-          to `lazy_one_time` as the `internal_state` parameter
-    Notes
-    -----
-    The normalized intensity-intensity time-autocorrelation function
-    is defined as
-    .. math::
-        g_2(q, t') = \\frac{<I(q, t)I(q, t + t')> }{<I(q, t)>^2}
-        t' > 0
-    Here, ``I(q, t)`` refers to the scattering strength at the momentum
-    transfer vector ``q`` in reciprocal space at time ``t``, and the brackets
-    ``<...>`` refer to averages over time ``t``. The quantity ``t'`` denotes
-    the delay time
-    This implementation is based on published work. [1]_
-    References
-    ----------
-    .. [1] D. Lumma, L. B. Lurio, S. G. J. Mochrie and M. Sutton,
-        "Area detector based photon correlation in the regime of
-        short data batches: Data reduction for dynamic x-ray
-        scattering," Rev. Sci. Instrum., vol 71, p 3274-3289, 2000.
-    """
-
-    if internal_state is None:
-        internal_state = _init_state_one_time(num_levels, num_bufs, labels)
-    # create a shorthand reference to the results and state named tuple
-    s = internal_state
-
-    qind, pixelist = roi.extract_label_indices(  labels  )    
-    # iterate over the images to compute multi-tau correlation  
-    
-    fra_pix = np.zeros_like( pixelist, dtype=np.float64)
-    timg = np.zeros(    FD.md['ncols'] * FD.md['nrows']   , dtype=np.int32   ) 
-    timg[pixelist] =   np.arange( 1, len(pixelist) + 1  ) 
-    
-    for  i in tqdm(range( FD.beg , FD.end )):        
-        if i in bad_frame_list:
-            fra_pix[:]= np.nan
-        else:
-            (p,v) = FD.rdrawframe(i)
-            w = np.where( timg[p] )[0]
-            pxlist = timg[  p[w]   ] -1 
-            fra_pix[ pxlist] = v[w] 
-        level = 0   
-        # increment buffer
-        s.cur[0] = (1 + s.cur[0]) % num_bufs 
-        # Put the ROI pixels into the ring buffer. 
-        s.buf[0, s.cur[0] - 1] =  fra_pix        
-        fra_pix[:]=0
-        
-        print( i, len(p), len(w), len( pixelist))
-        
-        #print ('i= %s init fra_pix'%i )            
-        buf_no = s.cur[0] - 1
-        # Compute the correlations between the first level
-        # (undownsampled) frames. This modifies G,
-        # past_intensity, future_intensity,
-        # and img_per_level in place!
-        _one_time_process(s.buf, s.G, s.past_intensity, s.future_intensity,
-                          s.label_array, num_bufs, s.num_pixels,
-                          s.img_per_level, level, buf_no, s.norm, s.lev_len)
-
-        # check whether the number of levels is one, otherwise
-        # continue processing the next level
-        processing = num_levels > 1
-
-        level = 1
-        while processing:
-            if not s.track_level[level]:
-                s.track_level[level] = True
-                processing = False
-            else:
-                prev = (1 + (s.cur[level - 1] - 2) % num_bufs)
-                s.cur[level] = (
-                    1 + s.cur[level] % num_bufs)
-
-                s.buf[level, s.cur[level] - 1] = ((
-                        s.buf[level - 1, prev - 1] +
-                        s.buf[level - 1, s.cur[level - 1] - 1]) / 2)
-
-                # make the track_level zero once that level is processed
-                s.track_level[level] = False
-
-                # call processing_func for each multi-tau level greater
-                # than one. This is modifying things in place. See comment
-                # on previous call above.
-                buf_no = s.cur[level] - 1
-                _one_time_process(s.buf, s.G, s.past_intensity,
-                                  s.future_intensity, s.label_array, num_bufs,
-                                  s.num_pixels, s.img_per_level, level, buf_no,
-                                  s.norm, s.lev_len)
-                level += 1
-
-                # Checking whether there is next level for processing
-                processing = level < num_levels
-
-        # If any past intensities are zero, then g2 cannot be normalized at
-        # those levels. This if/else code block is basically preventing
-        # divide-by-zero errors.
-        if len(np.where(s.past_intensity == 0)[0]) != 0:
-            g_max = np.where(s.past_intensity == 0)[0][0]
-        else:
-            g_max = s.past_intensity.shape[0]
-
-        g2 = (s.G[:g_max] / (s.past_intensity[:g_max] *
-                             s.future_intensity[:g_max]))
-        yield results(g2, s.lag_steps[:g_max], s)
-
-
-def multi_tau_auto_corr(num_levels, num_bufs, labels, images, bad_frame_list=None):
-    """Wraps generator implementation of multi-tau
-    Original code(in Yorick) for multi tau auto correlation
-    author: Mark Sutton
-    For parameter description, please reference the docstring for
-    lazy_one_time. Note that there is an API difference between this function
-    and `lazy_one_time`. The `images` arugment is at the end of this function
-    signature here for backwards compatibility, but is the first argument in
-    the `lazy_one_time()` function. The semantics of the variables remain
-    unchanged.
-    """
-    gen = lazy_one_time(images, num_levels, num_bufs, labels,bad_frame_list=bad_frame_list)
-    for result in gen:
-        pass
-    return result.g2, result.lag_steps
-
-
-def auto_corr_scat_factor(lags, beta, relaxation_rate, baseline=1):
-    """
-    This model will provide normalized intensity-intensity time
-    correlation data to be minimized.
-    Parameters
-    ----------
-    lags : array
-        delay time
-    beta : float
-        optical contrast (speckle contrast), a sample-independent
-        beamline parameter
-    relaxation_rate : float
-        relaxation time associated with the samples dynamics.
-    baseline : float, optional
-        baseline of one time correlation
-        equal to one for ergodic samples
-    Returns
-    -------
-    g2 : array
-        normalized intensity-intensity time autocorreltion
-    Notes :
-    -------
-    The intensity-intensity autocorrelation g2 is connected to the intermediate
-    scattering factor(ISF) g1
-    .. math::
-        g_2(q, \\tau) = \\beta_1[g_1(q, \\tau)]^{2} + g_\infty
-    For a system undergoing  diffusive dynamics,
-    .. math::
-        g_1(q, \\tau) = e^{-\gamma(q) \\tau}
-    .. math::
-       g_2(q, \\tau) = \\beta_1 e^{-2\gamma(q) \\tau} + g_\infty
-    These implementation are based on published work. [1]_
-    References
-    ----------
-    .. [1] L. Li, P. Kwasniewski, D. Orsi, L. Wiegart, L. Cristofolini,
-       C. Caronna and A. Fluerasu, " Photon statistics and speckle
-       visibility spectroscopy with partially coherent X-rays,"
-       J. Synchrotron Rad. vol 21, p 1288-1295, 2014
-    """
-    return beta * np.exp(-2 * relaxation_rate * lags) + baseline
-
-
-def two_time_corr(labels, images, num_frames, num_bufs, num_levels=1):
-    """Wraps generator implementation of multi-tau two time correlation
-    This function computes two-time correlation
-    Original code : author: Yugang Zhang
-    Returns
-    -------
-    results : namedtuple
-    For parameter definition, see the docstring for the `lazy_two_time()`
-    function in this module
-    """
-    gen = lazy_two_time(labels, images, num_frames, num_bufs, num_levels)
-    for result in gen:
-        pass
-    return two_time_state_to_results(result)
-
-
-def lazy_two_time(labels, images, num_frames, num_bufs, num_levels=1,
-                  two_time_internal_state=None):
-    """ Generator implementation of two-time correlation
-    If you do not want multi-tau correlation, set num_levels to 1 and
-    num_bufs to the number of images you wish to correlate
-    Multi-tau correlation uses a scheme to achieve long-time correlations
-    inexpensively by downsampling the data, iteratively combining successive
-    frames.
-    The longest lag time computed is num_levels * num_bufs.
-    ** see comments on multi_tau_auto_corr
-    Parameters
-    ----------
-    labels : array
-        labeled array of the same shape as the image stack;
-        each ROI is represented by a distinct label (i.e., integer)
-    images : iterable of 2D arrays
-        dimensions are: (rr, cc), iterable of 2D arrays
-    num_frames : int
-        number of images to use
-        default is number of images
-    num_bufs : int, must be even
-        maximum lag step to compute in each generation of
-        downsampling
-    num_levels : int, optional
-        how many generations of downsampling to perform, i.e.,
-        the depth of the binomial tree of averaged frames
-        default is one
-    Yields
-    ------
-    namedtuple
-        A ``results`` object is yielded after every image has been processed.
-        This `reults` object contains, in this order:
-        - ``g2``: the normalized correlation
-          shape is (num_rois, len(lag_steps), len(lag_steps))
-        - ``lag_steps``: the times at which the correlation was computed
-        - ``_internal_state``: all of the internal state. Can be passed back in
-          to ``lazy_one_time`` as the ``internal_state`` parameter
-    Notes
-    -----
-    The two-time correlation function is defined as
-    .. math::
-        C(q,t_1,t_2) = \\frac{<I(q,t_1)I(q,t_2)>}{<I(q, t_1)><I(q,t_2)>}
-    Here, the ensemble averages are performed over many pixels of detector,
-    all having the same ``q`` value. The average time or age is equal to
-    ``(t1+t2)/2``, measured by the distance along the ``t1 = t2`` diagonal.
-    The time difference ``t = |t1 - t2|``, with is distance from the
-    ``t1 = t2`` diagonal in the perpendicular direction.
-    In the equilibrium system, the two-time correlation functions depend only
-    on the time difference ``t``, and hence the two-time correlation contour
-    lines are parallel.
-    References
-    ----------
-    .. [1]
-        A. Fluerasu, A. Moussaid, A. Mandsen and A. Schofield, "Slow dynamics
-        and aging in collodial gels studied by x-ray photon correlation
-        spectroscopy," Phys. Rev. E., vol 76, p 010401(1-4), 2007.
-    """
-    if two_time_internal_state is None:
-        two_time_internal_state = _init_state_two_time(num_levels, num_bufs,
-                                                       labels, num_frames)
-    # create a shorthand reference to the results and state named tuple
-    s = two_time_internal_state
-
-    for img in images:
-        s.cur[0] = (1 + s.cur[0]) % num_bufs  # increment buffer
-
-        s.count_level[0] = 1 + s.count_level[0]
-
-        # get the current image time
-        s = s._replace(current_img_time=(s.current_img_time + 1))
-
-        # Put the image into the ring buffer.
-        s.buf[0, s.cur[0] - 1] = (np.ravel(img))[s.pixel_list]
-
-        # Compute the two time correlations between the first level
-        # (undownsampled) frames. two_time and img_per_level in place!
-        _two_time_process(s.buf, s.g2, s.label_array, num_bufs,
-                          s.num_pixels, s.img_per_level, s.lag_steps,
-                          s.current_img_time,
-                          level=0, buf_no=s.cur[0] - 1)
-
-        # time frame for each level
-        s.time_ind[0].append(s.current_img_time)
-
-        # check whether the number of levels is one, otherwise
-        # continue processing the next level
-        processing = num_levels > 1
-
-        # Compute the correlations for all higher levels.
-        level = 1
-        while processing:
-            if not s.track_level[level]:
-                s.track_level[level] = 1
-                processing = False
-            else:
-                prev = 1 + (s.cur[level - 1] - 2) % num_bufs
-                s.cur[level] = 1 + s.cur[level] % num_bufs
-                s.count_level[level] = 1 + s.count_level[level]
-
-                s.buf[level, s.cur[level] - 1] = (s.buf[level - 1, prev - 1] +
-                                                  s.buf[level - 1,
-                                                  s.cur[level - 1] - 1])/2
-
-                t1_idx = (s.count_level[level] - 1) * 2
-
-                current_img_time = ((s.time_ind[level - 1])[t1_idx] +
-                                    (s.time_ind[level - 1])[t1_idx + 1])/2.
-
-                # time frame for each level
-                s.time_ind[level].append(current_img_time)
-
-                # make the track_level zero once that level is processed
-                s.track_level[level] = 0
-
-                # call the _two_time_process function for each multi-tau level
-                # for multi-tau levels greater than one
-                # Again, this is modifying things in place. See comment
-                # on previous call above.
-                _two_time_process(s.buf, s.g2, s.label_array, num_bufs,
-                                  s.num_pixels, s.img_per_level, s.lag_steps,
-                                  current_img_time,
-                                  level=level, buf_no=s.cur[level]-1)
-                level += 1
-
-                # Checking whether there is next level for processing
-                processing = level < num_levels
-        yield s
-
-
-def two_time_state_to_results(state):
-    """Convert the internal state of the two time generator into usable results
-    Parameters
-    ----------
-    state : namedtuple
-        The internal state that is yielded from `lazy_two_time`
-    Returns
-    -------
-    results : namedtuple
-        A results object that contains the two time correlation results
-        and the lag steps
-    """
-    for q in range(np.max(state.label_array)):
-        x0 = (state.g2)[q, :, :]
-        (state.g2)[q, :, :] = (np.tril(x0) + np.tril(x0).T -
-                               np.diag(np.diag(x0)))
-    return results(state.g2, state.lag_steps, state)
-
-
-def _two_time_process(buf, g2, label_array, num_bufs, num_pixels,
-                      img_per_level, lag_steps, current_img_time,
-                      level, buf_no):
-    """
-    Parameters
-    ----------
-    buf: array
-        image data array to use for two time correlation
-    g2: array
-        two time correlation matrix
-        shape (number of labels(ROI), number of frames, number of frames)
-    label_array: array
-        Elements not inside any ROI are zero; elements inside each
-        ROI are 1, 2, 3, etc. corresponding to the order they are specified
-        in edges and segments
-    num_bufs: int, even
-        number of buffers(channels)
-    num_pixels : array
-        number of pixels in certain ROI's
-        ROI's, dimensions are len(np.unique(label_array))
-    img_per_level: array
-        to track how many images processed in each level
-    lag_steps : array
-        delay or lag steps for the multiple tau analysis
-        shape num_levels
-    current_img_time : int
-        the current image number
-    level : int
-        the current multi-tau level
-    buf_no : int
-        the current buffer number
-    """
-    img_per_level[level] += 1
-
-    # in multi-tau correlation other than first level all other levels
-    #  have to do the half of the correlation
-    if level == 0:
-        i_min = 0
-    else:
-        i_min = num_bufs//2
-
-    for i in range(i_min, min(img_per_level[level], num_bufs)):
-        t_index = level*num_bufs/2 + i
-
-        delay_no = (buf_no - i) % num_bufs
-
-        past_img = buf[level, delay_no]
-        future_img = buf[level, buf_no]
-
-        #  get the matrix of correlation function without normalizations
-        tmp_binned = (np.bincount(label_array,
-                                  weights=past_img*future_img)[1:])
-        # get the matrix of past intensity normalizations
-        pi_binned = (np.bincount(label_array,
-                                 weights=past_img)[1:])
-
-        # get the matrix of future intensity normalizations
-        fi_binned = (np.bincount(label_array,
-                                 weights=future_img)[1:])
-
-        tind1 = (current_img_time - 1)
-
-        tind2 = (current_img_time - lag_steps[t_index] - 1)
-
-        if not isinstance(current_img_time, int):
-            nshift = 2**(level-1)
-            for i in range(-nshift+1, nshift+1):
-                g2[:, int(tind1+i),
-                   int(tind2+i)] = (tmp_binned/(pi_binned *
-                                                fi_binned))*num_pixels
-        else:
-            g2[:, tind1, tind2] = tmp_binned/(pi_binned * fi_binned)*num_pixels
-
-
-def _init_state_two_time(num_levels, num_bufs, labels, num_frames):
-    """Initialize a stateful namedtuple for two time correlation
-    Parameters
-    ----------
-    num_levels : int
-    num_bufs : int
-    labels : array
-        Two dimensional labeled array that contains ROI information
-    num_frames : int
-        number of images to use
-        default is number of images
-    Returns
-    -------
-    internal_state : namedtuple
-        The namedtuple that contains all the state information that
-        `lazy_two_time` requires so that it can be used to pick up processing
-        after it was interrupted
-    """
-    (label_array, pixel_list, num_rois, num_pixels, lag_steps,
-     buf, img_per_level, track_level, cur, norm,
-     lev_len) = _validate_and_transform_inputs(num_bufs, num_levels, labels)
-
-    # to count images in each level
-    count_level = np.zeros(num_levels, dtype=np.int64)
-
-    # current image time
-    current_img_time = 0
-
-    # generate a time frame for each level
-    time_ind = {key: [] for key in range(num_levels)}
-
-    # two time correlation results (array)
-    g2 = np.zeros((num_rois, num_frames, num_frames), dtype=np.float64)
-
-    return _two_time_internal_state(
-        buf,
-        img_per_level,
-        label_array,
-        track_level,
-        cur,
-        pixel_list,
-        num_pixels,
-        lag_steps,
-        g2,
-        count_level,
-        current_img_time,
-        time_ind,
-        norm,
-        lev_len,
-    )
-
-
-def _validate_and_transform_inputs(num_bufs, num_levels, labels):
-    """
-    This is a helper function to validate inputs and create initial state
-    inputs for both one time and two time correlation
-    Parameters
-    ----------
-    num_bufs : int
-    num_levels : int
-    labels : array
-        labeled array of the same shape as the image stack;
-        each ROI is represented by a distinct label (i.e., integer)
-    Returns
-    -------
-    label_array : array
-        labels of the required region of interests(ROI's)
-    pixel_list : array
-        1D array of indices into the raveled image for all
-        foreground pixels (labeled nonzero)
-        e.g., [5, 6, 7, 8, 14, 15, 21, 22]
-    num_rois : int
-        number of region of interests (ROI)
-    num_pixels : array
-        number of pixels in each ROI
-    lag_steps : array
-        the times at which the correlation was computed
-    buf : array
-        image data for correlation
-    img_per_level : array
-        to track how many images processed in each level
-    track_level : array
-        to track processing each level
-    cur : array
-        to increment the buffer
-    norm : dict
-        to track bad images
-    lev_len : array
-        length of each levels
-    """
-    if num_bufs % 2 != 0:
-        raise ValueError("There must be an even number of `num_bufs`. You "
-                         "provided %s" % num_bufs)
-    label_array, pixel_list = extract_label_indices(labels)
-
-    # map the indices onto a sequential list of integers starting at 1
-    label_mapping = {label: n+1
-                     for n, label in enumerate(np.unique(label_array))}
-    # remap the label array to go from 1 -> max(_labels)
-    for label, n in label_mapping.items():
-        label_array[label_array == label] = n
-
-    # number of ROI's
-    num_rois = len(label_mapping)
-
-    # stash the number of pixels in the mask
-    num_pixels = np.bincount(label_array)[1:]
-
-    # Convert from num_levels, num_bufs to lag frames.
-    tot_channels, lag_steps, dict_lag = multi_tau_lags(num_levels, num_bufs)
-
-    # these norm and lev_len will help to find the one time correlation
-    # normalization norm will updated when there is a bad image
-    norm = {key: [0] * len(dict_lag[key]) for key in (dict_lag.keys())}
-    lev_len = np.array([len(dict_lag[i]) for i in (dict_lag.keys())])
-
-    # Ring buffer, a buffer with periodic boundary conditions.
-    # Images must be keep for up to maximum delay in buf.
-    buf = np.zeros((num_levels, num_bufs, len(pixel_list)),
-                   dtype=np.float64)
-    # to track how many images processed in each level
-    img_per_level = np.zeros(num_levels, dtype=np.int64)
-    # to track which levels have already been processed
-    track_level = np.zeros(num_levels, dtype=bool)
-    # to increment buffer
-    cur = np.ones(num_levels, dtype=np.int64)
-
-    return (label_array, pixel_list, num_rois, num_pixels,
-            lag_steps, buf, img_per_level, track_level, cur,
-            norm, lev_len)
-
-
-def one_time_from_two_time(two_time_corr):
-    """
-    This will provide the one-time correlation data from two-time
-    correlation data.
-    Parameters
-    ----------
-    two_time_corr : array
-        matrix of two time correlation
-        shape (number of labels(ROI's), number of frames, number of frames)
-    Returns
-    -------
-    one_time_corr : array
-        matrix of one time correlation
-        shape (number of labels(ROI's), number of frames)
-    """
-
-    one_time_corr = np.zeros((two_time_corr.shape[0], two_time_corr.shape[2]))
-    for g in two_time_corr:
-        for j in range(two_time_corr.shape[2]):
-            one_time_corr[:, j] = np.trace(g, offset=j)/two_time_corr.shape[2]
-    return one_time_corr
- 
-
-
-def cal_g2c( FD, ring_mask, 
-           bad_frame_list=None,good_start=0, num_buf = 8, num_lev = None ):
-    '''calculation g2 by using a multi-tau algorithm'''
-    
-    noframes = FD.end - good_start   # number of frames, not "no frames"
-    #num_buf = 8  # number of buffers
-
-    if num_lev is None:
-        num_lev = int(np.log( noframes/(num_buf-1))/np.log(2) +1) +1
-    print ('In this g2 calculation, the buf and lev number are: %s--%s--'%(num_buf,num_lev))
-    if bad_frame_list is not None:
-        print ('Bad frame involved and will be precessed!')
-    print ('%s frames will be processed...'%(noframes))
-    g2, lag_steps =  multi_tau_auto_corr(num_lev, num_buf,   ring_mask, FD, bad_frame_list )
-    print( 'G2 calculation DONE!')
-
-    return g2, lag_steps
-
-
-
-
-
-
-
+            
+  
 
 
 
