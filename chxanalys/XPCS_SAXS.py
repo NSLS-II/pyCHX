@@ -206,6 +206,8 @@ def angular_average(image, calibrated_center, threshold=0, nx=1500,
 
     return bin_centers*180/np.pi, ang_averages 
 
+
+
 def get_circular_average( avg_img, mask, pargs, show_pixel=True,
                           nx=1500, plot_ = False ,   save=False, *argv,**kwargs):   
     """get a circular average of an image        
@@ -249,46 +251,41 @@ def get_circular_average( avg_img, mask, pargs, show_pixel=True,
     qp = qp_/dpix
     
     if plot_:
-        fig = plt.figure(figsize=(8, 6))
-        ax1 = fig.add_subplot(111)
-        ax2 = ax1.twiny()
+        if  show_pixel:        
         
-        if   show_pixel:
+            fig = plt.figure(figsize=(8, 6))
+            ax1 = fig.add_subplot(111)
+            ax2 = ax1.twiny()        
             ax2.semilogy(qp, iq, '-o')
             ax1.semilogy(q,  iq , '-o')
             
             ax2.set_xlabel('q (pixel)')             
             ax1.set_xlabel('q ('r'$\AA^{-1}$)')
-             
+            ax2.cla()
+            ax1.set_ylabel('I(q)')
+            title = ax2.set_title('Uid= %s--Circular Average'%uid)      
+            
         else:
-           
-            ax2.semilogy(q,  iq , '-o')
-            ax1.semilogy(qp, iq, '-o')
-            ax1.set_xlabel('q (pixel)')             
-            ax2.set_xlabel('q ('r'$\AA^{-1}$)')
-        ax2.cla()
-        ax1.set_ylabel('I(q)')
+            fig = plt.figure(figsize=(8, 6))
+            ax1 = fig.add_subplot(111)
+            ax1.semilogy(q,  iq , '-o') 
+            ax1.set_xlabel('q ('r'$\AA^{-1}$)')        
+            ax1.set_ylabel('I(q)')
+            title = ax1.set_title('Uid= %s--Circular Average'%uid)     
+            ax2=None 
         
                     
         if 'xlim' in kwargs.keys():
             ax1.set_xlim(    kwargs['xlim']  )    
             x1,x2 =  kwargs['xlim']
-            w = np.where( (q >=x1 )&( q<=x2) )[0]
-                        
-            ax2.set_xlim(  [ qp[w[0]], qp[w[-1]]]     )    
+            w = np.where( (q >=x1 )&( q<=x2) )[0]                        
+            if ax2 is not None:
+                ax2.set_xlim(  [ qp[w[0]], qp[w[-1]]]     ) 
+            
             
         if 'ylim' in kwargs.keys():
-            ax1.set_ylim(    kwargs['ylim']  )
-            
-            
-        #ax1.semilogy(qp, np.ones_like( iq) , '-o')
-        
-        
-        #ax2.semilogy(q, iq, '-o')
-        
-        #ax2.cla()
-        
-        title = ax2.set_title('Uid= %s--Circular Average'%uid)        
+            ax1.set_ylim(    kwargs['ylim']  )        
+          
         title.set_y(1.1)
         fig.subplots_adjust(top=0.85)
 
@@ -309,6 +306,7 @@ def get_circular_average( avg_img, mask, pargs, show_pixel=True,
         plt.show()
         
     return  qp, iq, q
+
 
 
 def get_distance(p1,p2):
