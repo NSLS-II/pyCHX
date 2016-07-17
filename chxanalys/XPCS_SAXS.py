@@ -1,11 +1,60 @@
 from .chx_generic_functions import *
 
 
+ 
+def bin_1D(x, y, nx=None, min_x=None, max_x=None):
+    """
+    Bin the values in y based on their x-coordinates
+
+    Parameters
+    ----------
+    x : array
+        position
+    y : array
+        intensity
+    nx : integer, optional
+        number of bins to use defaults to default bin value
+    min_x : float, optional
+        Left edge of first bin defaults to minimum value of x
+    max_x : float, optional
+        Right edge of last bin defaults to maximum value of x
+
+    Returns
+    -------
+    edges : array
+        edges of bins, length nx + 1
+
+    val : array
+        sum of values in each bin, length nx
+
+    count : array
+        The number of counts in each bin, length nx
+    """
+
+    # handle default values
+    if min_x is None:
+        min_x = np.min(x)
+    if max_x is None:
+        max_x = np.max(x)
+    if nx is None:
+        nx = int(max_x - min_x) 
+
+    #print ( min_x, max_x, nx)    
     
-   
     
-    
-def circular_average(image, calibrated_center, threshold=0, nx=1500,
+    # use a weighted histogram to get the bin sum
+    bins = np.linspace(start=min_x, stop=max_x, num=nx+1, endpoint=True)
+    #print (x)
+    #print (bins)
+    val, _ = np.histogram(a=x, bins=bins, weights=y)
+    # use an un-weighted histogram to get the counts
+    count, _ = np.histogram(a=x, bins=bins)
+    # return the three arrays
+    return bins, val, count
+
+
+
+def circular_average(image, calibrated_center, threshold=0, nx=None,
                      pixel_size=(1, 1),  min_x=None, max_x=None, mask=None):
     """Circular average of the the image data
     The circular average is also known as the radial integration
@@ -37,8 +86,7 @@ def circular_average(image, calibrated_center, threshold=0, nx=1500,
     ring_averages : array
         Radial average of the image. shape is (nx, ).
     """
-    radial_val = utils.radial_grid(calibrated_center, image.shape, pixel_size) 
-    
+    radial_val = utils.radial_grid(calibrated_center, image.shape, pixel_size)     
     
     if mask is not None:  
         #maks = np.ones_like(  image )
@@ -50,19 +98,143 @@ def circular_average(image, calibrated_center, threshold=0, nx=1500,
         binr = np.ravel( radial_val ) 
         image_mask = np.ravel(image) 
         
-    bin_edges, sums, counts = utils.bin_1D( binr,
+    #if nx is None: #make a one-pixel width q
+    #   nx = int( max_r - min_r)
+    #if min_x is None:
+    #    min_x= int( np.min( binr))
+    #    min_x_= int( np.min( binr)/(np.sqrt(pixel_size[1]*pixel_size[0] )))
+    #if max_x is None:
+    #    max_x = int( np.max(binr )) 
+    #    max_x_ = int( np.max(binr)/(np.sqrt(pixel_size[1]*pixel_size[0] ))  )
+    #if nx is None:
+    #    nx = max_x_ - min_x_
+    
+    #binr_ = np.int_( binr /(np.sqrt(pixel_size[1]*pixel_size[0] )) )
+    binr_ =   binr /(np.sqrt(pixel_size[1]*pixel_size[0] ))
+    #print ( min_x, max_x, min_x_, max_x_, nx)
+    bin_edges, sums, counts = bin_1D(      binr_,
                                            image_mask,
-                                           nx,
+                                           nx=nx,
                                            min_x=min_x,
                                            max_x=max_x)
     
-    #print (counts)
+    #print  (len( bin_edges), len( counts) )
     th_mask = counts > threshold
+    
+    #print  (len(th_mask) )
     ring_averages = sums[th_mask] / counts[th_mask]
 
     bin_centers = utils.bin_edges_to_centers(bin_edges)[th_mask]
+    
+    #print (len(  bin_centers ) )
 
     return bin_centers, ring_averages 
+
+ 
+
+
+def get_circular_average( avg_img, mask, pargs, show_pixel=True,  min_x=None, max_x=None,
+                          nx=None, plot_ = False ,   save=False, *argv,**kwargs):   
+    """get a circular average of an image        
+    Parameters
+    ----------
+    
+    avg_img: 2D-array, the image
+    mask: 2D-array  
+    pargs: a dict, should contains
+        center: the beam center in pixel
+        Ldet: sample to detector distance
+        lambda_: the wavelength    
+        dpix, the pixel size in mm. For Eiger1m/4m, the size is 75 um (0.075 mm)
+
+    nx : int, optional
+        number of bins in x
+        defaults is 1500 bins
+        
+    plot_: a boolen type, if True, plot the one-D curve
+    plot_qinpixel:a boolen type, if True, the x-axis of the one-D curve is q in pixel; else in real Q
+    
+    Returns
+    -------
+    qp: q in pixel
+    iq: intensity of circular average
+    q: q in real unit (A-1)
+     
+     
+    """   
+    
+    center, Ldet, lambda_, dpix= pargs['center'],  pargs['Ldet'],  pargs['lambda_'],  pargs['dpix']
+    uid = pargs['uid']
+    
+    qp, iq = circular_average(avg_img, 
+        center, threshold=0, nx=nx, pixel_size=(dpix, dpix), mask=mask, min_x=min_x, max_x=max_x)
+    
+    
+
+    qp_ = qp * dpix
+    #  convert bin_centers from r [um] to two_theta and then to q [1/px] (reciprocal space)
+    two_theta = utils.radius_to_twotheta(Ldet, qp_)
+    q = utils.twotheta_to_q(two_theta, lambda_)
+    
+    #qp = qp_/dpix
+    
+    if plot_:
+        if  show_pixel:        
+        
+            fig = plt.figure(figsize=(8, 6))
+            ax1 = fig.add_subplot(111)
+            ax2 = ax1.twiny()        
+            ax2.semilogy(qp, iq, '-o')
+            ax1.semilogy(q,  iq , '-o')
+            
+            ax2.set_xlabel('q (pixel)')             
+            ax1.set_xlabel('q ('r'$\AA^{-1}$)')
+            ax2.cla()
+            ax1.set_ylabel('I(q)')
+            title = ax2.set_title('Uid= %s--Circular Average'%uid)      
+            
+        else:
+            fig = plt.figure(figsize=(8, 6))
+            ax1 = fig.add_subplot(111)
+            ax1.semilogy(q,  iq , '-o') 
+            ax1.set_xlabel('q ('r'$\AA^{-1}$)')        
+            ax1.set_ylabel('I(q)')
+            title = ax1.set_title('Uid= %s--Circular Average'%uid)     
+            ax2=None 
+        
+                    
+        if 'xlim' in kwargs.keys():
+            ax1.set_xlim(    kwargs['xlim']  )    
+            x1,x2 =  kwargs['xlim']
+            w = np.where( (q >=x1 )&( q<=x2) )[0]                        
+            if ax2 is not None:
+                ax2.set_xlim(  [ qp[w[0]], qp[w[-1]]]     ) 
+            
+            
+        if 'ylim' in kwargs.keys():
+            ax1.set_ylim(    kwargs['ylim']  )        
+          
+        title.set_y(1.1)
+        fig.subplots_adjust(top=0.85)
+
+        
+        #if plot_qinpixel:
+        #ax2.set_xlabel('q (pixel)')
+        #else:
+        #ax1.set_xlabel('q ('r'$\AA^{-1}$)')
+        #axes.set_xlim(30,  1050)
+        #axes.set_ylim(-0.0001, 10000)
+        if save:
+            dt =datetime.now()
+            CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
+            path = pargs['path']
+            fp = path + 'Uid= %s--Circular Average'%uid + CurTime + '.png'         
+            fig.savefig( fp, dpi=fig.dpi)
+        
+        plt.show()
+        
+    return  qp, iq, q
+ 
 
 
 
@@ -208,106 +380,7 @@ def angular_average(image, calibrated_center, threshold=0, nx=1500,
 
 
 
-def get_circular_average( avg_img, mask, pargs, show_pixel=True,
-                          nx=1500, plot_ = False ,   save=False, *argv,**kwargs):   
-    """get a circular average of an image        
-    Parameters
-    ----------
-    
-    avg_img: 2D-array, the image
-    mask: 2D-array  
-    pargs: a dict, should contains
-        center: the beam center in pixel
-        Ldet: sample to detector distance
-        lambda_: the wavelength    
-        dpix, the pixel size in mm. For Eiger1m/4m, the size is 75 um (0.075 mm)
-
-    nx : int, optional
-        number of bins in x
-        defaults is 1500 bins
-        
-    plot_: a boolen type, if True, plot the one-D curve
-    plot_qinpixel:a boolen type, if True, the x-axis of the one-D curve is q in pixel; else in real Q
-    
-    Returns
-    -------
-    qp: q in pixel
-    iq: intensity of circular average
-    q: q in real unit (A-1)
-     
-     
-    """   
-    
-    center, Ldet, lambda_, dpix= pargs['center'],  pargs['Ldet'],  pargs['lambda_'],  pargs['dpix']
-    uid = pargs['uid']
-    
-    qp_, iq = circular_average(avg_img, 
-        center, threshold=0, nx=nx, pixel_size=(dpix, dpix), mask=mask)
-
-    #  convert bin_centers from r [um] to two_theta and then to q [1/px] (reciprocal space)
-    two_theta = utils.radius_to_twotheta(Ldet, qp_)
-    q = utils.twotheta_to_q(two_theta, lambda_)
-    
-    qp = qp_/dpix
-    
-    if plot_:
-        if  show_pixel:        
-        
-            fig = plt.figure(figsize=(8, 6))
-            ax1 = fig.add_subplot(111)
-            ax2 = ax1.twiny()        
-            ax2.semilogy(qp, iq, '-o')
-            ax1.semilogy(q,  iq , '-o')
-            
-            ax2.set_xlabel('q (pixel)')             
-            ax1.set_xlabel('q ('r'$\AA^{-1}$)')
-            ax2.cla()
-            ax1.set_ylabel('I(q)')
-            title = ax2.set_title('Uid= %s--Circular Average'%uid)      
-            
-        else:
-            fig = plt.figure(figsize=(8, 6))
-            ax1 = fig.add_subplot(111)
-            ax1.semilogy(q,  iq , '-o') 
-            ax1.set_xlabel('q ('r'$\AA^{-1}$)')        
-            ax1.set_ylabel('I(q)')
-            title = ax1.set_title('Uid= %s--Circular Average'%uid)     
-            ax2=None 
-        
-                    
-        if 'xlim' in kwargs.keys():
-            ax1.set_xlim(    kwargs['xlim']  )    
-            x1,x2 =  kwargs['xlim']
-            w = np.where( (q >=x1 )&( q<=x2) )[0]                        
-            if ax2 is not None:
-                ax2.set_xlim(  [ qp[w[0]], qp[w[-1]]]     ) 
-            
-            
-        if 'ylim' in kwargs.keys():
-            ax1.set_ylim(    kwargs['ylim']  )        
-          
-        title.set_y(1.1)
-        fig.subplots_adjust(top=0.85)
-
-        
-        #if plot_qinpixel:
-        #ax2.set_xlabel('q (pixel)')
-        #else:
-        #ax1.set_xlabel('q ('r'$\AA^{-1}$)')
-        #axes.set_xlim(30,  1050)
-        #axes.set_ylim(-0.0001, 10000)
-        if save:
-            dt =datetime.now()
-            CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
-            path = pargs['path']
-            fp = path + 'Uid= %s--Circular Average'%uid + CurTime + '.png'         
-            fig.savefig( fp, dpi=fig.dpi)
-        
-        plt.show()
-        
-    return  qp, iq, q
-
-
+ 
 
 def get_distance(p1,p2):
     '''Calc the distance between two point'''
