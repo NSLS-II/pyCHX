@@ -310,11 +310,12 @@ def compress_eigerdata( images, mask, md, filename, force_compress=False,
             end= len(images)
             return read_compressed_eigerdata( mask, filename, beg, end, 
                             bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
-                                          nobytes= nobytes  )  
+                                            )  
 
 
         
-def read_compressed_eigerdata( mask, filename, beg, end, bad_pixel_threshold=1e15, hot_pixel_threshold=2**30 ):    
+def read_compressed_eigerdata( mask, filename, beg, end,
+                              bad_pixel_threshold=1e15, hot_pixel_threshold=2**30  )   
     '''
         Read already compress eiger data           
         Return 
