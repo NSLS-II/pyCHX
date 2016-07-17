@@ -157,8 +157,10 @@ def _init_state_one_time(num_levels, num_bufs, labels):
 
     # G holds the un normalized auto- correlation result. We
     # accumulate computations into G as the algorithm proceeds.
-    G = np.zeros(((num_levels + 1) * num_bufs / 2, num_rois),
+
+    G = np.zeros(( int( (num_levels + 1) * num_bufs / 2), num_rois),
                  dtype=np.float64)
+        
     # matrix for normalizing G into g2
     past_intensity = np.zeros_like(G)
     # matrix for normalizing G into g2
@@ -188,8 +190,9 @@ def fill_pixel( p, v, pixelist):
 
     
     
+    
 def lazy_one_time(FD, num_levels, num_bufs, labels,
-                  internal_state=None, bad_frame_list=None, imgsum=None ):
+                  internal_state=None, bad_frame_list=None, imgsum=None, norm = None ):
     """Generator implementation of 1-time multi-tau correlation
     If you do not want multi-tau correlation, set num_levels to 1 and
     num_bufs to the number of images you wish to correlate
@@ -220,6 +223,13 @@ of ``out[n] += 1``.
         internal_state is a bucket for all of the internal state of the
         generator. It is part of the `results` object that is yielded from
         this generator
+        
+    For the sake of normalization: 
+     
+        imgsum: a list with the same length as FD, sum of each frame
+        qp, iq:  the circular average radius (in pixel) and intensity    
+        center: beam center
+        
     Yields
     ------
 
@@ -266,6 +276,7 @@ Returns
     timg = np.zeros(    FD.md['ncols'] * FD.md['nrows']   , dtype=np.int32   ) 
     timg[pixelist] =   np.arange( 1, len(pixelist) + 1  ) 
     
+    
     for  i in tqdm(range( FD.beg , FD.end )):        
         if i in bad_frame_list:
             fra_pix[:]= np.nan
@@ -275,9 +286,17 @@ Returns
             pxlist = timg[  p[w]   ] -1 
             
             if imgsum is None:
-                fra_pix[ pxlist] = v[w] 
+                if norm is None:
+                    fra_pix[ pxlist] = v[w] 
+                else: 
+                    fra_pix[ pxlist] = v[w]/ norm[pxlist]   #-1.0    
+                    
             else:
-                fra_pix[ pxlist] = v[w] / imgsum[i]           
+                if norm is None:
+                    fra_pix[ pxlist] = v[w] / imgsum[i] 
+                else:
+                    fra_pix[ pxlist] = v[w]/ imgsum[i]/  norm[pxlist]           
+            
             
         level = 0   
         # increment buffer
@@ -345,7 +364,9 @@ Returns
         yield results(g2, s.lag_steps[:g_max], s)
 
 
-def multi_tau_auto_corr(num_levels, num_bufs, labels, images, bad_frame_list=None, imgsum=None ):
+
+def multi_tau_auto_corr(num_levels, num_bufs, labels, images, bad_frame_list=None, 
+                        imgsum=None, norm=None ):
     """Wraps generator implementation of multi-tau
     Original code(in Yorick) for multi tau auto correlation
     author: Mark Sutton
@@ -356,10 +377,12 @@ def multi_tau_auto_corr(num_levels, num_bufs, labels, images, bad_frame_list=Non
     the `lazy_one_time()` function. The semantics of the variables remain
     unchanged.
     """
-    gen = lazy_one_time(images, num_levels, num_bufs, labels,bad_frame_list=bad_frame_list, imgsum=imgsum)
+    gen = lazy_one_time(images, num_levels, num_bufs, labels,bad_frame_list=bad_frame_list, imgsum=imgsum,
+                       norm=norm )
     for result in gen:
         pass
     return result.g2, result.lag_steps
+
 
 
 def auto_corr_scat_factor(lags, beta, relaxation_rate, baseline=1):
@@ -798,8 +821,9 @@ def one_time_from_two_time(two_time_corr):
  
 
 
+
 def cal_g2c( FD, ring_mask, 
-           bad_frame_list=None,good_start=0, num_buf = 8, num_lev = None, imgsum=None ):
+           bad_frame_list=None,good_start=0, num_buf = 8, num_lev = None, imgsum=None, norm=None ):
     '''calculation g2 by using a multi-tau algorithm'''
     
     noframes = FD.end - good_start   # number of frames, not "no frames"
@@ -813,12 +837,30 @@ def cal_g2c( FD, ring_mask,
             print ('Bad frame involved and will be precessed!')
     print ('%s frames will be processed...'%(noframes))
 
-    g2, lag_steps =  multi_tau_auto_corr(num_lev, num_buf,   ring_mask, FD, bad_frame_list, imgsum )
+    g2, lag_steps =  multi_tau_auto_corr(num_lev, num_buf,   ring_mask, FD, bad_frame_list, 
+                                         imgsum=imgsum, norm = norm )
 
     print( 'G2 calculation DONE!')
 
     return g2, lag_steps
 
+
+
+def get_pixelist_interp_iq( qp, iq, ring_mask, center):
+    
+    qind, pixelist = roi.extract_label_indices(  ring_mask  )
+    #pixely = pixelist%FD.md['nrows'] -center[1]  
+    #pixelx = pixelist//FD.md['nrows'] - center[0]
+    
+    pixely = pixelist%ring_mask.shape[1] -center[1]  
+    pixelx = pixelist//ring_mask.shape[1]  - center[0]
+    
+    r= np.hypot(pixelx, pixely)              #leave as float.
+    #r= np.int_( np.hypot(pixelx, pixely)  +0.5  ) + 0.5  
+    return np.interp( r, qp, iq ) 
+    
+
+    
 
  
 
