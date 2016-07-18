@@ -880,12 +880,13 @@ class Get_Pixel_Arrayc(object):
         self.length = FD.end -FD.beg
         self.FD = FD
         self.pixelist = pixelist        
-            
+        self.norm = norm    
     def get_data(self ): 
         '''
         To get intested pixels array
         Return: 2-D array, shape as (len(images), len(pixellist))
         '''
+        norm = self.norm
         data_array = np.zeros([ self.length,len(self.pixelist)])        
         #fra_pix = np.zeros_like( pixelist, dtype=np.float64)
         timg = np.zeros(    self.FD.md['ncols'] * self.FD.md['nrows']   , dtype=np.int32   ) 
