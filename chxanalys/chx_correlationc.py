@@ -862,8 +862,6 @@ def get_pixelist_interp_iq( qp, iq, ring_mask, center):
 
     
 
- 
-
 class Get_Pixel_Arrayc(object):
     '''
     a class to get intested pixels from a images sequence, 
@@ -874,7 +872,7 @@ class Get_Pixel_Arrayc(object):
         data_pixel =   Get_Pixel_Array( imgsr, pixelist).get_data()
     '''
     
-    def __init__(self, FD, pixelist):
+    def __init__(self, FD, pixelist, norm=None):
         '''
         indexable: a images sequences
         pixelist:  1-D array, interest pixel list
@@ -897,9 +895,13 @@ class Get_Pixel_Arrayc(object):
             w = np.where( timg[p] )[0]
             pxlist = timg[  p[w]   ] -1 
             #fra_pix[ pxlist] = v[w] 
-            data_array[i][ pxlist] = v[w] 
-        return data_array
-     
+            if norm is None:
+                data_array[i][ pxlist] = v[w] 
+            else: 
+                data_array[i][ pxlist] = v[w] / norm[pxlist]   #-1.0                    
+                    
+            
+        return data_array  
     
 
 
