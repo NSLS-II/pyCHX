@@ -349,7 +349,7 @@ def angular_average(image, calibrated_center, threshold=0, nx=1500,
     if min_r is None:
         min_r=0
     if max_r is None:
-        max_r = np.sqrt(  (image.shape[0] - center[0])**2 +  (image.shape[1] - center[1])**2 )    
+        max_r = np.sqrt(  (image.shape[0] - calibrated_center[0])**2 +  (image.shape[1] - calibrated_center[1])**2 )    
     r_mask = make_ring_mask( calibrated_center, image.shape, min_r, max_r )
     
     
@@ -1641,7 +1641,7 @@ def fit_saxs_g2( g2, res_pargs=None, function='simple_exponential', *argv,**kwar
         ax.set_title(" Q= " + '%.5f  '%(q_ring_center[i]) + r'$\AA^{-1}$')  
         #ax.set_ylim([min(y)*.95, max(y[1:]) *1.05])
         #ax.set_ylim([0.9999, max(y[1:]) *1.002])
-        txts = r'$\gamma$' + r'$ = %.3f$'%(1/rate[i]) +  r'$ s$'
+        txts = r'$\tau$' + r'$ = %.3f$'%(1/rate[i]) +  r'$ s$'
         ax.text(x =0.02, y=.55, s=txts, fontsize=14, transform=ax.transAxes)     
         txts = r'$\alpha$' + r'$ = %.3f$'%(alpha[i])  
         #txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
