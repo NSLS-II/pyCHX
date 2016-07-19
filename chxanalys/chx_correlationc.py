@@ -860,8 +860,6 @@ def get_pixelist_interp_iq( qp, iq, ring_mask, center):
     return np.interp( r, qp, iq ) 
     
 
-    
-
 class Get_Pixel_Arrayc(object):
     '''
     a class to get intested pixels from a images sequence, 
@@ -872,12 +870,19 @@ class Get_Pixel_Arrayc(object):
         data_pixel =   Get_Pixel_Array( imgsr, pixelist).get_data()
     '''
     
-    def __init__(self, FD, pixelist, norm=None):
+    def __init__(self, FD, pixelist,beg=None, end=None, norm=None):
         '''
         indexable: a images sequences
         pixelist:  1-D array, interest pixel list
         '''
-        self.length = FD.end -FD.beg
+        if beg is None:
+            self.beg = FD.beg
+        if end is None:
+            self.end = FD.end
+        if beg ==0:
+            self.length = self.end - self.beg
+        else:
+            self.length = self.end - self.beg + 1
         self.FD = FD
         self.pixelist = pixelist        
         self.norm = norm    
@@ -891,20 +896,19 @@ class Get_Pixel_Arrayc(object):
         #fra_pix = np.zeros_like( pixelist, dtype=np.float64)
         timg = np.zeros(    self.FD.md['ncols'] * self.FD.md['nrows']   , dtype=np.int32   ) 
         timg[self.pixelist] =   np.arange( 1, len(self.pixelist) + 1  ) 
-        for  i in tqdm(range( self.FD.beg , self.FD.end )):
+        n=0
+        for  i in tqdm(range( self.beg , self.end )):
             (p,v) = self.FD.rdrawframe(i)
             w = np.where( timg[p] )[0]
             pxlist = timg[  p[w]   ] -1 
             #fra_pix[ pxlist] = v[w] 
             if norm is None:
-                data_array[i][ pxlist] = v[w] 
+                data_array[n][ pxlist] = v[w] 
             else: 
-                data_array[i][ pxlist] = v[w] / norm[pxlist]   #-1.0                    
-                    
+                data_array[n][ pxlist] = v[w] / norm[pxlist]   #-1.0                    
+            n += 1
             
         return data_array  
-    
-
 
 
 def auto_two_Arrayc(  data_pixel, rois, index=None):
