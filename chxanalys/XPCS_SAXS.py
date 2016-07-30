@@ -132,7 +132,6 @@ def circular_average(image, calibrated_center, threshold=0, nx=None,
 
  
 
-
 def get_circular_average( avg_img, mask, pargs, show_pixel=True,  min_x=None, max_x=None,
                           nx=None, plot_ = False ,   save=False, *argv,**kwargs):   
     """get a circular average of an image        
@@ -179,19 +178,19 @@ def get_circular_average( avg_img, mask, pargs, show_pixel=True,  min_x=None, ma
     #qp = qp_/dpix
     
     if plot_:
-        if  show_pixel:        
+        if  show_pixel:       
         
             fig = plt.figure(figsize=(8, 6))
             ax1 = fig.add_subplot(111)
-            ax2 = ax1.twiny()        
-            ax2.semilogy(qp, iq, '-o')
-            ax1.semilogy(q,  iq , '-o')
+            #ax2 = ax1.twiny()        
+            ax1.semilogy(qp, iq, '-o')
+            #ax1.semilogy(q,  iq , '-o')
             
-            ax2.set_xlabel('q (pixel)')             
-            ax1.set_xlabel('q ('r'$\AA^{-1}$)')
-            ax2.cla()
-            ax1.set_ylabel('I(q)')
-            title = ax2.set_title('Uid= %s--Circular Average'%uid)      
+            ax1.set_xlabel('q (pixel)')             
+            #ax1.set_xlabel('q ('r'$\AA^{-1}$)')
+            #ax2.cla()
+            #ax1.set_ylabel('I(q)')
+            title = ax1.set_title('Uid= %s--Circular Average'%uid)      
             
         else:
             fig = plt.figure(figsize=(8, 6))
@@ -207,8 +206,8 @@ def get_circular_average( avg_img, mask, pargs, show_pixel=True,  min_x=None, ma
             ax1.set_xlim(    kwargs['xlim']  )    
             x1,x2 =  kwargs['xlim']
             w = np.where( (q >=x1 )&( q<=x2) )[0]                        
-            if ax2 is not None:
-                ax2.set_xlim(  [ qp[w[0]], qp[w[-1]]]     ) 
+            #if ax2 is not None:
+            #    ax2.set_xlim(  [ qp[w[0]], qp[w[-1]]]     ) 
             
             
         if 'ylim' in kwargs.keys():
@@ -234,6 +233,8 @@ def get_circular_average( avg_img, mask, pargs, show_pixel=True,  min_x=None, ma
         plt.show()
         
     return  qp, iq, q
+
+ 
  
 
 
@@ -1285,9 +1286,8 @@ def fit_saxs_rad_ang_g2( g2, taus, res_pargs=None,function='simple_exponential',
         result = fit_g2( g2, res_pargs, function = 'simple')
         result = fit_g2( g2, res_pargs, function = 'stretched')
     '''
-    
-    
-    
+  
+
     if res_pargs is not None:
         uid = res_pargs['uid'] 
         path = res_pargs['path'] 
@@ -1322,16 +1322,51 @@ def fit_saxs_rad_ang_g2( g2, taus, res_pargs=None,function='simple_exponential',
     rate = np.zeros(   num_rings )  #  relaxation rate
     alpha = np.zeros(   num_rings )  #  alpha
     baseline = np.zeros(   num_rings )  #  baseline
+    
+            
+    if 'fit_variables' in kwargs:
+        additional_var  = kwargs['fit_variables']        
+        _vars =[ k for k in list( additional_var.keys()) if additional_var[k] is False]
+    else:
+        _vars = []
 
-        
+    _guess_val = dict( beta=.1, alpha=1.0, relaxation_rate =0.005, baseline=1.0)
+    
+    if 'guess_values' in kwargs:         
+        guess_values  = kwargs['guess_values']         
+        _guess_val.update( guess_values )  
+ 
+    
     if function=='simple_exponential' or function=='simple':
-        mod = Model(stretched_auto_corr_scat_factor,  independent_vars=['alpha', 'lags'])   
+        _vars = np.unique ( _vars + ['alpha']) 
+        mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars= list( _vars)   )
+        
         
     elif function=='stretched_exponential' or function=='stretched':
-        mod = Model(stretched_auto_corr_scat_factor,  independent_vars=[ 'lags'])   
+        
+        mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars=  _vars)   
+        
     else:
         print ("The %s is not supported.The supported functions include simple_exponential and stretched_exponential"%function)
     
+    #mod.set_param_hint( 'beta', value = 0.05 )
+    #mod.set_param_hint( 'alpha', value = 1.0 )
+    #mod.set_param_hint( 'relaxation_rate', value = 0.005 )
+    #mod.set_param_hint( 'baseline', value = 1.0, min=0.5, max= 1.5 )
+    mod.set_param_hint( 'baseline',   min=0.5, max= 1.5 )
+    mod.set_param_hint( 'beta',   min=0.0 )
+    mod.set_param_hint( 'alpha',   min=0.0 )
+    mod.set_param_hint( 'relaxation_rate',   min=0.0 )
+    
+    _beta=_guess_val['beta']
+    _alpha=_guess_val['alpha']
+    _relaxation_rate = _guess_val['relaxation_rate']
+    _baseline= _guess_val['baseline']
+    
+    pars  = mod.make_params( beta=_beta, alpha=_alpha, relaxation_rate =_relaxation_rate, baseline= _baseline)
+    
+    for v in _vars:
+        pars['%s'%v].vary = False
         
 
     for qr_ind in range(num_qr):
@@ -1358,19 +1393,17 @@ def fit_saxs_rad_ang_g2( g2, taus, res_pargs=None,function='simple_exponential',
             else:
                 title = title_qa
             ax.set_title( title  )
+            
+            y=g2[1:, i]   #print (y.shape)            
+            lags=taus[1:]        
+            result1 = mod.fit(y, pars, x =lags )
 
-            
-            y=g2[1:, i]
-            #print (y.shape)
-            
-            result1 = mod.fit(y, lags=taus[1:], beta=.05, alpha=1.0,
-                          relaxation_rate =0.005, baseline=1.0,   )
 
             #print ( result1.best_values)
             rate[i] = result1.best_values['relaxation_rate']
             #rate[i] = 1e-16
             beta[i] = result1.best_values['beta'] 
-        
+
             #baseline[i] = 1.0
             baseline[i] =  result1.best_values['baseline'] 
 
