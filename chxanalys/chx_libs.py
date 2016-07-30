@@ -42,6 +42,8 @@ from matplotlib import gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tqdm import tqdm
 
+import collections
+
 import itertools 
 mcolors = itertools.cycle(['b', 'g', 'r', 'c', 'm', 'y', 'k','darkgoldenrod','oldlace', 'brown','dodgerblue'   ])
 markers = itertools.cycle(list(plt.Line2D.filled_markers))
