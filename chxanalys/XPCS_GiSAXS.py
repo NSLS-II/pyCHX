@@ -1103,6 +1103,8 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
     #print (pars)
      
     
+    #result = {}
+    
     
     for qz_ind in range(num_qz):
         fig = plt.figure(figsize=(10, 12))
@@ -1162,25 +1164,26 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
             if 'xlim' in kwargs:
                 ax.set_xlim( kwargs['xlim'])                
 
-            txts = r'$\gamma$' + r'$ = %.3f$'%(1/rate[i]) +  r'$ s$'
-            ax.text(x =0.02, y=.55, s=txts, fontsize=14, transform=ax.transAxes)     
+            txts = r'$\tau$' + r'$ = %.3f$'%(1/rate[i]) +  r'$ s$'
+            
+            ax.text(x =0.02, y=.55 +.3, s=txts, fontsize=14, transform=ax.transAxes)     
             txts = r'$\alpha$' + r'$ = %.3f$'%(alpha[i])  
             #txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
-            ax.text(x =0.02, y=.45, s=txts, fontsize=14, transform=ax.transAxes)  
+            ax.text(x =0.02, y=.45+.3, s=txts, fontsize=14, transform=ax.transAxes)  
 
             txts = r'$baseline$' + r'$ = %.3f$'%( baseline[i]) 
-            ax.text(x =0.02, y=.35, s=txts, fontsize=14, transform=ax.transAxes)        
- 
+            ax.text(x =0.02, y=.35 + .3, s=txts, fontsize=14, transform=ax.transAxes)        
+     
+        #result[qz_ind] = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )
     
         #dt =datetime.now()
         #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute) 
         #fp = path + 'g2--uid=%s-qz=%s-fit'%(uid,qz_center[qz_ind]) + CurTime + '.png'
         #fig.savefig( fp, dpi=fig.dpi)        
-        
+    result = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )    
     fig.tight_layout()  
     plt.show()
-    result = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )
-    
+        
     return result
 
    
