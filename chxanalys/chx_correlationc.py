@@ -276,7 +276,8 @@ Returns
     timg = np.zeros(    FD.md['ncols'] * FD.md['nrows']   , dtype=np.int32   ) 
     timg[pixelist] =   np.arange( 1, len(pixelist) + 1  ) 
     
-    
+    if bad_frame_list is None:
+        bad_frame_list=[]
     for  i in tqdm(range( FD.beg , FD.end )):        
         if i in bad_frame_list:
             fra_pix[:]= np.nan
