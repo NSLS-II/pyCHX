@@ -135,6 +135,125 @@ def mean_intensityc(FD, labeled_array,  sampling=1, index=None):
 
 
 
+def cal_waterfallc(FD, labeled_array,   qindex=1):
+    """Compute the mean intensity for each ROI in the compressed file (FD)
+
+    Parameters
+    ----------
+    FD: Multifile class
+        compressed file
+    labeled_array : array
+        labeled array; 0 is background.
+        Each ROI is represented by a nonzero integer. It is not required that
+        the ROI labels are contiguous
+    qindex : int 
+        The ROI's to use.  
+
+    Returns
+    -------
+    waterfall : array
+        The mean intensity of each ROI for all `images`
+        Dimensions:
+            len(mean_intensity) == len(index)
+            len(mean_intensity[0]) == len(images)
+    index : list
+        The labels for each element of the `mean_intensity` list
+    """
+    sampling =1
+    
+    labeled_array_ = np.array( labeled_array == qindex, dtype= np.int64)
+    
+    qind, pixelist = roi.extract_label_indices(  labeled_array_  ) 
+    
+    if labeled_array_.shape != ( FD.md['ncols'],FD.md['nrows']):
+        raise ValueError(
+            " `image` shape (%d, %d) in FD is not equal to the labeled_array shape (%d, %d)" %( FD.md['ncols'],FD.md['nrows'], labeled_array_.shape[0], labeled_array_.shape[1]) )
+          
+    # pre-allocate an array for performance
+    # might be able to use list comprehension to make this faster
+    
+    watf = np.zeros(   [ int( ( FD.end - FD.beg)/sampling ), len(qind)] )    
+    
+    #fra_pix = np.zeros_like( pixelist, dtype=np.float64)
+    
+    timg = np.zeros(    FD.md['ncols'] * FD.md['nrows']   , dtype=np.int32   ) 
+    timg[pixelist] =   np.arange( 1, len(pixelist) + 1  ) 
+    
+    
+    
+    #maxqind = max(qind)    
+    norm = np.bincount( qind  )[1:]
+    n= 0         
+    #for  i in tqdm(range( FD.beg , FD.end )):        
+    for  i in tqdm(range( FD.beg, FD.end, sampling  ), desc= 'Get waterfall for q index=%s'%qindex ):
+        (p,v) = FD.rdrawframe(i)
+        w = np.where( timg[p] )[0]
+        pxlist = timg[  p[w]   ] -1        
+       
+        watf[n][pxlist] =  v[w]
+        n +=1    
+        
+    return watf
+
+
+def plot_waterfallc(wat, qindex=1, aspect = 1.0,vmax=None,):
+    '''plot waterfall for a giving compressed file
+    
+       FD: class object, the compressed file handler
+       labeled_array: np.array, a ROI mask
+       qindex: the index number of q, will calculate where( labeled_array == qindex)
+       aspect: the aspect ratio of the plot
+       
+       Return waterfall
+       Plot the waterfall
+    
+    '''
+    
+    #wat = cal_waterfallc( FD, labeled_array, qindex=qindex)
+    fig, ax = plt.subplots(figsize=(8,6))
+    ax.set_ylabel('Pixel')
+    ax.set_xlabel('Frame')
+    ax.set_title('Waterfall_Plot_@qind=%s'%qindex)
+
+    im = ax.imshow(wat.T, cmap='viridis', vmax=vmax)
+    fig.colorbar( im   )
+    ax.set_aspect( aspect)
+    plt.show()
+    
+
+
+
+def get_waterfallc(FD, labeled_array, qindex=1, aspect = 1.0,vmax=None):
+    '''plot waterfall for a giving compressed file
+    
+       FD: class object, the compressed file handler
+       labeled_array: np.array, a ROI mask
+       qindex: the index number of q, will calculate where( labeled_array == qindex)
+       aspect: the aspect ratio of the plot
+       
+       Return waterfall
+       Plot the waterfall
+    
+    '''
+    
+    wat = cal_waterfallc( FD, labeled_array, qindex=qindex)
+    fig, ax = plt.subplots(figsize=(8,6))
+    ax.set_ylabel('Pixel')
+    ax.set_xlabel('Frame')
+    ax.set_title('Waterfall_Plot_@qind=%s'%qindex)
+
+    im = ax.imshow(wat.T, cmap='viridis', vmax=vmax)
+    fig.colorbar( im   )
+    ax.set_aspect( aspect)
+    plt.show()
+    return  wat
+
+
+
+
+
+
+
 
 def get_each_ring_mean_intensityc( FD, ring_mask, sampling=1, timeperframe=None, plot_ = True , save=False, *argv,**kwargs):   
     
