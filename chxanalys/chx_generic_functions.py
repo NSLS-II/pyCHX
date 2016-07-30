@@ -722,4 +722,102 @@ def get_diffusion_coefficient( visocity, radius, T=298):
     
     k=  1.38064852*10**(-23)    
     return k*T / ( 6*np.pi* visocity * radius) * 10**20 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def ring_edges(inner_radius, width, spacing=0, num_rings=None):
+    """
+    Calculate the inner and outer radius of a set of rings.
+
+    The number of rings, their widths, and any spacing between rings can be
+    specified. They can be uniform or varied.
+
+    Parameters
+    ----------
+    inner_radius : float
+        inner radius of the inner-most ring
+
+    width : float or list of floats
+        ring thickness
+        If a float, all rings will have the same thickness.
+
+    spacing : float or list of floats, optional
+        margin between rings, 0 by default
+        If a float, all rings will have the same spacing. If a list,
+        the length of the list must be one less than the number of
+        rings.
+
+    num_rings : int, optional
+        number of rings
+        Required if width and spacing are not lists and number
+        cannot thereby be inferred. If it is given and can also be
+        inferred, input is checked for consistency.
+
+    Returns
+    -------
+    edges : array
+        inner and outer radius for each ring
+
+    Example
+    -------
+    # Make two rings starting at r=1px, each 5px wide
+    >>> ring_edges(inner_radius=1, width=5, num_rings=2)
+    [(1, 6), (6, 11)]
+    # Make three rings of different widths and spacings.
+    # Since the width and spacings are given individually, the number of
+    # rings here is simply inferred.
+    >>> ring_edges(inner_radius=1, width=(5, 4, 3), spacing=(1, 2))
+    [(1, 6), (7, 11), (13, 16)]
+    """
+    # All of this input validation merely checks that width, spacing, and
+    # num_rings are self-consistent and complete.
+    width_is_list = isinstance(width, collections.Iterable)
+    spacing_is_list = isinstance(spacing, collections.Iterable)
+    if (width_is_list and spacing_is_list):
+        if len(width) != len(spacing) + 1:
+            raise ValueError("List of spacings must be one less than list "
+                             "of widths.")
+    if num_rings is None:
+        try:
+            num_rings = len(width)
+        except TypeError:
+            try:
+                num_rings = len(spacing) + 1
+            except TypeError:
+                raise ValueError("Since width and spacing are constant, "
+                                 "num_rings cannot be inferred and must be "
+                                 "specified.")
+    else:
+        if width_is_list:
+            if num_rings != len(width):
+                raise ValueError("num_rings does not match width list")
+        if spacing_is_list:
+            if num_rings-1 != len(spacing):
+                raise ValueError("num_rings does not match spacing list")
+
+    # Now regularlize the input.
+    if not width_is_list:
+        width = np.ones(num_rings) * width
+    if not spacing_is_list:
+        spacing = np.ones(num_rings - 1) * spacing
+
+    # The inner radius is the first "spacing."
+    all_spacings = np.insert(spacing, 0, inner_radius)
+    steps = np.array([all_spacings, width]).T.ravel()
+    edges = np.cumsum(steps).reshape(-1, 2)
+
+    return edges
+
+
         
