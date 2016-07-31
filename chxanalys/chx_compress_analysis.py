@@ -364,7 +364,7 @@ def get_t_iqc( FD, frame_edge, mask, pargs, nx=1500, plot_ = False , save=False,
     return qp, np.array( iqs ),q
 
 
-def get_each_frame_intensityc( FD, sampling = 50, 
+def get_each_frame_intensityc( FD, sampling = 1, 
                              bad_pixel_threshold=1e10,  hot_pixel_threshold=2**30,                             
                              plot_ = False,  *argv,**kwargs):   
     '''Get the total intensity of each frame by sampling every N frames
@@ -396,7 +396,7 @@ def get_each_frame_intensityc( FD, sampling = 50,
         ax.set_ylabel( 'Total_Intensity' )
         plt.show()  
         
-    bad_frame_list = np.where( (np.array(imgsum) > bad_pixel_threshold) |  (np.array(imgsum)==0) )[0]
+    bad_frame_list = np.where( (np.array(imgsum) > bad_pixel_threshold) |  (np.array(imgsum)==0) )[0] +  FD.beg
     
     if len(bad_frame_list):
         print ('Bad frame list are: %s' %bad_frame_list)
