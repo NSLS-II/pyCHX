@@ -237,6 +237,7 @@ def get_waterfallc(FD, labeled_array, qindex=1, aspect = 1.0,vmax=None):
     '''
     
     wat = cal_waterfallc( FD, labeled_array, qindex=qindex)
+    
     fig, ax = plt.subplots(figsize=(8,6))
     ax.set_ylabel('Pixel')
     ax.set_xlabel('Frame')
@@ -254,7 +255,6 @@ def get_waterfallc(FD, labeled_array, qindex=1, aspect = 1.0,vmax=None):
 
 
 
-
 def get_each_ring_mean_intensityc( FD, ring_mask, sampling=1, timeperframe=None, plot_ = True , save=False, *argv,**kwargs):   
     
     """
@@ -263,10 +263,10 @@ def get_each_ring_mean_intensityc( FD, ring_mask, sampling=1, timeperframe=None,
     
     mean_int_sets, index_list = mean_intensityc(FD, ring_mask, sampling, index=None) 
     if timeperframe is None: 
-        times = np.arange( FD.end - FD.beg  ) # get the time for each frame
+        times = np.arange( FD.end - FD.beg  ) + FD.beg # get the time for each frame
     else:
-        times = np.arange( FD.end - FD.beg  )*timeperframe
-    num_rings = len( np.unique( ring_mask)[1:] )
+        times = ( FD.beg + np.arange( FD.end - FD.beg ) )*timeperframe
+    num_rings = len( np.unique( ring_mask)[1:] ) 
     
     if plot_:
         fig, ax = plt.subplots(figsize=(8, 8))
