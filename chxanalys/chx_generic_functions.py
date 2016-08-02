@@ -820,4 +820,56 @@ def ring_edges(inner_radius, width, spacing=0, num_rings=None):
     return edges
 
 
+
+
+
+def trans_tf_to_td(tf, dtype = 'dframe'):
+    import pandas as pd
+    import numpy as np
+    import datetime
+    '''translate time.float to time.date,
+       td.type dframe: a dataframe
+       td.type list,   a list
+    ''' 
+    if dtype is 'dframe':ind = tf.index
+    else:ind = range(len(tf))    
+    td = np.array([ datetime.datetime.fromtimestamp(tf[i]) for i in ind ])
+    return td
+
+
+
+def trans_td_to_tf(td, dtype = 'dframe'):
+    import time
+    import numpy as np
+    '''translate time.date to time.float,
+       td.type dframe: a dataframe
+       td.type list,   a list
+    ''' 
+    if dtype is 'dframe':ind = td.index
+    else:ind = range(len(td))
+    #tf = np.array([ time.mktime(td[i].timetuple()) for i in range(len(td)) ])
+    tf = np.array([ time.mktime(td[i].timetuple()) for i in ind])
+    return tf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         
