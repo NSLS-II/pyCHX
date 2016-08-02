@@ -27,7 +27,9 @@ def make_gisaxs_grid( qr_w= 10, qz_w = 12, dim_r =100,dim_z=120):
 
 
 def get_incident_angles( inc_x0, inc_y0, refl_x0, refl_y0, pixelsize=[75,75], Lsd=5.0):
-    ''' giving: incident beam center: bcenx,bceny
+    ''' 
+        Dec 16, 2015, Y.G.@CHX
+        giving: incident beam center: bcenx,bceny
                 reflected beam on detector: rcenx, rceny
                 sample to detector distance: Lsd, in meters
                 pixelsize: 75 um for Eiger4M detector
@@ -44,7 +46,8 @@ def get_incident_angles( inc_x0, inc_y0, refl_x0, refl_y0, pixelsize=[75,75], Ls
 def get_reflected_angles(inc_x0, inc_y0, refl_x0, refl_y0, thetai=0.0,
                          pixelsize=[75,75], Lsd=5.0,dimx = 2070.,dimy=2167.):
     
-    ''' giving: incident beam center: bcenx,bceny
+    ''' Dec 16, 2015, Y.G.@CHX
+        giving: incident beam center: bcenx,bceny
                 reflected beam on detector: rcenx, rceny
                 sample to detector distance: Lsd, in meters                
                 pixelsize: 75 um for Eiger4M detector
@@ -70,7 +73,7 @@ def convert_gisaxs_pixel_to_q( inc_x0, inc_y0, refl_x0, refl_y0,
                               thetai=0.0, lamda=1.0 ):
     
     ''' 
-    
+    Dec 16, 2015, Y.G.@CHX
     giving: incident beam center: bcenx,bceny
                 reflected beam on detector: rcenx, rceny
                 sample to detector distance: Lsd, in meters                
@@ -112,7 +115,8 @@ def convert_gisaxs_pixel_to_q( inc_x0, inc_y0, refl_x0, refl_y0,
     
 
 def get_qedge( qstart,qend,qwidth,noqs ):
-    ''' DOCUMENT make_qlist( )
+    ''' Dec 16, 2015, Y.G.@CHX
+    DOCUMENT make_qlist( )
     give qstart,qend,qwidth,noqs
     return a qedge by giving the noqs, qstart,qend,qwidth.
            a qcenter, which is center of each qedge 
@@ -283,7 +287,7 @@ def show_alphaf(alphaf,):
     
 def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,
               ticks=None, alpha=0.3, loglog=False, save=True, setup_pargs=None ): 
-    '''
+    '''Dec 16, 2015, Y.G.@CHX
        plot one-d of I(q) as a function of qr for different qz
        data: a dataframe
        Qr: info for qr, = qr_start , qr_end, qr_width, qr_num
@@ -760,7 +764,8 @@ def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3):
 #plot g2 results
 
 def plot_gisaxs_g2( g2, taus, res_pargs=None, *argv,**kwargs):     
-    '''plot g2 results, 
+    '''Dec 16, 2015, Y.G.@CHX
+        plot g2 results, 
        g2: one-time correlation function
        taus: the time delays  
        res_pargs, a dict, can contains
@@ -864,7 +869,8 @@ def plot_gisaxs_g2( g2, taus, res_pargs=None, *argv,**kwargs):
 #plot g2 results
 
 def plot_gisaxs_two_g2( g2, taus, g2b, tausb,res_pargs=None, *argv,**kwargs):        
-    '''plot g2 results, 
+    '''Dec 16, 2015, Y.G.@CHX
+        plot g2 results, 
        g2: one-time correlation function from a multi-tau method
        g2b: another g2 from a two-time method
        taus: the time delays        
@@ -988,9 +994,11 @@ def save_gisaxs_g2(  g2,res_pargs , *argv,**kwargs):
     df = DataFrame(     np.hstack( [ (taus).reshape( len(g2),1) ,  g2] )  ) 
     columns=[]
     columns.append('tau')
+    
     for qz in qz_center:
         for qr in qr_center:
             columns.append( [str(qz),str(qr)] )
+            
     df.columns = columns   
     
     dt =datetime.now()
@@ -1012,6 +1020,7 @@ def simple_exponential(x, beta, relaxation_rate,  baseline=1):
 
 def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs):     
     '''
+    July 20, Y.G.@CHX
     Fit one-time correlation function
     
     The support functions include simple exponential and stretched/compressed exponential
@@ -1067,13 +1076,6 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
     alpha = np.zeros(   num_rings )  #  alpha
     baseline = np.zeros(   num_rings )  #  baseline
     
-    if 'variables' in kwargs:
-        additional_var  = kwargs['variables']        
-        _vars =[ k for k in list( additional_var.keys()) if additional_var[k] is False]
-    else:
-        _vars = []
-        
-                           
     if function=='simple_exponential' or function=='simple':
         _vars = np.unique ( _vars + ['alpha']) 
         mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars= list( _vars)   )
@@ -1085,27 +1087,51 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
         
     else:
         print ("The %s is not supported.The supported functions include simple_exponential and stretched_exponential"%function)
+
     
     #mod.set_param_hint( 'beta', value = 0.05 )
     #mod.set_param_hint( 'alpha', value = 1.0 )
     #mod.set_param_hint( 'relaxation_rate', value = 0.005 )
     #mod.set_param_hint( 'baseline', value = 1.0, min=0.5, max= 1.5 )
-    mod.set_param_hint( 'baseline',   min=0.5, max= 1.5 )
+    mod.set_param_hint( 'baseline',   min=0.5, max= 2.5 )
     mod.set_param_hint( 'beta',   min=0.0 )
     mod.set_param_hint( 'alpha',   min=0.0 )
     mod.set_param_hint( 'relaxation_rate',   min=0.0 )
-    
-    
-    pars  = mod.make_params( beta=.05, alpha=1.0, relaxation_rate =0.005, baseline=1.0)    
+            
+        
+
+    if 'fit_variables' in kwargs:
+        additional_var  = kwargs['fit_variables']      
+        #print ( additional_var   )
+        _vars =[ k for k in list( additional_var.keys()) if additional_var[k] is False]
+    else:
+        _vars = []  
+        
+    if 'guess_values' in kwargs:
+        if 'beta' in list(kwargs['guess_values'].keys()):  
+            beta_ = kwargs['guess_values']['beta']
+        else:
+            beta_=0.05           
+            
+        if 'alpha' in list(kwargs['guess_values'].keys()):        
+            alpha_= kwargs['guess_values']['alpha']
+        else:
+            alpha_=1.0
+        if 'relaxation_rate' in list(kwargs['guess_values'].keys()):        
+            relaxation_rate_= kwargs['guess_values']['relaxation_rate']
+        else:
+            relaxation_rate_=0.005
+        if 'baseline' in list(kwargs['guess_values'].keys()):        
+            baseline_= kwargs['guess_values']['baseline']
+        else:
+            baseline_=1.0
+        pars  = mod.make_params( beta=beta_, alpha=alpha_, relaxation_rate = relaxation_rate_, baseline=baseline_)  
+    else:
+        pars  = mod.make_params( beta=.05, alpha=1.0, relaxation_rate =0.005, baseline=1.0) 
+                           
     for v in _vars:
-        pars['%s'%v].vary = False
-    
-    #print (pars)
-     
-    
-    #result = {}
-    
-    
+        pars['%s'%v].vary = False        
+        #print ( pars['%s'%v], pars['%s'%v].vary )
     for qz_ind in range(num_qz):
         fig = plt.figure(figsize=(10, 12))
         #fig = plt.figure()
@@ -1186,9 +1212,7 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
         
     return result
 
-   
-    
-    
+
     
     
 #GiSAXS End
@@ -1198,6 +1222,7 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
     
 def get_each_box_mean_intensity( data_series, box_mask, sampling, timeperframe, plot_ = True ,  *argv,**kwargs):   
     
+    '''Dec 16, 2015, Y.G.@CHX'''
     
     mean_int_sets, index_list = roi.mean_intensity(np.array(  data_series[::sampling]), box_mask) 
     try:
