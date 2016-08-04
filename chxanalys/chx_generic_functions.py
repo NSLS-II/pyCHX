@@ -128,6 +128,32 @@ def load_data2( uid , detector = 'eiger4m_single_image'  ):
     return imgs
 
 
+
+def psave_obj(obj, filename ):
+    '''save an object with filename by pickle.dump method
+       This function automatically add '.pkl' as filename extension
+    Input:
+        obj: the object to be saved
+        filename: filename (with full path) to be saved
+    Return:
+        None    
+    '''
+    with open( filename + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+
+def pload_obj(filename ):
+    '''load a pickled filename 
+        This function automatically add '.pkl' to filename extension
+    Input:        
+        filename: filename (with full path) to be saved
+    Return:
+        load the object by pickle.load method
+    '''
+    with open( filename + '.pkl', 'rb') as f:
+        return pickle.load(f)
+    
+    
+    
 def load_mask( path, mask_name, plot_ = False, *argv,**kwargs): 
     
     """load a mask file
@@ -643,14 +669,24 @@ def trans_data_to_pd(data, label=None,dtype='array'):
 
 def save_lists( data, label=None,  filename=None, path=None):    
     '''
-    save lists to a CSV file wit filename in path
+    save_lists( data, label=None,  filename=None, path=None)
     
+    save lists to a CSV file with filename in path
+    Parameters
+    ----------
+    data: list
+    label: the column name, the length should be equal to the column number of list
+    filename: the filename to be saved
+    path: the filepath to be saved
+    
+    Example:    
+    save_arrays(  [q,iq], label= ['q_A-1', 'Iq'], filename='uid=%s-q-Iq'%uid, path= data_dir  )    
     '''
+    
     M,N = len(data[0]),len(data)
     d = np.zeros( [N,M] )
     for i in range(N):
-        d[i] = data[i]
-        
+        d[i] = data[i]        
     
     df = trans_data_to_pd(d.T, label, 'array')  
     #dt =datetime.now()
@@ -688,12 +724,22 @@ def get_pos_val_overlap( p1, v1, p2,v2, Nl):
     
     
     
-    
-    
-    
 def save_arrays( data, label=None, dtype='array', filename=None, path=None):    
     '''
-    save data to a CSV file wit filename in path
+    save_arrays( data, label=None, dtype='array', filename=None, path=None): 
+    save data to a CSV file with filename in path
+    Parameters
+    ----------
+    data: arrays
+    label: the column name, the length should be equal to the column number of data
+    dtype: array or list
+    filename: the filename to be saved
+    path: the filepath to be saved
+    
+    Example:
+    
+    save_arrays(  qiq, label= ['q_A-1', 'Iq'], dtype='array', filename='uid=%s-q-Iq'%uid, path= data_dir  )
+
     
     '''
     df = trans_data_to_pd(data, label,dtype)  
@@ -726,18 +772,10 @@ def get_diffusion_coefficient( visocity, radius, T=298):
 
 
 
-
-
-
-
-
-
-
-
-
-
 def ring_edges(inner_radius, width, spacing=0, num_rings=None):
     """
+    ring_edges(inner_radius, width, spacing=0, num_rings=None)
+    
     Calculate the inner and outer radius of a set of rings.
 
     The number of rings, their widths, and any spacing between rings can be
@@ -779,6 +817,7 @@ def ring_edges(inner_radius, width, spacing=0, num_rings=None):
     # rings here is simply inferred.
     >>> ring_edges(inner_radius=1, width=(5, 4, 3), spacing=(1, 2))
     [(1, 6), (7, 11), (13, 16)]
+    
     """
     # All of this input validation merely checks that width, spacing, and
     # num_rings are self-consistent and complete.
