@@ -10,7 +10,7 @@ from chxanalys.chx_libs import (np, roi, time, datetime, os,  getpass, db, get_i
 from chxanalys.XPCS_SAXS import (get_circular_average)
 
 import os
-
+from chxanalys.chx_generic_functions import ( save_arrays )
 
 
 from skbeam.core.utils import multi_tau_lags
@@ -55,10 +55,6 @@ def get_avg_imgc( FD,  beg=None,end=None,sampling = 100, plot_ = False ,  *argv,
         fig.colorbar(im)
         plt.show()
     return avg_img
-
-
-
-
 
 
 def mean_intensityc(FD, labeled_array,  sampling=1, index=None):
@@ -135,7 +131,7 @@ def mean_intensityc(FD, labeled_array,  sampling=1, index=None):
 
 
 
-def cal_waterfallc(FD, labeled_array,   qindex=1):
+def cal_waterfallc(FD, labeled_array,   qindex=1, save=False, *argv,**kwargs):   
     """Compute the mean intensity for each ROI in the compressed file (FD)
 
     Parameters
@@ -191,12 +187,16 @@ def cal_waterfallc(FD, labeled_array,   qindex=1):
         pxlist = timg[  p[w]   ] -1        
        
         watf[n][pxlist] =  v[w]
-        n +=1    
-        
+        n +=1   
+    if save:
+        path = kwargs['path'] 
+        uid = kwargs['uid']
+        np.save(  path + 'uid=%s--waterfall'%uid, watf) 
+            
     return watf
 
 
-def plot_waterfallc(wat, qindex=1, aspect = 1.0,vmax=None,):
+def plot_waterfallc(wat, qindex=1, aspect = 1.0,vmax=None,save=False, *argv,**kwargs):   
     '''plot waterfall for a giving compressed file
     
        FD: class object, the compressed file handler
@@ -214,16 +214,34 @@ def plot_waterfallc(wat, qindex=1, aspect = 1.0,vmax=None,):
     ax.set_ylabel('Pixel')
     ax.set_xlabel('Frame')
     ax.set_title('Waterfall_Plot_@qind=%s'%qindex)
-
-    im = ax.imshow(wat.T, cmap='viridis', vmax=vmax)
+    if 'beg' in kwargs:
+        beg = kwargs['beg']
+    else:
+        beg=0
+    
+    extent = [  beg, len(wat)+beg, 0, len( wat.T) ]
+    im = ax.imshow(wat.T, cmap='viridis', vmax=vmax,extent= extent)
     fig.colorbar( im   )
     ax.set_aspect( aspect)
+    
+    if save:
+        dt =datetime.now()
+        CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
+        path = kwargs['path'] 
+        if 'uid' in kwargs:
+            uid = kwargs['uid']
+        else:
+            uid = 'uid'
+        fp = path + "Uid= %s--Waterfall-"%uid + CurTime + '.png'         
+        fig.savefig( fp, dpi=fig.dpi)
+        
     plt.show()
     
 
 
 
-def get_waterfallc(FD, labeled_array, qindex=1, aspect = 1.0,vmax=None):
+def get_waterfallc(FD, labeled_array, qindex=1, aspect = 1.0,
+                   vmax=None, save=False, *argv,**kwargs):   
     '''plot waterfall for a giving compressed file
     
        FD: class object, the compressed file handler
@@ -246,6 +264,8 @@ def get_waterfallc(FD, labeled_array, qindex=1, aspect = 1.0,vmax=None):
     im = ax.imshow(wat.T, cmap='viridis', vmax=vmax)
     fig.colorbar( im   )
     ax.set_aspect( aspect)
+    
+    
     plt.show()
     return  wat
 
@@ -290,6 +310,11 @@ def get_each_ring_mean_intensityc( FD, ring_mask, sampling=1, timeperframe=None,
             path = kwargs['path']              
             fp = path + "Uid= %s--Mean intensity of each ring-"%uid + CurTime + '.png'         
             fig.savefig( fp, dpi=fig.dpi)
+            
+            save_arrays( np.hstack( [times.reshape(len(times),1), mean_int_sets]),
+                        label=  ['frame']+ ['ROI_%d'%i for i in range( num_rings ) ],
+                        filename='uid=%s-t-ROIs'%uid, path= path  )           
+            
         
         plt.show()
         
@@ -352,11 +377,15 @@ def get_t_iqc( FD, frame_edge, mask, pargs, nx=1500, plot_ = False , save=False,
         title.set_y(1.01)
         if save:
             dt =datetime.now()
-            CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.m%systemonth, dt.day,dt.hour,dt.minute)
+            CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
             path = pargs['path']
             uid = pargs['uid']
             fp = path + 'Uid= %s--Iq~t-'%uid + CurTime + '.png'         
             fig.savefig( fp, dpi=fig.dpi)
+            
+            save_arrays(  np.vstack( [q, np.array(iqs)]).T, 
+                        label=  ['q_A-1']+ ['Fram-%s-%s'%(t[0],t[1]) for t in frame_edge],
+                        filename='uid=%s-q-Iqt'%uid, path= path  )
             
         plt.show()
         
