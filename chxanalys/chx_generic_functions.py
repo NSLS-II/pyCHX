@@ -317,6 +317,12 @@ def plot1D( y,x=None, ax=None,*argv,**kwargs):
     if 'ylabel' in kwargs.keys():            
         ax.set_ylabel(kwargs['ylabel'])
         
+    if 'title' in kwargs.keys():
+        title =  kwargs['title']
+    else:
+        title =  'plot'
+    ax.set_title( title )        
+        
     #ax.set_xlabel("$Log(q)$"r'($\AA^{-1}$)')
     
     ax.legend(loc = 'best')  
@@ -324,7 +330,7 @@ def plot1D( y,x=None, ax=None,*argv,**kwargs):
         if  kwargs['save']: 
             dt =datetime.now()
             CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)         
-            fp = kwargs['path'] + '%s'%(kwargs['plot_name'] ) + CurTime + '.png'         
+            fp = kwargs['path'] + '%s'%( title ) + CurTime + '.png'         
             fig.savefig( fp, dpi=fig.dpi) 
         
       
