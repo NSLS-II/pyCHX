@@ -1,6 +1,5 @@
-from .chx_generic_functions import *
 
-
+from chxanalys.chx_generic_functions import *
  
 def bin_1D(x, y, nx=None, min_x=None, max_x=None):
     """
@@ -189,7 +188,7 @@ def get_circular_average( avg_img, mask, pargs, show_pixel=True,  min_x=None, ma
             ax1.set_xlabel('q (pixel)')             
             #ax1.set_xlabel('q ('r'$\AA^{-1}$)')
             #ax2.cla()
-            #ax1.set_ylabel('I(q)')
+            ax1.set_ylabel('I(q)')
             title = ax1.set_title('Uid= %s--Circular Average'%uid)      
             
         else:
@@ -229,6 +228,8 @@ def get_circular_average( avg_img, mask, pargs, show_pixel=True,  min_x=None, ma
             path = pargs['path']
             fp = path + 'Uid= %s--Circular Average'%uid + CurTime + '.png'         
             fig.savefig( fp, dpi=fig.dpi)
+            
+            save_lists(  [q, iq], label=['q_A-1', 'Iq'],  filename='uid=%s-q-Iq'%uid, path= path  )
         
         plt.show()
         
@@ -1480,7 +1481,8 @@ def save_saxs_g2(  g2, res_pargs, taus=None, filename=None ):
     
     if filename is None:
         filename = 'g2'
-    filename += '-uid=%s-%s.csv' % (uid,CurTime)    
+    #filename += '-uid=%s-%s.csv' % (uid,CurTime)   
+    filename += '-uid=%s.csv' % (uid) 
     filename1 = os.path.join(path, filename)
     df.to_csv(filename1)
     print( 'The g2 is saved in %s with filename as %s'%( path, filename))
@@ -1497,6 +1499,8 @@ def simple_exponential(x, beta, relaxation_rate,  baseline=1):
 
 def fit_saxs_g2( g2, res_pargs=None, function='simple_exponential', *argv,**kwargs):    
     '''
+    Aug 5,2016, Y.G.@CHX
+    
     Fit one-time correlation function
     
     The support functions include simple exponential and stretched/compressed exponential
@@ -1578,21 +1582,13 @@ def fit_saxs_g2( g2, res_pargs=None, function='simple_exponential', *argv,**kwar
     else:
         sy = int(num_rings/sx+1)
         
-        
-        
+
     if 'fit_variables' in kwargs:
         additional_var  = kwargs['fit_variables']        
         _vars =[ k for k in list( additional_var.keys()) if additional_var[k] is False]
     else:
         _vars = []
-
-    _guess_val = dict( beta=.1, alpha=1.0, relaxation_rate =0.005, baseline=1.0)
-    
-    if 'guess_values' in kwargs:         
-        guess_values  = kwargs['guess_values']         
-        _guess_val.update( guess_values )  
- 
-    
+        
     if function=='simple_exponential' or function=='simple':
         _vars = np.unique ( _vars + ['alpha']) 
         mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars= list( _vars)   )
@@ -1603,17 +1599,27 @@ def fit_saxs_g2( g2, res_pargs=None, function='simple_exponential', *argv,**kwar
         mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars=  _vars)   
         
     else:
-        print ("The %s is not supported.The supported functions include simple_exponential and stretched_exponential"%function)
+        print ("The %s is not supported.The supported functions include simple_exponential and stretched_exponential"%function)  
+        
     
     #mod.set_param_hint( 'beta', value = 0.05 )
     #mod.set_param_hint( 'alpha', value = 1.0 )
     #mod.set_param_hint( 'relaxation_rate', value = 0.005 )
     #mod.set_param_hint( 'baseline', value = 1.0, min=0.5, max= 1.5 )
-    mod.set_param_hint( 'baseline',   min=0.5, max= 1.5 )
+    mod.set_param_hint( 'baseline',   min=0.5, max= 2.5 )
     mod.set_param_hint( 'beta',   min=0.0 )
     mod.set_param_hint( 'alpha',   min=0.0 )
     mod.set_param_hint( 'relaxation_rate',   min=0.0 )
+        
+        
+
+
+    _guess_val = dict( beta=.1, alpha=1.0, relaxation_rate =0.005, baseline=1.0)
     
+    if 'guess_values' in kwargs:         
+        guess_values  = kwargs['guess_values']         
+        _guess_val.update( guess_values )  
+   
     _beta=_guess_val['beta']
     _alpha=_guess_val['alpha']
     _relaxation_rate = _guess_val['relaxation_rate']
