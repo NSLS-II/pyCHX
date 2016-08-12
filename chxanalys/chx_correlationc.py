@@ -1,6 +1,10 @@
 """
-This module is for functions specific to time correlation
+June 10, Developed by Y.G.@CHX with the assistance of Mark Sutton
+yuzhang@bnl.gov
+This module is for computation of time correlation by using compressing algorithm
 """
+
+
 from __future__ import absolute_import, division, print_function
 
 from skbeam.core.utils import multi_tau_lags
@@ -135,6 +139,85 @@ _two_time_internal_state = namedtuple(
 )
 
 
+def _validate_and_transform_inputs(num_bufs, num_levels, labels):
+    """
+    This is a helper function to validate inputs and create initial state
+    inputs for both one time and two time correlation
+    Parameters
+    ----------
+    num_bufs : int
+    num_levels : int
+    labels : array
+        labeled array of the same shape as the image stack;
+        each ROI is represented by a distinct label (i.e., integer)
+    Returns
+    -------
+    label_array : array
+        labels of the required region of interests(ROI's)
+    pixel_list : array
+        1D array of indices into the raveled image for all
+        foreground pixels (labeled nonzero)
+        e.g., [5, 6, 7, 8, 14, 15, 21, 22]
+    num_rois : int
+        number of region of interests (ROI)
+    num_pixels : array
+        number of pixels in each ROI
+    lag_steps : array
+        the times at which the correlation was computed
+    buf : array
+        image data for correlation
+    img_per_level : array
+        to track how many images processed in each level
+    track_level : array
+        to track processing each level
+    cur : array
+        to increment the buffer
+    norm : dict
+        to track bad images
+    lev_len : array
+        length of each levels
+    """
+    if num_bufs % 2 != 0:
+        raise ValueError("There must be an even number of `num_bufs`. You "
+                         "provided %s" % num_bufs)
+    label_array, pixel_list = extract_label_indices(labels)
+
+    # map the indices onto a sequential list of integers starting at 1
+    label_mapping = {label: n+1
+                     for n, label in enumerate(np.unique(label_array))}
+    # remap the label array to go from 1 -> max(_labels)
+    for label, n in label_mapping.items():
+        label_array[label_array == label] = n
+
+    # number of ROI's
+    num_rois = len(label_mapping)
+
+    # stash the number of pixels in the mask
+    num_pixels = np.bincount(label_array)[1:]
+
+    # Convert from num_levels, num_bufs to lag frames.
+    tot_channels, lag_steps, dict_lag = multi_tau_lags(num_levels, num_bufs)
+
+    # these norm and lev_len will help to find the one time correlation
+    # normalization norm will updated when there is a bad image
+    norm = {key: [0] * len(dict_lag[key]) for key in (dict_lag.keys())}
+    lev_len = np.array([len(dict_lag[i]) for i in (dict_lag.keys())])
+
+    # Ring buffer, a buffer with periodic boundary conditions.
+    # Images must be keep for up to maximum delay in buf.
+    buf = np.zeros((num_levels, num_bufs, len(pixel_list)),
+                   dtype=np.float64)
+    # to track how many images processed in each level
+    img_per_level = np.zeros(num_levels, dtype=np.int64)
+    # to track which levels have already been processed
+    track_level = np.zeros(num_levels, dtype=bool)
+    # to increment buffer
+    cur = np.ones(num_levels, dtype=np.int64)
+
+    return (label_array, pixel_list, num_rois, num_pixels,
+            lag_steps, buf, img_per_level, track_level, cur,
+            norm, lev_len)
+
 def _init_state_one_time(num_levels, num_bufs, labels):
     """Initialize a stateful namedtuple for the generator-based multi-tau
      for one time correlation
@@ -181,6 +264,7 @@ def _init_state_one_time(num_levels, num_bufs, labels):
         norm,
         lev_len,
     )
+
 
 def fill_pixel( p, v, pixelist):    
     fra_pix = np.zeros_like( pixelist )
@@ -718,84 +802,7 @@ def _init_state_two_time(num_levels, num_bufs, labels, num_frames):
     )
 
 
-def _validate_and_transform_inputs(num_bufs, num_levels, labels):
-    """
-    This is a helper function to validate inputs and create initial state
-    inputs for both one time and two time correlation
-    Parameters
-    ----------
-    num_bufs : int
-    num_levels : int
-    labels : array
-        labeled array of the same shape as the image stack;
-        each ROI is represented by a distinct label (i.e., integer)
-    Returns
-    -------
-    label_array : array
-        labels of the required region of interests(ROI's)
-    pixel_list : array
-        1D array of indices into the raveled image for all
-        foreground pixels (labeled nonzero)
-        e.g., [5, 6, 7, 8, 14, 15, 21, 22]
-    num_rois : int
-        number of region of interests (ROI)
-    num_pixels : array
-        number of pixels in each ROI
-    lag_steps : array
-        the times at which the correlation was computed
-    buf : array
-        image data for correlation
-    img_per_level : array
-        to track how many images processed in each level
-    track_level : array
-        to track processing each level
-    cur : array
-        to increment the buffer
-    norm : dict
-        to track bad images
-    lev_len : array
-        length of each levels
-    """
-    if num_bufs % 2 != 0:
-        raise ValueError("There must be an even number of `num_bufs`. You "
-                         "provided %s" % num_bufs)
-    label_array, pixel_list = extract_label_indices(labels)
 
-    # map the indices onto a sequential list of integers starting at 1
-    label_mapping = {label: n+1
-                     for n, label in enumerate(np.unique(label_array))}
-    # remap the label array to go from 1 -> max(_labels)
-    for label, n in label_mapping.items():
-        label_array[label_array == label] = n
-
-    # number of ROI's
-    num_rois = len(label_mapping)
-
-    # stash the number of pixels in the mask
-    num_pixels = np.bincount(label_array)[1:]
-
-    # Convert from num_levels, num_bufs to lag frames.
-    tot_channels, lag_steps, dict_lag = multi_tau_lags(num_levels, num_bufs)
-
-    # these norm and lev_len will help to find the one time correlation
-    # normalization norm will updated when there is a bad image
-    norm = {key: [0] * len(dict_lag[key]) for key in (dict_lag.keys())}
-    lev_len = np.array([len(dict_lag[i]) for i in (dict_lag.keys())])
-
-    # Ring buffer, a buffer with periodic boundary conditions.
-    # Images must be keep for up to maximum delay in buf.
-    buf = np.zeros((num_levels, num_bufs, len(pixel_list)),
-                   dtype=np.float64)
-    # to track how many images processed in each level
-    img_per_level = np.zeros(num_levels, dtype=np.int64)
-    # to track which levels have already been processed
-    track_level = np.zeros(num_levels, dtype=bool)
-    # to increment buffer
-    cur = np.ones(num_levels, dtype=np.int64)
-
-    return (label_array, pixel_list, num_rois, num_pixels,
-            lag_steps, buf, img_per_level, track_level, cur,
-            norm, lev_len)
 
 
 def one_time_from_two_time(two_time_corr):
@@ -835,7 +842,10 @@ def cal_g2c( FD, ring_mask,
     print ('In this g2 calculation, the buf and lev number are: %s--%s--'%(num_buf,num_lev))
     if  bad_frame_list is not None:
         if len(bad_frame_list)!=0:
-            print ('Bad frame involved and will be precessed!')
+            print ('Bad frame involved and will be precessed!')                        
+            noframes -=  len(np.where(np.in1d( bad_frame_list, 
+                                              range(good_start, FD.end)))[0]) 
+            
     print ('%s frames will be processed...'%(noframes))
 
     g2, lag_steps =  multi_tau_auto_corr(num_lev, num_buf,   ring_mask, FD, bad_frame_list, 
