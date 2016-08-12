@@ -48,6 +48,7 @@ def delays( num_lev=3, num_buf=4, time=1 ):
 
 class Get_Pixel_Array(object):
     '''
+    Dec 16, 2015, Y.G.@CHX
     a class to get intested pixels from a images sequence, 
     load ROI of all images into memory 
     get_data: to get a 2-D array, shape as (len(images), len(pixellist))
@@ -86,6 +87,7 @@ class Get_Pixel_Array(object):
 
 
 class Reverse_Coordinate(object):
+    '''obsolete codes'''
     def __init__(self, indexable, mask):
         self.indexable = indexable
         self.mask = mask
@@ -143,6 +145,7 @@ def get_mean_intensity( data_pixel, qind):
 
 def run_time(t0):
     '''Calculate running time of a program
+    Dec 16, 2015, Y.G.@CHX
     Parameters
     ----------
     t0: time_string, t0=time.time()
@@ -169,7 +172,9 @@ def run_time(t0):
 def get_each_frame_ROI_intensity( data_pixel, 
                              bad_pixel_threshold=1e10,                               
                              plot_ = False,  *argv,**kwargs):   
-    '''Get the ROI intensity of each frame  
+    '''
+    Dec 16, 2015, Y.G.@CHX    
+    Get the ROI intensity of each frame  
        Also get bad_frame_list by check whether above  bad_pixel_threshold  
        
        Usuage:
@@ -185,9 +190,17 @@ def get_each_frame_ROI_intensity( data_pixel,
             uid = kwargs['uid']        
         fig, ax = plt.subplots()  
         ax.plot(imgsum,'bo')
-        ax.set_title('Uid= %s--imgsum'%uid)
+        ax.set_title('uid= %s--imgsum'%uid)
         ax.set_xlabel( 'Frame_bin_%s'%sampling )
         ax.set_ylabel( 'Total_Intensity' )
+        
+        if save:
+            #dt =datetime.now()
+            #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
+            path = kwargs['path'] 
+            #fp = path + "uid= %s--Waterfall-"%uid + CurTime + '.png'     
+            fp = path + "uid=%s--imgsum-"%uid  + '.png'    
+            fig.savefig( fp, dpi=fig.dpi)         
         plt.show()        
     bad_frame_list = np.where( np.array(imgsum) > bad_pixel_threshold )[0]
     if len(bad_frame_list):
@@ -454,7 +467,7 @@ def get_aged_g2_from_g12q2( g12q, slice_num = 6, slice_width=5, slice_start=0, s
         
     return g2_aged 
 
-def show_g12q_aged_g2( g12q, g2_aged,slice_width=10, timeperframe=1,vmin= 1, vmax= 1.25 ):
+def show_g12q_aged_g2( g12q, g2_aged,slice_width=10, timeperframe=1,vmin= 1, vmax= 1.25, save=False,*argv,**kwargs): 
     
     ''' 
     Dec 16, 2015, Y.G.@CHX
@@ -528,6 +541,19 @@ def show_g12q_aged_g2( g12q, g2_aged,slice_width=10, timeperframe=1,vmin= 1, vma
         ax1.set_ylabel("g2")
         ax1.set_xscale('log')
     ax1.legend(fontsize='small', loc='best' ) 
+            
+    if save:
+        #dt =datetime.now()
+        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
+        path = kwargs['path'] 
+        if 'uid' in kwargs:
+            uid = kwargs['uid']
+        else:
+            uid = 'uid'        
+        #fp = path + "uid= %s--Waterfall-"%uid + CurTime + '.png'     
+        fp = path + "uid=%s--Aged_G2-"%uid  + '.png'    
+        fig.savefig( fp, dpi=fig.dpi)  
+            
     plt.show()
     
 
@@ -933,6 +959,7 @@ def show_C12(C12, q_ind=0,  *argv,**kwargs):
     ax.set_xlabel( r'$t_1$ $(s)$', fontsize = 18)
     ax.set_ylabel( r'$t_2$ $(s)$', fontsize = 18)
     fig.colorbar(im)
+    
     save=False
     
     if 'save' in kwargs:
@@ -947,7 +974,8 @@ def show_C12(C12, q_ind=0,  *argv,**kwargs):
         dt =datetime.now()
         CurTime = '-%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
         path=kwargs['path']
-        fp = path + 'Two-time--uid=%s'%(uid) + tit + CurTime + '.png'
+        #fp = path + 'Two-time--uid=%s'%(uid) + tit + CurTime + '.png'
+        fp = path + 'uid=%s--Two-time-'%(uid) + '.png'
         fig.savefig( fp, dpi=fig.dpi)        
      
         
