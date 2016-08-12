@@ -1,3 +1,5 @@
+
+
 from __future__ import absolute_import, division, print_function
 
 from tqdm import tqdm
@@ -51,9 +53,22 @@ def get_avg_imgc( FD,  beg=None,end=None,sampling = 100, plot_ = False ,  *argv,
         im = ax.imshow(avg_img , cmap='viridis',origin='lower',
                    norm= LogNorm(vmin=0.001, vmax=1e2))
         #ax.set_title("Masked Averaged Image")
-        ax.set_title('Uid= %s--Masked Averaged Image'%uid)
+        ax.set_title('uid= %s--Masked-Averaged-Image-'%uid)
         fig.colorbar(im)
+        if save:
+            #dt =datetime.now()
+            #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
+            path = kwargs['path'] 
+            if 'uid' in kwargs:
+                uid = kwargs['uid']
+            else:
+                uid = 'uid'
+            #fp = path + "uid= %s--Waterfall-"%uid + CurTime + '.png'     
+            fp = path + "uid=%s--avg-img-"%uid  + '.png'    
+            fig.savefig( fp, dpi=fig.dpi)
+        
         plt.show()
+ 
     return avg_img
 
 
@@ -144,6 +159,7 @@ def cal_waterfallc(FD, labeled_array,   qindex=1, save=False, *argv,**kwargs):
         the ROI labels are contiguous
     qindex : int 
         The ROI's to use.  
+    save: save the waterfall
 
     Returns
     -------
@@ -225,14 +241,15 @@ def plot_waterfallc(wat, qindex=1, aspect = 1.0,vmax=None,save=False, *argv,**kw
     ax.set_aspect( aspect)
     
     if save:
-        dt =datetime.now()
-        CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
+        #dt =datetime.now()
+        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
         path = kwargs['path'] 
         if 'uid' in kwargs:
             uid = kwargs['uid']
         else:
             uid = 'uid'
-        fp = path + "Uid= %s--Waterfall-"%uid + CurTime + '.png'         
+        #fp = path + "uid= %s--Waterfall-"%uid + CurTime + '.png'     
+        fp = path + "uid=%s--Waterfall-"%uid  + '.png'    
         fig.savefig( fp, dpi=fig.dpi)
         
     plt.show()
@@ -265,7 +282,18 @@ def get_waterfallc(FD, labeled_array, qindex=1, aspect = 1.0,
     fig.colorbar( im   )
     ax.set_aspect( aspect)
     
-    
+    if save:
+        #dt =datetime.now()
+        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
+        path = kwargs['path'] 
+        if 'uid' in kwargs:
+            uid = kwargs['uid']
+        else:
+            uid = 'uid'
+        #fp = path + "uid= %s--Waterfall-"%uid + CurTime + '.png'     
+        fp = path + "uid=%s--Waterfall-"%uid  + '.png'    
+        fig.savefig( fp, dpi=fig.dpi) 
+        
     plt.show()
     return  wat
 
@@ -294,7 +322,7 @@ def get_each_ring_mean_intensityc( FD, ring_mask, sampling=1, timeperframe=None,
         if 'uid' in kwargs.keys():
             uid = kwargs['uid'] 
         
-        ax.set_title("Uid= %s--Mean intensity of each ROI"%uid)
+        ax.set_title("uid= %s--Mean intensity of each ROI"%uid)
         for i in range(num_rings):
             ax.plot( times, mean_int_sets[:,i], label="ROI "+str(i+1),marker = 'o', ls='-')
             if timeperframe is not None:   
@@ -305,16 +333,16 @@ def get_each_ring_mean_intensityc( FD, ring_mask, sampling=1, timeperframe=None,
         ax.legend(loc = 'best',fontsize='x-small') 
                 
         if save:
-            dt =datetime.now()
-            CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
+            #dt =datetime.now()
+            #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
             path = kwargs['path']              
-            fp = path + "Uid= %s--Mean intensity of each ring-"%uid + CurTime + '.png'         
+            #fp = path + "uid= %s--Mean intensity of each ring-"%uid + CurTime + '.png' 
+            fp = path + "uid=%s--Mean-intensity-of-each-ROI-"%uid  + '.png' 
             fig.savefig( fp, dpi=fig.dpi)
             
             save_arrays( np.hstack( [times.reshape(len(times),1), mean_int_sets]),
                         label=  ['frame']+ ['ROI_%d'%i for i in range( num_rings ) ],
-                        filename='uid=%s-t-ROIs'%uid, path= path  )           
-            
+                        filename='uid=%s-t-ROIs'%uid, path= path  )  
         
         plt.show()
         
@@ -373,14 +401,15 @@ def get_t_iqc( FD, frame_edge, mask, pargs, nx=1500, plot_ = False , save=False,
         ax.legend(loc = 'best')  
         
         uid = pargs['uid']
-        title = ax.set_title('Uid= %s--t~I(q)'%uid)        
+        title = ax.set_title('uid= %s--t~I(q)'%uid)        
         title.set_y(1.01)
         if save:
-            dt =datetime.now()
-            CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
+            #dt =datetime.now()
+            #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
             path = pargs['path']
             uid = pargs['uid']
-            fp = path + 'Uid= %s--Iq~t-'%uid + CurTime + '.png'         
+            #fp = path + 'uid= %s--Iq~t-'%uid + CurTime + '.png'  
+            fp = path + 'uid=%s--Iq-t-'%uid + '.png'  
             fig.savefig( fp, dpi=fig.dpi)
             
             save_arrays(  np.vstack( [q, np.array(iqs)]).T, 
@@ -420,11 +449,24 @@ def get_each_frame_intensityc( FD, sampling = 1,
             uid = kwargs['uid']        
         fig, ax = plt.subplots()  
         ax.plot(   imgsum,'bo')
-        ax.set_title('Uid= %s--imgsum'%uid)
+        ax.set_title('uid= %s--imgsum'%uid)
         ax.set_xlabel( 'Frame_bin_%s'%sampling )
         ax.set_ylabel( 'Total_Intensity' )
-        plt.show()  
         
+        if save:
+            #dt =datetime.now()
+            #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
+            path = kwargs['path'] 
+            if 'uid' in kwargs:
+                uid = kwargs['uid']
+            else:
+                uid = 'uid'
+            #fp = path + "uid= %s--Waterfall-"%uid + CurTime + '.png'     
+            fp = path + "uid=%s--imgsum-"%uid  + '.png'    
+            fig.savefig( fp, dpi=fig.dpi)
+        
+        plt.show()
+       
     bad_frame_list = np.where( (np.array(imgsum) > bad_pixel_threshold) |  (np.array(imgsum)==0) )[0] +  FD.beg
     
     if len(bad_frame_list):
@@ -451,7 +493,7 @@ def compress_eigerdata( images, mask, md, filename, force_compress=False,
             print ("Create a new compress file with filename as :%s."%filename)
             return init_compress_eigerdata( images, mask, md, filename, 
                        bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
-                                          nobytes= nobytes  )  
+                                          nobytes= nobytes )  
         else:      
             print ("Using already created compressed file with filename as :%s."%filename)
             beg=0
@@ -485,7 +527,6 @@ def read_compressed_eigerdata( mask, filename, beg, end,
 
     FD.FID.close()
     return   mask, avg_img, imgsum, bad_frame_list
-
 
 def init_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, nobytes=4  ):    
@@ -571,19 +612,6 @@ def init_compress_eigerdata( images, mask, md, filename,
         print ('No bad frames are involved.')
         
     return   mask, avg_img, imgsum, bad_frame_list
-
-    
-
-
-
-
-
-
-
-
-
-
-        
         
         
  
@@ -732,7 +760,9 @@ class Multifile:
 
 
             
-            
+def pass_FD(FD,n):
+    #FD.rdframe(n)
+    FD.seekimg(n)            
   
 
 
