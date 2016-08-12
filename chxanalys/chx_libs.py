@@ -1,3 +1,11 @@
+"""
+Dec 10, 2015 Developed by Y.G.@CHX 
+yuzhang@bnl.gov
+This module is for the necessary packages for the XPCS analysis 
+"""
+
+
+
 from databroker import DataBroker as db, get_images, get_table, get_events, get_fields
 from filestore.api import register_handler, deregister_handler
 #from filestore.retrieve import _h_registry, _HANDLER_CACHE, HandlerBase
@@ -32,7 +40,7 @@ import  getpass
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
- 
+import pickle 
 
 from lmfit import  Model
 from lmfit import minimize, Parameters, Parameter, report_fit
@@ -45,6 +53,9 @@ from tqdm import tqdm
 import collections
 
 import itertools 
+
+
+
 mcolors = itertools.cycle(['b', 'g', 'r', 'c', 'm', 'y', 'k','darkgoldenrod','oldlace', 'brown','dodgerblue'   ])
 markers = itertools.cycle(list(plt.Line2D.filled_markers))
 lstyles = itertools.cycle(['-', '--', '-.','.',':'])
