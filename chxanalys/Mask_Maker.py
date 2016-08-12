@@ -21,6 +21,8 @@ def load_images(hdr, name):
     seq_of_img_stacks = get_images(hdr, name)  # 1 x 21 x 2167 x 2070
     return np.squeeze(np.asarray(seq_of_img_stacks))
 
+def test():
+    pass
 
 def RemoveHot( img,threshold= 1E7, plot_=True ):
     mask = np.ones_like( np.array( img )    )
