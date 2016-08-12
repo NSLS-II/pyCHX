@@ -210,6 +210,8 @@ def reverse_updown( imgs):
 
 
 def RemoveHot( img,threshold= 1E7, plot_=True ):
+    '''Remove hot pixel from img'''
+    
     mask = np.ones_like( np.array( img )    )
     badp = np.where(  np.array(img) >= threshold )
     if len(badp[0])!=0:                
@@ -264,9 +266,10 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
     else:
         ax.set_aspect(aspect='auto')
     if save:
-        dt =datetime.now()
-        CurTime = '_%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)         
-        fp = path + '%s'%( image_name ) + CurTime + '.png'         
+        #dt =datetime.now()
+        #CurTime = '_%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)         
+        #fp = path + '%s'%( image_name ) + CurTime + '.png'       
+        fp = path + '%s'%( image_name ) + '.png'    
         fig.savefig( fp, dpi=fig.dpi) 
         
     plt.show()
@@ -328,9 +331,10 @@ def plot1D( y,x=None, ax=None,*argv,**kwargs):
     ax.legend(loc = 'best')  
     if 'save' in kwargs.keys():
         if  kwargs['save']: 
-            dt =datetime.now()
-            CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)         
-            fp = kwargs['path'] + '%s'%( title ) + CurTime + '.png'         
+            #dt =datetime.now()
+            #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)         
+            #fp = kwargs['path'] + '%s'%( title ) + CurTime + '.png'  
+            fp = kwargs['path'] + '%s'%( title )   + '.png' 
             fig.savefig( fp, dpi=fig.dpi) 
         
       
@@ -359,10 +363,10 @@ def check_shutter_open( data_series,  min_inten=0, time_edge = [0,10], plot_ = F
     if plot_:
         fig, ax = plt.subplots()  
         ax.plot(imgsum,'bo')
-        ax.set_title('Uid= %s--imgsum'%uid)
+        ax.set_title('uid=%s--imgsum'%uid)
         ax.set_xlabel( 'Frame' )
-        ax.set_ylabel( 'Total_Intensity' )
-        plt.show()        
+        ax.set_ylabel( 'Total_Intensity' ) 
+        plt.show()       
     shutter_open_frame = np.where( np.array(imgsum) > min_inten )[0][0]
     print ('The first frame with open shutter is : %s'%shutter_open_frame )
     return shutter_open_frame
@@ -370,9 +374,8 @@ def check_shutter_open( data_series,  min_inten=0, time_edge = [0,10], plot_ = F
 
 
 def get_each_frame_intensity( data_series, sampling = 50, 
-                             bad_pixel_threshold=1e10,  
-                             
-                             plot_ = False,  *argv,**kwargs):   
+                             bad_pixel_threshold=1e10,                              
+                             plot_ = False, save= False, *argv,**kwargs):   
     '''Get the total intensity of each frame by sampling every N frames
        Also get bad_frame_list by check whether above  bad_pixel_threshold  
        
@@ -389,10 +392,22 @@ def get_each_frame_intensity( data_series, sampling = 50,
             uid = kwargs['uid']        
         fig, ax = plt.subplots()  
         ax.plot(imgsum,'bo')
-        ax.set_title('Uid= %s--imgsum'%uid)
+        ax.set_title('uid= %s--imgsum'%uid)
         ax.set_xlabel( 'Frame_bin_%s'%sampling )
         ax.set_ylabel( 'Total_Intensity' )
-        plt.show()        
+        if save:
+            #dt =datetime.now()
+            #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
+            path = kwargs['path'] 
+            if 'uid' in kwargs:
+                uid = kwargs['uid']
+            else:
+                uid = 'uid'
+            #fp = path + "Uid= %s--Waterfall-"%uid + CurTime + '.png'     
+            fp = path + "uid=%s--imgsum-"%uid  + '.png'    
+            fig.savefig( fp, dpi=fig.dpi)        
+        plt.show()  
+        
     bad_frame_list = np.where( np.array(imgsum) > bad_pixel_threshold )[0]
     if len(bad_frame_list):
         print ('Bad frame list are: %s' %bad_frame_list)
@@ -468,7 +483,7 @@ def show_label_array_on_image(ax, image, label_array, cmap=None,norm=None, log_i
     
     
 
-def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on = True, *argv,**kwargs):
+def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on = True, save=False, *argv,**kwargs):
     '''show ROI on an image
         image: the data frame
         ROI: the interested region
@@ -513,6 +528,18 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
         
         
     fig.colorbar(im_label)
+    if save:
+        #dt =datetime.now()
+        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
+        path = kwargs['path'] 
+        if 'uid' in kwargs:
+            uid = kwargs['uid']
+        else:
+            uid = 'uid'
+        #fp = path + "Uid= %s--Waterfall-"%uid + CurTime + '.png'     
+        fp = path + "uid=%s--ROI-on-Image-"%uid  + '.png'    
+        fig.savefig( fp, dpi=fig.dpi)  
+    
     plt.show()
 
         
@@ -544,7 +571,7 @@ def crop_image(  image,  crop_mask  ):
     return img_crop
             
 
-def get_avg_img( data_series, sampling = 100, plot_ = False ,  *argv,**kwargs):   
+def get_avg_img( data_series, sampling = 100, plot_ = False , save=False, *argv,**kwargs):   
     '''Get average imagef from a data_series by every sampling number to save time'''
     avg_img = np.average(data_series[:: sampling], axis=0)
     if plot_:
@@ -556,14 +583,27 @@ def get_avg_img( data_series, sampling = 100, plot_ = False ,  *argv,**kwargs):
         im = ax.imshow(avg_img , cmap='viridis',origin='lower',
                    norm= LogNorm(vmin=0.001, vmax=1e2))
         #ax.set_title("Masked Averaged Image")
-        ax.set_title('Uid= %s--Masked Averaged Image'%uid)
+        ax.set_title('uid= %s--Masked Averaged Image'%uid)
         fig.colorbar(im)
+        
+        if save:
+            #dt =datetime.now()
+            #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
+            path = kwargs['path'] 
+            if 'uid' in kwargs:
+                uid = kwargs['uid']
+            else:
+                uid = 'uid'
+            #fp = path + "uid= %s--Waterfall-"%uid + CurTime + '.png'     
+            fp = path + "uid=%s--avg-img-"%uid  + '.png'    
+            fig.savefig( fp, dpi=fig.dpi)        
         plt.show()
+
     return avg_img
 
 
 
-def check_ROI_intensity( avg_img, ring_mask, ring_number=3 ,  *argv,**kwargs):
+def check_ROI_intensity( avg_img, ring_mask, ring_number=3 , save=False, *argv,**kwargs):
     
     """plot intensity versus pixel of a ring        
     Parameters
@@ -582,10 +622,19 @@ def check_ROI_intensity( avg_img, ring_mask, ring_number=3 ,  *argv,**kwargs):
         uid = kwargs['uid'] 
     pixel = roi.roi_pixel_values(avg_img, ring_mask, [ring_number] )
     fig, ax = plt.subplots()
-    ax.set_title('Uid= %s--check-RIO-%s-intensity'%(uid, ring_number) )
+    ax.set_title('uid= %s--check-RIO-%s-intensity'%(uid, ring_number) )
     ax.plot( pixel[0][0] ,'bo', ls='-' )
     ax.set_ylabel('Intensity')
     ax.set_xlabel('pixel')
+    if save:
+        #dt =datetime.now()
+        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
+        path = kwargs['path'] 
+        #fp = path + "Uid= %s--Waterfall-"%uid + CurTime + '.png'     
+        #fp = path + "uid=%s--check-ROI-intensity-"%uid  + '.png'  
+        fp = path + "uid= %s--Mean-intensity-of-each-ROI-"%uid  + '.png' 
+        fig.savefig( fp, dpi=fig.dpi)  
+    
     plt.show()
     return pixel[0][0]
 
@@ -732,6 +781,7 @@ def get_pos_val_overlap( p1, v1, p2,v2, Nl):
     
 def save_arrays( data, label=None, dtype='array', filename=None, path=None):    
     '''
+    July 10, 2016, Y.G.@CHX
     save_arrays( data, label=None, dtype='array', filename=None, path=None): 
     save data to a CSV file with filename in path
     Parameters
@@ -758,7 +808,8 @@ def save_arrays( data, label=None, dtype='array', filename=None, path=None):
     #print( 'The g2 of uid= %s is saved in %s with filename as g2-%s-%s.csv'%(uid, path, uid, CurTime))
 
 def get_diffusion_coefficient( visocity, radius, T=298):
-    '''get diffusion_coefficient of a Brownian motion particle with radius in fuild with visocity
+    '''July 10, 2016, Y.G.@CHX
+        get diffusion_coefficient of a Brownian motion particle with radius in fuild with visocity
         visocity: N*s/m^2
         radius: m
         T: K
@@ -780,6 +831,7 @@ def get_diffusion_coefficient( visocity, radius, T=298):
 
 def ring_edges(inner_radius, width, spacing=0, num_rings=None):
     """
+    Aug 02, 2016, Y.G.@CHX
     ring_edges(inner_radius, width, spacing=0, num_rings=None)
     
     Calculate the inner and outer radius of a set of rings.
@@ -869,6 +921,9 @@ def ring_edges(inner_radius, width, spacing=0, num_rings=None):
 
 
 def trans_tf_to_td(tf, dtype = 'dframe'):
+    '''July 02, 2015, Y.G.@CHX
+    Translate epoch time to string
+    '''
     import pandas as pd
     import numpy as np
     import datetime
@@ -884,6 +939,10 @@ def trans_tf_to_td(tf, dtype = 'dframe'):
 
 
 def trans_td_to_tf(td, dtype = 'dframe'):
+    '''July 02, 2015, Y.G.@CHX
+    Translate string to epoch time
+    
+    '''
     import time
     import numpy as np
     '''translate time.date to time.float,
