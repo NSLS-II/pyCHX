@@ -1,3 +1,10 @@
+"""
+Dec 10, 2015 Developed by Y.G.@CHX 
+yuzhang@bnl.gov
+This module is for the SAXS XPCS analysis 
+"""
+
+
 
 from chxanalys.chx_generic_functions import *
  
@@ -197,7 +204,7 @@ def get_circular_average( avg_img, mask, pargs, show_pixel=True,  min_x=None, ma
             ax1.semilogy(q,  iq , '-o') 
             ax1.set_xlabel('q ('r'$\AA^{-1}$)')        
             ax1.set_ylabel('I(q)')
-            title = ax1.set_title('Uid= %s--Circular Average'%uid)     
+            title = ax1.set_title('uid= %s--Circular Average'%uid)     
             ax2=None 
         
                     
@@ -223,10 +230,11 @@ def get_circular_average( avg_img, mask, pargs, show_pixel=True,  min_x=None, ma
         #axes.set_xlim(30,  1050)
         #axes.set_ylim(-0.0001, 10000)
         if save:
-            dt =datetime.now()
-            CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
+            #dt =datetime.now()
+            #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
             path = pargs['path']
-            fp = path + 'Uid= %s--Circular Average'%uid + CurTime + '.png'         
+            #fp = path + 'Uid= %s--Circular Average'%uid + CurTime + '.png'     
+            fp = path + 'uid=%s--Circular-Average-'%uid  + '.png'  
             fig.savefig( fp, dpi=fig.dpi)
             
             save_lists(  [q, iq], label=['q_A-1', 'Iq'],  filename='uid=%s-q-Iq'%uid, path= path  )
@@ -285,16 +293,17 @@ def get_angular_average( avg_img, mask, pargs,   min_r, max_r,
         ax.set_ylabel("I(ang)")
         #ax.legend(loc = 'best')  
         uid = pargs['uid']
-        title = ax.set_title('Uid= %s--t~I(Ang)'%uid)        
+        title = ax.set_title('Uid= %s--t-I(Ang)'%uid)        
         title.set_y(1.01)
         
         if save:
-            dt =datetime.now()
-            CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
+            #dt =datetime.now()
+            #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
             path = pargs['path']
             uid = pargs['uid']
  
-            fp = path + 'Uid= %s--Ang-Iq~t-'%uid + CurTime + '.png'         
+            #fp = path + 'Uid= %s--Ang-Iq~t-'%uid + CurTime + '.png'   
+            fp = path + 'uid=%s--Ang-Iq-t-'%uid   + '.png'   
             fig.savefig( fp, dpi=fig.dpi)
             
         plt.show()
@@ -456,14 +465,15 @@ def get_t_iq( data_series, frame_edge, mask, pargs, nx=1500, plot_ = False , sav
         ax.legend(loc = 'best')  
         
         uid = pargs['uid']
-        title = ax.set_title('Uid= %s--t~I(q)'%uid)        
+        title = ax.set_title('uid=%s--t-I(q)'%uid)        
         title.set_y(1.01)
         if save:
-            dt =datetime.now()
-            CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
+            #dt =datetime.now()
+            #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
             path = pargs['path']
             uid = pargs['uid']
-            fp = path + 'Uid= %s--Iq~t-'%uid + CurTime + '.png'         
+            #fp = path + 'Uid= %s--Iq~t-'%uid + CurTime + '.png'         
+            fp = path + 'uid=%s--Iq-t-'%uid  + '.png'    
             fig.savefig( fp, dpi=fig.dpi)
             
         plt.show()
@@ -528,16 +538,16 @@ def get_t_ang( data_series, frame_edge, mask, center, pixel_size, min_r, max_r,p
             ax.set_ylabel("I(ang)")
         ax.legend(loc = 'best')  
         uid = pargs['uid']
-        title = ax.set_title('Uid= %s--t~I(Ang)'%uid)        
+        title = ax.set_title('Uid= %s--t-I(Ang)'%uid)        
         title.set_y(1.01)
         
         if save:
-            dt =datetime.now()
-            CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
+            #dt =datetime.now()
+            #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
             path = pargs['path']
             uid = pargs['uid']
- 
-            fp = path + 'Uid= %s--Ang-Iq~t-'%uid + CurTime + '.png'         
+            #fp = path + 'Uid= %s--Ang-Iq~t-'%uid + CurTime + '.png'         
+            fp = path + 'uid=%s--Ang-Iq-t-'%uid  + '.png'         
             fig.savefig( fp, dpi=fig.dpi)
             
         plt.show()
@@ -805,7 +815,7 @@ def get_ring_anglar_mask(ring_mask, ang_mask,
 
 
 
-def show_ring_ang_roi( data, rois,   alpha=0.3):    
+def show_ring_ang_roi( data, rois,   alpha=0.3, save=False, *argv,**kwargs): 
         
     ''' 
     May 16, 2016, Y.G.@CHX
@@ -864,6 +874,19 @@ def show_ring_ang_roi( data, rois,   alpha=0.3):
     cax = divider.append_axes("right", size="5%", pad=0.05)
     plt.colorbar(im, cax=cax)
     
+        
+    if save:
+        #dt =datetime.now()
+        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
+        path = kwargs['path'] 
+        if 'uid' in kwargs:
+            uid = kwargs['uid']
+        else:
+            uid = 'uid'
+        #fp = path + "uid= %s--Waterfall-"%uid + CurTime + '.png'     
+        fp = path + "uid=%s--ROI-on-image-"%uid  + '.png'    
+        fig.savefig( fp, dpi=fig.dpi) 
+    
     #ax.set_xlabel(r'$q_r$', fontsize=22)
     #ax.set_ylabel(r'$q_z$',fontsize=22)
 
@@ -876,8 +899,9 @@ def show_ring_ang_roi( data, rois,   alpha=0.3):
     
     
     
-def plot_qIq_with_ROI( q, iq, q_ring_center, logs=True, *argv,**kwargs):   
-    '''plot q~Iq with interested q rings'''
+def plot_qIq_with_ROI( q, iq, q_ring_center, logs=True, save=False, *argv,**kwargs):   
+    '''Aug 6, 2016, Y.G.@CHX 
+    plot q~Iq with interested q rings'''
 
     uid = 'uid'
     if 'uid' in kwargs.keys():
@@ -890,7 +914,7 @@ def plot_qIq_with_ROI( q, iq, q_ring_center, logs=True, *argv,**kwargs):
     else:        
         axes.plot(q,  iq, '-o')
         
-    axes.set_title('Uid= %s--Circular Average with the Q ring values'%uid)
+    axes.set_title('uid= %s--Circular Average with the Q ring values'%uid)
     axes.set_ylabel('I(q)')
     axes.set_xlabel('Q 'r'($\AA^{-1}$)')
     #axes.set_xlim(0, 0.02)
@@ -908,6 +932,19 @@ def plot_qIq_with_ROI( q, iq, q_ring_center, logs=True, *argv,**kwargs):
     num_rings = len( np.unique( q_ring_center) )
     for i in range(num_rings):
         axes.axvline(q_ring_center[i] )#, linewidth = 5  )
+        
+    if save:
+        #dt =datetime.now()
+        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
+        path = kwargs['path'] 
+        if 'uid' in kwargs:
+            uid = kwargs['uid']
+        else:
+            uid = 'uid'
+        #fp = path + "uid= %s--Waterfall-"%uid + CurTime + '.png'     
+        fp = path + "uid=%s--ROI-on-Iq-"%uid  + '.png'    
+        fig.savefig( fp, dpi=fig.dpi) 
+        
     plt.show()
 
 
@@ -927,7 +964,7 @@ def get_each_ring_mean_intensity( data_series, ring_mask, sampling, timeperframe
         if 'uid' in kwargs.keys():
             uid = kwargs['uid'] 
         
-        ax.set_title("Uid= %s--Mean intensity of each ring"%uid)
+        ax.set_title("uid= %s--Mean intensity of each ring"%uid)
         for i in range(num_rings):
             ax.plot( mean_int_sets[:,i], label="Ring "+str(i+1),marker = 'o', ls='-')
             ax.set_xlabel("Time")
@@ -935,10 +972,12 @@ def get_each_ring_mean_intensity( data_series, ring_mask, sampling, timeperframe
         ax.legend(loc = 'best') 
                 
         if save:
-            dt =datetime.now()
-            CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
+            #dt =datetime.now()
+            #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
             path = kwargs['path']              
-            fp = path + "Uid= %s--Mean intensity of each ring-"%uid + CurTime + '.png'         
+            #fp = path + "Uid= %s--Mean intensity of each ring-"%uid + CurTime + '.png'     
+            fp = path + "uid=%s--Mean-intensity-of-each-ring-"%uid   + '.png'   
+            
             fig.savefig( fp, dpi=fig.dpi)
         
         plt.show()
@@ -1012,7 +1051,7 @@ def plot_saxs_g2( g2, taus, res_pargs=None, *argv,**kwargs):
     else:
         fig = plt.figure(figsize=(8,8))
         #print ('here')
-    plt.title('uid= %s'%uid,fontsize=20, y =1.06)        
+    plt.title('uid=%s'%uid,fontsize=20, y =1.06)        
     for i in range(num_rings):
         ax = fig.add_subplot(sx, sy, i+1 )
         ax.set_ylabel("g2") 
@@ -1031,21 +1070,15 @@ def plot_saxs_g2( g2, taus, res_pargs=None, *argv,**kwargs):
             ax.set_xlim( kwargs['xlim'])
  
  
-    dt =datetime.now()
-    CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
+    #dt =datetime.now()
+    #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
                 
-    fp = path + 'g2--uid=%s'%(uid) + CurTime + '.png'
+    #fp = path + 'g2--uid=%s'%(uid) + CurTime + '.png'
+    fp = path + 'uid=%s--g2-'%(uid)   + '.png'
     fig.savefig( fp, dpi=fig.dpi)        
     fig.tight_layout()  
-    plt.show()
-                
+    plt.show()               
  
-
-
-
-            
-    
-    
 
 def plot_saxs_two_g2( g2, taus, g2b, tausb,res_pargs=None, *argv,**kwargs):     
     '''plot g2 results, 
@@ -1117,7 +1150,7 @@ def plot_saxs_two_g2( g2, taus, g2b, tausb,res_pargs=None, *argv,**kwargs):
     else:
         fig = plt.figure(figsize=(8,8))
         
-    plt.title('uid= %s'%uid,fontsize=20, y =1.06)  
+    plt.title('uid=%s'%uid,fontsize=20, y =1.06)  
     plt.axis('off')
     for sn in range(num_rings):
         ax = fig.add_subplot(sx,sy,sn+1 )
@@ -1142,10 +1175,11 @@ def plot_saxs_two_g2( g2, taus, g2b, tausb,res_pargs=None, *argv,**kwargs):
             ax.legend(loc = 'best')       
 
 
-    dt =datetime.now()
-    CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
+    #dt =datetime.now()
+    #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
     fig.tight_layout()            
-    fp = path + 'g2--uid=%s'%(uid) + CurTime + '--twog2.png'
+    #fp = path + 'g2--uid=%s'%(uid) + CurTime + '--twog2.png'
+    fp = path + 'uid=%s--g2'%(uid) + '--two-g2-.png'
     fig.savefig( fp, dpi=fig.dpi)        
      
     plt.show()
@@ -1247,7 +1281,8 @@ def plot_saxs_rad_ang_g2( g2, taus, res_pargs=None, *argv,**kwargs):
         dt =datetime.now()
         CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
                 
-        fp = path + 'g2--uid=%s-qr=%s'%(uid,q_ring_center[qr_ind]) + CurTime + '.png'
+        #fp = path + 'g2--uid=%s-qr=%s'%(uid,q_ring_center[qr_ind]) + CurTime + '.png'         
+        fp = path + 'uid=%s--g2-qr=%s'%(uid )   + '-.png'
         fig.savefig( fp, dpi=fig.dpi)        
         fig.tight_layout()  
         plt.show()
@@ -1374,7 +1409,7 @@ def fit_saxs_rad_ang_g2( g2, taus, res_pargs=None,function='simple_exponential',
         fig = plt.figure(figsize=(10, 12))
         #fig = plt.figure()
         title_qr = ' Qr= %.5f  '%( q_ring_center[qr_ind]) + r'$\AA^{-1}$' 
-        plt.title('uid= %s:--->'%uid + title_qr,fontsize=20, y =1.1) 
+        plt.title('uid=%s:--->'%uid + title_qr,fontsize=20, y =1.1) 
         #print (qz_ind,title_qz)
         if num_qr!=1:plt.axis('off')
         sx = int(round(np.sqrt(num_qa)) )
@@ -1441,7 +1476,8 @@ def fit_saxs_rad_ang_g2( g2, taus, res_pargs=None,function='simple_exponential',
         dt =datetime.now()
         CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
                 
-        fp = path + 'g2--uid=%s-qr=%s'%(uid,q_ring_center[qr_ind]) + CurTime + '.png'
+        #fp = path + 'g2--uid=%s-qr=%s'%(uid,q_ring_center[qr_ind]) + CurTime + '.png'
+        fp = path + 'uid=%s--g2--qr--fit-'%(uid)  + '.png'
         fig.savefig( fp, dpi=fig.dpi)        
         fig.tight_layout()  
         plt.show()
@@ -1480,9 +1516,10 @@ def save_saxs_g2(  g2, res_pargs, taus=None, filename=None ):
     CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)  
     
     if filename is None:
-        filename = 'g2'
+        filename = ''
     #filename += '-uid=%s-%s.csv' % (uid,CurTime)   
-    filename += '-uid=%s.csv' % (uid) 
+    #filename += '-uid=%s.csv' % (uid) 
+    filename += 'uid=%s--g2.csv' % (uid) 
     filename1 = os.path.join(path, filename)
     df.to_csv(filename1)
     print( 'The g2 is saved in %s with filename as %s'%( path, filename))
@@ -1703,10 +1740,11 @@ def fit_saxs_g2( g2, res_pargs=None, function='simple_exponential', *argv,**kwar
             ax.set_xlim( kwargs['xlim'])
             
 
-    dt =datetime.now()
-    CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
+    #dt =datetime.now()
+    #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
          
-    fp = path + 'g2--uid=%s'%(uid) + CurTime + '--Fit.png'
+    #fp = path + 'g2--uid=%s'%(uid) + CurTime + '--Fit.png'
+    fp = path + 'uid=%s--g2'%(uid) + '--fit-.png'
     fig.savefig( fp, dpi=fig.dpi)        
     
     fig.tight_layout()       
@@ -1783,7 +1821,8 @@ def fit_q_rate( q, rate, plot_=True, power_variable=False, *argv,**kwargs):
               
         dt =datetime.now()
         CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)     
-        fp = path + 'Q%s-Rate--uid=%s'%(power,uid) + CurTime + '--Fit.png'
+        #fp = path + 'Q%s-Rate--uid=%s'%(power,uid) + CurTime + '--Fit.png'
+        fp = path + 'uid=--%s--Q-Rate'%(uid) + '--fit-.png'
         fig.savefig( fp, dpi=fig.dpi)    
     
         fig.tight_layout() 
@@ -1840,7 +1879,8 @@ def fit_q2_rate( q2, rate, plot_=True, *argv,**kwargs):
               
         dt =datetime.now()
         CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)     
-        fp = path + 'Q2-Rate--uid=%s'%(uid) + CurTime + '--Fit.png'
+        #fp = path + 'Q2-Rate--uid=%s'%(uid) + CurTime + '--Fit.png'
+        fp = path + 'uid=%s--Q2-Rate'%(uid) + '--fit-.png'
         fig.savefig( fp, dpi=fig.dpi)    
     
         fig.tight_layout() 
