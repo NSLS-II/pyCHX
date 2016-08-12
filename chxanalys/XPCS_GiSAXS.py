@@ -1,3 +1,12 @@
+"""
+Dec 10, 2015 Developed by Y.G.@CHX 
+yuzhang@bnl.gov
+This module is for the GiSAXS XPCS analysis 
+"""
+
+
+
+
 from .chx_generic_functions import *
 
 
@@ -8,6 +17,9 @@ from .chx_generic_functions import *
 
 
 def make_gisaxs_grid( qr_w= 10, qz_w = 12, dim_r =100,dim_z=120):
+    '''    Dec 16, 2015, Y.G.@CHX
+    
+    '''
     y, x = np.indices( [dim_z,dim_r] )
     Nr = int(dim_r/qp_w)
     Nz = int(dim_z/qz_w)
@@ -144,6 +156,7 @@ def get_qedge2( qstart,qend,qwidth,noqs,  ):
     return a qedge by giving the noqs, qstart,qend,qwidth.
            a qcenter, which is center of each qedge 
     KEYWORD:  None    ''' 
+    
     import numpy as np 
     qcenter = np.linspace(qstart,qend,noqs)
     #print ('the qcenter is:  %s'%qcenter )
@@ -158,8 +171,12 @@ def get_qedge2( qstart,qend,qwidth,noqs,  ):
 ###########################################     
     
 def get_qmap_label( qmap, qedge ):
+    
     import numpy as np
-    '''give a qmap and qedge to bin the qmap into a label array'''
+    '''
+    April 20, 2016, Y.G.@CHX
+    give a qmap and qedge to bin the qmap into a label array
+    '''
     edges = np.atleast_2d(np.asarray(qedge)).ravel()
     label_array = np.digitize(qmap.ravel(), edges, right=False)
     label_array = np.int_(label_array)
@@ -170,7 +187,7 @@ def get_qmap_label( qmap, qedge ):
     
     
 def get_qzrmap(label_array_qz, label_array_qr, qz_center, qr_center   ):
-    '''get   qzrmap  '''
+    '''April 20, 2016, Y.G.@CHX, get   qzrmap  '''
     qzmax = label_array_qz.max()
     label_array_qr_ = np.zeros( label_array_qr.shape  )
     ind = np.where(label_array_qr!=0)
@@ -243,7 +260,7 @@ def show_label_array_on_image(ax, image, label_array, cmap=None,norm=None, log_i
 
 
 def show_qz(qz):
-    ''' 
+    '''Dec 16, 2015, Y.G.@CHX
     plot qz mape
 
     '''
@@ -256,7 +273,7 @@ def show_qz(qz):
     plt.show()
     
 def show_qr(qr):
-    ''' 
+    '''Dec 16, 2015, Y.G.@CHX
     plot qr mape
 
     '''
@@ -267,7 +284,7 @@ def show_qr(qr):
     plt.show()    
 
 def show_alphaf(alphaf,):
-    ''' 
+    '''Dec 16, 2015, Y.G.@CHX
      plot alphaf mape
 
     '''
@@ -408,11 +425,12 @@ def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,
     df.columns = np.concatenate( columns    ) 
     
     if save:
-        dt =datetime.now()
-        CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)  
+        #dt =datetime.now()
+        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)  
         path = setup_pargs['path']
         uid = setup_pargs['uid']
-        filename = os.path.join(path, 'qr_1d-%s-%s.csv' % (uid,CurTime))
+        #filename = os.path.join(path, 'qr_1d-%s-%s.csv' % (uid,CurTime))
+        filename = os.path.join(path, 'uid=--%sqr_1d.csv'% (uid) )
         df.to_csv(filename)
         print( 'The qr_1d of uid= %s is saved in %s with filename as qr_1d-%s-%s.csv'%(uid, path, uid, CurTime))
         
@@ -554,7 +572,8 @@ def get_qz_tick_label( qz, label_array_qz,interp=True):
 
 
 
-def show_qzr_map(  qr, qz, inc_x0, data=None, Nzline=10,Nrline=10 , interp=True):
+def show_qzr_map(  qr, qz, inc_x0, data=None, Nzline=10,Nrline=10 , 
+                 interp=True, *argv,**kwargs):  
     
     ''' 
     Dec 16, 2015, Y.G.@CHX
@@ -658,12 +677,26 @@ def show_qzr_map(  qr, qz, inc_x0, data=None, Nzline=10,Nrline=10 , interp=True)
     ax.set_xticklabels(xticks, fontsize=7)    
 
     ax.set_title( 'Q-zr_Map', y=1.03,fontsize=18)
-    plt.show()    
+    
+    save=False    
+    if 'save' in kwargs:
+        save=kwargs['save']    
+    if 'uid' in kwargs:
+        uid=kwargs['uid']
+    else:
+        uid='uid'        
+    if save:
+        path=kwargs['path']
+        fp = path + 'uid=%s--Q-zr-Map-'%(uid) + '.png'
+        fig.savefig( fp, dpi=fig.dpi)         
+    plt.show() 
+    
+    
     return  zticks,zticks_label,rticks,rticks_label
 
 
  
-def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3):    
+def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, *argv,**kwargs):  
         
     ''' 
     Dec 16, 2015, Y.G.@CHX
@@ -756,9 +789,20 @@ def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3):
     
     ax.set_xlabel(r'$q_r$', fontsize=22)
     ax.set_ylabel(r'$q_z$',fontsize=22)
-
-    plt.show()
-
+    
+    save=False    
+    if 'save' in kwargs:
+        save=kwargs['save']    
+    if 'uid' in kwargs:
+        uid=kwargs['uid']
+    else:
+        uid='uid'        
+    if save:
+        path=kwargs['path']
+        fp = path + 'uid=%s--ROI-on-image-'%(uid) + '.png'
+        fig.savefig( fp, dpi=fig.dpi)         
+    plt.show() 
+    
     
     
 #plot g2 results
@@ -853,10 +897,13 @@ def plot_gisaxs_g2( g2, taus, res_pargs=None, *argv,**kwargs):
             if 'xlim' in kwargs:
                 ax.set_xlim( kwargs['xlim'])
 
-        dt =datetime.now()
-        CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
+        #dt =datetime.now()
+        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
                 
-        fp = path + 'g2--uid=%s-qz=%s'%(uid,qz_center[qz_ind]) + CurTime + '.png'
+        #fp = path + 'g2--uid=%s-qz=%s'%(uid,qz_center[qz_ind]) + CurTime + '.png'
+        #fp = path + 'uid=%s--g2-'%(uid)  + '.png'        
+        fp = path + 'uid=%s--g2-qz=%s'%(uid,qz_center[qz_ind])  + '.png'
+        
         fig.savefig( fp, dpi=fig.dpi)        
         fig.tight_layout()  
         plt.show()
@@ -966,18 +1013,20 @@ def plot_gisaxs_two_g2( g2, taus, g2b, tausb,res_pargs=None, *argv,**kwargs):
         #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
                 
         #fp = path + 'g2--uid=%s-qz=%s'%(uid,qz_center[qz_ind]) + CurTime + '.png'
-        #fig.savefig( fp, dpi=fig.dpi)        
+        #fig.savefig( fp, dpi=fig.dpi)  
+        #fp = path + 'uid=%s--two-g2-'%(uid)  + '.png'
+        fp = path + 'uid=%s--two-g2-qz=%s'%(uid,qz_center[qz_ind])  + '.png'
+        
+        fig.savefig( fp, dpi=fig.dpi) 
+        
         fig.tight_layout()  
         plt.show()
-
-        
-        
-        
-        
-        
-def save_gisaxs_g2(  g2,res_pargs , *argv,**kwargs):     
+       
+def save_gisaxs_g2(  g2,res_pargs, time_label=True, *argv,**kwargs):     
     
-    '''save g2 results, 
+    '''
+    Aug 8, 2016, Y.G.@CHX
+    save g2 results, 
        res_pargs should contain
            g2: one-time correlation function
            res_pargs: contions taus, q_ring_center values
@@ -1001,12 +1050,14 @@ def save_gisaxs_g2(  g2,res_pargs , *argv,**kwargs):
             
     df.columns = columns   
     
-    dt =datetime.now()
-    CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)  
-    
-    filename = os.path.join(path, 'g2-%s-%s.csv' % (uid,CurTime))
+    if time_label:
+        dt =datetime.now()
+        CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)  
+        filename = os.path.join(path, 'g2-%s-%s.csv' %(uid,CurTime))
+    else:
+        filename = os.path.join(path, 'uid=%s--g2.csv' % (uid))
     df.to_csv(filename)
-    print( 'The g2 of uid= %s is saved in %s with filename as g2-%s-%s.csv'%(uid, path, uid, CurTime))
+    print( 'The g2 of uid= %s is saved with filename as %s'%(uid, filename))
 
     
     
@@ -1020,7 +1071,7 @@ def simple_exponential(x, beta, relaxation_rate,  baseline=1):
 
 def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs):     
     '''
-    July 20, Y.G.@CHX
+    July 20,2016, Y.G.@CHX
     Fit one-time correlation function
     
     The support functions include simple exponential and stretched/compressed exponential
@@ -1068,6 +1119,7 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
     qr_center = res_pargs[ 'qr_center']
     num_qr = len( qr_center)  
     uid=res_pargs['uid']    
+    path=res_pargs['path']   
     #uid=res_pargs['uid']  
     
     num_rings = g2.shape[1]
@@ -1132,6 +1184,7 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
     for v in _vars:
         pars['%s'%v].vary = False        
         #print ( pars['%s'%v], pars['%s'%v].vary )
+    result = {}
     for qz_ind in range(num_qz):
         fig = plt.figure(figsize=(10, 12))
         #fig = plt.figure()
@@ -1200,15 +1253,24 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
             txts = r'$baseline$' + r'$ = %.3f$'%( baseline[i]) 
             ax.text(x =0.02, y=.35 + .3, s=txts, fontsize=14, transform=ax.transAxes)        
      
-        #result[qz_ind] = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )
+        result[qz_ind] = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )
+        fp = path + 'uid=%s--g2-qz=%s--fit'%(uid,qz_center[qz_ind])  + '.png'
+        fig.savefig( fp, dpi=fig.dpi)
+        fig.tight_layout()  
+        plt.show()
     
         #dt =datetime.now()
         #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute) 
         #fp = path + 'g2--uid=%s-qz=%s-fit'%(uid,qz_center[qz_ind]) + CurTime + '.png'
-        #fig.savefig( fp, dpi=fig.dpi)        
-    result = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )    
-    fig.tight_layout()  
-    plt.show()
+        #fig.savefig( fp, dpi=fig.dpi)     
+         
+         
+        
+    #result = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )      
+    #fp = path + 'uid=%s--g2--fit-'%(uid)  + '.png'
+    #fig.savefig( fp, dpi=fig.dpi)    
+    #fig.tight_layout()  
+    #plt.show()
         
     return result
 
@@ -1222,7 +1284,11 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
     
 def get_each_box_mean_intensity( data_series, box_mask, sampling, timeperframe, plot_ = True ,  *argv,**kwargs):   
     
-    '''Dec 16, 2015, Y.G.@CHX'''
+    '''Dec 16, 2015, Y.G.@CHX
+       get each box (ROI) mean intensity as a function of time
+       
+       
+    '''
     
     mean_int_sets, index_list = roi.mean_intensity(np.array(  data_series[::sampling]), box_mask) 
     try:
@@ -1237,12 +1303,21 @@ def get_each_box_mean_intensity( data_series, box_mask, sampling, timeperframe, 
         if 'uid' in kwargs.keys():
             uid = kwargs['uid'] 
             
-        ax.set_title("Uid= %s--Mean intensity of each box"%uid)
+        ax.set_title("uid= %s--Mean intensity of each box"%uid)
         for i in range(num_rings):
             ax.plot( times[::sampling], mean_int_sets[:,i], label="Box "+str(i+1),marker = 'o', ls='-')
             ax.set_xlabel("Time")
             ax.set_ylabel("Mean Intensity")
         ax.legend() 
+        
+        #fp = path + 'uid=%s--Mean intensity of each box-'%(uid)  + '.png'
+        if 'path' not in kwargs.keys():
+            path=''
+        else:
+            path = kwargs['path']
+        fp = path + 'uid=%s--Mean-intensity-of-each-ROI-'%(uid)  + '.png'
+        fig.savefig( fp, dpi=fig.dpi) 
+        
         plt.show()
     return times, mean_int_sets
 
