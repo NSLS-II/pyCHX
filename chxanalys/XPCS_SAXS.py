@@ -1213,7 +1213,7 @@ def plot_saxs_rad_ang_g2( g2, taus, res_pargs=None, *argv,**kwargs):
         q_ring_center= res_pargs[ 'q_ring_center']
         num_qr = len( q_ring_center)
         ang_center = res_pargs[ 'ang_center']
-        num_ang = len( ang_center )
+        num_qa = len( ang_center )
     
     else:
     
@@ -1235,8 +1235,6 @@ def plot_saxs_rad_ang_g2( g2, taus, res_pargs=None, *argv,**kwargs):
             num_qa = len( ang_center)
         else:
             print( 'Please give ang_center') 
-
-
         
 
     for qr_ind in range(num_qr):
@@ -1245,26 +1243,28 @@ def plot_saxs_rad_ang_g2( g2, taus, res_pargs=None, *argv,**kwargs):
         title_qr = ' Qr= %.5f  '%( q_ring_center[qr_ind]) + r'$\AA^{-1}$' 
         plt.title('uid= %s:--->'%uid + title_qr,fontsize=20, y =1.1) 
         #print (qz_ind,title_qz)
-        if num_qr!=1:plt.axis('off')
+        #if num_qr!=1:plt.axis('off')
+        plt.axis('off')    
         sx = int(round(np.sqrt(num_qa)) )
         if num_qa%sx == 0: 
             sy = int(num_qa/sx)
         else: 
             sy=int(num_qa/sx+1) 
+            
         for sn in range(num_qa):
             ax = fig.add_subplot(sx,sy,sn+1 )
             ax.set_ylabel("g2") 
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
             i = sn + qr_ind * num_qa
-            title_qa = " Angle= " + '%.2f'%( ang_center[sn]) + r'$^\circ$' + '( %d )'%i
-            if num_qr==1:
-
-                title = 'uid= %s:--->'%uid + title_qr + '__' +  title_qa
-            else:
-                title = title_qa
-            ax.set_title( title  )
-
-
+            #title_qa = " Angle= " + '%.2f'%( ang_center[sn]) + r'$^\circ$' + '( %d )'%i
+            
+            title_qa = '%.2f'%( ang_center[sn]) + r'$^\circ$' + '( %d )'%(i)
+            #if num_qr==1:
+            #    title = 'uid= %s:--->'%uid + title_qr + '__' +  title_qa
+            #else:
+            #    title = title_qa
+            title = title_qa    
+            ax.set_title( title , y =1.1) 
             y=g2[:, i]
             ax.semilogx(taus, y, '-o', markersize=6)             
             
@@ -1272,26 +1272,46 @@ def plot_saxs_rad_ang_g2( g2, taus, res_pargs=None, *argv,**kwargs):
                 ax.set_ylim( kwargs['ylim'])
             elif 'vlim' in kwargs:
                 vmin, vmax =kwargs['vlim']
-                ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])
+                ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])                
             else:
                 pass
+            
             if 'xlim' in kwargs:
                 ax.set_xlim( kwargs['xlim'])
 
-        dt =datetime.now()
-        CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
+        #dt =datetime.now()
+        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
                 
         #fp = path + 'g2--uid=%s-qr=%s'%(uid,q_ring_center[qr_ind]) + CurTime + '.png'         
-        fp = path + 'uid=%s--g2-qr=%s'%(uid )   + '-.png'
+        fp = path + 'uid=%s--g2-qr=%s'%(uid, q_ring_center[qr_ind] )  + '-.png'
         fig.savefig( fp, dpi=fig.dpi)        
         fig.tight_layout()  
         plt.show()
 
         
         
- 
 
-def fit_saxs_rad_ang_g2( g2, taus, res_pargs=None,function='simple_exponential', *argv,**kwargs):    
+def stretched_auto_corr_scat_factor(x, beta, relaxation_rate, alpha=1.0, baseline=1):
+    return beta * (np.exp(-2 * relaxation_rate * x))**alpha + baseline
+
+def simple_exponential(x, beta, relaxation_rate,  baseline=1):
+    return beta * np.exp(-2 * relaxation_rate * x) + baseline
+
+
+def flow_para_function( x, beta, relaxation_rate, flow_velocity, baseline=1):
+    Diff_part=    np.exp(-2 * relaxation_rate * x)
+    Flow_part =  np.pi**2/(16*x*flow_velocity) *  abs(  erf(  np.sqrt(   4/np.pi * 1j* x * flow_velocity ) ) )**2
+    
+    return  beta*Diff_part * Flow_part + baseline
+
+
+def get_flow_velocity( average_velocity, shape_factor):
+    
+    return average_velocity * (1- shape_factor)/(1+  shape_factor)
+
+
+
+def fit_saxs_rad_ang_g2( g2,  res_pargs=None,function='simple_exponential', *argv,**kwargs):    
      
     '''
     Fit one-time correlation function
@@ -1330,7 +1350,7 @@ def fit_saxs_rad_ang_g2( g2, taus, res_pargs=None,function='simple_exponential',
         q_ring_center= res_pargs[ 'q_ring_center']
         num_qr = len( q_ring_center)
         ang_center = res_pargs[ 'ang_center']
-        num_ang = len( ang_center )
+        num_qa = len( ang_center )
     
     else:
     
@@ -1357,7 +1377,9 @@ def fit_saxs_rad_ang_g2( g2, taus, res_pargs=None,function='simple_exponential',
     beta = np.zeros(   num_rings )  #  contrast factor
     rate = np.zeros(   num_rings )  #  relaxation rate
     alpha = np.zeros(   num_rings )  #  alpha
-    baseline = np.zeros(   num_rings )  #  baseline
+    baseline = np.zeros(   num_rings )  #  baseline 
+    if function=='flow_para_function' or  function=='flow_para':
+        flow= np.zeros(   num_rings )  #  baseline 
     
             
     if 'fit_variables' in kwargs:
@@ -1378,9 +1400,11 @@ def fit_saxs_rad_ang_g2( g2, taus, res_pargs=None,function='simple_exponential',
         mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars= list( _vars)   )
         
         
-    elif function=='stretched_exponential' or function=='stretched':
-        
-        mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars=  _vars)   
+    elif function=='stretched_exponential' or function=='stretched':        
+        mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars=  _vars) 
+                
+    elif function=='flow_para_function' or  function=='flow_para': 
+        mod = Model(flow_para_function)#,  independent_vars=  _vars)
         
     else:
         print ("The %s is not supported.The supported functions include simple_exponential and stretched_exponential"%function)
@@ -1393,13 +1417,19 @@ def fit_saxs_rad_ang_g2( g2, taus, res_pargs=None,function='simple_exponential',
     mod.set_param_hint( 'beta',   min=0.0 )
     mod.set_param_hint( 'alpha',   min=0.0 )
     mod.set_param_hint( 'relaxation_rate',   min=0.0 )
+    if function=='flow_para_function' or  function=='flow_para':
+        mod.set_param_hint( 'flow_velocity', min=0)
     
     _beta=_guess_val['beta']
     _alpha=_guess_val['alpha']
     _relaxation_rate = _guess_val['relaxation_rate']
     _baseline= _guess_val['baseline']
-    
     pars  = mod.make_params( beta=_beta, alpha=_alpha, relaxation_rate =_relaxation_rate, baseline= _baseline)
+    
+    if function=='flow_para_function' or  function=='flow_para':
+        _flow_velocity =_guess_val['flow_velocity']    
+        pars  = mod.make_params( beta=_beta, alpha=_alpha, flow_velocity=_flow_velocity,
+                                relaxation_rate =_relaxation_rate, baseline= _baseline)
     
     for v in _vars:
         pars['%s'%v].vary = False
@@ -1411,7 +1441,8 @@ def fit_saxs_rad_ang_g2( g2, taus, res_pargs=None,function='simple_exponential',
         title_qr = ' Qr= %.5f  '%( q_ring_center[qr_ind]) + r'$\AA^{-1}$' 
         plt.title('uid=%s:--->'%uid + title_qr,fontsize=20, y =1.1) 
         #print (qz_ind,title_qz)
-        if num_qr!=1:plt.axis('off')
+        #if num_qr!=1:plt.axis('off')
+        plt.axis('off')    
         sx = int(round(np.sqrt(num_qa)) )
         if num_qa%sx == 0: 
             sy = int(num_qa/sx)
@@ -1422,13 +1453,15 @@ def fit_saxs_rad_ang_g2( g2, taus, res_pargs=None,function='simple_exponential',
             ax.set_ylabel("g2") 
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
             i =  sn + qr_ind * num_qa
-            title_qa = " Angle= " + '%.2f'%( ang_center[sn]) + r'$^\circ$' + '( %d )'%i
-            if num_qr==1:
-
-                title = 'uid= %s:--->'%uid + title_qr + '__' +  title_qa
-            else:
-                title = title_qa
-            ax.set_title( title  )
+            #title_qa = " Angle= " + '%.2f'%( ang_center[sn]) + r'$^\circ$' + '( %d )'%i
+            title_qa = '%.2f'%( ang_center[sn]) + r'$^\circ$' + '( %d )'%(i)
+            #if num_qr==1:
+            #    title = 'uid= %s:--->'%uid + title_qr + '__' +  title_qa
+            #else:
+            #    title = title_qa
+            
+            title = title_qa    
+            ax.set_title( title , y =1.1) 
             
             y=g2[1:, i]   #print (y.shape)            
             lags=taus[1:]        
@@ -1443,10 +1476,14 @@ def fit_saxs_rad_ang_g2( g2, taus, res_pargs=None,function='simple_exponential',
             #baseline[i] = 1.0
             baseline[i] =  result1.best_values['baseline'] 
 
+
             if function=='simple_exponential' or function=='simple':
                 alpha[i] =1.0 
             elif function=='stretched_exponential' or function=='stretched':
                 alpha[i] = result1.best_values['alpha']
+            
+            if function=='flow_para_function' or  function=='flow_para':
+                flow[i] = result1.best_values['flow_velocity']
 
             ax.semilogx(taus[1:], y, 'ro')
             ax.semilogx(taus[1:], result1.best_fit, '-b')
@@ -1460,8 +1497,10 @@ def fit_saxs_rad_ang_g2( g2, taus, res_pargs=None,function='simple_exponential',
 
             txts = r'$baseline$' + r'$ = %.3f$'%( baseline[i]) 
             ax.text(x =0.02, y=.35, s=txts, fontsize=14, transform=ax.transAxes)  
-        
-        
+            
+            if function=='flow_para_function' or  function=='flow_para':
+                txts = r'$flow_v$' + r'$ = %.3f$'%( flow[i]) 
+                ax.text(x =0.02, y=.25, s=txts, fontsize=14, transform=ax.transAxes)         
         
             if 'ylim' in kwargs:
                 ax.set_ylim( kwargs['ylim'])
@@ -1473,11 +1512,11 @@ def fit_saxs_rad_ang_g2( g2, taus, res_pargs=None,function='simple_exponential',
             if 'xlim' in kwargs:
                 ax.set_xlim( kwargs['xlim'])
 
-        dt =datetime.now()
-        CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
+        #dt =datetime.now()
+        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
                 
         #fp = path + 'g2--uid=%s-qr=%s'%(uid,q_ring_center[qr_ind]) + CurTime + '.png'
-        fp = path + 'uid=%s--g2--qr--fit-'%(uid)  + '.png'
+        fp = path + 'uid=%s--g2--qr-%s--fit-'%(uid, q_ring_center[qr_ind] )  + '.png'
         fig.savefig( fp, dpi=fig.dpi)        
         fig.tight_layout()  
         plt.show()
@@ -1485,9 +1524,52 @@ def fit_saxs_rad_ang_g2( g2, taus, res_pargs=None,function='simple_exponential',
     #fig.tight_layout()  
     #plt.show()
     result = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )
-    
+    if function=='flow_para_function' or  function=='flow_para':
+        result = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline, flow_velocity=flow )
     return result
                 
+    
+ 
+def save_seg_saxs_g2(  g2, res_pargs, time_label=True, *argv,**kwargs):     
+    
+    '''
+    Aug 8, 2016, Y.G.@CHX
+    save g2 results, 
+       res_pargs should contain
+           g2: one-time correlation function
+           res_pargs: contions taus, q_ring_center values
+           path:
+           uid:
+      
+      '''
+    taus = res_pargs[ 'taus']
+    qz_center= res_pargs[ 'q_ring_center']       
+    qr_center = res_pargs[ 'ang_center']
+    path = res_pargs['path']
+    uid = res_pargs['uid']
+    
+    df = DataFrame(     np.hstack( [ (taus).reshape( len(g2),1) ,  g2] )  ) 
+    columns=[]
+    columns.append('tau')
+    
+    for qz in qz_center:
+        for qr in qr_center:
+            columns.append( [str(qz),str(qr)] )
+            
+    df.columns = columns   
+    
+    if time_label:
+        dt =datetime.now()
+        CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)  
+        filename = os.path.join(path, 'g2-%s-%s.csv' %(uid,CurTime))
+    else:
+        filename = os.path.join(path, 'uid=%s--g2.csv' % (uid))
+    df.to_csv(filename)
+    print( 'The g2 of uid= %s is saved with filename as %s'%(uid, filename))
+
+    
+
+    
     
     
 
@@ -1526,11 +1608,6 @@ def save_saxs_g2(  g2, res_pargs, taus=None, filename=None ):
 
     
 
-def stretched_auto_corr_scat_factor(x, beta, relaxation_rate, alpha=1.0, baseline=1):
-    return beta * (np.exp(-2 * relaxation_rate * x))**alpha + baseline
-
-def simple_exponential(x, beta, relaxation_rate,  baseline=1):
-    return beta * np.exp(-2 * relaxation_rate * x) + baseline
 
 
 
@@ -1630,10 +1707,8 @@ def fit_saxs_g2( g2, res_pargs=None, function='simple_exponential', *argv,**kwar
         _vars = np.unique ( _vars + ['alpha']) 
         mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars= list( _vars)   )
         
-        
-    elif function=='stretched_exponential' or function=='stretched':
-        
-        mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars=  _vars)   
+    elif function=='stretched_exponential' or function=='stretched':        
+        mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars=  _vars)  
         
     else:
         print ("The %s is not supported.The supported functions include simple_exponential and stretched_exponential"%function)  
@@ -1822,7 +1897,7 @@ def fit_q_rate( q, rate, plot_=True, power_variable=False, *argv,**kwargs):
         dt =datetime.now()
         CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)     
         #fp = path + 'Q%s-Rate--uid=%s'%(power,uid) + CurTime + '--Fit.png'
-        fp = path + 'uid=--%s--Q-Rate'%(uid) + '--fit-.png'
+        fp = path + 'uid=%s--Q-Rate'%(uid) + '--fit-.png'
         fig.savefig( fp, dpi=fig.dpi)    
     
         fig.tight_layout() 
@@ -1902,3 +1977,169 @@ def plot_gamma():
     ax.set_ylabel('Log( Gamma )')
     ax.set_xlabel("$Log(q)$"r'($\AA^{-1}$)')
     plt.show()
+
+    
+from chxanalys.chx_compress_analysis import ( compress_eigerdata, read_compressed_eigerdata,
+                                             Multifile,get_t_iqc,
+                                            get_each_ring_mean_intensityc)
+
+from chxanalys.chx_correlationc import ( cal_g2c,Get_Pixel_Arrayc,auto_two_Arrayc,get_pixelist_interp_iq,)
+
+
+def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, fit = True, compress=True  ):
+    ''''Aug 16, 2016, YG@CHX-NSLS2
+    Do SAXS-XPCS analysis for multi uid data
+    uids: a list of uids to be analyzed    
+    md: metadata, should at least include
+        mask: array, mask data
+        data_dir: the path to save data, the result will be saved in data_dir/uid/...
+        dpix:
+        Ldet:
+        lambda:
+        timeperframe:
+        center
+    run_num: the run number
+    sub_num: the number in each sub-run
+    fit: if fit, do fit for g2 and show/save all fit plots
+    compress: apply a compress algorithm
+    
+    Save g2/metadata/g2-fit plot/g2 q-rate plot/ of each uid in data_dir/uid/...
+    return:
+    g2s: a dictionary, {run_num: sub_num: g2_of_each_uid}   
+    taus,
+    use_uids: return the valid uids
+    '''
+    
+    
+    g2s = {} # g2s[run_number][sub_seq]  =  g2 of each uid
+    lag_steps = [0]    
+    useful_uids = {}
+    if sub_num is None:
+        sub_num = len( uids )//run_num    
+
+    mask = md['mask']    
+    data_dir = md['data_dir']
+    ring_mask = md['ring_mask']
+    q_ring_center = md['q_ring_center']
+    
+    for run_seq in range(run_num):
+        g2s[ run_seq + 1] = {}    
+        useful_uids[ run_seq + 1] = {}  
+        i=0    
+        for sub_seq in range(  0, sub_num   ):        
+            uid = uids[ sub_seq + run_seq * sub_num  ]        
+            print( 'The %i--th uid to be analyzed is : %s'%(i, uid) )
+            try:
+                detector = get_detector( db[uid ] )
+                imgs = load_data( uid, detector  )  
+            except:
+                print( 'The %i--th uid: %s can not load data'%(i, uid) )
+                imgs=0
+
+            data_dir_ = os.path.join( data_dir, '%s/'%uid)
+            os.makedirs(data_dir_, exist_ok=True)
+
+            i +=1            
+            if imgs !=0:            
+                imgsa = apply_mask( imgs, mask )
+                Nimg = len(imgs)
+                md_ = imgs.md  
+                useful_uids[ run_seq + 1][i] = uid
+                if compress:
+                    filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%uid 
+                    mask, avg_img, imgsum, bad_frame_list = compress_eigerdata(imgs, mask, md_, filename, 
+                                                    force_compress= False, bad_pixel_threshold= 5e9, nobytes=4)
+                    try:
+                        md['Measurement']= db[uid]['start']['Measurement']
+                        #md['sample']=db[uid]['start']['sample']     
+                        #md['sample']= 'PS205000-PMMA-207000-SMMA3'
+                        print( md['Measurement'] )
+
+                    except:
+                        md['Measurement']= 'Measurement'
+                        md['sample']='sample'                    
+
+                    dpix = md['x_pixel_size'] * 1000.  #in mm, eiger 4m is 0.075 mm
+                    lambda_ =md['incident_wavelength']    # wavelegth of the X-rays in Angstroms
+                    Ldet = md['detector_distance'] * 1000      # detector to sample distance (mm)
+                    exposuretime= md['count_time']
+                    acquisition_period = md['frame_time']
+                    timeperframe = acquisition_period#for g2
+                    #timeperframe = exposuretime#for visiblitly
+                    #timeperframe = 2  ## manual overwrite!!!! we apparently writing the wrong metadata....
+                    center= md['center']
+
+                    setup_pargs=dict(uid=uid, dpix= dpix, Ldet=Ldet, lambda_= lambda_, 
+                                timeperframe=timeperframe, center=center, path= data_dir_)
+
+                    md['avg_img'] = avg_img                  
+                    #plot1D( y = imgsum[ np.array( [i for i in np.arange( len(imgsum)) if i not in bad_frame_list])],
+                    #   title ='Uid= %s--imgsum'%uid, xlabel='Frame', ylabel='Total_Intensity', legend=''   )
+                    min_inten = 10
+
+                    #good_start = np.where( np.array(imgsum) > min_inten )[0][0]
+                    good_start = 2
+
+                    good_start = max(good_start, np.where( np.array(imgsum) > min_inten )[0][0] )   
+
+                    print ('With compression, the good_start frame number is: %s '%good_start)
+                    FD = Multifile(filename, 0, len(imgs)) 
+
+                    hmask = create_hot_pixel_mask( avg_img, 1e8)
+                    qp, iq, q = get_circular_average( avg_img, mask * hmask, pargs=setup_pargs, nx=None,
+                            plot_ = False, show_pixel= True, xlim=[0.001,.05], ylim = [0.0001, 500])                
+
+                    norm = get_pixelist_interp_iq( qp, iq, ring_mask, center)
+                    g2, lag_steps_  =cal_g2c( FD,  ring_mask, bad_frame_list,good_start, num_buf = 8, 
+                                imgsum= None, norm= norm )   
+
+                    if len( lag_steps) < len(lag_steps_):
+                        lag_steps = lag_steps_
+
+                else:
+                    sampling = 1000  #sampling should be one  
+
+                    #good_start = check_shutter_open( imgsra,  min_inten=5, time_edge = [0,10], plot_ = False )
+                    good_start = 2
+
+                    good_series = apply_mask( imgsa[good_start:  ], mask )
+
+                    imgsum, bad_frame_list = get_each_frame_intensity(good_series ,sampling = sampling, 
+                                        bad_pixel_threshold=1.2e8,  plot_ = False, uid=uid)
+                    bad_image_process = False
+
+                    if  len(bad_frame_list):
+                        bad_image_process = True
+                    print( bad_image_process  ) 
+
+                    g2, lag_steps_  =cal_g2( good_series,  ring_mask, bad_image_process,
+                                       bad_frame_list, good_start, num_buf = 8 )
+                    if len( lag_steps) < len(lag_steps_):
+                        lag_steps = lag_step_
+
+
+                taus = lag_steps * timeperframe
+                res_pargs = dict(taus=taus, q_ring_center=q_ring_center, path=data_dir_, uid=uid        )
+                save_saxs_g2(   g2, res_pargs )
+                #plot_saxs_g2( g2, taus,  vlim=[0.95, 1.05], res_pargs=res_pargs) 
+                if fit:
+                    fit_result = fit_saxs_g2( g2, res_pargs, function = 'stretched',  vlim=[0.95, 1.05], 
+                        fit_variables={'baseline':True, 'beta':True, 'alpha':False,'relaxation_rate':True},
+                        guess_values={'baseline':1.0,'beta':0.05,'alpha':1.0,'relaxation_rate':0.01})
+                    fit_q_rate(  q_ring_center[:], fit_result['rate'][:], power_variable= False,
+                           uid=uid, path= data_dir_ )
+
+                    psave_obj( fit_result, data_dir_ + 'uid=%s-g2-fit-para'%uid )
+                psave_obj(  md, data_dir_ + 'uid=%s-md'%uid ) #save the setup parameters
+
+                g2s[run_seq + 1][i] = g2            
+                print ('*'*40)
+                print()
+
+        
+    return g2s, taus, useful_uids
+    
+    
+    
+    
+    
