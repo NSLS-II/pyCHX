@@ -787,27 +787,35 @@ def get_ring_anglar_mask(ring_mask, ang_mask,
     ind = np.where(ang_mask!=0)
     ang_mask_[ind ] =  ang_mask[ ind ] + 1E9  #add some large number to qr
     
+    dumy_ring_mask = np.zeros( ring_mask.shape  )
+    dumy_ring_mask[ring_mask==1] =1
+    dumy_ring_ang = dumy_ring_mask * ang_mask
+    real_ang_lab =   np.int_( np.unique( dumy_ring_ang )[1:] ) -1
+    
     ring_ang = ring_mask * ang_mask_  
     
     #convert label_array_qzr to [1,2,3,...]
     ura = np.unique( ring_ang )[1:]
     
     ur = np.unique( ring_mask )[1:]
-    ua = np.unique( ang_mask )[1:]
-    #print (uqzr)     
+    ua = np.unique( ang_mask )[real_ang_lab]
+        
     
     ring_ang_ = np.zeros_like( ring_ang )
     newl = np.arange( 1, len(ura)+1)
+    #newl = np.int_( real_ang_lab )   
+    
     
     rc= [  [ q_ring_center[i]]*len( ua ) for i in range(len( ur ))  ]
-    ac =list( ang_center) * len( ur )
+    ac =list( ang_center[ua]) * len( ur )
     
     #rc =list( q_ring_center) * len( ua )
     #ac= [  [ ang_center[i]]*len( ur ) for i in range(len( ua ))  ]
     
     for i, label in enumerate(ura):
         #print (i, label)
-        ring_ang_.ravel()[ np.where(  ring_ang.ravel() == label)[0] ] = newl[i]    
+        ring_ang_.ravel()[ np.where(  ring_ang.ravel() == label)[0] ] = newl[i] 
+  
     
     
     return   np.int_(ring_ang_), np.concatenate( np.array( rc )),  np.array( ac ) 
@@ -1190,13 +1198,14 @@ def plot_saxs_two_g2( g2, taus, g2b, tausb,res_pargs=None, *argv,**kwargs):
     
 #plot g2 results
 
-def plot_saxs_rad_ang_g2( g2, taus, res_pargs=None, *argv,**kwargs):     
+def plot_saxs_rad_ang_g2( g2, taus, res_pargs=None, master_angle_plot= False, *argv,**kwargs):     
     '''plot g2 results of segments with radius and angle partation , 
     
        g2: one-time correlation function
        taus: the time delays  
        res_pargs, a dict, can contains
            uid/path/qr_center/qz_center/
+       master_angle_plot: if True, plot angle first, then q
        kwargs: can contains
            vlim: [vmin,vmax]: for the plot limit of y, the y-limit will be [vmin * min(y), vmx*max(y)]
            ylim/xlim: the limit of y and x
@@ -1236,29 +1245,44 @@ def plot_saxs_rad_ang_g2( g2, taus, res_pargs=None, *argv,**kwargs):
         else:
             print( 'Please give ang_center') 
         
-
-    for qr_ind in range(num_qr):
+    if master_angle_plot:
+        first_var = num_qa
+        sec_var = num_qr
+    else:
+        first_var=num_qr
+        sec_var = num_qa
+        
+    for qr_ind in range( first_var  ):
         fig = plt.figure(figsize=(10, 12))
         #fig = plt.figure()
-        title_qr = ' Qr= %.5f  '%( q_ring_center[qr_ind]) + r'$\AA^{-1}$' 
+        if master_angle_plot:
+            title_qr = 'Angle= %.2f'%( ang_center[qr_ind]) + r'$^\circ$' 
+        else:
+            title_qr = ' Qr= %.5f  '%( q_ring_center[qr_ind]) + r'$\AA^{-1}$' 
+        
         plt.title('uid= %s:--->'%uid + title_qr,fontsize=20, y =1.1) 
         #print (qz_ind,title_qz)
         #if num_qr!=1:plt.axis('off')
         plt.axis('off')    
-        sx = int(round(np.sqrt(num_qa)) )
-        if num_qa%sx == 0: 
-            sy = int(num_qa/sx)
+        sx = int(round(np.sqrt(  sec_var  )) )
+        if sec_var%sx == 0: 
+            sy = int(sec_var/sx)
         else: 
-            sy=int(num_qa/sx+1) 
+            sy=int(sec_var/sx+1) 
             
-        for sn in range(num_qa):
+        for sn in range( sec_var ):
             ax = fig.add_subplot(sx,sy,sn+1 )
             ax.set_ylabel("g2") 
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
-            i = sn + qr_ind * num_qa
+            if master_angle_plot:
+                i = sn + qr_ind * num_qr
+                title_qa =  '%.5f  '%( q_ring_center[sn]) + r'$\AA^{-1}$' 
+            else:
+                i = sn + qr_ind * num_qa
+                title_qa = '%.2f'%( ang_center[sn]) + r'$^\circ$' + '( %d )'%(i)
             #title_qa = " Angle= " + '%.2f'%( ang_center[sn]) + r'$^\circ$' + '( %d )'%i
             
-            title_qa = '%.2f'%( ang_center[sn]) + r'$^\circ$' + '( %d )'%(i)
+            #title_qa = '%.2f'%( ang_center[sn]) + r'$^\circ$' + '( %d )'%(i)
             #if num_qr==1:
             #    title = 'uid= %s:--->'%uid + title_qr + '__' +  title_qa
             #else:
@@ -1311,7 +1335,8 @@ def get_flow_velocity( average_velocity, shape_factor):
 
 
 
-def fit_saxs_rad_ang_g2( g2,  res_pargs=None,function='simple_exponential', *argv,**kwargs):    
+def fit_saxs_rad_ang_g2( g2,  res_pargs=None,function='simple_exponential', 
+                        master_angle_plot= False, *argv,**kwargs):    
      
     '''
     Fit one-time correlation function
@@ -1435,30 +1460,41 @@ def fit_saxs_rad_ang_g2( g2,  res_pargs=None,function='simple_exponential', *arg
         pars['%s'%v].vary = False
         
 
-    for qr_ind in range(num_qr):
+        
+    if master_angle_plot:
+        first_var = num_qa
+        sec_var = num_qr
+    else:
+        first_var=num_qr
+        sec_var = num_qa
+        
+    for qr_ind in range( first_var  ):
         fig = plt.figure(figsize=(10, 12))
         #fig = plt.figure()
-        title_qr = ' Qr= %.5f  '%( q_ring_center[qr_ind]) + r'$\AA^{-1}$' 
-        plt.title('uid=%s:--->'%uid + title_qr,fontsize=20, y =1.1) 
-        #print (qz_ind,title_qz)
-        #if num_qr!=1:plt.axis('off')
-        plt.axis('off')    
-        sx = int(round(np.sqrt(num_qa)) )
-        if num_qa%sx == 0: 
-            sy = int(num_qa/sx)
+        if master_angle_plot:
+            title_qr = 'Angle= %.2f'%( ang_center[qr_ind]) + r'$^\circ$' 
+        else:
+            title_qr = ' Qr= %.5f  '%( q_ring_center[qr_ind]) + r'$\AA^{-1}$' 
+        
+        plt.title('uid= %s:--->'%uid + title_qr,fontsize=20, y =1.1)
+        plt.axis('off') 
+ 
+        sx = int(round(np.sqrt(  sec_var  )) )
+        if sec_var%sx == 0: 
+            sy = int(sec_var/sx)
         else: 
-            sy=int(num_qa/sx+1) 
-        for sn in range(num_qa):
+            sy=int(sec_var/sx+1) 
+            
+        for sn in range( sec_var ):
             ax = fig.add_subplot(sx,sy,sn+1 )
             ax.set_ylabel("g2") 
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
-            i =  sn + qr_ind * num_qa
-            #title_qa = " Angle= " + '%.2f'%( ang_center[sn]) + r'$^\circ$' + '( %d )'%i
-            title_qa = '%.2f'%( ang_center[sn]) + r'$^\circ$' + '( %d )'%(i)
-            #if num_qr==1:
-            #    title = 'uid= %s:--->'%uid + title_qr + '__' +  title_qa
-            #else:
-            #    title = title_qa
+            if master_angle_plot:
+                i = sn + qr_ind * num_qr
+                title_qa =  '%.5f  '%( q_ring_center[sn]) + r'$\AA^{-1}$' 
+            else:
+                i = sn + qr_ind * num_qa
+                title_qa = '%.2f'%( ang_center[sn]) + r'$^\circ$' + '( %d )'%(i)        
             
             title = title_qa    
             ax.set_title( title , y =1.1) 
