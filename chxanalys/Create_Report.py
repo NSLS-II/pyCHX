@@ -34,42 +34,13 @@ from datetime import datetime
 
 import sys,os
 
-
-        
-
-
-
-data_dir = '/XF11ID/analysis/2016_2/yuzhang/Results/August/af8f66/'
-uid = 'af8f66'
-
-out_dir = data_dir + 'test/'
-if not os.path.exists(out_dir):
-    os.makedirs(out_dir)
-    
-    
-'''global definition'''
-
-avg_img_file = 'uid=%s--img-avg-.png'%uid   
-ROI_on_img_file = 'uid=%s--ROI-on-Image-.png'%uid
-qiq_file = 'uid=%s--Circular-Average-.png'%uid   
-ROI_on_Iq_file = 'uid=%s--ROI-on-Iq-.png'%uid  
-
-Iq_t_file = 'uid=%s--Iq-t-.png'%uid
-img_sum_t_file = 'uid=%s--img-sum-t.png'%uid
-wat_file= 'uid=%s--Waterfall-.png'%uid
-Mean_inten_t_file= 'uid=%s--Mean-intensity-of-each-ROI-.png'%uid
-
-g2_file = 'uid=%s--g2-.png'%uid
-g2_fit_file = 'uid=%s--g2--fit-.png'%uid
-q_rate_file = 'uid=--%s--Q-Rate--fit-.png'%uid    
-
-two_time_file = 'uid=%s--Two-time-.png'%uid
-two_g2_file = 'uid=%s--g2--two-g2-.png'%uid
-
+ 
+ 
 
 class create_pdf_report( object ):
     
-    '''Create a pdf report by giving data_dir, uid, out_dir
+    '''Aug 16, YG@CHX-NSLS-II 
+       Create a pdf report by giving data_dir, uid, out_dir
        data_dir: the input data directory, including all necessary images
        the images names should be:
             meta_file = 'uid=%s-md'%uid
@@ -97,7 +68,7 @@ class create_pdf_report( object ):
           A PDF file with name as "XPCS Analysis Report for uid=%s"%uid in out_dir folder
     '''       
     
-    def __init__( self, data_dir, uid, out_dir=None ):
+    def __init__( self, data_dir, uid, out_dir=None, filename=None, load=True ):
         self.data_dir = data_dir
         self.uid = uid
         if out_dir is None:
@@ -113,18 +84,49 @@ class create_pdf_report( object ):
         dt =datetime.now()
         CurTime = '%02d/%02d/%s/-%02d/%02d/' % ( dt.month, dt.day, dt.year,dt.hour,dt.minute)
         self.CurTime = CurTime
-      
-        c = canvas.Canvas( out_dir + "XPCS_Analysis_Report_for_uid=%s.pdf"%uid, pagesize=letter)
+        if filename is None:
+            filename="XPCS_Analysis_Report_for_uid=%s.pdf"%uid
+        filename=out_dir + filename
+        c = canvas.Canvas( filename, pagesize=letter)
+        self.filename= filename
         c.setTitle("XPCS Analysis Report for uid=%s"%uid)
+        self.c = c
+        if load:
+            self.load_metadata()
+        
+    def load_metadata(self):
+        uid=self.uid
+        data_dir = self.data_dir
+        
         #load metadata        
         meta_file = 'uid=%s-md'%uid
         md = pload_obj( data_dir + meta_file )         
-        self.c = c
-        self.md = md
         
+        self.md = md        
         self.sub_title_num = 0
+        
+        '''global definition'''
+
+        self.avg_img_file = 'uid=%s--img-avg-.png'%uid   
+        self.ROI_on_img_file = 'uid=%s--ROI-on-Image-.png'%uid
+        self.qiq_file = 'uid=%s--Circular-Average-.png'%uid   
+        self.ROI_on_Iq_file = 'uid=%s--ROI-on-Iq-.png'%uid  
+
+        self.Iq_t_file = 'uid=%s--Iq-t-.png'%uid
+        self.img_sum_t_file = 'uid=%s--img-sum-t.png'%uid
+        self.wat_file= 'uid=%s--Waterfall-.png'%uid
+        self.Mean_inten_t_file= 'uid=%s--Mean-intensity-of-each-ROI-.png'%uid
+
+        self.g2_file = 'uid=%s--g2-.png'%uid
+        self.g2_fit_file = 'uid=%s--g2--fit-.png'%uid
+        self.q_rate_file = 'uid=%s--Q-Rate--fit-.png'%uid    
+
+        self.two_time_file = 'uid=%s--Two-time-.png'%uid
+        self.two_g2_file = 'uid=%s--g2--two-g2-.png'%uid
         #self.report_header(page=1, top=730, new_page=False)
         #self.report_meta(new_page=False)
+        
+        
         
     def report_header(self, page=1, new_page=False):
         '''create headers, including title/page number'''
@@ -139,9 +141,11 @@ class create_pdf_report( object ):
         #add time stamp
         c.drawString(380, 10, "created at %s@CHX"%( CurTime ) ) 
         #add title
-        c.setFont("Helvetica", 22)
+        #c.setFont("Helvetica", 22)
+        title = "XPCS Analysis Report for uid=%s"%uid        
+        c.setFont("Helvetica", 1000/( len(title) )   )        
         #c.drawString(180,760, "XPCS Report of uid=%s"%uid )  #add title
-        c.drawString(140,760, "XPCS Analysis Report for uid=%s"%uid )  #add title
+        c.drawString(50,760, "XPCS Analysis Report for uid=%s"%uid )  #add title
         #add a line under title
         c.setStrokeColor( red )
         c.setLineWidth(width=1.5) 
@@ -166,6 +170,7 @@ class create_pdf_report( object ):
         '''
 
         c=self.c
+        uid=self.uid
         #load metadata
         md = self.md
         #add sub-title, metadata
@@ -184,9 +189,29 @@ class create_pdf_report( object ):
         c.drawString(30, top-ds*5, 'Detector-Sample Distance: %s m'%(md['detector_distance']) )
         c.drawString(30, top-ds*6, 'Beam Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y']) )
         c.drawString(30, top-ds*7, 'Mask file: %s'%md['mask_file'] )
-        c.drawString(30, top-ds*8, 'Data dir: %s'%data_dir )
-        c.setFont("Helvetica", 10)
-        c.drawString(30, top-ds*9, 'Pipeline notebook: %s'%md['NOTEBOOK_FULL_PATH'] )
+        
+        s=  'Data dir: %s'%self.data_dir     
+        #c.setFont("Helvetica", 1000/( len(s ) )   )  
+        c.setFont("Helvetica", 12)
+        if (12*len(s )) >1000:
+            c.drawString(30, top-ds*8, s[:1000//12] )
+            c.drawString(30 + len('Data dir:')*6, top-ds*9, s[1000//12:] )
+            line = 9
+        else:              
+            c.drawString(30, top-ds*8, s)
+            line = 8
+        s = 'Pipeline notebook: %s'%md['NOTEBOOK_FULL_PATH']
+        #c.setFont("Helvetica", 800/( len(s ) )   )   
+        c.setFont("Helvetica", 12)
+        
+        line +=1
+        if (12*len(s )) >1000:
+            c.drawString(30, top-ds*line, s[:1000//12] )
+            c.drawString(30+  len('Pipeline notebook:')*6, top-ds*(line+1), s[1000//12:] )
+        else:              
+            c.drawString(30, top-ds*line, s)
+
+        
         if new_page:
             c.showPage()
             c.save()
@@ -202,7 +227,7 @@ class create_pdf_report( object ):
 
         c= self.c
         c.setFont("Helvetica", 20)
-        
+        uid=self.uid
         
         ds =  220
         self.sub_title_num +=1
@@ -210,8 +235,8 @@ class create_pdf_report( object ):
 
         #add average image
         c.setFont("Helvetica", 14)
-        imgf = avg_img_file  
-        image = data_dir + imgf
+        imgf = self.avg_img_file  
+        image = self.data_dir + imgf
         im = Image.open( image )
         ratio = float(im.size[1])/im.size[0]
         height=  180
@@ -227,8 +252,8 @@ class create_pdf_report( object ):
 
         #add q_Iq
 
-        imgf = qiq_file 
-        image = data_dir + imgf
+        imgf = self.qiq_file 
+        image = self.data_dir + imgf
         im = Image.open( image )
         ratio = float(im.size[1])/im.size[0]
         height= 180
@@ -251,7 +276,7 @@ class create_pdf_report( object ):
                ROI on average intensity image
                ROI on circular average
         '''   
-        
+        uid=self.uid
         c= self.c
         #add sub-title, static images
         c.setFillColor(black)
@@ -261,8 +286,8 @@ class create_pdf_report( object ):
         c.drawString(10, top, "%s. Define of ROI"%self.sub_title_num )  #add title
         #add ROI on image
         c.setFont("Helvetica", 14)
-        imgf = ROI_on_img_file
-        image = data_dir + imgf
+        imgf = self.ROI_on_img_file
+        image = self.data_dir + imgf
         im = Image.open( image )
         ratio = float(im.size[1])/im.size[0]
         height= 240
@@ -276,8 +301,8 @@ class create_pdf_report( object ):
         c.drawString( 60, top- 260,  'filename: %s'%imgf    )
         
         #add q_Iq
-        imgf = ROI_on_Iq_file
-        image = data_dir + imgf
+        imgf = self.ROI_on_Iq_file
+        image = self.data_dir + imgf
         im = Image.open( image )
         ratio = float(im.size[1])/im.size[0]
         height= 180
@@ -304,7 +329,7 @@ class create_pdf_report( object ):
                mean intensity of each ROI as a function of time               
         '''   
         c= self.c
-
+        uid=self.uid
         #add sub-title, Time-dependent plot
         c.setFont("Helvetica", 20)
         top1=top
@@ -315,8 +340,8 @@ class create_pdf_report( object ):
         
         top = top1 - 160
         #add q_Iq_t
-        imgf = img_sum_t_file
-        image = data_dir + imgf
+        imgf = self.img_sum_t_file
+        image = self.data_dir + imgf
         im = Image.open( image )
         ratio = float(im.size[1])/im.size[0]
         height= 140
@@ -331,8 +356,8 @@ class create_pdf_report( object ):
         c.drawString( 80, top- 5,  'filename: %s'%imgf    )
 
         #add mean_intensity_each_roi
-        imgf = Iq_t_file
-        image = data_dir + imgf
+        imgf = self.Iq_t_file
+        image = self.data_dir + imgf
         im = Image.open( image )
         ratio = float(im.size[1])/im.size[0]
         height= 140
@@ -349,8 +374,8 @@ class create_pdf_report( object ):
 
         top = top1 - 340
         #add waterfall plot
-        imgf = wat_file
-        image = data_dir + imgf
+        imgf = self.wat_file
+        image = self.data_dir + imgf
         im = Image.open( image )
         ratio = float(im.size[1])/im.size[0]
         height= 160
@@ -366,8 +391,8 @@ class create_pdf_report( object ):
 
 
         #add mean-intensity of each roi
-        imgf = Mean_inten_t_file
-        image = data_dir + imgf
+        imgf = self.Mean_inten_t_file
+        image = self.data_dir + imgf
         im = Image.open( image )
         ratio = float(im.size[1])/im.size[0]
         height= 160
@@ -385,13 +410,14 @@ class create_pdf_report( object ):
             c.showPage()
             c.save()
 
-    def report_one_time( self, top= 350,new_page=False):
+    def report_one_time( self, top= 350, g2_fit_file=None, q_rate_file=None, new_page=False):
         '''create the one time correlation function report
            Two images:
                One Time Correlation Function with fit
                q-rate fit
         '''   
         c= self.c
+        uid=self.uid
         #add sub-title, One Time Correlation Function
         c.setFillColor(black)
         c.setFont("Helvetica", 20)
@@ -401,9 +427,11 @@ class create_pdf_report( object ):
         c.setFont("Helvetica", 14)
         #add g2 plot
         top = top - 320
-
-        imgf = g2_fit_file
-        image = data_dir + imgf
+        if g2_fit_file is None:
+            imgf = self.g2_fit_file
+        else:
+            imgf = g2_fit_file
+        image = self.data_dir + imgf
         im = Image.open( image )
         ratio = float(im.size[1])/im.size[0]
         height= 300
@@ -419,8 +447,11 @@ class create_pdf_report( object ):
 
         #add g2 plot fit
         top = top + 70 #
-        imgf = q_rate_file
-        image = data_dir + imgf
+        if q_rate_file is None:
+            imgf = self.q_rate_file
+        else:
+            imgf =  q_rate_file
+        image = self.data_dir + imgf
         im = Image.open( image )
         ratio = float(im.size[1])/im.size[0]
         height= 180
@@ -437,6 +468,63 @@ class create_pdf_report( object ):
             c.showPage()
             c.save()
 
+            
+            
+    def report_mulit_one_time( self, top= 720,new_page=False):
+        '''create the mulit one time correlation function report
+           Two images:
+               One Time Correlation Function with fit
+               q-rate fit
+        '''   
+        c= self.c
+        uid=self.uid
+        #add sub-title, One Time Correlation Function
+        c.setFillColor(black)
+        c.setFont("Helvetica", 20)
+        ds = 20
+        self.sub_title_num +=1
+        c.drawString(10, top, "%s. One Time Correlation Function"%self.sub_title_num  )  #add title
+        c.setFont("Helvetica", 14)
+        #add g2 plot
+        top = top - 320
+
+        imgf = self.g2_fit_file
+        image = self.data_dir + imgf
+        im = Image.open( image )
+        ratio = float(im.size[1])/im.size[0]
+        height= 300
+        c.drawImage( image, 1, top,  width= height/ratio,height=height, mask= 'auto')
+        #c.drawImage( image, 1, top,  width= height/ratio,height=height, mask= None )
+        c.setFont("Helvetica", 16)
+        c.setFillColor( blue) 
+        c.drawString( 150, top + height ,  'g2 fit plot'    )
+
+        c.setFont("Helvetica", 12)
+        c.setFillColor(red) 
+        c.drawString( 80, top- 0,  'filename: %s'%imgf    )
+
+        #add g2 plot fit
+        top = top + 70 #
+        imgf = self.q_rate_file
+        image = self.data_dir + imgf
+        im = Image.open( image )
+        ratio = float(im.size[1])/im.size[0]
+        height= 180
+        c.drawImage( image, 350, top,  width= height/ratio,height=height,mask= 'auto')
+
+        c.setFont("Helvetica", 16)
+        c.setFillColor( blue) 
+        c.drawString( 450, top + 230,  'q-rate fit  plot'    )
+        c.setFont("Helvetica", 12)
+        c.setFillColor(red) 
+        c.drawString( 380, top- 5,  'filename: %s'%imgf    )
+        
+        if new_page:
+            c.showPage()
+            c.save()
+
+            
+            
     def report_two_time( self, top= 720, new_page=False):
         '''create the one time correlation function report
            Two images:
@@ -444,6 +532,7 @@ class create_pdf_report( object ):
                two one-time correlatoin function from multi-one-time and from diagonal two-time
         '''   
         c= self.c
+        uid=self.uid
         #add sub-title, Time-dependent plot
         c.setFont("Helvetica", 20)
         
@@ -455,8 +544,8 @@ class create_pdf_report( object ):
         top1=top
         top = top1 - 330
         #add q_Iq_t
-        imgf = two_time_file
-        image = data_dir + imgf
+        imgf = self.two_time_file
+        image = self.data_dir + imgf
         im = Image.open( image )
         ratio = float(im.size[1])/im.size[0]
         height= 300
@@ -471,8 +560,8 @@ class create_pdf_report( object ):
         c.drawString( 180, top- 10,  'filename: %s'%imgf    )
         top = top - 340
         #add q_Iq_t
-        imgf = two_g2_file
-        image = data_dir + imgf
+        imgf = self.two_g2_file
+        image = self.data_dir + imgf
         im = Image.open( image )
         ratio = float(im.size[1])/im.size[0]
         height= 300
@@ -500,13 +589,68 @@ class create_pdf_report( object ):
         
     def done(self):
         out_dir = self.out_dir
-        self.uid = uid
+        uid=self.uid
+        
         print()
         print('*'*40)
-        print ('The pdf report is created in: %s with filename as: Report_uid=%s.pdf'%(out_dir,uid ))
+        print ('The pdf report is created with filename as: %s'%(self.filename ))
         print('*'*40)
 
 
 
+def create_multi_pdf_reports_for_uids( uids, g2, data_dir ):
+    ''' Aug 16, YG@CHX-NSLS-II 
+        Create multi pdf reports for each uid in uids
+        uids: a list of uids to be reported
+        g2: a dictionary, {run_num: sub_num: g2_of_each_uid}   
+        data_dir:
+        Save pdf report in data dir
+    '''
+    for key in list( g2.keys()):    
+        i=1
+        for sub_key in list( g2[key].keys() ):
+            uid_i = uids[key][sub_key]
+            data_dir_ = os.path.join( data_dir, '%s/'%uid_i)        
 
+            c= create_pdf_report(  data_dir_, uid_i,data_dir )    
+            #Page one: Meta-data/Iq-Q/ROI
+            c.report_header(page=1)
+            c.report_meta( top=730)
+            c.report_one_time( top= 500 )
+            c.save_page()
+            c.done() 
 
+            
+def create_one_pdf_reports_for_uids( uids, g2, data_dir, filename='all_in_one' ):
+    ''' Aug 16, YG@CHX-NSLS-II 
+        Create one pdf reports for each uid in uids
+        uids: a list of uids to be reported
+        g2: a dictionary, {run_num: sub_num: g2_of_each_uid}   
+        data_dir:
+        Save pdf report in data dir
+    '''
+    c= create_pdf_report( data_dir, uid=filename, out_dir=data_dir, load=False )  
+    page=1
+
+    for key in list( g2.keys()):    
+        i=1
+        for sub_key in list( g2[key].keys() ):
+            uid_i = uids[key][sub_key]
+            data_dir_ = os.path.join( data_dir, '%s/'%uid_i)  
+            
+            c.uid = uid_i
+            c.data_dir = data_dir_
+            c.load_metadata()         
+            
+            #Page one: Meta-data/Iq-Q/ROI
+            c.report_header(page=page)
+            c.report_meta( top=730)
+            c.report_one_time( top= 500 )
+            c.new_page()
+            page += 1
+    c.uid = filename        
+    c.save_page()
+    c.done() 
+    
+    
+    
