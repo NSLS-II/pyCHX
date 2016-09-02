@@ -1323,6 +1323,7 @@ def simple_exponential(x, beta, relaxation_rate,  baseline=1):
 
 
 def flow_para_function( x, beta, relaxation_rate, flow_velocity, baseline=1):
+    
     Diff_part=    np.exp(-2 * relaxation_rate * x)
     Flow_part =  np.pi**2/(16*x*flow_velocity) *  abs(  erf(  np.sqrt(   4/np.pi * 1j* x * flow_velocity ) ) )**2
     
