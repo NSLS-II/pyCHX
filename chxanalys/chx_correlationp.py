@@ -28,6 +28,12 @@ logger = logging.getLogger(__name__)
 def pass_FD(FD,n):
     #FD.rdframe(n)
     FD.seekimg(n)
+
+def go_through_FD(FD):    
+    for i in range(FD.beg, FD.end):
+        pass_FD(FD,i)
+        
+        
     
 def run_dill_encoded(what):
     fun, args = dill.loads(what)
