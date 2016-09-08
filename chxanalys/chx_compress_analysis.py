@@ -212,7 +212,7 @@ def cal_waterfallc(FD, labeled_array,   qindex=1, save=False, *argv,**kwargs):
     return watf
 
 
-def plot_waterfallc(wat, qindex=1, aspect = 1.0,vmax=None,save=False, *argv,**kwargs):   
+def plot_waterfallc(wat, qindex=1, aspect = None,vmax=None, vmin=None,save=False, *argv,**kwargs):   
     '''plot waterfall for a giving compressed file
     
        FD: class object, the compressed file handler
@@ -236,6 +236,12 @@ def plot_waterfallc(wat, qindex=1, aspect = 1.0,vmax=None,save=False, *argv,**kw
         beg=0
     
     extent = [  beg, len(wat)+beg, 0, len( wat.T) ]
+    if vmax is None:
+        vmax=wat.max()
+    if vmin is None:
+        vmin = wat.min()
+    if aspect is None:
+        aspect = wat.shape[0]/wat.shape[1]
     im = ax.imshow(wat.T, cmap='viridis', vmax=vmax,extent= extent)
     fig.colorbar( im   )
     ax.set_aspect( aspect)
@@ -253,6 +259,7 @@ def plot_waterfallc(wat, qindex=1, aspect = 1.0,vmax=None,save=False, *argv,**kw
         fig.savefig( fp, dpi=fig.dpi)
         
     plt.show()
+    
     
 
 
