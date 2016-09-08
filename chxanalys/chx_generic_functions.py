@@ -918,6 +918,44 @@ def ring_edges(inner_radius, width, spacing=0, num_rings=None):
 
 
 
+def get_non_uniform_edges(  centers, width = 4, number_rings=3 ):
+    '''
+    YG CHX Spe 6
+    get_non_uniform_edges(  centers, width = 4, number_rings=3 )
+    
+    Calculate the inner and outer radius of a set of non uniform distributed
+    rings by giving ring centers
+    For each center, there are number_rings with each of width
+
+    Parameters
+    ----------
+    centers : float
+        the center of the rings
+
+    width : float or list of floats
+        ring thickness
+        If a float, all rings will have the same thickness.
+
+    num_rings : int, optional
+        number of rings
+        Required if width and spacing are not lists and number
+        cannot thereby be inferred. If it is given and can also be
+        inferred, input is checked for consistency.
+
+    Returns
+    -------
+    edges : array
+        inner and outer radius for each ring    
+    '''
+    
+    
+    
+    edges = np.zeros( [len(centers)*number_rings, 2], dtype=np.int32  )
+    for i, c in enumerate(centers):       
+        edges[i*number_rings:(i+1)*number_rings,:] = ring_edges( inner_radius =  c - int(width*number_rings/2.),  
+                      width=width, spacing= 0, num_rings=number_rings)
+    return edges   
+
 
 
 def trans_tf_to_td(tf, dtype = 'dframe'):
