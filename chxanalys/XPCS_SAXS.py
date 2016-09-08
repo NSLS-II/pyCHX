@@ -6,6 +6,7 @@ This module is for the SAXS XPCS analysis
 
 
 
+
 from chxanalys.chx_generic_functions import *
  
 def bin_1D(x, y, nx=None, min_x=None, max_x=None):
@@ -1088,6 +1089,99 @@ def plot_saxs_g2( g2, taus, res_pargs=None, *argv,**kwargs):
     plt.show()               
  
 
+def plot_saxs_g4( g4, taus, res_pargs=None, *argv,**kwargs):     
+    '''plot g2 results, 
+       g2: one-time correlation function
+       taus: the time delays  
+       res_pargs, a dict, can contains
+           uid/path/qr_center/qz_center/
+       kwargs: can contains
+           vlim: [vmin,vmax]: for the plot limit of y, the y-limit will be [vmin * min(y), vmx*max(y)]
+           ylim/xlim: the limit of y and x
+       
+       e.g.
+       plot_gisaxs_g4( g4, taus= np.arange( g4.shape[0]) *timeperframe, q_ring_center = q_ring_center, vlim=[.99, 1.01] )
+           
+      ''' 
+
+    
+    if res_pargs is not None:
+        uid = res_pargs['uid'] 
+        path = res_pargs['path'] 
+        q_ring_center = res_pargs[ 'q_ring_center']
+
+    else:
+        
+        if 'uid' in kwargs.keys():
+            uid = kwargs['uid'] 
+        else:
+            uid = 'uid'
+
+        if 'q_ring_center' in kwargs.keys():
+            q_ring_center = kwargs[ 'q_ring_center']
+        else:
+            q_ring_center = np.arange(  g4.shape[1] )
+
+        if 'path' in kwargs.keys():
+            path = kwargs['path'] 
+        else:
+            path = ''
+    
+    if 'logx' in kwargs.keys():
+        logx = kwargs['logx'] 
+    else:
+        logx =  False
+
+    
+    num_rings = g4.shape[1]
+    sx = int(round(np.sqrt(num_rings)) )
+    if num_rings%sx == 0: 
+        sy = int(num_rings/sx)
+    else:
+        sy=int(num_rings/sx+1)  
+    
+    #print (num_rings)    
+    if num_rings!=1:
+        fig = plt.figure(figsize=(12, 10))
+        plt.axis('off')
+        #plt.axes(frameon=False)    
+        plt.xticks([])
+        plt.yticks([])       
+        
+    else:
+        fig = plt.figure(figsize=(8,8))
+        #print ('here')
+    plt.title('uid=%s'%uid,fontsize=20, y =1.06)        
+    for i in range(num_rings):
+        ax = fig.add_subplot(sx, sy, i+1 )
+        ax.set_ylabel("g4") 
+        ax.set_title(" Q= " + '%.5f  '%(q_ring_center[i]) + r'$\AA^{-1}$')
+        y=g4[:, i]        
+        if logx:
+            ax.semilogx(taus, y, '-o', markersize=6)
+        else:
+            ax.plot(taus, y, '-o', markersize=6))
+        if 'ylim' in kwargs:
+            ax.set_ylim( kwargs['ylim'])
+        elif 'vlim' in kwargs:
+            vmin, vmax =kwargs['vlim']
+            ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])
+        else:
+            pass
+        if 'xlim' in kwargs:
+            ax.set_xlim( kwargs['xlim']) 
+ 
+    #dt =datetime.now()
+    #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
+                
+    #fp = path + 'g2--uid=%s'%(uid) + CurTime + '.png'
+    fp = path + 'uid=%s--g4-'%(uid)   + '.png'
+    fig.savefig( fp, dpi=fig.dpi)        
+    fig.tight_layout()  
+    plt.show()               
+ 
+
+
 def plot_saxs_two_g2( g2, taus, g2b, tausb,res_pargs=None, *argv,**kwargs):     
     '''plot g2 results, 
        g2: one-time correlation function from a multi-tau method
@@ -1635,13 +1729,12 @@ def save_saxs_g2(  g2, res_pargs, taus=None, filename=None ):
     CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)  
     
     if filename is None:
-        filename = ''
+          filename = 'uid=%s--g2.csv' % (uid)
     #filename += '-uid=%s-%s.csv' % (uid,CurTime)   
     #filename += '-uid=%s.csv' % (uid) 
-    filename += 'uid=%s--g2.csv' % (uid) 
     filename1 = os.path.join(path, filename)
     df.to_csv(filename1)
-    print( 'The g2 is saved in %s with filename as %s'%( path, filename))
+    print( 'The correlation function is saved in %s with filename as %s'%( path, filename))
 
     
 
