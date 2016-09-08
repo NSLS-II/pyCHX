@@ -283,52 +283,6 @@ def auto_two_Array( data, rois, data_pixel=None  ):
 ##Derivation of Two time correlation
 #####################################
     
-#####################################
-#get one-time
-#####################################
- 
-
-def get_one_time_from_two_time(  g12, norms=None, nopr = None   ):
-    
-    ''' 
-    Dec 16, 2015, Y.G.@CHX
-    Get one-time correlation function from two correlation function
-    namely, calculate the mean of each diag line of g12 to get one-time correlation fucntion
-    
-    Parameters:
-        g12: a 3-D array, two correlation function, shape as ( imgs_length, imgs_length, q) 
-    
-    Options:
-        norms: if not None, a 2-D array, shape as ( imgs_length,   q), a normalization for further get one-time from two time, get by:  g12b_norm, g12b_not_norm, norms = auto_two_Array_g1_norm( imgsr, ring_mask, data_pixel = data_pixel ) 
-        nopr: if not None, 1-D array, shape as [q], the number of interested pixel of each q 
-         
-   
-    Return:
-        g2f12: a 2-D array, shape as ( imgs_length,  q), 
-                   a one-time correlation function  
-     
-    One example:        
-        g2b_norm = get_one_time_from_two_time(g12b_norm,  norms=None, nopr=None )
-        g2b_not_norm = get_one_time_from_two_time(g12b_not_norm, norms=norms, nopr=nopr)   
-    '''    
- 
-    m,n,noqs = g12.shape           
-    g2f12 = np.zeros(  [m,noqs ] )
-    for q in  range(noqs):                
-        y=g12[:,:,q]        
-        for tau in range(m): 
-             
-            if norms is None:
-                g2f12[tau,q] = np.nanmean(  np.diag(y,k=int(tau))  )            
-            else:
-                yn = norms[:,q]                 
-                yn1 =  np.average( yn[tau:] )
-                yn2 =  np.average( yn[: m-tau] )   
-                g2f12[tau,q] = np.nanmean(  np.diag(y,k=int(tau))  )     /  (yn1*yn2*nopr[q])  
- 
-    return g2f12
-
-
 
 #####################################
 #get one-time @different age
@@ -762,14 +716,93 @@ def histogram_taus(taus, hisbin=20, plot=True,timeperframe=1):
         ax1.legend(fontsize='large', loc='best' ) 
         plt.show()
         
-    return his
-        
+    return his       
 
 
 
 
+#####################################
+#get one-time
+#####################################
+ 
+def get_one_time_from_two_time_old(  g12, norms=None, nopr = None   ):
+    
+    ''' 
+    Dec 16, 2015, Y.G.@CHX
+    Get one-time correlation function from two correlation function
+    namely, calculate the mean of each diag line of g12 to get one-time correlation fucntion
+    
+    Parameters:
+        g12: a 3-D array, two correlation function, shape as ( imgs_length, imgs_length, q) 
+    
+    Options:
+        norms: if not None, a 2-D array, shape as ( imgs_length,   q), a normalization for further get one-time from two time, get by:  g12b_norm, g12b_not_norm, norms = auto_two_Array_g1_norm( imgsr, ring_mask, data_pixel = data_pixel ) 
+        nopr: if not None, 1-D array, shape as [q], the number of interested pixel of each q 
+         
+   
+    Return:
+        g2f12: a 2-D array, shape as ( imgs_length,  q), 
+                   a one-time correlation function  
+     
+    One example:        
+        g2b_norm = get_one_time_from_two_time(g12b_norm,  norms=None, nopr=None )
+        g2b_not_norm = get_one_time_from_two_time(g12b_not_norm, norms=norms, nopr=nopr)   
+    '''    
+ 
+    m,n,noqs = g12.shape           
+    g2f12 = np.zeros(  [m,noqs ] )
+    for q in  range(noqs):                
+        y=g12[:,:,q]        
+        for tau in range(m): 
+             
+            if norms is None:
+                g2f12[tau,q] = np.nanmean(  np.diag(y,k=int(tau))  )            
+            else:
+                yn = norms[:,q]                 
+                yn1 =  np.average( yn[tau:] )
+                yn2 =  np.average( yn[: m-tau] )   
+                g2f12[tau,q] = np.nanmean(  np.diag(y,k=int(tau))  )     /  (yn1*yn2*nopr[q])  
+ 
+    return g2f12
     
     
+    
+def get_one_time_from_two_time(  g12, norms=None, nopr = None   ):
+    
+    ''' 
+    Dec 16, 2015, Y.G.@CHX
+    Get one-time correlation function from two correlation function
+    namely, calculate the mean of each diag line of g12 to get one-time correlation fucntion
+    
+    Parameters:
+        g12: a 3-D array, two correlation function, shape as ( imgs_length, imgs_length, q) 
+    
+    Options:
+        norms: if not None, a 2-D array, shape as ( imgs_length,   q), a normalization for further get one-time from two time, get by:  g12b_norm, g12b_not_norm, norms = auto_two_Array_g1_norm( imgsr, ring_mask, data_pixel = data_pixel ) 
+        nopr: if not None, 1-D array, shape as [q], the number of interested pixel of each q 
+         
+   
+    Return:
+        g2f12: a 2-D array, shape as ( imgs_length,  q), 
+                   a one-time correlation function  
+     
+    One example:        
+        g2b_norm = get_one_time_from_two_time(g12b_norm,  norms=None, nopr=None )
+        g2b_not_norm = get_one_time_from_two_time(g12b_not_norm, norms=norms, nopr=nopr)   
+    '''    
+ 
+    m,n,noqs = g12.shape 
+    if norms is None:
+        g2f12 = np.array(  [ np.nanmean( g12.diagonal(i), axis=1) for i in range(m) ] )
+    else:
+        g2f12 = np.zeros(  [m,noqs ] )    
+        for q in  range(noqs): 
+            yn= norms[:,q]
+            g2f12[i,q] = np.array(  [  np.nanmean( g12[:,:,q].diagonal(i))/( 
+                np.average( yn[i:] ) *  np.average( yn[: m-i] ) * nopr[q] ) for i in range(m) ] ) 
+    return g2f12
+
+
 
 
 def get_four_time_from_two_time(  g12,g2=None, rois=None  ):
@@ -795,35 +828,20 @@ def get_four_time_from_two_time(  g12,g2=None, rois=None  ):
         s1,s2 = 0,2000
         g4 = get_four_time_from_two_time( g12bm, g2b, roi=[s1,s2,s1,s2] )
          
-    '''      
-    
-    
-    m,n,noqs = g12.shape
-    g4f12 = []       
-    for q in  range(noqs):   
-        temp=[]    
-        if rois is None:
-            y=g12[:,:,q]  
-        else:
-            x1,x2,y1,y2 = rois
-            y=g12[x1:x2,y1:y2, q]
-            m,n = y.shape
-        norm =  ( g2[:,q][0] -1)**2  
-        for tau in range(m): 
-            d_ = np.diag(y,k=int(tau))
-            d = d_[   np.where( d_ !=1)            ]
-            g4 = ( d.std() )**2 /norm
-            temp.append( g4 )                
-                
-        temp = np.array( temp).reshape( len(temp),1)
-        if q==0:
-            g4f12 =  temp
-        else:
-            g4f12=np.hstack( [g4f12,  temp] ) 
-            
+    '''   
+    m,n,noqs = g12.shape 
+    if g2 is not None:
+        norm =  ( g2[0] -1)**2  
+    else:
+        norm=1.
+    if rois is None:
+         g4f12 = np.array(  [ (np.std( g12.diagonal(i), axis=1))**2/norm for i in range(m) ] )
+        
+    else:
+        x1,x2,y1,y2 = rois
+        g4f12 = np.array(  [ (np.std( g12[x1:x2,y1:y2, :].diagonal(i), axis=1))**2/norm for i in range(m) ] )
+        
     return g4f12
-
-
 
 
 
