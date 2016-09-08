@@ -370,6 +370,8 @@ def lazy_one_timep(FD, num_levels, num_bufs, labels,
    
 
     
+    
+    
 
 def cal_g2p( FD, ring_mask, bad_frame_list=None, 
             good_start=0, num_buf = 8, num_lev = None, imgsum=None, norm=None ):
@@ -426,8 +428,68 @@ def cal_g2p( FD, ring_mask, bad_frame_list=None,
          
     
     
- 
+def auto_two_Arrayp(  data_pixel, rois, index=None):
+    
+    ''' 
+    Dec 16, 2015, Y.G.@CHX
+    a numpy operation method to get two-time correlation function using parallel computation
+    
+    Parameters:
+        data:  images sequence, shape as [img[0], img[1], imgs_length]
+        rois: 2-D array, the interested roi, has the same shape as image, can be rings for saxs, boxes for gisaxs
+    
+    Options:
         
+        data_pixel: if not None,    
+                    2-D array, shape as (len(images), len(qind)),
+                    use function Get_Pixel_Array( ).get_data(  ) to get 
+         
+   
+    Return:
+        g12: a 3-D array, shape as ( imgs_length, imgs_length, q)
+     
+    One example:        
+        g12 = auto_two_Array( imgsr, ring_mask, data_pixel = data_pixel ) 
+    '''            
+    qind, pixelist = roi.extract_label_indices(   rois  )
+    noqs = len( np.unique(qind) )
+    nopr = np.bincount(qind, minlength=(noqs+1))[1:] 
+    noframes = data_pixel.shape[0]    
+    g12b = np.zeros(  [noframes, noframes, noqs] )
+    
+    if index is None:
+        index =  np.arange( 1, noqs + 1 )        
+    else:
+        try:
+            len(index)
+            index = np.array(  index  )
+        except TypeError:
+            index = np.array(  [index]  )
+    qlist = np.arange( 1, noqs + 1 )[ index -1  ]    
     
 
+    inputs = range( len(qlist) ) 
+    pool =  Pool(processes= len(inputs) )    
+    
+    data_pixel_qis = [0]* len(qlist)
+    for i in inputs:         
+        pixelist_qi =  np.where( qind ==  qlist[i] )[0] 
+        data_pixel_qis[i] =    data_pixel[:,pixelist_qi]    
+    
+    
+    results = [ apply_async( pool, _get_two_time_for_one_q, ( qlist[i], 
+                                        data_pixel_qis[i], nopr, noframes ) ) for i in tqdm( inputs )  ]        
+    res = [r.get() for r in results]    
+    for i in inputs:
+        qi=qlist[i]
+        g12b[:,:,qi -1 ] = res[i]        
+    print( 'G12 calculation DONE!')        
+    return g12b #g12b
+
+
+def _get_two_time_for_one_q( qi, data_pixel_qi, nopr, noframes   ):
+    sum1 = (np.average( data_pixel_qi, axis=1)).reshape( 1, noframes   )  
+    sum2 = sum1.T 
+    two_time_qi = np.dot(   data_pixel_qi, data_pixel_qi.T)  /sum1  / sum2  / nopr[qi -1]
+    return  two_time_qi
     
