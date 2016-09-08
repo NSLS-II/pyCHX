@@ -123,6 +123,7 @@ class create_pdf_report( object ):
 
         self.two_time_file = 'uid=%s--Two-time-.png'%uid
         self.two_g2_file = 'uid=%s--g2--two-g2-.png'%uid
+        self.four_time_file = 'uid=%s--g4-.png'%uid
         #self.report_header(page=1, top=730, new_page=False)
         #self.report_meta(new_page=False)
         
@@ -578,6 +579,46 @@ class create_pdf_report( object ):
         if new_page:
             c.showPage()
             c.save()
+
+    def report_four_time( self, top= 720, new_page=False):
+        '''create the one time correlation function report
+           Two images:
+               Two Time Correlation Function
+               two one-time correlatoin function from multi-one-time and from diagonal two-time
+        '''   
+        
+        c= self.c
+        uid=self.uid
+        #add sub-title, Time-dependent plot
+        c.setFont("Helvetica", 20)
+        
+        ds = 20
+        self.sub_title_num +=1
+        c.drawString(10, top, "%s. Four Time Correlation Fucntion"%self.sub_title_num )  #add title
+        c.setFont("Helvetica", 14)
+        
+        top1=top
+        top = top1 - 330
+        #add q_Iq_t
+        imgf = self.four_time_file
+        image = self.data_dir + imgf
+        im = Image.open( image )
+        ratio = float(im.size[1])/im.size[0]
+        height= 300
+        c.drawImage( image, 80, top,  width= height/ratio,height=height,mask=None)
+
+        c.setFont("Helvetica", 16)
+        c.setFillColor( blue) 
+        c.drawString( 180, top + 300 ,  'four time correlation fucntion'    )
+
+        c.setFont("Helvetica", 12)
+        c.setFillColor(red) 
+        c.drawString( 180, top- 10,  'filename: %s'%imgf    )      
+ 
+
+        if new_page:
+            c.showPage()
+            c.save()            
 
     def new_page(self):
         c=self.c
