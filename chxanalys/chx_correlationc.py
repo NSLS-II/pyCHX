@@ -890,13 +890,14 @@ class Get_Pixel_Arrayc(object):
             self.beg = FD.beg
         if end is None:
             self.end = FD.end
-        if beg ==0:
+        if self.beg ==0:
             self.length = self.end - self.beg
         else:
             self.length = self.end - self.beg + 1
         self.FD = FD
         self.pixelist = pixelist        
         self.norm = norm    
+        
     def get_data(self ): 
         '''
         To get intested pixels array
