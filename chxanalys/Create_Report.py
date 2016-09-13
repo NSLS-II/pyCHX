@@ -108,8 +108,10 @@ class create_pdf_report( object ):
         '''global definition'''
 
         self.avg_img_file = 'uid=%s--img-avg-.png'%uid   
+        
         self.ROI_on_img_file = 'uid=%s--ROI-on-Image-.png'%uid
-        self.qiq_file = 'uid=%s--Circular-Average-.png'%uid   
+        self.qiq_file = 'uid=%s--Circular-Average-.png'%uid  
+        self.qiq_fit_file = 'uid=%s--form_factor--fit-.png'%uid  
         self.ROI_on_Iq_file = 'uid=%s--ROI-on-Iq-.png'%uid  
 
         self.Iq_t_file = 'uid=%s--Iq-t-.png'%uid
@@ -217,7 +219,7 @@ class create_pdf_report( object ):
             c.showPage()
             c.save()
         
-    def report_static( self, top=560, new_page=False):
+    def report_static( self, top=560, new_page=False, iq_fit=False):
         '''create the static analysis report
            two images:
                average intensity image
@@ -254,6 +256,8 @@ class create_pdf_report( object ):
         #add q_Iq
 
         imgf = self.qiq_file 
+        if iq_fit:
+            imgf = self.qiq_fit_file     
         image = self.data_dir + imgf
         im = Image.open( image )
         ratio = float(im.size[1])/im.size[0]
@@ -270,6 +274,8 @@ class create_pdf_report( object ):
         if new_page:
             c.showPage()
             c.save()
+            
+           
 
     def report_ROI( self, top= 300, new_page=False):
         '''create the static analysis report
