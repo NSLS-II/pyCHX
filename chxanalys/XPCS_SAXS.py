@@ -8,6 +8,7 @@ This module is for the SAXS XPCS analysis
 
 
 from chxanalys.chx_generic_functions import *
+from scipy.special import erf
  
 def bin_1D(x, y, nx=None, min_x=None, max_x=None):
     """
@@ -715,8 +716,33 @@ def get_angular_mask( mask,  inner_angle=0, outer_angle = 360, width = None, edg
     return ang_mask, ang_center, edges
 
 
-def get_ring_mask(  mask, inner_radius=40, outer_radius = 762, width = 6, num_rings = 12, edges=None, pargs=None   ):
-     
+       
+def two_theta_to_radius(dist_sample, two_theta):
+    """
+    Converts scattering angle (2:math:`2\\theta`) to radius (from the calibrated center)
+    with known detector to sample distance.
+
+    Parameters
+    ----------
+    dist_sample : float
+        distance from the sample to the detector (mm)
+        
+    two_theta : array
+        An array of :math:`2\\theta` values
+
+    Returns
+    -------        
+    radius : array
+        The L2 norm of the distance (mm) of each pixel from the calibrated center.
+    """
+    return np.tan(two_theta) * dist_sample
+
+
+#def get_ring_mask(  mask, inner_radius=40, outer_radius = 762, width = 6, num_rings = 12,
+#                  edges=None, unit='pixel',pargs=None   ):
+    
+def get_ring_mask(  mask, inner_radius= 0.0020, outer_radius = 0.009, width = 0.0002, num_rings = 12,
+                  edges=None, unit='A',pargs=None   ):     
     ''' 
     mask: 2D-array 
     inner_radius #radius of the first ring
@@ -726,9 +752,10 @@ def get_ring_mask(  mask, inner_radius=40, outer_radius = 762, width = 6, num_ri
     pargs: a dict, should contains
         center: the beam center in pixel
         Ldet: sample to detector distance
-        lambda_: the wavelength    
+        lambda_: the wavelength, in unit of A    
         dpix, the pixel size in mm. For Eiger1m/4m, the size is 75 um (0.075 mm)
-        
+        unit: if pixel, all the radius inputs are in unit of pixel
+              else: should be in unit of A-1
     Returns
     -------
     ring_mask: a ring mask, np.array
@@ -754,13 +781,16 @@ def get_ring_mask(  mask, inner_radius=40, outer_radius = 762, width = 6, num_ri
         else:
             spacing = 0
         edges = roi.ring_edges(inner_radius, width, spacing, num_rings)    
-        
-    #print ( edges )        
+   
+    if (unit=='pixel') or (unit=='p'):
+        two_theta = utils.radius_to_twotheta(Ldet, edges*dpix)
+        q_ring_val = utils.twotheta_to_q(two_theta, lambda_)
+    else: #in unit of A-1 
+        two_theta = utils.q_to_twotheta( edges, lambda_)
+        q_ring_val =  edges
+        edges = two_theta_to_radius(Ldet,two_theta)/dpix  #converto pixel  
     
-    two_theta = utils.radius_to_twotheta(Ldet, edges*dpix)
-    q_ring_val = utils.twotheta_to_q(two_theta, lambda_)
-
-    q_ring_center = np.average(q_ring_val, axis=1)    
+    q_ring_center = np.average(q_ring_val, axis=1)  
     
     rings = roi.rings(edges, center, mask.shape)
     ring_mask = rings*mask
@@ -1160,7 +1190,7 @@ def plot_saxs_g4( g4, taus, res_pargs=None, *argv,**kwargs):
         if logx:
             ax.semilogx(taus, y, '-o', markersize=6)
         else:
-            ax.plot(taus, y, '-o', markersize=6))
+            ax.plot(taus, y, '-o', markersize=6)
         if 'ylim' in kwargs:
             ax.set_ylim( kwargs['ylim'])
         elif 'vlim' in kwargs:
@@ -1471,6 +1501,8 @@ def fit_saxs_rad_ang_g2( g2,  res_pargs=None,function='simple_exponential',
         num_qr = len( q_ring_center)
         ang_center = res_pargs[ 'ang_center']
         num_qa = len( ang_center )
+        taus=res_pargs['taus']
+	
     
     else:
     
