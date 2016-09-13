@@ -1,4 +1,4 @@
-from .chx_libs import *
+from chxanalys.chx_libs import *
 #from tqdm import *
 
 #####
@@ -950,9 +950,9 @@ def get_non_uniform_edges(  centers, width = 4, number_rings=3 ):
     
     
     
-    edges = np.zeros( [len(centers)*number_rings, 2], dtype=np.int32  )
+    edges = np.zeros( [len(centers)*number_rings, 2]  )
     for i, c in enumerate(centers):       
-        edges[i*number_rings:(i+1)*number_rings,:] = ring_edges( inner_radius =  c - int(width*number_rings/2.),  
+        edges[i*number_rings:(i+1)*number_rings,:] = ring_edges( inner_radius =  c - width*number_rings/2,  
                       width=width, spacing= 0, num_rings=number_rings)
     return edges   
 
