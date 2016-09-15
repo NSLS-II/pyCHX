@@ -430,7 +430,8 @@ def get_t_iqc( FD, frame_edge, mask, pargs, nx=1500, plot_ = False , save=False,
 
 
 def get_each_frame_intensityc( FD, sampling = 1, 
-                             bad_pixel_threshold=1e10,  hot_pixel_threshold=2**30,                             
+                             bad_pixel_threshold=1e10, bad_pixel_low_threshold=0, 
+                              hot_pixel_threshold=2**30,                             
                              plot_ = False,  *argv,**kwargs):   
     '''Get the total intensity of each frame by sampling every N frames
        Also get bad_frame_list by check whether above  bad_pixel_threshold  
@@ -474,10 +475,14 @@ def get_each_frame_intensityc( FD, sampling = 1,
         
         plt.show()
        
-    bad_frame_list = np.where( (np.array(imgsum) > bad_pixel_threshold) |  (np.array(imgsum)==0) )[0] +  FD.beg
+    bad_frame_list = np.where(   ( np.array(imgsum) > bad_pixel_threshold ) | ( np.array(imgsum) <= bad_pixel_low_threshold)  )[0] +  FD.beg  
+    
+    #|  (np.array(imgsum)==0) )[0] +  FD.beg  
+    
+    #print (  np.array(imgsum), bad_pixel_threshold,  bad_pixel_low_threshold)
     
     if len(bad_frame_list):
-        print ('Bad frame list are: %s' %bad_frame_list)
+        print ('Bad frame list length is: %s' %len(bad_frame_list))
     else:
         print ('No bad frames are involved.')
     return imgsum,bad_frame_list
@@ -486,7 +491,8 @@ def get_each_frame_intensityc( FD, sampling = 1,
 
 
 def compress_eigerdata( images, mask, md, filename, force_compress=False, 
-                        bad_pixel_threshold=1e15,hot_pixel_threshold=2**30, nobytes=4  ):
+                        bad_pixel_threshold=1e15, bad_pixel_low_threshold=0, 
+                       hot_pixel_threshold=2**30, nobytes=4  ):
     
     
     
@@ -494,25 +500,26 @@ def compress_eigerdata( images, mask, md, filename, force_compress=False,
         print ("Create a new compress file with filename as :%s."%filename)
         return init_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
-                                          nobytes= nobytes  )        
+                                    bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes= nobytes  )        
     else:
         if not os.path.exists( filename ):
             print ("Create a new compress file with filename as :%s."%filename)
             return init_compress_eigerdata( images, mask, md, filename, 
                        bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
-                                          nobytes= nobytes )  
+                      bad_pixel_low_threshold=bad_pixel_low_threshold,    nobytes= nobytes )  
         else:      
             print ("Using already created compressed file with filename as :%s."%filename)
             beg=0
             end= len(images)
             return read_compressed_eigerdata( mask, filename, beg, end, 
                             bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
-                                            )  
+                       bad_pixel_low_threshold=bad_pixel_low_threshold     )  
 
 
         
 def read_compressed_eigerdata( mask, filename, beg, end,
-                              bad_pixel_threshold=1e15, hot_pixel_threshold=2**30  ):   
+                              bad_pixel_threshold=1e15, hot_pixel_threshold=2**30,
+                             bad_pixel_low_threshold=0):   
     '''
         Read already compress eiger data           
         Return 
@@ -529,14 +536,15 @@ def read_compressed_eigerdata( mask, filename, beg, end,
     avg_img = get_avg_imgc( FD,  beg=None,end=None,sampling = 1, plot_ = False ) 
     
     imgsum, bad_frame_list = get_each_frame_intensityc( FD, sampling = 1, 
-                             bad_pixel_threshold=bad_pixel_threshold, 
+            bad_pixel_threshold=bad_pixel_threshold, bad_pixel_low_threshold=bad_pixel_low_threshold,
                                     hot_pixel_threshold=hot_pixel_threshold, plot_ = False)    
 
     FD.FID.close()
     return   mask, avg_img, imgsum, bad_frame_list
 
 def init_compress_eigerdata( images, mask, md, filename, 
-                        bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, nobytes=4  ):    
+                        bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
+                            bad_pixel_low_threshold=0,nobytes=4  ):    
     '''
         Compress the eiger data 
         
@@ -611,7 +619,7 @@ def init_compress_eigerdata( images, mask, md, filename,
     print( "The fraction of pixel occupied by photon is %6.3f%% "%(100*frac) ) 
     avg_img /= good_count
     
-    bad_frame_list = np.where( np.array(imgsum) > bad_pixel_threshold )[0] 
+    bad_frame_list = np.where( (np.array(imgsum) > bad_pixel_threshold) & (np.array(imgsum) < bad_pixel_low_threshold)  )[0] 
     
     if len(bad_frame_list):
         print ('Bad frame list are: %s' %bad_frame_list)
