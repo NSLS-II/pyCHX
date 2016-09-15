@@ -63,12 +63,16 @@ class create_pdf_report( object ):
             
       uid: the unique id
       out_dir: the output directory
+      report_type: 
+          'saxs':  report saxs results
+          'gisaxs': report gisaxs results
+          
       
       Output: 
           A PDF file with name as "XPCS Analysis Report for uid=%s"%uid in out_dir folder
     '''       
     
-    def __init__( self, data_dir, uid, out_dir=None, filename=None, load=True ):
+    def __init__( self, data_dir, uid, out_dir=None, filename=None, load=True, report_type='saxs' ):
         self.data_dir = data_dir
         self.uid = uid
         if out_dir is None:
@@ -80,7 +84,7 @@ class create_pdf_report( object ):
         self.styles = getSampleStyleSheet()
         self.width, self.height = letter
         
-        
+        self.report_type = report_type
         dt =datetime.now()
         CurTime = '%02d/%02d/%s/-%02d/%02d/' % ( dt.month, dt.day, dt.year,dt.hour,dt.minute)
         self.CurTime = CurTime
@@ -110,10 +114,17 @@ class create_pdf_report( object ):
         self.avg_img_file = 'uid=%s--img-avg-.png'%uid   
         
         self.ROI_on_img_file = 'uid=%s--ROI-on-Image-.png'%uid
+        
         self.qiq_file = 'uid=%s--Circular-Average-.png'%uid  
-        self.qiq_fit_file = 'uid=%s--form_factor--fit-.png'%uid  
-        self.ROI_on_Iq_file = 'uid=%s--ROI-on-Iq-.png'%uid  
+        self.qiq_fit_file = 'uid=%s--form_factor--fit-.png'%uid 
+        self.qr_1d_file = 'uid=%s--qr_1d-.png'%uid
 
+        
+        if self.report_type =='saxs':
+            self.ROI_on_Iq_file = 'uid=%s--ROI-on-Iq-.png'%uid  
+        else:
+            self.ROI_on_Iq_file = 'uid=%s--qr_1d--ROI-.png'%uid 
+        
         self.Iq_t_file = 'uid=%s--Iq-t-.png'%uid
         self.img_sum_t_file = 'uid=%s--img-sum-t.png'%uid
         self.wat_file= 'uid=%s--Waterfall-.png'%uid
@@ -126,6 +137,7 @@ class create_pdf_report( object ):
         self.two_time_file = 'uid=%s--Two-time-.png'%uid
         self.two_g2_file = 'uid=%s--g2--two-g2-.png'%uid
         self.four_time_file = 'uid=%s--g4-.png'%uid
+        
         #self.report_header(page=1, top=730, new_page=False)
         #self.report_meta(new_page=False)
         
@@ -185,12 +197,23 @@ class create_pdf_report( object ):
 
         top = top - 5
         c.setFont("Helvetica", 12)
-        c.drawString(30, top-ds, 'uid: %s'%uid )
+        i=1
+        c.drawString(30, top-ds*i, 'uid: %s'%uid )
         c.drawString(30, top-ds*2, 'Sample: %s'%md['sample'] )
         c.drawString(30, top-ds*3, 'Measurement: %s'%md['Measurement'] )
         c.drawString(30, top-ds*4, 'Wavelength: %s A-1'%md['incident_wavelength'] )
         c.drawString(30, top-ds*5, 'Detector-Sample Distance: %s m'%(md['detector_distance']) )
-        c.drawString(30, top-ds*6, 'Beam Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y']) )
+        
+        if self.report_type == 'saxs':
+            c.drawString(30, top-ds*6, 
+                            'Beam Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y']) )
+        elif self.report_type == 'gisaxs':
+            c.drawString(30, top-ds*6, 
+                            'Incident Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y']) )
+            c.drawString(280, top-ds*6, '||' )       
+            c.drawString(350, top-ds*6, 
+                'Reflect Center: [%s, %s] (pixel)'%(md['refl_center_x'], md['refl_center_y']) )            
+        
         c.drawString(30, top-ds*7, 'Mask file: %s'%md['mask_file'] )
         
         s=  'Data dir: %s'%self.data_dir     
@@ -254,10 +277,19 @@ class create_pdf_report( object ):
         c.drawString( 80, top- 230,  'filename: %s'%imgf    )
 
         #add q_Iq
-
-        imgf = self.qiq_file 
-        if iq_fit:
-            imgf = self.qiq_fit_file     
+        if self.report_type == 'saxs':
+            imgf = self.qiq_file 
+            if iq_fit:
+                imgf = self.qiq_fit_file  
+            label = 'Circular Average'  
+            lab_pos = 390
+            fn_pos = 320
+        else:
+            imgf = self.qr_1d_file
+            label = 'Qr-1D'
+            lab_pos = 420
+            fn_pos = 350
+            
         image = self.data_dir + imgf
         im = Image.open( image )
         ratio = float(im.size[1])/im.size[0]
@@ -266,11 +298,12 @@ class create_pdf_report( object ):
 
         c.setFont("Helvetica", 16)
         c.setFillColor( blue) 
-        c.drawString( 390, top- 35,  'Circular Average'    )
+        c.drawString( lab_pos, top- 35,  label   )
 
         c.setFont("Helvetica", 12)
         c.setFillColor(red) 
-        c.drawString( 320, top- 230,  'filename: %s'%imgf    )        
+        c.drawString( fn_pos, top- 230,  'filename: %s'%imgf    )  
+            
         if new_page:
             c.showPage()
             c.save()
@@ -306,6 +339,7 @@ class create_pdf_report( object ):
         c.setFont("Helvetica", 12)
         c.setFillColor(red) 
         c.drawString( 60, top- 260,  'filename: %s'%imgf    )
+        
         
         #add q_Iq
         imgf = self.ROI_on_Iq_file
@@ -345,39 +379,49 @@ class create_pdf_report( object ):
         c.drawString(10, top, "%s. Time Dependent Plot"%self.sub_title_num )  #add title
         c.setFont("Helvetica", 14)
         
+        
         top = top1 - 160
-        #add q_Iq_t
+        #add img_sum_t
+        if self.report_type == 'saxs':
+            ipos = 80
+        elif self.report_type == 'gisaxs':
+            ipos = 200
         imgf = self.img_sum_t_file
         image = self.data_dir + imgf
         im = Image.open( image )
         ratio = float(im.size[1])/im.size[0]
         height= 140
-        c.drawImage( image, 80, top,  width= height/ratio,height=height,mask=None)
+        c.drawImage( image, ipos, top,  width= height/ratio,height=height,mask=None)
 
         c.setFont("Helvetica", 16)
         c.setFillColor( blue) 
-        c.drawString( 140, top1 - 20 ,  'img sum ~ t'    )
+        c.drawString( ipos + 60, top1 - 20 ,  'img sum ~ t'    )
 
         c.setFont("Helvetica", 12)
         c.setFillColor(red) 
-        c.drawString( 80, top- 5,  'filename: %s'%imgf    )
+        c.drawString( ipos, top- 5,  'filename: %s'%imgf    )
 
-        #add mean_intensity_each_roi
-        imgf = self.Iq_t_file
-        image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height= 140
-        c.drawImage( image, 350, top,  width= height/ratio,height=height,mask=None)
-        
 
-        c.setFont("Helvetica", 16)
-        c.setFillColor( blue) 
-        c.drawString( 420, top1-20 ,  'iq ~ t'    )
+        #plot iq~t
+        if self.report_type == 'saxs':
+            
+            imgf = self.Iq_t_file
+            image = self.data_dir + imgf
+            im = Image.open( image )
+            ratio = float(im.size[1])/im.size[0]
+            height= 140
+            c.drawImage( image, 350, top,  width= height/ratio,height=height,mask=None)
 
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( 360, top- 5,  'filename: %s'%imgf    )
+            c.setFont("Helvetica", 16)
+            c.setFillColor( blue) 
+            c.drawString( 420, top1-20 ,  'iq ~ t'    )
+
+            c.setFont("Helvetica", 12)
+            c.setFillColor(red) 
+            c.drawString( 360, top- 5,  'filename: %s'%imgf    )
+        elif self.report_type == 'gisaxs':
+            pass
+            
 
         top = top1 - 340
         #add waterfall plot
