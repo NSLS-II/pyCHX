@@ -285,7 +285,9 @@ def lazy_one_timep(FD, num_levels, num_bufs, labels,
             
             if imgsum is None:
                 if norm is None:
+                    #print ('here')
                     fra_pix[ pxlist] = v[w] 
+                    
                 else:                     
                     fra_pix[ pxlist] = v[w]/ norm[pxlist]   #-1.0    
                     
@@ -370,8 +372,6 @@ def lazy_one_timep(FD, num_levels, num_bufs, labels,
    
 
     
-    
-    
 
 def cal_g2p( FD, ring_mask, bad_frame_list=None, 
             good_start=0, num_buf = 8, num_lev = None, imgsum=None, norm=None ):
@@ -400,20 +400,27 @@ def cal_g2p( FD, ring_mask, bad_frame_list=None,
               for i in np.unique( ring_mask )[1:] ]
     
     qind, pixelist = roi.extract_label_indices(  ring_mask  )
-    norms = [ norm[ np.in1d(  pixelist, 
+    
+    if norm is not None:
+        norms = [ norm[ np.in1d(  pixelist, 
             extract_label_indices( np.array(ring_mask==i, dtype = np.int64))[1])]
                 for i in np.unique( ring_mask )[1:] ] 
-    
-    inputs = range( len(ring_masks) )
-    
+
+    inputs = range( len(ring_masks) )    
     
     pool =  Pool(processes= len(inputs) )
-    internal_state = None        
-
-                
-    results = [ apply_async( pool, lazy_one_timep, ( FD, num_lev, num_buf,
-                    ring_masks[i], internal_state, 
-        bad_frame_list, imgsum, norms[i], ) ) for i in tqdm( inputs )  ]
+    internal_state = None       
+    
+    if norm is not None:            
+        results = [ apply_async( pool, lazy_one_timep, ( FD, num_lev, num_buf, ring_masks[i],
+                        internal_state,  bad_frame_list, imgsum,
+                                    norms[i], ) ) for i in tqdm( inputs )  ]  
+    else:
+        #print ('for norm is None')        
+        results = [ apply_async( pool, lazy_one_timep, ( FD, num_lev, num_buf, ring_masks[i], 
+                        internal_state,   bad_frame_list,imgsum, None,
+                                     ) ) for i in tqdm( inputs )  ]    
+        
 
     res = [r.get() for r in results]    
     #print( res )
