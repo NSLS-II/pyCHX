@@ -7,7 +7,7 @@ This module is for the GiSAXS XPCS analysis
 
 
 
-from .chx_generic_functions import *
+from chxanalys.chx_generic_functions import *
 
 
 
@@ -71,7 +71,7 @@ def get_reflected_angles(inc_x0, inc_y0, refl_x0, refl_y0, thetai=0.0,
     alphai, phi =  get_incident_angles( inc_x0, inc_y0, refl_x0, refl_y0, pixelsize, Lsd)
     print ('The incident_angle (alphai) is: %s'%(alphai* 180/np.pi))
     px,py = pixelsize
-    y, x = np.indices( [dimy,dimx] )    
+    y, x = np.indices( [int(dimy),int(dimx)] )    
     #alphaf = np.arctan2( (y-inc_y0)*py*10**(-6), Lsd )/2 - alphai 
     alphaf = np.arctan2( (y-inc_y0)*py*10**(-6), Lsd )  - alphai 
     thetaf = np.arctan2( (x-inc_x0)*px*10**(-6), Lsd )/2 - thetai   
@@ -414,7 +414,7 @@ def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,
     
         
     #ax.set_xlabel( r'$q_r$', fontsize=15)
-    ax.set_xlabel('$qr $'r'($\AA^{-1}$)', fontsize=18)
+    ax.set_xlabel(r'$q_r$'r'($\AA^{-1}$)', fontsize=18)
     ax.set_ylabel('$Intensity (a.u.)$', fontsize=18)
     ax.set_yscale('log')
     #ax.set_xscale('log')
@@ -430,12 +430,73 @@ def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,
         path = setup_pargs['path']
         uid = setup_pargs['uid']
         #filename = os.path.join(path, 'qr_1d-%s-%s.csv' % (uid,CurTime))
-        filename = os.path.join(path, 'uid=--%sqr_1d.csv'% (uid) )
+        filename = os.path.join(path, 'uid=%s--qr_1d.csv'% (uid) )
         df.to_csv(filename)
-        print( 'The qr_1d of uid= %s is saved in %s with filename as qr_1d-%s-%s.csv'%(uid, path, uid, CurTime))
-        
+        print( 'The qr_1d is saved in %s with filename as uid=%s--qr_1d.csv'%(path, uid))
+
+        #fp = path + 'Uid= %s--Circular Average'%uid + CurTime + '.png'     
+        fp = path + 'uid=%s--qr_1d-'%uid  + '.png'  
+        fig.savefig( fp, dpi=fig.dpi)           
+    plt.show()  
     return df
 
+
+
+def plot_qr_1d_with_ROI( qr_1d, qr_center,  loglog=False, save=True, setup_pargs=None ): 
+    '''Dec 16, 2015, Y.G.@CHX
+       plot one-d of I(q) as a function of qr with ROI
+       qr_1d: a dataframe for qr_1d
+       qr_center: the center of qr       
+
+       loglog: if True, plot in log-log scale
+       setup_pargs: gives path, filename...
+       
+       Return:                    
+               Plot 1D cureve with ROI
+        
+    A plot example:
+        plot_1d_qr_with_ROI( df, qr_center,  loglog=False, save=True, setup_pargs=None ): 
+
+
+    '''     
+
+    fig, ax = plt.subplots()
+    Ncol = len( qr_1d.columns )
+    Nqr = Ncol%2
+    qz_center = qr_1d.columns[1::2]
+    Nqz = len(qz_center)
+              
+    for i,qzc_ in enumerate(qz_center):
+        
+        x= qr_1d[  qr_1d.columns[0]   ]
+        y=   qr_1d[qzc_]          
+        
+        if loglog:
+            ax.loglog(x,y,  '--o', label= 'qz= %s'%qzc_, markersize=1)
+        else:
+            ax.plot( x,y,  '--o', label= 'qz= %s'%qzc_) 
+    
+    for qrc in qr_center:
+        ax.axvline( qrc )#, linewidth = 5  )
+        
+        
+    #ax.set_xlabel( r'$q_r$', fontsize=15)
+    ax.set_xlabel(r'$q_r$'r'($\AA^{-1}$)', fontsize=18)
+    ax.set_ylabel('$Intensity (a.u.)$', fontsize=18)
+    ax.set_yscale('log')
+    #ax.set_xscale('log')
+    ax.set_xlim(   x.max(), x.min()  )
+    ax.legend(loc='best') 
+    
+    if save:
+  
+        path = setup_pargs['path']
+        uid = setup_pargs['uid']       
+    
+        fp = path + 'uid=%s--qr_1d--ROI-'%uid  + '.png'  
+        fig.savefig( fp, dpi=fig.dpi)           
+    plt.show()  
+    
 
 
 
@@ -736,7 +797,10 @@ def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, *argv,**kwargs):
     zticks, zticks_label, rticks, rticks_label = ticks
     avg_imgr, box_maskr = data, rois
     num_qzr = len(np.unique( box_maskr)) -1
-    fig, ax = plt.subplots(figsize=(8,12))
+    
+    #fig, ax = plt.subplots(figsize=(8,12))
+    fig, ax = plt.subplots(figsize=(8,8))
+    
     ax.set_title("ROI--Labeled Array on Data")
     im,im_label = show_label_array_on_image(ax, avg_imgr, box_maskr, imshow_cmap='viridis',
                             cmap='Paired', alpha=alpha,
@@ -799,7 +863,7 @@ def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, *argv,**kwargs):
         uid='uid'        
     if save:
         path=kwargs['path']
-        fp = path + 'uid=%s--ROI-on-image-'%(uid) + '.png'
+        fp = path + 'uid=%s--ROI-on-Image-'%(uid) + '.png'
         fig.savefig( fp, dpi=fig.dpi)         
     plt.show() 
     
@@ -807,22 +871,21 @@ def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, *argv,**kwargs):
     
 #plot g2 results
 
-def plot_gisaxs_g2( g2, taus, res_pargs=None, *argv,**kwargs):     
+def plot_gisaxs_g2( g2, taus, res_pargs=None, one_plot = False, *argv,**kwargs):     
     '''Dec 16, 2015, Y.G.@CHX
         plot g2 results, 
        g2: one-time correlation function
        taus: the time delays  
        res_pargs, a dict, can contains
            uid/path/qr_center/qz_center/
+       one_plot: if True, show all qz in one plot
        kwargs: can contains
            vlim: [vmin,vmax]: for the plot limit of y, the y-limit will be [vmin * min(y), vmx*max(y)]
            ylim/xlim: the limit of y and x
        
        e.g.
-       plot_gisaxs_g2( g2b, taus= np.arange( g2b.shape[0]) *timeperframe, q_ring_center = q_ring_center, vlim=[.99, 1.01] )
-           
+       plot_gisaxs_g2( g2b, taus= np.arange( g2b.shape[0]) *timeperframe, q_ring_center = q_ring_center, vlim=[.99, 1.01] )           
       ''' 
-
     
     if res_pargs is not None:
         uid = res_pargs['uid'] 
@@ -852,40 +915,82 @@ def plot_gisaxs_g2( g2, taus, res_pargs=None, *argv,**kwargs):
             num_qr = len( qr_center)
         else:
             print( 'Please give qr_center') 
-
-
         
+    if not one_plot: 
+        for qz_ind in range(num_qz):
+            fig = plt.figure(figsize=(10, 12))
+            #fig = plt.figure()
+            title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$' 
+            plt.title('uid= %s:--->'%uid + title_qz,fontsize=20, y =1.1) 
+            #print (qz_ind,title_qz)
+            if num_qz!=1:
+                if num_qr!=1:
+                    plt.axis('off')
+            sx = int(round(np.sqrt(num_qr)) )
+            if num_qr%sx == 0: 
+                sy = int(num_qr/sx)
+            else: 
+                sy=int(num_qr/sx+1) 
+            for sn in range(num_qr):
+                ax = fig.add_subplot(sx,sy,sn+1 )
+                ax.set_ylabel("g2") 
+                ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
 
-    for qz_ind in range(num_qz):
+                title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
+                if num_qz==1:
+
+                    title = 'uid= %s:--->'%uid + title_qz + '__' +  title_qr
+                else:
+                    title = title_qr
+                ax.set_title( title  )
+
+                y=g2[:, sn + qz_ind * num_qr]
+                ax.semilogx(taus, y, '-o', markersize=6)             
+
+                if 'ylim' in kwargs:
+                    ax.set_ylim( kwargs['ylim'])
+                elif 'vlim' in kwargs:
+                    vmin, vmax =kwargs['vlim']
+                    ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])
+                else:
+                    pass
+                if 'xlim' in kwargs:
+                    ax.set_xlim( kwargs['xlim'])
+                    
+            fp = path + 'uid=%s--g2-qz=%s'%(uid,qz_center[qz_ind])  + '.png'        
+            fig.savefig( fp, dpi=fig.dpi)        
+            fig.tight_layout()  
+            plt.show() 
+                        
+    else:  
         fig = plt.figure(figsize=(10, 12))
-        #fig = plt.figure()
-        title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$' 
-        plt.title('uid= %s:--->'%uid + title_qz,fontsize=20, y =1.1) 
-        #print (qz_ind,title_qz)
+        plt.title('uid= %s'%uid,fontsize=20, y =1.05)  
         if num_qz!=1:
             if num_qr!=1:
                 plt.axis('off')
+        
         sx = int(round(np.sqrt(num_qr)) )
         if num_qr%sx == 0: 
             sy = int(num_qr/sx)
         else: 
             sy=int(num_qr/sx+1) 
+            
         for sn in range(num_qr):
             ax = fig.add_subplot(sx,sy,sn+1 )
             ax.set_ylabel("g2") 
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
 
             title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
-            if num_qz==1:
-
-                title = 'uid= %s:--->'%uid + title_qz + '__' +  title_qr
-            else:
-                title = title_qr
+            title = title_qr
             ax.set_title( title  )
-
-
-            y=g2[:, sn + qz_ind * num_qr]
-            ax.semilogx(taus, y, '-o', markersize=6)             
+            
+            for qz_ind in range(num_qz):
+                y=g2[:, sn + qz_ind * num_qr]                
+                if sn ==0:
+                    title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$'
+                    ax.semilogx(taus, y, '-o', markersize=6, label = title_qz )   
+                else:
+                    ax.semilogx(taus, y, '-o', markersize=6, label='' )   
             
             if 'ylim' in kwargs:
                 ax.set_ylim( kwargs['ylim'])
@@ -895,15 +1000,10 @@ def plot_gisaxs_g2( g2, taus, res_pargs=None, *argv,**kwargs):
             else:
                 pass
             if 'xlim' in kwargs:
-                ax.set_xlim( kwargs['xlim'])
-
-        #dt =datetime.now()
-        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
-                
-        #fp = path + 'g2--uid=%s-qz=%s'%(uid,qz_center[qz_ind]) + CurTime + '.png'
-        #fp = path + 'uid=%s--g2-'%(uid)  + '.png'        
-        fp = path + 'uid=%s--g2-qz=%s'%(uid,qz_center[qz_ind])  + '.png'
-        
+                ax.set_xlim( kwargs['xlim'])                
+            if sn ==0:
+                ax.legend(loc='best', fontsize = 6)
+        fp = path + 'uid=%s--g2'%(uid)  + '.png'        
         fig.savefig( fp, dpi=fig.dpi)        
         fig.tight_layout()  
         plt.show()
@@ -915,7 +1015,7 @@ def plot_gisaxs_g2( g2, taus, res_pargs=None, *argv,**kwargs):
     
 #plot g2 results
 
-def plot_gisaxs_two_g2( g2, taus, g2b, tausb,res_pargs=None, *argv,**kwargs):        
+def plot_gisaxs_two_g2( g2, taus, g2b, tausb,res_pargs=None,one_plot=False, *argv,**kwargs):        
     '''Dec 16, 2015, Y.G.@CHX
         plot g2 results, 
        g2: one-time correlation function from a multi-tau method
@@ -958,47 +1058,100 @@ def plot_gisaxs_two_g2( g2, taus, g2b, tausb,res_pargs=None, *argv,**kwargs):
             qr_center = kwargs[ 'qr_center']
             num_qr = len( qr_center)
         else:
-            print( 'Please give qr_center') 
+            print( 'Please give qr_center')   
+        
+    if not one_plot:        
+        for qz_ind in range(num_qz):            
+            fig = plt.figure(figsize=(12, 10))
+            #fig = plt.figure()
+            title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$' 
+            plt.title('uid= %s:--->'%uid + title_qz,fontsize=20, y =1.1) 
+            #print (qz_ind,title_qz)
+            if num_qz!=1:plt.axis('off')
+            sx = int(round(np.sqrt(num_qr)) )
+            if num_qr%sx == 0: 
+                sy = int(num_qr/sx)
+            else: 
+                sy=int(num_qr/sx+1) 
+            for sn in range(num_qr):
+                ax = fig.add_subplot(sx,sy,sn+1 )
+                ax.set_ylabel("g2") 
+                ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
 
+                title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
+                if num_qz==1:
 
+                    title = 'uid= %s:--->'%uid + title_qz + '__' +  title_qr
+                else:
+                    title = title_qr
+                ax.set_title( title  )
+
+                y=g2b[:, sn + qz_ind * num_qr]
+                ax.semilogx( tausb, y, '--r', markersize=6,label= 'by-two-time')  
+
+                #y2=g2[:, sn]
+                y2=g2[:, sn + qz_ind * num_qr]
+                ax.semilogx(taus, y2, 'o', markersize=6,  label= 'by-multi-tau') 
+
+                if sn + qz_ind * num_qr==0:
+                    ax.legend(loc='best')
+                if 'ylim' in kwargs:
+                    ax.set_ylim( kwargs['ylim'])
+                elif 'vlim' in kwargs:
+                    vmin, vmax =kwargs['vlim']
+                    ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])
+                else:
+                    pass
+                if 'xlim' in kwargs:
+                    ax.set_xlim( kwargs['xlim'])                
+
+            fp = path + 'uid=%s--two-g2-qz=%s'%(uid,qz_center[qz_ind])  + '.png'        
+            fig.savefig( fp, dpi=fig.dpi)         
+            fig.tight_layout()  
+            plt.show()
         
 
-    for qz_ind in range(num_qz):
-        fig = plt.figure(figsize=(10, 12))
-        #fig = plt.figure()
-        title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$' 
-        plt.title('uid= %s:--->'%uid + title_qz,fontsize=20, y =1.1) 
-        #print (qz_ind,title_qz)
-        if num_qz!=1:plt.axis('off')
+    else: 
+        fig = plt.figure(figsize=(12, 10))
+        plt.title('uid= %s'%uid,fontsize=20, y =1.05)  
+        if num_qz!=1:
+            if num_qr!=1:
+                plt.axis('off')
+        
         sx = int(round(np.sqrt(num_qr)) )
         if num_qr%sx == 0: 
             sy = int(num_qr/sx)
         else: 
             sy=int(num_qr/sx+1) 
+            
         for sn in range(num_qr):
             ax = fig.add_subplot(sx,sy,sn+1 )
             ax.set_ylabel("g2") 
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
 
             title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
-            if num_qz==1:
-
-                title = 'uid= %s:--->'%uid + title_qz + '__' +  title_qr
-            else:
-                title = title_qr
+            title = title_qr
             ax.set_title( title  )
             
-            y=g2b[:, sn + qz_ind * num_qr]
-            ax.semilogx( tausb, y, '--r', markersize=6,label= 'by-two-time')  
-
-            y2=g2[:, sn]
-            ax.semilogx(taus, y2, 'o', markersize=6,  label= 'by-multi-tau') 
-        
+            for qz_ind in range(num_qz):                
+                
+                y=g2b[:, sn + qz_ind * num_qr]
+                y2=g2[:,  sn + qz_ind * num_qr]  
+                title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$' 
+                label1 = ''
+                label2 =''  
+                
+                if sn ==0:   
+                    label2 = title_qz 
+                    
+                elif sn==1:    
+                    if qz_ind ==0:
+                        label1= 'by-two-time'
+                        label2= 'by-multi-tau'
+                    
+                ax.semilogx(tausb, y, '-r', markersize=6, linewidth=4, label=label1) 
+                ax.semilogx(taus, y2, 'o', markersize=6, label=label2) 
             
-            if sn + qz_ind * num_qr==0:
-                ax.legend()
-        
-        
             if 'ylim' in kwargs:
                 ax.set_ylim( kwargs['ylim'])
             elif 'vlim' in kwargs:
@@ -1007,22 +1160,24 @@ def plot_gisaxs_two_g2( g2, taus, g2b, tausb,res_pargs=None, *argv,**kwargs):
             else:
                 pass
             if 'xlim' in kwargs:
-                ax.set_xlim( kwargs['xlim'])
-
-        #dt =datetime.now()
-        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
+                ax.set_xlim( kwargs['xlim'])                
+            if (sn ==0) or (sn==1):
+                ax.legend(loc='best', fontsize = 6)
                 
-        #fp = path + 'g2--uid=%s-qz=%s'%(uid,qz_center[qz_ind]) + CurTime + '.png'
-        #fig.savefig( fp, dpi=fig.dpi)  
-        #fp = path + 'uid=%s--two-g2-'%(uid)  + '.png'
-        fp = path + 'uid=%s--two-g2-qz=%s'%(uid,qz_center[qz_ind])  + '.png'
+        fp = path + 'uid=%s--g2--two-g2-'%uid  + '.png'  
+
         
-        fig.savefig( fp, dpi=fig.dpi) 
-        
+        fig.savefig( fp, dpi=fig.dpi)        
         fig.tight_layout()  
         plt.show()
+
+        
+        
+        
+        
+                
        
-def save_gisaxs_g2(  g2,res_pargs, time_label=True, *argv,**kwargs):     
+def save_gisaxs_g2(  g2,res_pargs, time_label=True, taus=None, filename=None, *argv,**kwargs):     
     
     '''
     Aug 8, 2016, Y.G.@CHX
@@ -1031,10 +1186,12 @@ def save_gisaxs_g2(  g2,res_pargs, time_label=True, *argv,**kwargs):
            g2: one-time correlation function
            res_pargs: contions taus, q_ring_center values
            path:
-           uid:
-      
+           uid:      
       '''
-    taus = res_pargs[ 'taus']
+        
+    if taus is None:
+        taus = res_pargs[ 'taus']
+
     qz_center = res_pargs['qz_center']
     qr_center = res_pargs['qr_center']
     path = res_pargs['path']
@@ -1050,14 +1207,18 @@ def save_gisaxs_g2(  g2,res_pargs, time_label=True, *argv,**kwargs):
             
     df.columns = columns   
     
-    if time_label:
-        dt =datetime.now()
-        CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)  
-        filename = os.path.join(path, 'g2-%s-%s.csv' %(uid,CurTime))
-    else:
-        filename = os.path.join(path, 'uid=%s--g2.csv' % (uid))
+    if filename is None: 
+        if time_label:
+            dt =datetime.now()
+            CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)  
+            filename = os.path.join(path, 'g2-%s-%s.csv' %(uid,CurTime))
+        else:
+            filename = os.path.join(path, 'uid=%s--g2.csv' % (uid))
+    else:  
+        filename = os.path.join(path, filename)
+    
     df.to_csv(filename)
-    print( 'The g2 of uid= %s is saved with filename as %s'%(uid, filename))
+    print( 'The correlation function of uid= %s is saved with filename as %s'%(uid, filename))
 
     
     
@@ -1069,7 +1230,7 @@ def simple_exponential(x, beta, relaxation_rate,  baseline=1):
     return beta * np.exp(-2 * relaxation_rate * x) + baseline
 
 
-def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs):     
+def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', one_plot=False, *argv,**kwargs):     
     '''
     July 20,2016, Y.G.@CHX
     Fit one-time correlation function
@@ -1185,54 +1346,134 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
         pars['%s'%v].vary = False        
         #print ( pars['%s'%v], pars['%s'%v].vary )
     result = {}
-    for qz_ind in range(num_qz):
-        fig = plt.figure(figsize=(10, 12))
-        #fig = plt.figure()
-        title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$' 
-        plt.title('uid= %s:--->'%uid + title_qz,fontsize=20, y =1.1) 
-        #print (qz_ind,title_qz)
-        if num_qz!=1:plt.axis('off')
+    
+    
+    if not one_plot: 
+        for qz_ind in range(num_qz):
+            #fig = plt.figure(figsize=(10, 12))
+            fig = plt.figure(figsize=(12, 10))
+            #fig = plt.figure()
+            title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$' 
+            plt.title('uid= %s:--->'%uid + title_qz,fontsize=20, y =1.1) 
+            #print (qz_ind,title_qz)
+            if num_qz!=1:plt.axis('off')
+            sx = int(round(np.sqrt(num_qr)) )
+            if num_qr%sx == 0: 
+                sy = int(num_qr/sx)
+            else: 
+                sy=int(num_qr/sx+1) 
+            for sn in range(num_qr):
+
+                ax = fig.add_subplot(sx,sy,sn+1 )
+                ax.set_ylabel("g2") 
+                ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
+
+                title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
+                if num_qz==1:
+                    title = 'uid= %s:--->'%uid + title_qz + '__' +  title_qr
+                else:
+                    title = title_qr
+                ax.set_title( title  )
+
+                i = sn + qz_ind * num_qr            
+                y=g2[1:, i]
+
+                result1 = mod.fit(y, pars, x = taus[1:] )
+
+                #print ( result1.best_values)
+                rate[i] = result1.best_values['relaxation_rate']
+                #rate[i] = 1e-16
+                beta[i] = result1.best_values['beta'] 
+
+                #baseline[i] = 1.0
+                baseline[i] =  result1.best_values['baseline'] 
+
+                if function=='simple_exponential' or function=='simple':
+                    alpha[i] =1.0 
+                elif function=='stretched_exponential' or function=='stretched':
+                    alpha[i] = result1.best_values['alpha']
+
+                ax.semilogx(taus[1:], y, 'ro')
+                ax.semilogx(taus[1:], result1.best_fit, '-b')
+
+
+                if 'ylim' in kwargs:
+                    ax.set_ylim( kwargs['ylim'])
+                elif 'vlim' in kwargs:
+                    vmin, vmax =kwargs['vlim']
+                    ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])
+                else:
+                    pass
+                if 'xlim' in kwargs:
+                    ax.set_xlim( kwargs['xlim'])                
+
+                txts = r'$\tau$' + r'$ = %.3f$'%(1/rate[i]) +  r'$ s$'
+                ax.text(x =0.02, y=.55 +.3, s=txts, fontsize=14, transform=ax.transAxes)     
+                txts = r'$\alpha$' + r'$ = %.3f$'%(alpha[i])  
+                #txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
+                ax.text(x =0.02, y=.45+.3, s=txts, fontsize=14, transform=ax.transAxes)  
+                txts = r'$baseline$' + r'$ = %.3f$'%( baseline[i]) 
+                ax.text(x =0.02, y=.35 + .3, s=txts, fontsize=14, transform=ax.transAxes)   
+                
+
+            result = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )
+            fp = path + 'uid=%s--g2-qz=%s--fit'%(uid,qz_center[qz_ind])  + '.png'
+            fig.savefig( fp, dpi=fig.dpi)
+            fig.tight_layout()  
+            plt.show()
+            
+            
+    else:
+        #fig = plt.figure(figsize=(10, 12))
+        fig = plt.figure(figsize=(12, 10))
+        plt.title('uid= %s'%uid,fontsize=20, y =1.05)  
+        if num_qz!=1:
+            if num_qr!=1:
+                plt.axis('off')
+
         sx = int(round(np.sqrt(num_qr)) )
         if num_qr%sx == 0: 
             sy = int(num_qr/sx)
         else: 
             sy=int(num_qr/sx+1) 
+
         for sn in range(num_qr):
-            
             ax = fig.add_subplot(sx,sy,sn+1 )
             ax.set_ylabel("g2") 
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
 
             title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
-            if num_qz==1:
-
-                title = 'uid= %s:--->'%uid + title_qz + '__' +  title_qr
-            else:
-                title = title_qr
+            title = title_qr
             ax.set_title( title  )
 
-            i = sn + qz_ind * num_qr            
-            y=g2[1:, i]
+            for qz_ind in range(num_qz):
+                i = sn + qz_ind * num_qr        
+                y=g2[1:, i]    
+                result1 = mod.fit(y, pars, x = taus[1:] )
+                #print ( result1.best_values)
+                rate[i] = result1.best_values['relaxation_rate']
+                #rate[i] = 1e-16
+                beta[i] = result1.best_values['beta'] 
+                #baseline[i] = 1.0
+                baseline[i] =  result1.best_values['baseline'] 
 
-            result1 = mod.fit(y, pars, x = taus[1:] )
+                if function=='simple_exponential' or function=='simple':
+                    alpha[i] =1.0 
+                elif function=='stretched_exponential' or function=='stretched':
+                    alpha[i] = result1.best_values['alpha']
 
-            #print ( result1.best_values)
-            rate[i] = result1.best_values['relaxation_rate']
-            #rate[i] = 1e-16
-            beta[i] = result1.best_values['beta'] 
-        
-            #baseline[i] = 1.0
-            baseline[i] =  result1.best_values['baseline'] 
+                if sn ==0:
+                    title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$'
+                    ax.semilogx(taus[1:], y, 'o', markersize=6, label = title_qz )                     
+                else:
+                    ax.semilogx(taus[1:], y, 'o', markersize=6, label='' )   
+                ax.semilogx(taus[1:], result1.best_fit, '-b')
+                
+                txts = r'$q_z$' + r'$_%s$'%qz_ind + r'$\tau$' + r'$ = %.3f$'%(1/rate[i]) +  r'$ s$'
+                ax.text(x =0.02, y=.55 +.3 - 0.1*qz_ind, s=txts, fontsize=14, transform=ax.transAxes)  
 
-            if function=='simple_exponential' or function=='simple':
-                alpha[i] =1.0 
-            elif function=='stretched_exponential' or function=='stretched':
-                alpha[i] = result1.best_values['alpha']
-
-            ax.semilogx(taus[1:], y, 'ro')
-            ax.semilogx(taus[1:], result1.best_fit, '-b')
-             
-            
+                
+                
             if 'ylim' in kwargs:
                 ax.set_ylim( kwargs['ylim'])
             elif 'vlim' in kwargs:
@@ -1242,22 +1483,16 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
                 pass
             if 'xlim' in kwargs:
                 ax.set_xlim( kwargs['xlim'])                
-
-            txts = r'$\tau$' + r'$ = %.3f$'%(1/rate[i]) +  r'$ s$'
-            
-            ax.text(x =0.02, y=.55 +.3, s=txts, fontsize=14, transform=ax.transAxes)     
-            txts = r'$\alpha$' + r'$ = %.3f$'%(alpha[i])  
-            #txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
-            ax.text(x =0.02, y=.45+.3, s=txts, fontsize=14, transform=ax.transAxes)  
-
-            txts = r'$baseline$' + r'$ = %.3f$'%( baseline[i]) 
-            ax.text(x =0.02, y=.35 + .3, s=txts, fontsize=14, transform=ax.transAxes)        
-     
-        result[qz_ind] = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )
-        fp = path + 'uid=%s--g2-qz=%s--fit'%(uid,qz_center[qz_ind])  + '.png'
-        fig.savefig( fp, dpi=fig.dpi)
+            if sn ==0:
+                ax.legend(loc='best', fontsize = 6)
+                
+        result = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )        
+        fp = path + 'uid=%s--g2--fit-'%(uid)  + '.png'        
+        fig.savefig( fp, dpi=fig.dpi)        
         fig.tight_layout()  
         plt.show()
+
+        
     
         #dt =datetime.now()
         #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute) 
@@ -1323,8 +1558,231 @@ def get_each_box_mean_intensity( data_series, box_mask, sampling, timeperframe, 
 
 
 
+def power_func(x, D0, power=2):
+    return D0 * x**power
 
 
+def fit_qr_qz_rate( qr, qz, rate, plot_=True,  *argv,**kwargs): 
+    '''
+    Option:
+        if power_variable = False, power =2 to fit q^2~rate, 
+                Otherwise, power is variable.
+    '''
+    power_variable=False
+    x=qr            
+    if 'fit_range' in kwargs.keys():
+        fit_range = kwargs['fit_range']         
+    else:    
+        fit_range= None
+
+    if 'uid' in kwargs.keys():
+        uid = kwargs['uid'] 
+    else:
+        uid = 'uid' 
+
+    if 'path' in kwargs.keys():
+        path = kwargs['path'] 
+    else:
+        path = ''    
+
+    if fit_range is not None:
+        y=rate[fit_range[0]:fit_range[1]]
+        x=q[fit_range[0]:fit_range[1]] 
+        
+    mod = Model( power_func )
+    #mod.set_param_hint( 'power',   min=0.5, max= 10 )
+    #mod.set_param_hint( 'D0',   min=0 )
+    pars  = mod.make_params( power = 2, D0=1*10^(-5) )
+    if power_variable:
+        pars['power'].vary = True
+    else:
+        pars['power'].vary = False
+        
+
+    Nqr = len( qr)
+    Nqz = len( qz)
+    D0= np.zeros( Nqz )
+    power= 2 #np.zeros( Nqz )
+
+    res= []        
+    for i, qz_ in enumerate(qz): 
+        
+        y = rate['rate'][ i*Nqr  : (i+1)*Nqr ]        
+        _result = mod.fit(y, pars, x = x )
+        res.append(  _result )
+        D0[i]  = _result.best_values['D0']
+        #power[i] = _result.best_values['power']  
+        print ('The fitted diffusion coefficient D0 is:  %.3e   A^2S-1'%D0[i])
+        
+    if plot_: 
+        fig,ax = plt.subplots()
+        plt.title('Q%s-Rate--uid= %s_Fit'%(power,uid),fontsize=20, y =1.06)
+        for i, qz_ in enumerate(qz): 
+            ax.plot(x**power,rate['rate'][ i*Nqr  : (i+1)*Nqr ], marker = 'o',
+                    label=r'$q_z=%.5f$'%qz_)
+            ax.plot(x**power, res[i].best_fit,  '-r')  
+            txts = r'$D0: %.3e$'%D0[i] + r' $A^2$' + r'$s^{-1}$'
+            dy=0.1
+            ax.text(x =0.15, y=.65 -dy *i, s=txts, fontsize=14, transform=ax.transAxes) 
+            legend = ax.legend(loc='best')
+            
+            
+        ax.set_ylabel('Relaxation rate 'r'$\gamma$'"($s^{-1}$)")
+        ax.set_xlabel("$q^%s$"r'($\AA^{-2}$)'%power)
+
+        dt =datetime.now()
+        CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)     
+        #fp = path + 'Q%s-Rate--uid=%s'%(power,uid) + CurTime + '--Fit.png'
+        fp = path + 'uid=%s--Q-Rate'%(uid) + '--fit-.png'
+        fig.savefig( fp, dpi=fig.dpi)    
+
+        fig.tight_layout() 
+        plt.show()
+
+    return D0
+
+
+
+
+#plot g4 results
+
+def plot_gisaxs_g4( g4, taus, res_pargs=None, one_plot=False, *argv,**kwargs):     
+    '''Dec 16, 2015, Y.G.@CHX
+        plot g4 results, 
+       g4: four-time correlation function
+       taus: the time delays  
+       res_pargs, a dict, can contains
+           uid/path/qr_center/qz_center/
+       kwargs: can contains
+           vlim: [vmin,vmax]: for the plot limit of y, the y-limit will be [vmin * min(y), vmx*max(y)]
+           ylim/xlim: the limit of y and x
+       
+       e.g.
+       plot_gisaxs_g4( g4, taus= np.arange( g2b.shape[0]) *timeperframe, q_ring_center = q_ring_center, vlim=[.99, 1.01] )
+           
+      ''' 
+
+    
+    if res_pargs is not None:
+        uid = res_pargs['uid'] 
+        path = res_pargs['path'] 
+        qz_center = res_pargs[ 'qz_center']
+        num_qz = len( qz_center)
+        qr_center = res_pargs[ 'qr_center']
+        num_qr = len( qr_center)
+    
+    else:
+    
+        if 'uid' in kwargs.keys():
+            uid = kwargs['uid'] 
+        else:
+            uid = 'uid'
+        if 'path' in kwargs.keys():
+            path = kwargs['path'] 
+        else:
+            path = ''
+        if 'qz_center' in kwargs.keys():
+            qz_center = kwargs[ 'qz_center']
+            num_qz = len( qz_center)
+        else:
+            print( 'Please give qz_center')
+        if 'qr_center' in kwargs.keys():
+            qr_center = kwargs[ 'qr_center']
+            num_qr = len( qr_center)
+        else:
+            print( 'Please give qr_center') 
+            
+    if not one_plot: 
+        for qz_ind in range(num_qz):
+            fig = plt.figure(figsize=(12, 10))
+            #fig = plt.figure()
+            title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$' 
+            plt.title('uid= %s:--->'%uid + title_qz,fontsize=20, y =1.1) 
+            #print (qz_ind,title_qz)
+            if num_qz!=1:
+                if num_qr!=1:
+                    plt.axis('off')
+            sx = int(round(np.sqrt(num_qr)) )
+            if num_qr%sx == 0: 
+                sy = int(num_qr/sx)
+            else: 
+                sy=int(num_qr/sx+1) 
+            for sn in range(num_qr):
+                ax = fig.add_subplot(sx,sy,sn+1 )
+                ax.set_ylabel("g4") 
+                ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
+
+                title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
+                if num_qz==1:
+
+                    title = 'uid= %s:--->'%uid + title_qz + '__' +  title_qr
+                else:
+                    title = title_qr
+                ax.set_title( title  )
+
+                y=g4[:, sn + qz_ind * num_qr]
+                ax.semilogx(taus, y, '-o', markersize=6)             
+
+                if 'ylim' in kwargs:
+                    ax.set_ylim( kwargs['ylim'])
+                elif 'vlim' in kwargs:
+                    vmin, vmax =kwargs['vlim']
+                    ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])
+                else:
+                    pass
+                if 'xlim' in kwargs:
+                    ax.set_xlim( kwargs['xlim'])
+                    
+            fp = path + 'uid=%s--g4-qz=%s'%(uid,qz_center[qz_ind])  + '.png'        
+            fig.savefig( fp, dpi=fig.dpi)        
+            fig.tight_layout()  
+            plt.show() 
+                        
+    else:  
+        fig = plt.figure(figsize=(12, 10))
+        plt.title('uid= %s'%uid,fontsize=20, y =1.05)  
+        if num_qz!=1:
+            if num_qr!=1:
+                plt.axis('off')
+        
+        sx = int(round(np.sqrt(num_qr)) )
+        if num_qr%sx == 0: 
+            sy = int(num_qr/sx)
+        else: 
+            sy=int(num_qr/sx+1) 
+            
+        for sn in range(num_qr):
+            ax = fig.add_subplot(sx,sy,sn+1 )
+            ax.set_ylabel("g4") 
+            ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
+
+            title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
+            title = title_qr
+            ax.set_title( title  )
+            
+            for qz_ind in range(num_qz):
+                y=g4[:, sn + qz_ind * num_qr]                
+                if sn ==0:
+                    title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$'
+                    ax.semilogx(taus, y, '-o', markersize=6, label = title_qz )   
+                else:
+                    ax.semilogx(taus, y, '-o', markersize=6, label='' )   
+            
+            if 'ylim' in kwargs:
+                ax.set_ylim( kwargs['ylim'])
+            elif 'vlim' in kwargs:
+                vmin, vmax =kwargs['vlim']
+                ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])
+            else:
+                pass
+            if 'xlim' in kwargs:
+                ax.set_xlim( kwargs['xlim'])                
+            if sn ==0:
+                ax.legend(loc='best', fontsize = 6)
+        fp = path + 'uid=%s--g4-'%(uid)  + '.png'        
+        fig.savefig( fp, dpi=fig.dpi)        
+        fig.tight_layout()  
+        plt.show()
 
 
 
