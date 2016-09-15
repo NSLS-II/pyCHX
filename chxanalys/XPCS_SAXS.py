@@ -738,11 +738,11 @@ def two_theta_to_radius(dist_sample, two_theta):
     return np.tan(two_theta) * dist_sample
 
 
-#def get_ring_mask(  mask, inner_radius=40, outer_radius = 762, width = 6, num_rings = 12,
-#                  edges=None, unit='pixel',pargs=None   ):
+def get_ring_mask(  mask, inner_radius=40, outer_radius = 762, width = 6, num_rings = 12,
+                  edges=None, unit='pixel',pargs=None   ):
     
-def get_ring_mask(  mask, inner_radius= 0.0020, outer_radius = 0.009, width = 0.0002, num_rings = 12,
-                  edges=None, unit='A',pargs=None   ):     
+#def get_ring_mask(  mask, inner_radius= 0.0020, outer_radius = 0.009, width = 0.0002, num_rings = 12,
+#                  edges=None, unit='pixel',pargs=None   ):     
     ''' 
     mask: 2D-array 
     inner_radius #radius of the first ring
@@ -1653,6 +1653,7 @@ def fit_saxs_rad_ang_g2( g2,  res_pargs=None,function='simple_exponential',
             
             
             txts = r'$\gamma$' + r'$ = %.3f$'%(1/rate[i]) +  r'$ s$'
+            
             ax.text(x =0.02, y=.55, s=txts, fontsize=14, transform=ax.transAxes)     
             txts = r'$\alpha$' + r'$ = %.3f$'%(alpha[i])  
             #txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
@@ -1997,6 +1998,7 @@ def power_func(x, D0, power=2):
     return D0 * x**power
 
 
+
 def fit_q_rate( q, rate, plot_=True, power_variable=False, *argv,**kwargs): 
     '''
     Option:
@@ -2041,9 +2043,8 @@ def fit_q_rate( q, rate, plot_=True, power_variable=False, *argv,**kwargs):
     
     print ('The fitted diffusion coefficient D0 is:  %.3e   A^2S-1'%D0)
     if plot_:
-        fig,ax = plt.subplots()
-        
-        plt.title('Q%s-Rate--uid= %s_Fit'%(power,uid),fontsize=20, y =1.06)   
+        fig,ax = plt.subplots()        
+        plt.title('Q%s-Rate--uid= %s_Fit'%(power,uid),fontsize=20, y =1.06)  
         
         ax.plot(q**power,rate, 'bo')
         ax.plot(x**power, _result.best_fit,  '-r')
@@ -2066,6 +2067,7 @@ def fit_q_rate( q, rate, plot_=True, power_variable=False, *argv,**kwargs):
         plt.show()
         
     return D0
+
 
 
 def linear_fit( x,y):
