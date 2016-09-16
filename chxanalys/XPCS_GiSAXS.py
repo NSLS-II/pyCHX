@@ -9,7 +9,11 @@ This module is for the GiSAXS XPCS analysis
 
 from chxanalys.chx_generic_functions import *
 
+from chxanalys.chx_compress_analysis import ( compress_eigerdata, read_compressed_eigerdata,
+                                             init_compress_eigerdata,
+                                             Multifile) 
 
+from chxanalys.chx_correlationc import ( cal_g2c )
 
 ##########################################
 ###Functions for GiSAXS
@@ -1787,4 +1791,152 @@ def plot_gisaxs_g4( g4, taus, res_pargs=None, one_plot=False, *argv,**kwargs):
 
 
 
+def multi_uids_gisaxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, fit = True, compress=True  ):
+    ''''Sep 16, 2016, YG@CHX-NSLS2
+    Do SAXS-XPCS analysis for multi uid data
+    uids: a list of uids to be analyzed    
+    md: metadata, should at least include
+        mask: array, mask data
+        data_dir: the path to save data, the result will be saved in data_dir/uid/...
+        dpix:
+        Ldet:
+        lambda:
+        timeperframe:
+        center
+    run_num: the run number
+    sub_num: the number in each sub-run
+    fit: if fit, do fit for g2 and show/save all fit plots
+    compress: apply a compress algorithm
+    
+    Save g2/metadata/g2-fit plot/g2 q-rate plot/ of each uid in data_dir/uid/...
+    return:
+    g2s: a dictionary, {run_num: sub_num: g2_of_each_uid}   
+    taus,
+    use_uids: return the valid uids
+    '''
+    
+    
+    g2s = {} # g2s[run_number][sub_seq]  =  g2 of each uid
+    lag_steps = [0]    
+    useful_uids = {}
+    if sub_num is None:
+        sub_num = len( uids )//run_num    
 
+    mask = md['mask']  
+    maskr = mask[::-1,:]
+    data_dir = md['data_dir']
+    box_maskr = md['ring_mask']
+    qz_center= md['qz_center']
+    qr_center= md['qr_center']
+    
+    
+    for run_seq in range(run_num):
+        g2s[ run_seq + 1] = {}    
+        useful_uids[ run_seq + 1] = {}  
+        i=0    
+        for sub_seq in range(  0, sub_num   ):        
+            uid = uids[ sub_seq + run_seq * sub_num  ]        
+            print( 'The %i--th uid to be analyzed is : %s'%(i, uid) )
+            try:
+                detector = get_detector( db[uid ] )
+                imgs = load_data( uid, detector  )  
+            except:
+                print( 'The %i--th uid: %s can not load data'%(i, uid) )
+                imgs=0
+
+            data_dir_ = os.path.join( data_dir, '%s/'%uid)
+            os.makedirs(data_dir_, exist_ok=True)            
+            i +=1            
+            if imgs !=0:            
+                
+                Nimg = len(imgs)
+                md_ = imgs.md  
+                useful_uids[ run_seq + 1][i] = uid
+                
+                imgsr = reverse_updown( imgs )
+                imgsra = apply_mask( imgsr, maskr )
+                
+                if compress:
+                    filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%uid 
+                    maskr, avg_imgr, imgsum, bad_frame_list = compress_eigerdata(imgsr, maskr, md_, filename, 
+                                        force_compress= False, bad_pixel_threshold= 5e10, nobytes=4)
+                    try:
+                        md['Measurement']= db[uid]['start']['Measurement']
+                        #md['sample']=db[uid]['start']['sample'] 
+                        #print( md['Measurement'] )
+                    except:
+                        md['Measurement']= 'Measurement'
+                        md['sample']='sample'                    
+
+                    dpix = md['x_pixel_size'] * 1000.  #in mm, eiger 4m is 0.075 mm
+                    lambda_ =md['incident_wavelength']    # wavelegth of the X-rays in Angstroms
+                    Ldet =  md['detector_distance']
+                    # detector to sample distance (mm), currently, *1000 for saxs, *1 for gisaxs
+                    exposuretime= md['count_time']
+                    acquisition_period = md['frame_time']
+                    timeperframe = acquisition_period#for g2
+                    #timeperframe = exposuretime#for visiblitly
+                    #timeperframe = 2  ## manual overwrite!!!! we apparently writing the wrong metadata....
+                    setup_pargs=dict(uid=uid, dpix= dpix, Ldet=Ldet, lambda_= lambda_, 
+                            timeperframe=timeperframe,  path= data_dir)
+                    md['avg_img'] = avg_imgr                  
+
+                    min_inten = 0
+                    #good_start = np.where( np.array(imgsum) > min_inten )[0][0]
+                    good_start = 0
+                    good_start = max(good_start, np.where( np.array(imgsum) > min_inten )[0][0] )   
+
+                    print ('With compression, the good_start frame number is: %s '%good_start)
+                    FD = Multifile(filename, good_start, len(imgs)) 
+
+                    g2, lag_steps_  =cal_g2c( FD,  box_maskr, bad_frame_list, good_start, num_buf = 8, 
+                                imgsum= None, norm= None )   
+
+                    if len( lag_steps) < len(lag_steps_):
+                        lag_steps = lag_steps_
+
+                else:
+                    sampling = 1000  #sampling should be one  
+
+                    #good_start = check_shutter_open( imgsra,  min_inten=5, time_edge = [0,10], plot_ = False )
+                    good_start = 0
+                    good_series = apply_mask( imgsar[good_start:  ], maskr )
+                    imgsum, bad_frame_list = get_each_frame_intensity(good_series ,sampling = sampling, 
+                                        bad_pixel_threshold=1.2e8,  plot_ = False, uid=uid)
+                    bad_image_process = False
+
+                    if  len(bad_frame_list):
+                        bad_image_process = True
+                    print( bad_image_process  ) 
+
+                    g2, lag_steps_  =cal_g2( good_series,  box_maskr, bad_image_process,
+                                       bad_frame_list, good_start, num_buf = 8 )
+                    if len( lag_steps) < len(lag_steps_):
+                        lag_steps = lag_step_
+
+                taus_ = lag_steps_ * timeperframe
+                taus = lag_steps * timeperframe
+                res_pargs = dict(taus=taus_, qz_center=qz_center, qr_center=qr_center,  path=data_dir_, uid=uid )
+                save_gisaxs_g2(  g2, res_pargs )
+                #plot_gisaxs_g2( g2, taus,  vlim=[0.95, 1.1], res_pargs=res_pargs, one_plot=True)  
+                
+                if fit:
+                    fit_result = fit_gisaxs_g2( g2, res_pargs, function = 'stretched',  vlim=[0.95, 1.1], 
+                fit_variables={'baseline':True, 'beta':True, 'alpha':False,'relaxation_rate':True},
+                guess_values={'baseline':1.229,'beta':0.05,'alpha':1.0,'relaxation_rate':0.01},
+                              one_plot= True)
+                    
+                    fit_qr_qz_rate(  qr_center, qz_center, fit_result, power_variable= False,
+           uid=uid, path= data_dir_ )
+                        
+                psave_obj(  md, data_dir_ + 'uid=%s-md'%uid ) #save the setup parameters
+
+                g2s[run_seq + 1][i] = g2
+                
+                print ('*'*40)
+                print()
+
+        
+    return g2s, taus, useful_uids
+    
+    
