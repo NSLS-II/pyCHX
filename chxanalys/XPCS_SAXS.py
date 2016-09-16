@@ -9,9 +9,11 @@ This module is for the SAXS XPCS analysis
 
 from chxanalys.chx_generic_functions import *
 from scipy.special import erf
-from chxanalys.chx_compress_analysis import ( compress_eigerdata, read_compressed_eigerdata,
+
+from chxanalys.chx_compress import ( compress_eigerdata, read_compressed_eigerdata,
                                              init_compress_eigerdata,
                                              Multifile) 
+
 from chxanalys.chx_correlationc import ( cal_g2c )    
     
     
