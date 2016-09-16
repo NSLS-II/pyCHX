@@ -378,7 +378,8 @@ def cal_g2p( FD, ring_mask, bad_frame_list=None,
     '''calculation g2 by using a multi-tau algorithm
        for a compressed file with parallel calculation
     '''
-    noframes = FD.end - good_start   # number of frames, not "no frames"
+    FD.beg = max(FD.beg, good_start)
+    noframes = FD.end - FD.beg   # number of frames, not "no frames"
     #noframes = FD.end - FD.beg   # number of frames
 
     for i in range(FD.beg, FD.end):
