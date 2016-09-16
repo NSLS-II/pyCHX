@@ -9,7 +9,7 @@ This module is for the GiSAXS XPCS analysis
 
 from chxanalys.chx_generic_functions import *
 
-from chxanalys.chx_compress_analysis import ( compress_eigerdata, read_compressed_eigerdata,
+from chxanalys.chx_compress import ( compress_eigerdata, read_compressed_eigerdata,
                                              init_compress_eigerdata,
                                              Multifile) 
 
