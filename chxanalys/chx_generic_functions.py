@@ -175,6 +175,7 @@ def load_mask( path, mask_name, plot_ = False, *argv,**kwargs):
     """
     
     mask = np.load(    path +   mask_name )
+    mask = np.array(mask, dtype = np.int32)
     if plot_:
         show_img( mask, *argv,**kwargs)   
     return mask
