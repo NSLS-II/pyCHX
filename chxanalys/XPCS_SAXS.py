@@ -9,7 +9,12 @@ This module is for the SAXS XPCS analysis
 
 from chxanalys.chx_generic_functions import *
 from scipy.special import erf
- 
+from chxanalys.chx_compress_analysis import ( compress_eigerdata, read_compressed_eigerdata,
+                                             init_compress_eigerdata,
+                                             Multifile) 
+from chxanalys.chx_correlationc import ( cal_g2c )    
+    
+    
 def bin_1D(x, y, nx=None, min_x=None, max_x=None):
     """
     Bin the values in y based on their x-coordinates
@@ -2280,10 +2285,11 @@ def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, fit = Tr
                                        bad_frame_list, good_start, num_buf = 8 )
                     if len( lag_steps) < len(lag_steps_):
                         lag_steps = lag_step_
-
-
+                
+                taus_ = lag_steps_ * timeperframe
                 taus = lag_steps * timeperframe
-                res_pargs = dict(taus=taus, q_ring_center=q_ring_center, path=data_dir_, uid=uid        )
+                
+                res_pargs = dict(taus=taus_, q_ring_center=q_ring_center, path=data_dir_, uid=uid        )
                 save_saxs_g2(   g2, res_pargs )
                 #plot_saxs_g2( g2, taus,  vlim=[0.95, 1.05], res_pargs=res_pargs) 
                 if fit:
