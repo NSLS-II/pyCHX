@@ -689,7 +689,7 @@ class create_pdf_report( object ):
 
 
 
-def create_multi_pdf_reports_for_uids( uids, g2, data_dir ):
+def create_multi_pdf_reports_for_uids( uids, g2, data_dir, report_type='saxs' ):
     ''' Aug 16, YG@CHX-NSLS-II 
         Create multi pdf reports for each uid in uids
         uids: a list of uids to be reported
@@ -703,7 +703,7 @@ def create_multi_pdf_reports_for_uids( uids, g2, data_dir ):
             uid_i = uids[key][sub_key]
             data_dir_ = os.path.join( data_dir, '%s/'%uid_i)        
 
-            c= create_pdf_report(  data_dir_, uid_i,data_dir )    
+            c= create_pdf_report(  data_dir_, uid_i,data_dir,report_type=report_type )    
             #Page one: Meta-data/Iq-Q/ROI
             c.report_header(page=1)
             c.report_meta( top=730)
@@ -712,7 +712,7 @@ def create_multi_pdf_reports_for_uids( uids, g2, data_dir ):
             c.done() 
 
             
-def create_one_pdf_reports_for_uids( uids, g2, data_dir, filename='all_in_one' ):
+def create_one_pdf_reports_for_uids( uids, g2, data_dir, filename='all_in_one', report_type='saxs' ):
     ''' Aug 16, YG@CHX-NSLS-II 
         Create one pdf reports for each uid in uids
         uids: a list of uids to be reported
@@ -720,7 +720,7 @@ def create_one_pdf_reports_for_uids( uids, g2, data_dir, filename='all_in_one' )
         data_dir:
         Save pdf report in data dir
     '''
-    c= create_pdf_report( data_dir, uid=filename, out_dir=data_dir, load=False )  
+    c= create_pdf_report( data_dir, uid=filename, out_dir=data_dir, load=False, report_type= report_type)
     page=1
 
     for key in list( g2.keys()):    
