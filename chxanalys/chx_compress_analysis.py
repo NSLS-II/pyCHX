@@ -7,9 +7,9 @@ import struct
 
 import matplotlib.pyplot as plt
 
-from chxanalys.chx_libs import (np, roi, time, datetime, os,  getpass, db, get_images,LogNorm)
+from chxanalys.chx_libs import (np, roi, time, datetime, os,  getpass, db, get_images,LogNorm,Figure, RUN_GUI)
 #from chxanalys.chx_generic_functions import (get_circular_average)
-from chxanalys.XPCS_SAXS import (get_circular_average)
+#from chxanalys.XPCS_SAXS import (get_circular_average)
 
 import os
 from chxanalys.chx_generic_functions import ( save_arrays )
@@ -95,8 +95,7 @@ def cal_waterfallc(FD, labeled_array,   qindex=1, save=False, *argv,**kwargs):
             
     return watf
 
-
-def plot_waterfallc(wat, qindex=1, aspect = None,vmax=None, vmin=None,save=False, *argv,**kwargs):   
+def plot_waterfallc(wat, qindex=1, aspect = None,vmax=None, vmin=None,save=False, return_fig=False,*argv,**kwargs):   
     '''plot waterfall for a giving compressed file
     
        FD: class object, the compressed file handler
@@ -107,10 +106,14 @@ def plot_waterfallc(wat, qindex=1, aspect = None,vmax=None, vmin=None,save=False
        Return waterfall
        Plot the waterfall
     
-    '''
-    
+    '''    
     #wat = cal_waterfallc( FD, labeled_array, qindex=qindex)
-    fig, ax = plt.subplots(figsize=(8,6))
+    if RUN_GUI:
+        fig = Figure(figsize=(8,6))
+        ax = fig.add_subplot(111)
+    else:
+        fig, ax = plt.subplots(figsize=(8,6))   
+    #fig, ax = plt.subplots(figsize=(8,6))
     ax.set_ylabel('Pixel')
     ax.set_xlabel('Frame')
     ax.set_title('Waterfall_Plot_@qind=%s'%qindex)
@@ -140,12 +143,13 @@ def plot_waterfallc(wat, qindex=1, aspect = None,vmax=None, vmin=None,save=False
             uid = 'uid'
         #fp = path + "uid= %s--Waterfall-"%uid + CurTime + '.png'     
         fp = path + "uid=%s--Waterfall-"%uid  + '.png'    
-        fig.savefig( fp, dpi=fig.dpi)
+        plt.savefig( fp, dpi=fig.dpi)
         
-    plt.show()
+    #plt.show()
+    if return_fig:
+        return fig,ax, im 
     
     
-
 
 
 def get_waterfallc(FD, labeled_array, qindex=1, aspect = 1.0,
@@ -158,8 +162,7 @@ def get_waterfallc(FD, labeled_array, qindex=1, aspect = 1.0,
        aspect: the aspect ratio of the plot
        
        Return waterfall
-       Plot the waterfall
-    
+       Plot the waterfall    
     '''
     
     wat = cal_waterfallc( FD, labeled_array, qindex=qindex)
@@ -241,78 +244,6 @@ def get_each_ring_mean_intensityc( FD, ring_mask, sampling=1, timeperframe=None,
 
 
  
-
-def get_t_iqc( FD, frame_edge, mask, pargs, nx=1500, plot_ = False , save=False, *argv,**kwargs):   
-    '''Get t-dependent Iq 
-    
-        Parameters        
-        ----------
-        data_series:  a image series
-        frame_edge: list, the ROI frame regions, e.g., [  [0,100], [200,400] ]
-        mask:  a image mask 
-        
-        nx : int, optional
-            number of bins in x
-            defaults is 1500 bins
-        plot_: a boolen type, if True, plot the time~one-D curve with qp as x-axis
-
-        Returns
-        ---------
-        qp: q in pixel
-        iq: intensity of circular average
-        q: q in real unit (A-1)
-     
-    '''   
-       
-    Nt = len( frame_edge )
-    iqs = list( np.zeros( Nt ) )
-    for i in range(Nt):
-        t1,t2 = frame_edge[i]
-        #print (t1,t2)
-        
-        avg_img = get_avg_imgc( FD, beg=t1,end=t2, sampling = 1, plot_ = False )
-        qp, iqs[i], q = get_circular_average( avg_img, mask,pargs, nx=nx,
-                           plot_ = False)
-        
-    if plot_:
-        fig,ax = plt.subplots(figsize=(8, 6))
-        for i in range(  Nt ):
-            t1,t2 = frame_edge[i]
-            ax.semilogy(q, iqs[i], label="frame: %s--%s"%( t1,t2) )
-            #ax.set_xlabel("q in pixel")
-            ax.set_xlabel('Q 'r'($\AA^{-1}$)')
-            ax.set_ylabel("I(q)")
-            
-        if 'xlim' in kwargs.keys():
-            ax.set_xlim(    kwargs['xlim']  )    
-        if 'ylim' in kwargs.keys():
-            ax.set_ylim(    kwargs['ylim']  )
- 
-
-        ax.legend(loc = 'best')  
-        
-        uid = pargs['uid']
-        title = ax.set_title('uid= %s--t~I(q)'%uid)        
-        title.set_y(1.01)
-        if save:
-            #dt =datetime.now()
-            #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
-            path = pargs['path']
-            uid = pargs['uid']
-            #fp = path + 'uid= %s--Iq~t-'%uid + CurTime + '.png'  
-            fp = path + 'uid=%s--Iq-t-'%uid + '.png'  
-            fig.savefig( fp, dpi=fig.dpi)
-            
-            save_arrays(  np.vstack( [q, np.array(iqs)]).T, 
-                        label=  ['q_A-1']+ ['Fram-%s-%s'%(t[0],t[1]) for t in frame_edge],
-                        filename='uid=%s-q-Iqt'%uid, path= path  )
-            
-        plt.show()
-        
-    
-    return qp, np.array( iqs ),q
-
-
 
 
 

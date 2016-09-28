@@ -1,6 +1,6 @@
 import os
 import matplotlib.pyplot as plt
-from chxanalys.chx_libs import (np, roi, time, datetime, os,  getpass, db, get_images,LogNorm)
+from chxanalys.chx_libs import (np, roi, time, datetime, os,  getpass, db, get_images,LogNorm, RUN_GUI)
 import struct    
 from tqdm import tqdm
 
@@ -297,7 +297,7 @@ def pass_FD(FD,n):
 
 
 
-def get_avg_imgc( FD,  beg=None,end=None,sampling = 100, plot_ = False ,  *argv,**kwargs):   
+def get_avg_imgc( FD,  beg=None,end=None,sampling = 100, plot_ = False,  *argv,**kwargs):   
     '''Get average imagef from a data_series by every sampling number to save time'''
     #avg_img = np.average(data_series[:: sampling], axis=0)
     
@@ -307,22 +307,22 @@ def get_avg_imgc( FD,  beg=None,end=None,sampling = 100, plot_ = False ,  *argv,
         end = FD.end
         
     avg_img = FD.rdframe(beg)
-    n=1
-    
+    n=1    
     for  i in tqdm(range( sampling-1 + beg , end, sampling  ), desc= 'Averaging images' ):  
         (p,v) = FD.rdrawframe(i)
         if len(p)>0:
             np.ravel(avg_img )[p] +=   v
-            n += 1
-            
-    avg_img /= n 
-    
+            n += 1            
+    avg_img /= n     
     if plot_:
-        fig, ax = plt.subplots()
+        if RUN_GUI:
+            fig = Figure()
+            ax = fig.add_subplot(111)
+        else:
+            fig, ax = plt.subplots()
         uid = 'uid'
         if 'uid' in kwargs.keys():
-            uid = kwargs['uid'] 
-            
+            uid = kwargs['uid']             
         im = ax.imshow(avg_img , cmap='viridis',origin='lower',
                    norm= LogNorm(vmin=0.001, vmax=1e2))
         #ax.set_title("Masked Averaged Image")
@@ -338,10 +338,8 @@ def get_avg_imgc( FD,  beg=None,end=None,sampling = 100, plot_ = False ,  *argv,
                 uid = 'uid'
             #fp = path + "uid= %s--Waterfall-"%uid + CurTime + '.png'     
             fp = path + "uid=%s--avg-img-"%uid  + '.png'    
-            fig.savefig( fp, dpi=fig.dpi)
-        
-        plt.show()
- 
+            plt.savefig( fp, dpi=fig.dpi)        
+        #plt.show() 
     return avg_img
 
 

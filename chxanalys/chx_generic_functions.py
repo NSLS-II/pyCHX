@@ -154,7 +154,7 @@ def pload_obj(filename ):
     
     
     
-def load_mask( path, mask_name, plot_ = False, *argv,**kwargs): 
+def load_mask( path, mask_name, plot_ = False, reverse=False, *argv,**kwargs): 
     
     """load a mask file
     the mask is a numpy binary file (.npy) 
@@ -164,7 +164,7 @@ def load_mask( path, mask_name, plot_ = False, *argv,**kwargs):
     path: the path of the mask file
     mask_name: the name of the mask file
     plot_: a boolen type
-    
+    reverse: if True, reverse the image upside down to match the "real" image geometry (should always be True in the future)    
     Returns
     -------
     mask: array
@@ -176,6 +176,8 @@ def load_mask( path, mask_name, plot_ = False, *argv,**kwargs):
     
     mask = np.load(    path +   mask_name )
     mask = np.array(mask, dtype = np.int32)
+    if reverse:
+        mask = mask[::-1,:]  
     if plot_:
         show_img( mask, *argv,**kwargs)   
     return mask
@@ -227,7 +229,7 @@ def RemoveHot( img,threshold= 1E7, plot_=True ):
 
 
 def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,path=None, 
-             aspect=None, logs=False,vmin=None,vmax=None,
+             aspect=None, logs=False,vmin=None,vmax=None,return_fig=False,
              *argv,**kwargs ):    
     """a simple function to show image by using matplotlib.plt imshow
     pass *argv,**kwargs to imshow
@@ -242,7 +244,11 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
     """ 
     
     if ax is None:
-        fig, ax = plt.subplots()
+        if RUN_GUI:
+            fig = Figure()
+            ax = fig.add_subplot(111)
+        else:
+            fig, ax = plt.subplots()
     else:
         fig, ax=ax
         
@@ -251,9 +257,7 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
         im=ax.imshow(image, origin='lower' ,cmap='viridis',interpolation="nearest", vmin=vmin,vmax=vmax)  #vmin=0,vmax=1,
     else:
         im=ax.imshow(image, origin='lower' ,cmap='viridis',
-        interpolation="nearest" , norm=LogNorm(vmin,  vmax))        
-        
-        
+        interpolation="nearest" , norm=LogNorm(vmin,  vmax))          
         
     fig.colorbar(im)
     ax.set_title( image_name )
@@ -270,13 +274,14 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
         #dt =datetime.now()
         #CurTime = '_%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)         
         #fp = path + '%s'%( image_name ) + CurTime + '.png'       
-        fp = path + '%s'%( image_name ) + '.png'    
-        fig.savefig( fp, dpi=fig.dpi) 
-        
-    plt.show()
+        fp = path + '%s'%( image_name ) + '.png'
+        plt.savefig( fp, dpi=fig.dpi)        
+    #plt.show()
+    if return_fig:
+        return fig
     
     
-def plot1D( y,x=None, ax=None,*argv,**kwargs):    
+def plot1D( y,x=None, ax=None,return_fig=False,*argv,**kwargs):    
     """a simple function to plot two-column data by using matplotlib.plot
     pass *argv,**kwargs to plot
     
@@ -289,7 +294,12 @@ def plot1D( y,x=None, ax=None,*argv,**kwargs):
     None
     """     
     if ax is None:
-        fig, ax = plt.subplots()
+        if RUN_GUI:
+            fig = Figure()
+            ax = fig.add_subplot(111)
+        else:
+            fig, ax = plt.subplots()
+        
     if 'legend' in kwargs.keys():
         legend =  kwargs['legend']  
     else:
@@ -325,10 +335,8 @@ def plot1D( y,x=None, ax=None,*argv,**kwargs):
         title =  kwargs['title']
     else:
         title =  'plot'
-    ax.set_title( title )        
-        
-    #ax.set_xlabel("$Log(q)$"r'($\AA^{-1}$)')
-    
+    ax.set_title( title ) 
+    #ax.set_xlabel("$Log(q)$"r'($\AA^{-1}$)')    
     ax.legend(loc = 'best')  
     if 'save' in kwargs.keys():
         if  kwargs['save']: 
@@ -336,9 +344,9 @@ def plot1D( y,x=None, ax=None,*argv,**kwargs):
             #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)         
             #fp = kwargs['path'] + '%s'%( title ) + CurTime + '.png'  
             fp = kwargs['path'] + '%s'%( title )   + '.png' 
-            fig.savefig( fp, dpi=fig.dpi) 
-        
-      
+            plt.savefig( fp, dpi=fig.dpi)         
+    if return_fig:
+        return fig      
 
         
 ###
@@ -484,7 +492,8 @@ def show_label_array_on_image(ax, image, label_array, cmap=None,norm=None, log_i
     
     
 
-def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on = True, save=False, *argv,**kwargs):
+def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on = True, 
+                      save=False,return_fig = False, *argv,**kwargs):
     '''show ROI on an image
         image: the data frame
         ROI: the interested region
@@ -501,7 +510,12 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
     if 'vmax' in kwargs.keys():
         vmax = kwargs['vmax']
         
-    fig, axes = plt.subplots(figsize=(8,8))
+    if RUN_GUI:
+        fig = Figure(figsize=(8,8))
+        axes = fig.add_subplot(111)
+    else:
+        fig, axes = plt.subplots(figsize=(8,8))
+        
     axes.set_title("ROI on Image")
     im,im_label = show_label_array_on_image(axes, image, ROI, imshow_cmap='viridis',
                             cmap='Paired',alpha=alpha,
@@ -525,10 +539,9 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
 
             x_val = int( ind.mean() )
             #print (xval, y)
-            axes.text(x_val, y_val, c, va='center', ha='center')    
-        
-        
-    fig.colorbar(im_label)
+            axes.text(x_val, y_val, c, va='center', ha='center')         
+    #fig.colorbar(im_label)
+    fig.colorbar(im)
     if save:
         #dt =datetime.now()
         #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
@@ -539,9 +552,10 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
             uid = 'uid'
         #fp = path + "Uid= %s--Waterfall-"%uid + CurTime + '.png'     
         fp = path + "uid=%s--ROI-on-Image-"%uid  + '.png'    
-        fig.savefig( fp, dpi=fig.dpi)  
-    
-    plt.show()
+        plt.savefig( fp, dpi=fig.dpi)      
+    #plt.show()
+    if return_fig:
+        return fig, axes, im 
 
         
 

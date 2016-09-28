@@ -107,6 +107,142 @@ def find_index( x,x0,tolerance= None):
     return position
 
 
+def get_form_factor_fit( q, iq, guess_values, fit_range=None, fit_variables = None,function='poly_sphere', 
+                         *argv,**kwargs): 
+    '''
+    Fit form factor for GUI
+    
+    The support fitting functions include  
+                poly_sphere (poly_sphere_form_factor_intensity),
+                mono_sphere (mono_sphere_form_factor_intensity)
+    Parameters
+    ---------- 
+    q: q vector
+    iq: form factor
+    
+    guess_values:a dict, contains keys
+        radius: the initial guess of spherecentral radius
+        sigma: the initial guess of sqrt root of variance in percent 
+        
+    function: 
+        mono_sphere (mono_sphere_form_factor_intensity): fit by mono dispersed sphere model
+        poly_sphere (poly_sphere_form_factor_intensity): fit by poly dispersed sphere model
+                    
+    Returns
+    -------        
+    fit resutls:
+         radius
+         sigma
+    an example:
+        result = fit_form_factor( q, iq,  res_pargs=None,function='poly_sphere'
+    '''
+    
+    if function=='poly_sphere':        
+        mod = Model(poly_sphere_form_factor_intensity_q2 )
+    elif function=='mono_sphere':  
+        mod = Model( mono_sphere_form_factor_intensity )        
+    else:
+        print ("The %s is not supported.The supported functions include poly_sphere and mono_sphere"%function)
+        
+    if fit_range is not None:
+        x1,x2= fit_range
+        q1=find_index( q,x1,tolerance= None)
+        q2=find_index( q,x2,tolerance= None)            
+    else:
+        q1=0
+        q2=len(q)
+
+    q_=q[q1:q2]
+    iq_ = iq[q1:q2]        
+        
+    _r= guess_values[ 'radius']
+    _sigma = guess_values['sigma']
+    _delta_rho= guess_values['delta_rho']
+    #_scale = guess_values['scale']
+    #_baseline = guess_values['baseline']
+    
+    mod.set_param_hint( 'radius',   min= _r/10, max=_r*10  )
+    mod.set_param_hint( 'sigma',   min= _sigma/10, max=_sigma*10 ) 
+    #mod.set_param_hint( 'scale',   min= _scale/1E3, max= _scale*1E3  )   
+    #mod.set_param_hint( 'baseline',   min= 0  )   
+    #mod.set_param_hint( 'delta_rho',   min= 0  )  
+    mod.set_param_hint( 'delta_rho',   min= _delta_rho/1E6, max= _delta_rho*1E6  )  
+    pars  = mod.make_params( radius= _r, sigma=_sigma,delta_rho=_delta_rho)# scale= _scale, baseline =_baseline  )  
+    
+    if fit_variables is not None:
+        for var in  list( fit_variables.keys()):
+            pars[var].vary = fit_variables[var]            
+    #pars['delta_rho'].vary =False       
+    fit_power = 2    
+    result = mod.fit( iq_* q_**fit_power, pars, x = q_ )    
+    if function=='poly_sphere':        
+        sigma = result.best_values['sigma']
+    elif function=='mono_sphere':  
+        sigma=0        
+    r = result.best_values['radius']  
+    #scale =  result.best_values['scale']
+    #baseline = result.best_values['baseline']
+    delta_rho= result.best_values['delta_rho']    
+    return result, q_
+
+def plot_form_factor_with_fit(q, iq, q_, result,  fit_power=2,  res_pargs=None, return_fig=False,
+                         *argv,**kwargs):
+    
+    if res_pargs is not None:
+        uid = res_pargs['uid'] 
+        path = res_pargs['path']     
+    else:    
+        if 'uid' in kwargs.keys():
+            uid = kwargs['uid'] 
+        else:
+            uid = 'uid'
+        if 'path' in kwargs.keys():
+            path = kwargs['path'] 
+        else:
+            path = ''
+    
+    fig = Figure()
+    ax = fig.add_subplot(111)        
+    title_qr = 'form_factor_fit'        
+    plt.title('uid= %s:--->'%uid + title_qr,fontsize=20, y =1.02)
+    
+    r = result.best_values['radius'] 
+    delta_rho= result.best_values['delta_rho']
+    sigma = result.best_values['sigma'] 
+        
+    ax.semilogy( q, iq, 'ro', label='Form Factor')        
+    ax.semilogy( q_, result.best_fit/q_**fit_power, '-b', lw=3, label='Fit')            
+    
+    txts = r'radius' + r' = %.2f '%( r/10.) +   r'$ nm$' 
+    ax.text(x =0.02, y=.35, s=txts, fontsize=14, transform=ax.transAxes)
+    txts = r'sigma' + r' = %.3f'%( sigma)  
+    #txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
+    ax.text(x =0.02, y=.25, s=txts, fontsize=14, transform=ax.transAxes)  
+    #txts = r'delta_rho' + r' = %.3e'%( delta_rho)  
+    #txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
+    #ax.text(x =0.02, y=.35, s=txts, fontsize=14, transform=ax.transAxes)  
+    ax.legend( loc = 'best' )
+
+    if 'ylim' in kwargs:
+        ax.set_ylim( kwargs['ylim'])
+    elif 'vlim' in kwargs:
+        vmin, vmax =kwargs['vlim']
+        ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])
+    else:
+        pass
+    if 'xlim' in kwargs:
+        ax.set_xlim( kwargs['xlim'])
+
+    fp = path + 'uid=%s--form_factor--fit-'%(uid )  + '.png'
+    plt.savefig( fp, dpi=fig.dpi)        
+    fig.tight_layout()  
+    plt.show()
+
+    if return_fig:
+        return fig
+
+
+    
 def fit_form_factor( q, iq,  guess_values, fit_range=None, fit_variables = None, res_pargs=None,function='poly_sphere', 
                          *argv,**kwargs):    
      

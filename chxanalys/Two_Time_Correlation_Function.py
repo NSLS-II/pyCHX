@@ -13,14 +13,10 @@ from matplotlib import gridspec
 from datetime import datetime
 
 from tqdm import tqdm
-
 import itertools
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-mcolors = itertools.cycle(['b', 'g', 'r', 'c', 'm', 'y', 'k','darkgoldenrod','oldlace', 'brown','dodgerblue'   ])
-markers = itertools.cycle(list(plt.Line2D.filled_markers))
-lstyles = itertools.cycle(['-', '--', '-.','.',':'])
-
+from chxanalys.chx_libs import  ( mcolors,  markers, markers_copy, lstyles, Figure, RUN_GUI)
 
 
 
@@ -903,7 +899,7 @@ def masked_g12( g12, badframes_list):
 
 
 
-def show_C12(C12, q_ind=0,  *argv,**kwargs):  
+def show_C12(C12, q_ind=0, return_fig=False, *argv,**kwargs):  
  
     '''
     plot one-q of two-time correlation function
@@ -960,7 +956,12 @@ def show_C12(C12, q_ind=0,  *argv,**kwargs):
         title=True        
 
     data = C12[N1:N2,N1:N2,C12_num]
-    fig, ax = plt.subplots()
+    if RUN_GUI:
+        fig = Figure()
+        ax = fig.add_subplot(111)
+    else:
+        fig, ax = plt.subplots()
+
     im=ax.imshow( data, origin='lower' , cmap='viridis', 
                  norm= LogNorm( vmin, vmax ), 
             extent=[0, data.shape[0]*timeperframe, 0, data.shape[0]*timeperframe ] )
@@ -994,20 +995,9 @@ def show_C12(C12, q_ind=0,  *argv,**kwargs):
         path=kwargs['path']
         #fp = path + 'Two-time--uid=%s'%(uid) + tit + CurTime + '.png'
         fp = path + 'uid=%s--Two-time-'%(uid) + '.png'
-        fig.savefig( fp, dpi=fig.dpi)        
+        plt.savefig( fp, dpi=fig.dpi)        
      
-        
-    plt.show()   
+    if return_fig:
+        return fig, ax, im
 
-
-    
-
-       
-    
-    
-    
-    
-    
-    
-    
 

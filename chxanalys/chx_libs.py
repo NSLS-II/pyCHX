@@ -6,6 +6,7 @@ This module is for the necessary packages for the XPCS analysis
 
 
 
+
 from databroker import DataBroker as db, get_images, get_table, get_events, get_fields
 from filestore.api import register_handler, deregister_handler
 #from filestore.retrieve import _h_registry, _HANDLER_CACHE, HandlerBase
@@ -44,23 +45,30 @@ import pickle
 
 from lmfit import  Model
 from lmfit import minimize, Parameters, Parameter, report_fit
- 
+
+from matplotlib.figure import Figure 
 from matplotlib import gridspec
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tqdm import tqdm
 
 import collections
-
 import itertools 
-
 
 
 mcolors = itertools.cycle(['b', 'g', 'r', 'c', 'm', 'y', 'k','darkgoldenrod','oldlace', 'brown','dodgerblue'   ])
 markers = itertools.cycle(list(plt.Line2D.filled_markers))
 lstyles = itertools.cycle(['-', '--', '-.','.',':'])
 
+colors =  itertools.cycle(["blue", "darkolivegreen", "brown", "m", "orange", "hotpink", "darkcyan",  "red",
+            "gray", "green", "black", "cyan", "purple" , "navy"])
+colors_copy =  itertools.cycle(["blue", "darkolivegreen", "brown", "m", "orange", "hotpink", "darkcyan",  "red",
+            "gray", "green", "black", "cyan", "purple" , "navy"])
+markers = itertools.cycle( ["o", "2", "p", "1", "s", "*", "4",  "+", "8", "v","3", "D",  "H", "^",])
+markers_copy = itertools.cycle( ["o", "2", "p", "1", "s", "*", "4",  "+", "8", "v","3", "D",  "H", "^",])
 
+
+RUN_GUI = False  #if True for gui setup; else for notebook; the main code difference is the Figure() or plt.figure(figsize=(8, 6))
 
 
 
