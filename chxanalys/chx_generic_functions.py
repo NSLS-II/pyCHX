@@ -304,23 +304,40 @@ def plot1D( y,x=None, ax=None,return_fig=False,*argv,**kwargs):
         legend =  kwargs['legend']  
     else:
         legend = ' '
+
+    try:
+         logx = kwargs['logx']
+    except:
+        logx=False
+    try:
+         logy = kwargs['logy']
+    except:
+        logy=False
+        
+    try:
+         logxy = kwargs['logxy']
+    except:
+        logxy= False        
+
+    if logx==True and logy==True:
+        logxy = True
         
     if x is None:
         ax.plot( y, marker = 'o', ls='-',label= legend)#,*argv,**kwargs)
-        if 'logx' in kwargs.keys():
-            ax.semilogx( y, marker = 'o', ls='-')#,*argv,**kwargs)   
-        elif 'logy' in kwargs.keys():
-            ax.semilogy( y, marker = 'o', ls='-')#,*argv,**kwargs) 
-        elif 'logxy' in kwargs.keys():
-            ax.loglog( y, marker = 'o', ls='-')#,*argv,**kwargs)             
+        if logx:
+            ax.semilogx( y, marker = 'o', ls='-')#,*argv,**kwargs)
+        if logy:
+            ax.semilogy( y, marker = 'o', ls='-')#,*argv,**kwargs)
+        if logxy:
+            ax.loglog( y, marker = 'o', ls='-')#,*argv,**kwargs)
     else:
-        ax.plot(x,y, marker='o',ls='-',label= legend)#,*argv,**kwargs) 
-        if 'logx' in kwargs.keys():
-            ax.semilogx( x,y, marker = 'o', ls='-')#,*argv,**kwargs)   
-        elif 'logy' in kwargs.keys():
-            ax.semilogy( x,y, marker = 'o', ls='-')#,*argv,**kwargs) 
-        elif 'logxy' in kwargs.keys():
-            ax.loglog( x,y, marker = 'o', ls='-')#,*argv,**kwargs)  
+        ax.plot(x,y, marker='o',ls='-',label= legend)#,*argv,**kwargs)        
+        if logx:
+            ax.semilogx( x,y, marker = 'o', ls='-')#,*argv,**kwargs)
+        if logy:
+            ax.semilogy( x,y, marker = 'o', ls='-')#,*argv,**kwargs)
+        if logxy:
+            ax.loglog( x,y, marker = 'o', ls='-')#,*argv,**kwargs) 
     
     if 'xlim' in kwargs.keys():
          ax.set_xlim(    kwargs['xlim']  )    
@@ -491,9 +508,11 @@ def show_label_array_on_image(ax, image, label_array, cmap=None,norm=None, log_i
     return im, im_label    
     
     
-
-def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on = True, 
-                      save=False,return_fig = False, *argv,**kwargs):
+    
+def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on = True,
+                       save=False, return_fig = False, rect_reqion=None,
+                       *argv,**kwargs):
+    
     '''show ROI on an image
         image: the data frame
         ROI: the interested region
@@ -520,12 +539,14 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
     im,im_label = show_label_array_on_image(axes, image, ROI, imshow_cmap='viridis',
                             cmap='Paired',alpha=alpha,
                              vmin=vmin, vmax=vmax,  origin="lower")
-
-    #fig.colorbar(im)
-    #rwidth = 400 
-    if center is not None:
-        x1,x2 = [center[1] - rwidth, center[1] + rwidth]
-        y1,y2 = [center[0] - rwidth, center[0] + rwidth]
+    if rect_reqion is  None:
+        if center is not None:
+            x1,x2 = [center[1] - rwidth, center[1] + rwidth]
+            y1,y2 = [center[0] - rwidth, center[0] + rwidth]
+            axes.set_xlim( [x1,x2])
+            axes.set_ylim( [y1,y2])
+    else:
+        x1,x2,y1,y2= rect_reqion
         axes.set_xlim( [x1,x2])
         axes.set_ylim( [y1,y2])
     
@@ -536,7 +557,6 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
             indz =  np.where( ROI == i)[0]
             c = '%i'%i
             y_val = int( indz.mean() )
-
             x_val = int( ind.mean() )
             #print (xval, y)
             axes.text(x_val, y_val, c, va='center', ha='center')         

@@ -377,7 +377,7 @@ def fit_form_factor( q, iq,  guess_values, fit_range=None, fit_variables = None,
     fig.tight_layout()  
     plt.show()
 
-    result = dict( radius =r, sigma = sigma  )
+    result = dict( radius =r, sigma = sigma, delta_rho = delta_rho  )
 
     return result
                 

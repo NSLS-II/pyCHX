@@ -134,7 +134,11 @@ def init_compress_eigerdata( images, mask, md, filename,
     print( "The fraction of pixel occupied by photon is %6.3f%% "%(100*frac) ) 
     avg_img /= good_count
     
-    bad_frame_list = np.where( (np.array(imgsum) > bad_pixel_threshold) & (np.array(imgsum) < bad_pixel_low_threshold)  )[0] 
+    #bad_frame_list = np.where( (np.array(imgsum) > bad_pixel_threshold) & (np.array(imgsum) < bad_pixel_low_threshold)  )[0]
+    bad_frame_list1 = np.where( np.array(imgsum) > bad_pixel_threshold  )[0]
+    bad_frame_list2 = np.where( np.array(imgsum) < bad_pixel_low_threshold  )[0]
+    bad_frame_list =   np.unique( np.concatenate( [bad_frame_list1, bad_frame_list2]) )
+    
     
     if len(bad_frame_list):
         print ('Bad frame list are: %s' %bad_frame_list)
