@@ -773,7 +773,7 @@ def angulars(edges, center, shape):
     
 
 def get_angular_mask( mask,  inner_angle=0, outer_angle = 360, width = None, edges = None,
-                     num_angles = 12, center = None, dpix=[1,1]    ):
+                     num_angles = 12, center = None, dpix=[1,1], flow_geometry=False    ):
      
     ''' 
     mask: 2D-array 
@@ -785,7 +785,8 @@ def get_angular_mask( mask,  inner_angle=0, outer_angle = 360, width = None, edg
      
     center: the beam center in pixel    
     dpix, the pixel size in mm. For Eiger1m/4m, the size is 75 um (0.075 mm)
-        
+    flow_geometry: if True, the angle should be between 0 and 180. the map will be a center inverse symmetry
+    
     Returns
     -------
     ang_mask: a ring mask, np.array
@@ -809,18 +810,36 @@ def get_angular_mask( mask,  inner_angle=0, outer_angle = 360, width = None, edg
     #    edges[:,0],edges[:,1] = ang_center - width/2, ang_center + width/2 
         
 
+    if flow_geometry:
+        if inner_angle<0:
+            print('In this flow_geometry, the inner_angle should be larger than 0')
+        if outer_angle >180:
+            print('In this flow_geometry, the out_angle should be smaller than 180')
+            
+
     if edges is None:
         if num_angles!=1:
             spacing =  (outer_angle - inner_angle - num_angles* width )/(num_angles-1)      # spacing between rings
         else:
             spacing = 0
-        edges = roi.ring_edges(inner_angle, width, spacing, num_angles) 
-        
+        edges1 = roi.ring_edges(inner_angle, width, spacing, num_angles) 
+
     #print (edges)
-    angs = angulars( np.radians( edges ), center, mask.shape)    
-    ang_center = np.average(edges, axis=1)        
+    angs = angulars( np.radians( edges1 ), center, mask.shape)    
+    ang_center = np.average(edges1, axis=1)        
     ang_mask = angs*mask
-    ang_mask = np.array(ang_mask, dtype=int)    
+    ang_mask = np.array(ang_mask, dtype=int)
+        
+    if flow_geometry:
+        outer_angle -= 180
+        inner_angle -= 180 
+        if edges is None:
+            edges2 = roi.ring_edges(inner_angle, width, spacing, num_angles)
+        #print (edges)
+        angs2 = angulars( np.radians( edges2 ), center, mask.shape)
+        ang_mask2 = angs2*mask
+        ang_mask2 = np.array(ang_mask2, dtype=int)        
+        ang_mask +=  ang_mask2    
     
     labels, indices = roi.extract_label_indices(ang_mask)
     nopr = np.bincount( np.array(labels, dtype=int) )[1:]
@@ -828,7 +847,7 @@ def get_angular_mask( mask,  inner_angle=0, outer_angle = 360, width = None, edg
     if len( np.where( nopr ==0 )[0] !=0):
         print (nopr)
         print ("Some angs contain zero pixels. Please redefine the edges.")      
-    return ang_mask, ang_center, edges
+    return ang_mask, ang_center, edges1
 
 
        
