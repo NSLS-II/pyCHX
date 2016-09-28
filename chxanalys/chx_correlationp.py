@@ -371,7 +371,69 @@ def lazy_one_timep(FD, num_levels, num_bufs, labels,
     return g2, s.lag_steps[:g_max] #, s
    
 
+def cal_g2p2( FD, ring_mask, bad_frame_list=None, 
+            good_start=0, num_buf = 8, num_lev = None, imgsum=None, norm=None ):
+    '''calculation g2 by using a multi-tau algorithm
+       for a compressed file with parallel calculation
+    '''
+    FD.beg = max(FD.beg, good_start)
+    noframes = FD.end - FD.beg   # number of frames, not "no frames"
+    #noframes = FD.end - FD.beg   # number of frames
+
+    for i in range(FD.beg, FD.end):
+        pass_FD(FD,i)
     
+    if num_lev is None:
+        num_lev = int(np.log( noframes/(num_buf-1))/np.log(2) +1) +1
+    print ('In this g2 calculation, the buf and lev number are: %s--%s--'%(num_buf,num_lev))
+    if  bad_frame_list is not None:
+        if len(bad_frame_list)!=0:
+            print ('Bad frame involved and will be precessed!')
+            
+            noframes -=  len(np.where(np.in1d( bad_frame_list, 
+                                              range(good_start, FD.end)))[0])   
+    print ('%s frames will be processed...'%(noframes))    
+    
+    
+    ring_masks = [   np.array(ring_mask==i, dtype = np.int64) 
+              for i in np.unique( ring_mask )[1:] ]
+    
+    qind, pixelist = roi.extract_label_indices(  ring_mask  )
+    
+    if norm is not None:
+        norms = [ norm[ np.in1d(  pixelist, 
+            extract_label_indices( np.array(ring_mask==i, dtype = np.int64))[1])]
+                for i in np.unique( ring_mask )[1:] ] 
+
+    inputs = range( len(ring_masks) )    
+    
+    pool =  Pool(processes= len(inputs) )
+    internal_state = None       
+    
+    if norm is not None:            
+        results = np.array( [ apply_async( pool, lazy_one_timep, ( FD, num_lev, num_buf, ring_masks[i],
+                        internal_state,  bad_frame_list, imgsum,
+                                    norms[i], ) ) for i in tqdm( inputs )  ]  )
+    else:
+        #print ('for norm is None')        
+        results = np.array( [ apply_async( pool, lazy_one_timep, ( FD, num_lev, num_buf, ring_masks[i], 
+                        internal_state,   bad_frame_list,imgsum, None,
+                                     ) ) for i in tqdm( inputs )  ]  )  
+
+    res = [r.get() for r in results]    
+    #print( res )
+    
+    lag_steps  = res[0][1]  
+    g2 = np.zeros( [len( lag_steps),len(ring_masks)] )
+    for i in inputs:
+        g2[:,i] = res[i][0][:,0]        
+    print( 'G2 calculation DONE!')
+
+    return  g2, lag_steps  
+
+
+
+
 
 def cal_g2p( FD, ring_mask, bad_frame_list=None, 
             good_start=0, num_buf = 8, num_lev = None, imgsum=None, norm=None ):
