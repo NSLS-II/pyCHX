@@ -229,7 +229,7 @@ def RemoveHot( img,threshold= 1E7, plot_=True ):
 
 
 def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,path=None, 
-             aspect=None, logs=False,vmin=None,vmax=None,return_fig=False,
+             aspect=None, logs=False,vmin=None,vmax=None,return_fig=False,cmap='viridis', show_time=True, file_name =None,
              *argv,**kwargs ):    
     """a simple function to show image by using matplotlib.plt imshow
     pass *argv,**kwargs to imshow
@@ -254,9 +254,9 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
         
     if not logs:
         #im=ax.imshow(img, origin='lower' ,cmap='viridis',interpolation="nearest" , vmin=vmin,vmax=vmax)
-        im=ax.imshow(image, origin='lower' ,cmap='viridis',interpolation="nearest", vmin=vmin,vmax=vmax)  #vmin=0,vmax=1,
+        im=ax.imshow(image, origin='lower' ,cmap=cmap,interpolation="nearest", vmin=vmin,vmax=vmax)  #vmin=0,vmax=1,
     else:
-        im=ax.imshow(image, origin='lower' ,cmap='viridis',
+        im=ax.imshow(image, origin='lower' ,cmap=cmap,
         interpolation="nearest" , norm=LogNorm(vmin,  vmax))          
         
     fig.colorbar(im)
@@ -271,10 +271,12 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
     else:
         ax.set_aspect(aspect='auto')
     if save:
-        #dt =datetime.now()
-        #CurTime = '_%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)         
-        #fp = path + '%s'%( image_name ) + CurTime + '.png'       
-        fp = path + '%s'%( image_name ) + '.png'
+        if show_time:
+            dt =datetime.now()
+            CurTime = '_%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)         
+            fp = path + '%s'%( file_name ) + CurTime + '.png'       
+        else:
+            fp = path + '%s'%( image_name ) + '.png'
         plt.savefig( fp, dpi=fig.dpi)        
     #plt.show()
     if return_fig:
