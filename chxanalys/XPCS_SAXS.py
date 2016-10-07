@@ -16,73 +16,6 @@ from chxanalys.chx_compress_analysis import ( compress_eigerdata, read_compresse
 from chxanalys.chx_correlationc import ( cal_g2c,Get_Pixel_Arrayc,auto_two_Arrayc,get_pixelist_interp_iq,)
 
 
-def get_t_iqc( FD, frame_edge, mask, pargs, nx=1500, plot_ = False , save=False, *argv,**kwargs):   
-    '''Get t-dependent Iq 
-    
-        Parameters        
-        ----------
-        data_series:  a image series
-        frame_edge: list, the ROI frame regions, e.g., [  [0,100], [200,400] ]
-        mask:  a image mask 
-        
-        nx : int, optional
-            number of bins in x
-            defaults is 1500 bins
-        plot_: a boolen type, if True, plot the time~one-D curve with qp as x-axis
-        Returns
-        ---------
-        qp: q in pixel
-        iq: intensity of circular average
-        q: q in real unit (A-1)
-     
-    '''   
-       
-    Nt = len( frame_edge )
-    iqs = list( np.zeros( Nt ) )
-    for i in range(Nt):
-        t1,t2 = frame_edge[i]
-        #print (t1,t2)        
-        avg_img = get_avg_imgc( FD, beg=t1,end=t2, sampling = 1, plot_ = False )
-        qp, iqs[i], q = get_circular_average( avg_img, mask,pargs, nx=nx,
-                           plot_ = False)
-        
-    if plot_:
-        fig,ax = plt.subplots(figsize=(8, 6))
-        for i in range(  Nt ):
-            t1,t2 = frame_edge[i]
-            ax.semilogy(q, iqs[i], label="frame: %s--%s"%( t1,t2) )
-            #ax.set_xlabel("q in pixel")
-            ax.set_xlabel('Q 'r'($\AA^{-1}$)')
-            ax.set_ylabel("I(q)")
-            
-        if 'xlim' in kwargs.keys():
-            ax.set_xlim(    kwargs['xlim']  )    
-        if 'ylim' in kwargs.keys():
-            ax.set_ylim(    kwargs['ylim']  )
- 
-
-        ax.legend(loc = 'best')  
-        
-        uid = pargs['uid']
-        title = ax.set_title('uid= %s--t~I(q)'%uid)        
-        title.set_y(1.01)
-        if save:
-            #dt =datetime.now()
-            #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
-            path = pargs['path']
-            uid = pargs['uid']
-            #fp = path + 'uid= %s--Iq~t-'%uid + CurTime + '.png'  
-            fp = path + 'uid=%s--Iq-t-'%uid + '.png'  
-            fig.savefig( fp, dpi=fig.dpi)
-            
-            save_arrays(  np.vstack( [q, np.array(iqs)]).T, 
-                        label=  ['q_A-1']+ ['Fram-%s-%s'%(t[0],t[1]) for t in frame_edge],
-                        filename='uid=%s-q-Iqt'%uid, path= path  )
-            
-        plt.show()        
-    
-    return qp, np.array( iqs ),q
-
     
     
 def bin_1D(x, y, nx=None, min_x=None, max_x=None):
@@ -507,6 +440,72 @@ def angular_average(image, calibrated_center, threshold=0, nx=1500,
     return bin_centers*180/np.pi, ang_averages 
 
 
+def get_t_iqc( FD, frame_edge, mask, pargs, nx=1500, plot_ = False , save=False, *argv,**kwargs):   
+    '''Get t-dependent Iq 
+    
+        Parameters        
+        ----------
+        data_series:  a image series
+        frame_edge: list, the ROI frame regions, e.g., [  [0,100], [200,400] ]
+        mask:  a image mask 
+        
+        nx : int, optional
+            number of bins in x
+            defaults is 1500 bins
+        plot_: a boolen type, if True, plot the time~one-D curve with qp as x-axis
+        Returns
+        ---------
+        qp: q in pixel
+        iq: intensity of circular average
+        q: q in real unit (A-1)
+     
+    '''   
+       
+    Nt = len( frame_edge )
+    iqs = list( np.zeros( Nt ) )
+    for i in range(Nt):
+        t1,t2 = frame_edge[i]
+        #print (t1,t2)        
+        avg_img = get_avg_imgc( FD, beg=t1,end=t2, sampling = 1, plot_ = False )
+        qp, iqs[i], q = get_circular_average( avg_img, mask,pargs, nx=nx,
+                           plot_ = False)
+        
+    if plot_:
+        fig,ax = plt.subplots(figsize=(8, 6))
+        for i in range(  Nt ):
+            t1,t2 = frame_edge[i]
+            ax.semilogy(q, iqs[i], label="frame: %s--%s"%( t1,t2) )
+            #ax.set_xlabel("q in pixel")
+            ax.set_xlabel('Q 'r'($\AA^{-1}$)')
+            ax.set_ylabel("I(q)")
+            
+        if 'xlim' in kwargs.keys():
+            ax.set_xlim(    kwargs['xlim']  )    
+        if 'ylim' in kwargs.keys():
+            ax.set_ylim(    kwargs['ylim']  )
+ 
+
+        ax.legend(loc = 'best')  
+        
+        uid = pargs['uid']
+        title = ax.set_title('uid= %s--t~I(q)'%uid)        
+        title.set_y(1.01)
+        if save:
+            #dt =datetime.now()
+            #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
+            path = pargs['path']
+            uid = pargs['uid']
+            #fp = path + 'uid= %s--Iq~t-'%uid + CurTime + '.png'  
+            fp = path + 'uid=%s--Iq-t-'%uid + '.png'  
+            fig.savefig( fp, dpi=fig.dpi)
+            
+            save_arrays(  np.vstack( [q, np.array(iqs)]).T, 
+                        label=  ['q_A-1']+ ['Fram-%s-%s'%(t[0],t[1]) for t in frame_edge],
+                        filename='uid=%s-q-Iqt'%uid, path= path  )
+            
+        plt.show()        
+    
+    return qp, np.array( iqs ),q
 
  
 
@@ -1156,6 +1155,11 @@ def get_each_ring_mean_intensity( data_series, ring_mask, sampling, timeperframe
     return times, mean_int_sets
 
 
+
+
+
+
+
 def plot_saxs_g2( g2, taus, res_pargs=None,one_plot=False, ylabel='g2', return_fig=False,tight=True,*argv,**kwargs):     
     '''plot g2 results, 
        g2: one-time correlation function
@@ -1571,7 +1575,10 @@ def plot_saxs_rad_ang_g2( g2, taus, res_pargs=None, master_angle_plot= False,ret
     if return_fig:
         return fig
 
-        
+
+    
+###########
+#*for g2 fit and plot
 
 def stretched_auto_corr_scat_factor(x, beta, relaxation_rate, alpha=1.0, baseline=1):
     return beta * (np.exp(-2 * relaxation_rate * x))**alpha + baseline
@@ -1580,21 +1587,561 @@ def simple_exponential(x, beta, relaxation_rate,  baseline=1):
     return beta * np.exp(-2 * relaxation_rate * x) + baseline
 
 
-def flow_para_function( x, beta, relaxation_rate, flow_velocity, baseline=1):
-    
+def simple_exponential_with_vibration(x, beta, relaxation_rate, freq, amp,  baseline=1):
+    return beta * (1 + amp*np.cos(  2*np.pi*freq* x) )* np.exp(-2 * relaxation_rate * x) + baseline
+
+def stretched_auto_corr_scat_factor_with_vibration(x, beta, relaxation_rate, alpha, freq, amp,  baseline=1):
+    return beta * (1 + amp*np.cos(  2*np.pi*freq* x) )* np.exp(-2 * relaxation_rate * x)**alpha + baseline
+
+
+
+def flow_para_function( x, beta, relaxation_rate, flow_velocity, baseline=1):    
     Diff_part=    np.exp(-2 * relaxation_rate * x)
-    Flow_part =  np.pi**2/(16*x*flow_velocity) *  abs(  erf(  np.sqrt(   4/np.pi * 1j* x * flow_velocity ) ) )**2
-    
+    Flow_part =  np.pi**2/(16*x*flow_velocity) *  abs(  erf(  np.sqrt(   4/np.pi * 1j* x * flow_velocity ) ) )**2    
     return  beta*Diff_part * Flow_part + baseline
 
 
-def get_flow_velocity( average_velocity, shape_factor):
-    
+def get_flow_velocity( average_velocity, shape_factor):    
     return average_velocity * (1- shape_factor)/(1+  shape_factor)
 
 
 
-def fit_saxs_rad_ang_g2( g2,  res_pargs=None,function='simple_exponential', 
+
+
+
+def get_g2_fit( g2, res_pargs=None, function='simple_exponential', *argv,**kwargs):
+    '''
+    Aug 5,2016, Y.G.@CHX
+    
+    Fit one-time correlation function
+    
+    The support functions include simple exponential and stretched/compressed exponential
+    Parameters
+    ---------- 
+    g2: one-time correlation function for fit, with shape as [taus, qs]
+    res_pargs: a dict, contains keys
+        taus: the time delay, with the same length as g2
+        q_ring_center:  the center of q rings, for the title of each sub-plot
+        uid: unique id, for the title of plot
+        
+    function: 
+        'simple_exponential': fit by a simple exponential function, defined as  
+                    beta * np.exp(-2 * relaxation_rate * lags) + baseline
+        'streched_exponential': fit by a streched exponential function, defined as  
+                    beta * (np.exp(-2 * relaxation_rate * lags))**alpha + baseline
+                    
+         'stretched_vibration': fit by a streched exponential function with vibration, defined as            
+                 beta * (1 + amp*np.cos(  2*np.pi*60* x) )* np.exp(-2 * relaxation_rate * x)**alpha + baseline
+         'flow_para_function': fit by a flow function
+         
+                    
+    kwargs:
+        could contains:
+            'fit_variables': a dict, for vary or not, 
+                                keys are fitting para, including 
+                                    beta, relaxation_rate , alpha ,baseline
+                                values: a False or True, False for not vary
+            'guess_values': a dict, for initial value of the fitting para,
+                            the defalut values are 
+                                dict( beta=.1, alpha=1.0, relaxation_rate =0.005, baseline=1.0)
+                    
+    Returns
+    -------        
+    fit resutls: a instance in limfit
+    fit_data by the model, it has the q number of g2
+         
+    an example:
+        result,fd = fit_g2( g2, res_pargs, function = 'simple')
+        result,fd = fit_g2( g2, res_pargs, function = 'stretched')
+    '''      
+    
+    if 'fit_range' in kwargs.keys():
+        fit_range = kwargs['fit_range'] 
+    else:
+        fit_range=None    
+
+    if res_pargs is not None:
+        taus = res_pargs[ 'taus']
+    else:
+        taus =  kwargs['taus'] 
+    num_rings = g2.shape[1]    
+    if 'fit_variables' in kwargs:
+        additional_var  = kwargs['fit_variables']        
+        _vars =[ k for k in list( additional_var.keys()) if additional_var[k] is False]
+    else:
+        _vars = []        
+    if function=='simple_exponential' or function=='simple':
+        _vars = np.unique ( _vars + ['alpha']) 
+        mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars= list( _vars)   )        
+    elif function=='stretched_exponential' or function=='stretched':        
+        mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars=  _vars)       
+    elif function=='stretched_vibration':        
+        mod = Model(stretched_auto_corr_scat_factor_with_vibration)#,  independent_vars=  _vars)        
+    elif function=='flow_para_function' or  function=='flow_para':         
+        mod = Model(flow_para_function)#,  independent_vars=  _vars)        
+    else:
+        print ("The %s is not supported.The supported functions include simple_exponential and stretched_exponential"%function)
+        
+    mod.set_param_hint( 'baseline',   min=0.5, max= 2.5 )
+    mod.set_param_hint( 'beta',   min=0.0,  max=1.0 )
+    mod.set_param_hint( 'alpha',   min=0.0 )
+    mod.set_param_hint( 'relaxation_rate',   min=0.0,  max= 1000  )  
+    
+    if function=='flow_para_function' or  function=='flow_para':
+        mod.set_param_hint( 'flow_velocity', min=0)
+    if function=='stretched_vibration':     
+        mod.set_param_hint( 'freq', min=0)
+        mod.set_param_hint( 'amp', min=0)
+        
+    _guess_val = dict( beta=.1, alpha=1.0, relaxation_rate =0.005, baseline=1.0)    
+    if 'guess_values' in kwargs:         
+        guess_values  = kwargs['guess_values']         
+        _guess_val.update( guess_values )  
+   
+    _beta=_guess_val['beta']
+    _alpha=_guess_val['alpha']
+    _relaxation_rate = _guess_val['relaxation_rate']
+    _baseline= _guess_val['baseline']    
+    pars  = mod.make_params( beta=_beta, alpha=_alpha, relaxation_rate =_relaxation_rate, baseline= _baseline)
+    if function=='flow_para_function' or  function=='flow_para':
+        _flow_velocity =_guess_val['flow_velocity']    
+        pars  = mod.make_params( beta=_beta, alpha=_alpha, flow_velocity=_flow_velocity,
+                                relaxation_rate =_relaxation_rate, baseline= _baseline)
+        
+    if function=='stretched_vibration':
+        _freq =_guess_val['freq'] 
+        _amp = _guess_val['amp'] 
+        pars  = mod.make_params( beta=_beta, alpha=_alpha, freq=_freq, amp = _amp,
+                                relaxation_rate =_relaxation_rate, baseline= _baseline)        
+    for v in _vars:
+        pars['%s'%v].vary = False
+    print( pars )
+    fit_res = []
+    model_data = []    
+    for i in range(num_rings):  
+        if fit_range is not None:
+            y=g2[1:, i][fit_range[0]:fit_range[1]]
+            lags=taus[1:][fit_range[0]:fit_range[1]] 
+        else:
+            y=g2[1:, i]
+            lags=taus[1:]            
+        result1 = mod.fit(y, pars, x =lags )        
+        fit_res.append( result1) 
+        model_data.append(  result1.best_fit )
+        
+        print(  result1.best_values['freq'] )
+        
+    return fit_res, lags, np.array( model_data ).T
+
+
+
+
+
+
+
+def plot_g2( g2, res_pargs, tau_2=None, g2_2=None, fit_res=None,  geometry='saxs', function='simple_exponential', 
+            master_plot=None, one_plot= True, plot_g1=False,return_fig=False, *argv,**kwargs):    
+    '''
+    Octo 8,2016, Y.G.@CHX
+    
+    Plot one-time correlation function (with fit) for different geometry
+    
+    The support functions include simple exponential and stretched/compressed exponential
+    Parameters
+    ---------- 
+    g2: one-time correlation function for fit, with shape as [taus, qs]
+    tau_2: if not None, will plot g2 with g2_fit using tau_fit as x
+    g2_2: if not None, will plot g2 with the g2_fit
+    fit_res: give all the fitting parameters for showing in the plot
+    
+    res_pargs: a dict, contains keys
+        taus: the time delay, with the same length as g2
+        q_ring_center:  the center of q rings, for the title of each sub-plot
+        uid: unique id, for the title of plot  
+        path: the path to save data        
+        
+    function: 
+        'simple_exponential': fit by a simple exponential function, defined as  
+                    beta * np.exp(-2 * relaxation_rate * lags) + baseline
+        'streched_exponential': fit by a streched exponential function, defined as  
+                    beta * (np.exp(-2 * relaxation_rate * lags))**alpha + baseline  
+    geometry:
+        'saxs':  a saxs with Qr partition
+        'ang_saxs': a saxs with Qr and angular partition
+        'gi_saxs': gisaxs with Qz, Qr
+        
+    master_plot:  can support 'angle' or 'qr' for saxs
+                               'qz' or 'qr' for gisaxs
+                  if not None, take master_plot = 'angle' for example, it will plot the different qr for one angle
+    one_plot: if True, plot all images in one pannel
+    
+                    
+    kwargs:
+
+                    
+    Returns
+    -------        
+    the plot
+
+    '''
+    
+    uid = res_pargs['uid'] 
+    path = res_pargs['path'] 
+    taus = res_pargs[ 'taus']
+    ##for saxs
+    if 'q_ring_center' in res_pargs.keys(): 
+        qr_center = res_pargs[ 'q_ring_center']
+        num_qr = len( qr_center)
+    elif 'qr_center' in res_pargs.keys():          
+        qr_center = res_pargs[ 'qr_center']
+        num_qr = len( qr_center)  
+    else:
+        print( 'please give qr center')
+    #for ang_saxs
+    if 'ang_center' in res_pargs.keys():        
+        #ang_center = res_pargs[ 'ang_center']
+        #num_qa = len( ang_center )         
+        qz_center = res_pargs[ 'ang_center']
+        num_qz = len( qz_center)           
+    #for gi_saxs        
+    elif 'qz_center' in res_pargs.keys():         
+        qz_center = res_pargs[ 'qz_center']
+        num_qz = len( qz_center)
+    else:
+        num_qz = 1   #for simple saxs     
+        
+    if one_plot:       
+        
+        if master_plot == 'qz':
+            first_var = num_qz
+            sec_var = num_qr
+        else:
+            first_var=num_qr
+            sec_var = num_qz  
+            
+        for qr_ind in range( first_var  ):
+            if RUN_GUI:
+                fig = Figure(figsize=(10, 12))            
+            else:
+                fig = plt.figure(figsize=(10, 12)) 
+            #fig = plt.figure()
+            
+            if master_plot == 'qz':
+                if geometry=='ang_saxs':
+                    title_qr = 'Angle= %.2f'%( qz_center[qr_ind]) + r'$^\circ$' 
+                    filename = 'Angle= %.2f'%( qz_center[qr_ind])
+                elif geometry=='gi_saxs':
+                    title_qr = 'Qz= %.2f'%( qz_center[qr_ind]) + r'$\AA^{-1}$' 
+                    filename = 'Qz= %.2f'%( qz_center[qr_ind])
+                else:
+                    title_qr = ''
+                    filename=''
+            else: #qr
+                if geometry=='ang_saxs' or geometry=='gi_saxs':
+                    title_qr = 'Qr= %.5f  '%( qr_center[qr_ind]) + r'$\AA^{-1}$' 
+                    filename='Qr= %.5f  '%( qr_center[qr_ind])
+                else:
+                    title_qr=''
+                    filename=''
+
+            plt.title('uid= %s:--->'%uid + title_qr,fontsize=20, y =1.1) 
+            #print (qz_ind,title_qz)
+            #if num_qr!=1:plt.axis('off')
+            if sec_var!=1:            
+                plt.axis('off')                 
+            sx = int(round(np.sqrt(  sec_var  )) )
+            
+            if sec_var%sx == 0: 
+                sy = int(sec_var/sx)
+            else: 
+                sy=int(sec_var/sx+1)             
+            
+            for sn in range( sec_var ):
+                ax = fig.add_subplot(sx,sy,sn+1 )
+                ax.set_ylabel( r"$g_2$" + '(' + r'$\tau$' + ')' ) 
+                ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
+                if master_plot == 'qz': 
+                    i = sn + qr_ind * num_qr       
+                    if geometry=='ang_saxs' or  geometry=='gi_saxs' or geometry=='saxs':                                      
+                        title_qz =  r'$Q_r= $'+'%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'                    
+                else: #if the first one is qr
+                    i = sn + qr_ind * num_qz
+                    if geometry=='ang_saxs':
+                        title_qz = 'Ang= ' + '%.2f'%( qz_center[sn]) + r'$^\circ$' + '( %d )'%(i)
+                    elif geometry=='gi_saxs':
+                        title_qz =   r'$Q_z= $'+ '%.5f  '%( qz_center[sn]) + r'$\AA^{-1}$'  
+                    else:
+                        title_qz = ''                        
+
+                title = title_qz
+                ax.set_title( title , y =1.1, fontsize=12) 
+                
+                y=g2[:, i]
+                ax.semilogx(taus, y, '-o', markersize=6)   
+                
+                if g2_2 is not None:                    
+                    y=g2_2[:, i]
+                    ax.semilogx( tau_2, y, '-r', markersize=6)                    
+                    
+ 
+                if fit_res is not None:
+                    result1 = fit_res[i]        
+                    rate = result1.best_values['relaxation_rate']
+                    beta = result1.best_values['beta'] 
+                    baseline =  result1.best_values['baseline'] 
+                    if function=='simple_exponential' or function=='simple':
+                        alpha =1.0 
+                    elif function=='stretched_exponential' or function=='stretched':
+                        alpha = result1.best_values['alpha']
+                    elif function=='stretched_vibration':
+                        alpha = result1.best_values['alpha']    
+                        freq = result1.best_values['freq'] 
+                    if function=='flow_para_function' or  function=='flow_para':
+                        flow = result1.best_values['flow_velocity']    
+
+                    txts = r'$\gamma$' + r'$ = %.3f$'%(1/rate) +  r'$ s$'
+                    x=0.25
+                    y0=0.9
+                    fontsize = 12
+                    ax.text(x =x, y= y0, s=txts, fontsize=fontsize, transform=ax.transAxes)     
+                    txts = r'$\alpha$' + r'$ = %.3f$'%(alpha)  
+                    #txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
+                    ax.text(x =x, y= y0-.1, s=txts, fontsize=fontsize, transform=ax.transAxes) 
+                    txts = r'$baseline$' + r'$ = %.3f$'%( baseline) 
+                    ax.text(x =x, y= y0-.2, s=txts, fontsize=fontsize, transform=ax.transAxes) 
+                    if function=='flow_para_function' or  function=='flow_para':
+                        txts = r'$flow_v$' + r'$ = %.3f$'%( flow) 
+                        ax.text(x =x, y= y0-.3, s=txts, fontsize=fontsize, transform=ax.transAxes)                        
+                    if function=='stretched_vibration':
+                        txts = r'$vibration$' + r'$ = %.1f Hz$'%( freq) 
+                        ax.text(x =x, y= y0-.3, s=txts, fontsize=fontsize, transform=ax.transAxes)  
+
+                
+                    
+                
+                if 'ylim' in kwargs:
+                    ax.set_ylim( kwargs['ylim'])
+                elif 'vlim' in kwargs:
+                    vmin, vmax =kwargs['vlim']
+                    ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])                
+                else:
+                    pass
+                if 'xlim' in kwargs:
+                    ax.set_xlim( kwargs['xlim'])              
+            if sn ==0:
+                ax.legend(loc='best', fontsize = 6)
+                
+        file_name =   'uid=%s--g2-%s'%(uid, filename)
+        fp = path + file_name  + '-.png'
+        plt.savefig( fp, dpi=fig.dpi)        
+        fig.set_tight_layout(True)        
+    if return_fig:
+        return fig               
+
+        
+        
+        
+            
+def dummy():        
+
+    beta = np.zeros(   num_rings )  #  contrast factor
+    rate = np.zeros(   num_rings )  #  relaxation rate
+    alpha = np.zeros(   num_rings )  #  alpha
+    baseline = np.zeros(   num_rings )  #  baseline
+
+    sx = int( round (np.sqrt(num_rings)) )
+    if num_rings%sx==0:
+        sy = int(num_rings/sx)
+    else:
+        sy = int(num_rings/sx+1)
+        
+        
+    if function=='simple_exponential' or function=='simple':
+        _vars = np.unique ( _vars + ['alpha']) 
+        mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars= list( _vars)   )
+        
+    elif function=='stretched_exponential' or function=='stretched':        
+        mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars=  _vars)  
+        
+    else:
+        print ("The %s is not supported.The supported functions include simple_exponential and stretched_exponential"%function)          
+    
+    #mod.set_param_hint( 'beta', value = 0.05 )
+    #mod.set_param_hint( 'alpha', value = 1.0 )
+    #mod.set_param_hint( 'relaxation_rate', value = 0.005 )
+    #mod.set_param_hint( 'baseline', value = 1.0, min=0.5, max= 1.5 )
+    mod.set_param_hint( 'baseline',   min=0.5, max= 2.5 )
+    mod.set_param_hint( 'beta',   min=0.0 )
+    mod.set_param_hint( 'alpha',   min=0.0 )
+    mod.set_param_hint( 'relaxation_rate',   min=0.0 ) 
+
+    _guess_val = dict( beta=.1, alpha=1.0, relaxation_rate =0.005, baseline=1.0)
+    
+    if 'guess_values' in kwargs:         
+        guess_values  = kwargs['guess_values']         
+        _guess_val.update( guess_values )  
+   
+    _beta=_guess_val['beta']
+    _alpha=_guess_val['alpha']
+    _relaxation_rate = _guess_val['relaxation_rate']
+    _baseline= _guess_val['baseline']
+    
+    pars  = mod.make_params( beta=_beta, alpha=_alpha, relaxation_rate =_relaxation_rate, baseline= _baseline)    
+    for v in _vars:
+        pars['%s'%v].vary = False
+        
+    if plot_g1:  
+        ylabel='g1'
+    else:
+        ylabel='g2'
+        
+    if not one_plot:
+        if num_rings!=1:
+            #fig = plt.figure(figsize=(14, 10))
+            fig = plt.figure(figsize=(12, 10))
+            plt.axis('off')
+            #plt.axes(frameon=False)
+            #print ('here')
+            plt.xticks([])
+            plt.yticks([])
+
+        else:
+            fig = plt.figure(figsize=(8,8))
+
+        #fig = plt.figure(figsize=(8,8))
+        plt.title('uid= %s'%uid,fontsize=20, y =1.06)   
+
+        for i in range(num_rings):
+            ax = fig.add_subplot(sx, sy, i+1 )
+
+            if fit_range is not None:
+                y=g2[1:, i][fit_range[0]:fit_range[1]]
+                lags=taus[1:][fit_range[0]:fit_range[1]]
+            else:
+                y=g2[1:, i]
+                lags=taus[1:]
+
+
+            result1 = mod.fit(y, pars, x =lags )
+
+
+            #print ( result1.best_values)
+            rate[i] = result1.best_values['relaxation_rate']
+            #rate[i] = 1e-16
+            beta[i] = result1.best_values['beta'] 
+
+            #baseline[i] = 1.0
+            baseline[i] =  result1.best_values['baseline'] 
+
+            if function=='simple_exponential' or function=='simple':
+                alpha[i] =1.0 
+            elif function=='stretched_exponential' or function=='stretched':
+                alpha[i] = result1.best_values['alpha']
+                
+            if plot_g1:
+                ax.semilogx(taus[1:], ( g2[1:, i] - baseline[i] )/beta[i], 'bo')
+                ax.semilogx(lags, (result1.best_fit- baseline[i] )/beta[i], '-r')            
+            else:
+                ax.semilogx(taus[1:], g2[1:, i], 'bo')
+                ax.semilogx(lags, result1.best_fit, '-r')
+
+            ax.set_title(" Q= " + '%.5f  '%(q_ring_center[i]) + r'$\AA^{-1}$')  
+            #ax.set_ylim([min(y)*.95, max(y[1:]) *1.05])
+            #ax.set_ylim([0.9999, max(y[1:]) *1.002])
+            txts = r'$\tau$' + r'$ = %.3f$'%(1/rate[i]) +  r'$ s$'
+            ax.text(x =0.02, y=.55, s=txts, fontsize=14, transform=ax.transAxes)     
+            txts = r'$\alpha$' + r'$ = %.3f$'%(alpha[i])  
+            #txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
+            ax.text(x =0.02, y=.45, s=txts, fontsize=14, transform=ax.transAxes)  
+
+            txts = r'$baseline$' + r'$ = %.3f$'%( baseline[i]) 
+            ax.text(x =0.02, y=.35, s=txts, fontsize=14, transform=ax.transAxes) 
+
+            txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) #+  r'$ s^{-1}$'    
+            ax.text(x =0.02, y=.25, s=txts, fontsize=14, transform=ax.transAxes) 
+
+            if 'ylim' in kwargs:
+                ax.set_ylim( kwargs['ylim'])
+            elif 'vlim' in kwargs:
+                vmin, vmax =kwargs['vlim']
+                ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])
+            else:
+                ax.set_ylim([min(y)*.95, max(y[1:]) *1.05])
+            if 'xlim' in kwargs:
+                ax.set_xlim( kwargs['xlim'])
+
+    else:
+        fig = plt.figure(figsize=(8,8))
+        #fig = plt.figure(figsize=(8,8))
+        plt.title('uid= %s'%uid,fontsize=20, y =1.06)   
+        ax = fig.add_subplot(111 )
+        ax.set_ylabel(ylabel) 
+        for i in range(num_rings):
+            if fit_range is not None:
+                y=g2[1:, i][fit_range[0]:fit_range[1]]
+                lags=taus[1:][fit_range[0]:fit_range[1]]
+            else:
+                y=g2[1:, i]
+                lags=taus[1:]
+            result1 = mod.fit(y, pars, x =lags )
+            #print ( result1.best_values)
+            rate[i] = result1.best_values['relaxation_rate']
+            #rate[i] = 1e-16
+            beta[i] = result1.best_values['beta'] 
+            #baseline[i] = 1.0
+            baseline[i] =  result1.best_values['baseline'] 
+
+            if function=='simple_exponential' or function=='simple':
+                alpha[i] =1.0 
+            elif function=='stretched_exponential' or function=='stretched':
+                alpha[i] = result1.best_values['alpha']            
+           
+                
+            if plot_g1:
+                #print( baseline[i] , beta[i] )
+                y= (g2[1:, i] - baseline[i] )/beta[i]
+                ax.semilogx(taus[1:], y,
+                            next(markers),color=next(colors),
+                            label = "Q= " + '%.5f  '%(q_ring_center[i]) + r'$\AA^{-1}$' )
+                
+                ax.semilogx(lags, (result1.best_fit- baseline[i] )/beta[i], '-',
+                            color=next(colors_copy) )            
+            else:
+                ax.semilogx(taus[1:], g2[1:, i], 
+                    next(markers),label = "Q= " + '%.5f  '%(q_ring_center[i]) + r'$\AA^{-1}$' )
+                ax.semilogx(lags, result1.best_fit, '-r')             
+
+        if 'ylim' in kwargs:
+            ax.set_ylim( kwargs['ylim'])
+        elif 'vlim' in kwargs:
+            vmin, vmax =kwargs['vlim']
+            ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])
+        else:
+            ax.set_ylim([min(y)*.95, max(y[1:]) *1.05])
+        if 'xlim' in kwargs:
+            ax.set_xlim( kwargs['xlim'])
+                
+        plt.legend(loc='best', fontsize=10)
+                
+    #dt =datetime.now()
+    #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
+         
+    #fp = path + 'g2--uid=%s'%(uid) + CurTime + '--Fit.png'
+    fp = path + 'uid=%s--%s) '%(uid,ylabel) + '--fit-.png'
+    fig.savefig( fp, dpi=fig.dpi)        
+    
+    fig.tight_layout()       
+    plt.show()
+
+    result = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )
+    
+    return result
+
+
+
+
+
+def fit_saxs_rad_ang_g2( g2,  res_pargs=None,function='simple_exponential', fit_range=None, 
                         master_angle_plot= False, *argv,**kwargs):    
      
     '''
@@ -1614,7 +2161,10 @@ def fit_saxs_rad_ang_g2( g2,  res_pargs=None,function='simple_exponential',
                     beta * np.exp(-2 * relaxation_rate * lags) + baseline
         'streched_exponential': fit by a streched exponential function, defined as  
                     beta * (np.exp(-2 * relaxation_rate * lags))**alpha + baseline
-                    
+     
+    #fit_vibration:
+    #    if True, will fit the g2 by a dumped sin function due to beamline mechnical oscillation
+    
     Returns
     -------        
     fit resutls:
@@ -1635,8 +2185,7 @@ def fit_saxs_rad_ang_g2( g2,  res_pargs=None,function='simple_exponential',
         num_qr = len( q_ring_center)
         ang_center = res_pargs[ 'ang_center']
         num_qa = len( ang_center )
-        taus=res_pargs['taus']
-	
+        taus=res_pargs['taus']	
     
     else:
     
@@ -1658,28 +2207,32 @@ def fit_saxs_rad_ang_g2( g2,  res_pargs=None,function='simple_exponential',
             num_qa = len( ang_center)
         else:
             print( 'Please give ang_center') 
+  
+            
+
 
     num_rings = g2.shape[1]
     beta = np.zeros(   num_rings )  #  contrast factor
     rate = np.zeros(   num_rings )  #  relaxation rate
     alpha = np.zeros(   num_rings )  #  alpha
     baseline = np.zeros(   num_rings )  #  baseline 
-    if function=='flow_para_function' or  function=='flow_para':
-        flow= np.zeros(   num_rings )  #  baseline 
+    freq= np.zeros(   num_rings )  
     
-            
+    if function=='flow_para_function' or  function=='flow_para':
+        flow= np.zeros(   num_rings )  #  baseline             
     if 'fit_variables' in kwargs:
         additional_var  = kwargs['fit_variables']        
         _vars =[ k for k in list( additional_var.keys()) if additional_var[k] is False]
     else:
         _vars = []
+    
+    #print (_vars)
 
     _guess_val = dict( beta=.1, alpha=1.0, relaxation_rate =0.005, baseline=1.0)
     
     if 'guess_values' in kwargs:         
         guess_values  = kwargs['guess_values']         
-        _guess_val.update( guess_values )  
- 
+        _guess_val.update( guess_values )   
     
     if function=='simple_exponential' or function=='simple':
         _vars = np.unique ( _vars + ['alpha']) 
@@ -1688,34 +2241,44 @@ def fit_saxs_rad_ang_g2( g2,  res_pargs=None,function='simple_exponential',
         
     elif function=='stretched_exponential' or function=='stretched':        
         mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars=  _vars) 
-                
-    elif function=='flow_para_function' or  function=='flow_para': 
+        
+    elif function=='stretched_vibration':        
+        mod = Model(stretched_auto_corr_scat_factor_with_vibration)#,  independent_vars=  _vars) 
+        
+    elif function=='flow_para_function' or  function=='flow_para':         
         mod = Model(flow_para_function)#,  independent_vars=  _vars)
         
     else:
         print ("The %s is not supported.The supported functions include simple_exponential and stretched_exponential"%function)
-    
-    #mod.set_param_hint( 'beta', value = 0.05 )
-    #mod.set_param_hint( 'alpha', value = 1.0 )
-    #mod.set_param_hint( 'relaxation_rate', value = 0.005 )
-    #mod.set_param_hint( 'baseline', value = 1.0, min=0.5, max= 1.5 )
+
     mod.set_param_hint( 'baseline',   min=0.5, max= 1.5 )
     mod.set_param_hint( 'beta',   min=0.0 )
     mod.set_param_hint( 'alpha',   min=0.0 )
     mod.set_param_hint( 'relaxation_rate',   min=0.0 )
     if function=='flow_para_function' or  function=='flow_para':
         mod.set_param_hint( 'flow_velocity', min=0)
+    if function=='stretched_vibration':     
+        mod.set_param_hint( 'freq', min=0)
+        mod.set_param_hint( 'amp', min=0)
+        
     
     _beta=_guess_val['beta']
     _alpha=_guess_val['alpha']
     _relaxation_rate = _guess_val['relaxation_rate']
     _baseline= _guess_val['baseline']
-    pars  = mod.make_params( beta=_beta, alpha=_alpha, relaxation_rate =_relaxation_rate, baseline= _baseline)
+    pars  = mod.make_params( beta=_beta, alpha=_alpha, relaxation_rate =_relaxation_rate, baseline= _baseline)   
+    
     
     if function=='flow_para_function' or  function=='flow_para':
         _flow_velocity =_guess_val['flow_velocity']    
         pars  = mod.make_params( beta=_beta, alpha=_alpha, flow_velocity=_flow_velocity,
                                 relaxation_rate =_relaxation_rate, baseline= _baseline)
+        
+    if function=='stretched_vibration':
+        _freq =_guess_val['freq'] 
+        _amp = _guess_val['amp'] 
+        pars  = mod.make_params( beta=_beta, alpha=_alpha, freq=_freq, amp = _amp,
+                                relaxation_rate =_relaxation_rate, baseline= _baseline) 
     
     for v in _vars:
         pars['%s'%v].vary = False        
@@ -1727,25 +2290,30 @@ def fit_saxs_rad_ang_g2( g2,  res_pargs=None,function='simple_exponential',
         sec_var = num_qa
         
     for qr_ind in range( first_var  ):
-        fig = plt.figure(figsize=(10, 12))
+        #fig = plt.figure(figsize=(10, 12))
+        fig = plt.figure(figsize=(14, 8))
         #fig = plt.figure()
         if master_angle_plot:
             title_qr = 'Angle= %.2f'%( ang_center[qr_ind]) + r'$^\circ$' 
         else:
             title_qr = ' Qr= %.5f  '%( q_ring_center[qr_ind]) + r'$\AA^{-1}$' 
         
-        plt.title('uid= %s:--->'%uid + title_qr,fontsize=20, y =1.1)
+        #plt.title('uid= %s:--->'%uid + title_qr,fontsize=20, y =1.1)
         plt.axis('off') 
  
-        sx = int(round(np.sqrt(  sec_var  )) )
-        if sec_var%sx == 0: 
-            sy = int(sec_var/sx)
+        #sx = int(round(np.sqrt(  sec_var  )) )
+        sy=4
+        #if sec_var%sx == 0: 
+        if sec_var%sy == 0:             
+            #sy = int(sec_var/sx)
+            sx = int(sec_var/sy)
         else: 
-            sy=int(sec_var/sx+1) 
+            #sy=int(sec_var/sx+1) 
+            sx=int(sec_var/sy+1) 
             
         for sn in range( sec_var ):
             ax = fig.add_subplot(sx,sy,sn+1 )
-            ax.set_ylabel("g2") 
+            ax.set_ylabel(r"$g^($" + r'$^2$' + r'$^)$' + r'$(Q,$' + r'$\tau$' +  r'$)$' ) 
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
             if master_angle_plot:
                 i = sn + qr_ind * num_qr
@@ -1756,9 +2324,14 @@ def fit_saxs_rad_ang_g2( g2,  res_pargs=None,function='simple_exponential',
             
             title = title_qa    
             ax.set_title( title , y =1.1) 
-            
-            y=g2[1:, i]   #print (y.shape)            
-            lags=taus[1:]        
+
+            if fit_range is not None:
+                y=g2[1:, i][fit_range[0]:fit_range[1]]
+                lags=taus[1:][fit_range[0]:fit_range[1]]
+            else:
+                y=g2[1:, i]
+                lags=taus[1:]   
+      
             result1 = mod.fit(y, pars, x =lags )
 
 
@@ -1769,33 +2342,41 @@ def fit_saxs_rad_ang_g2( g2,  res_pargs=None,function='simple_exponential',
 
             #baseline[i] = 1.0
             baseline[i] =  result1.best_values['baseline'] 
+            
+            #print( result1.best_values['freq']  )
+            
 
 
             if function=='simple_exponential' or function=='simple':
                 alpha[i] =1.0 
             elif function=='stretched_exponential' or function=='stretched':
                 alpha[i] = result1.best_values['alpha']
+            elif function=='stretched_vibration':
+                alpha[i] = result1.best_values['alpha']    
+                freq[i] = result1.best_values['freq']     
             
             if function=='flow_para_function' or  function=='flow_para':
                 flow[i] = result1.best_values['flow_velocity']
 
-            ax.semilogx(taus[1:], y, 'ro')
-            ax.semilogx(taus[1:], result1.best_fit, '-b')
+            ax.semilogx(taus[1:], g2[1:, i], 'ro')
+            ax.semilogx(lags, result1.best_fit, '-b')
             
             
             txts = r'$\gamma$' + r'$ = %.3f$'%(1/rate[i]) +  r'$ s$'
-            
-            ax.text(x =0.02, y=.55, s=txts, fontsize=14, transform=ax.transAxes)     
+            x=0.25
+            y0=0.75
+            fontsize = 12
+            ax.text(x =x, y= y0, s=txts, fontsize=fontsize, transform=ax.transAxes)     
             txts = r'$\alpha$' + r'$ = %.3f$'%(alpha[i])  
             #txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
-            ax.text(x =0.02, y=.45, s=txts, fontsize=14, transform=ax.transAxes)  
+            ax.text(x =x, y= y0-.1, s=txts, fontsize=fontsize, transform=ax.transAxes)  
 
             txts = r'$baseline$' + r'$ = %.3f$'%( baseline[i]) 
-            ax.text(x =0.02, y=.35, s=txts, fontsize=14, transform=ax.transAxes)  
+            ax.text(x =x, y= y0-.2, s=txts, fontsize=fontsize, transform=ax.transAxes)  
             
             if function=='flow_para_function' or  function=='flow_para':
                 txts = r'$flow_v$' + r'$ = %.3f$'%( flow[i]) 
-                ax.text(x =0.02, y=.25, s=txts, fontsize=14, transform=ax.transAxes)         
+                ax.text(x =x, y= y0-.3, s=txts, fontsize=fontsize, transform=ax.transAxes)         
         
             if 'ylim' in kwargs:
                 ax.set_ylim( kwargs['ylim'])
@@ -1807,20 +2388,18 @@ def fit_saxs_rad_ang_g2( g2,  res_pargs=None,function='simple_exponential',
             if 'xlim' in kwargs:
                 ax.set_xlim( kwargs['xlim'])
 
-        #dt =datetime.now()
-        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
-                
-        #fp = path + 'g2--uid=%s-qr=%s'%(uid,q_ring_center[qr_ind]) + CurTime + '.png'
         fp = path + 'uid=%s--g2--qr-%s--fit-'%(uid, q_ring_center[qr_ind] )  + '.png'
         fig.savefig( fp, dpi=fig.dpi)        
         fig.tight_layout()  
         plt.show()
         
-    #fig.tight_layout()  
-    #plt.show()
+
     result = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )
     if function=='flow_para_function' or  function=='flow_para':
         result = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline, flow_velocity=flow )
+    if function=='stretched_vibration':
+        result = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline, freq= freq )        
+        
     return result
                 
     
@@ -1896,109 +2475,12 @@ def save_saxs_g2(  g2, res_pargs, taus=None, filename=None ):
     df.to_csv(filename1)
     print( 'The correlation function is saved in %s with filename as %s'%( path, filename))
 
+
+    
+    
+    
     
 
-def get_fit_saxs_g2( g2, res_pargs=None, function='simple_exponential', *argv,**kwargs):
-    '''
-    Aug 5,2016, Y.G.@CHX
-    
-    Fit one-time correlation function
-    
-    The support functions include simple exponential and stretched/compressed exponential
-    Parameters
-    ---------- 
-    g2: one-time correlation function for fit, with shape as [taus, qs]
-    res_pargs: a dict, contains keys
-        taus: the time delay, with the same length as g2
-        q_ring_center:  the center of q rings, for the title of each sub-plot
-        uid: unique id, for the title of plot
-        
-    function: 
-        'simple_exponential': fit by a simple exponential function, defined as  
-                    beta * np.exp(-2 * relaxation_rate * lags) + baseline
-        'streched_exponential': fit by a streched exponential function, defined as  
-                    beta * (np.exp(-2 * relaxation_rate * lags))**alpha + baseline
-    kwargs:
-        could contains:
-            'fit_variables': a dict, for vary or not, 
-                                keys are fitting para, including 
-                                    beta, relaxation_rate , alpha ,baseline
-                                values: a False or True, False for not vary
-            'guess_values': a dict, for initial value of the fitting para,
-                            the defalut values are 
-                                dict( beta=.1, alpha=1.0, relaxation_rate =0.005, baseline=1.0)
-                    
-    Returns
-    -------        
-    fit resutls:
-        a dict, with keys as 
-        'baseline': 
-         'beta':
-         'relaxation_rate': 
-    an example:
-        result = fit_g2( g2, res_pargs, function = 'simple')
-        result = fit_g2( g2, res_pargs, function = 'stretched')
-    '''      
-    if 'fit_range' in kwargs.keys():
-        fit_range = kwargs['fit_range'] 
-    else:
-        fit_range=None
-        
-    if res_pargs is not None:
-        taus = res_pargs[ 'taus']
-    else:
-        taus =  kwargs['taus']     
-    
-    num_rings = g2.shape[1]
-    beta = np.zeros(   num_rings )  #  contrast factor
-    rate = np.zeros(   num_rings )  #  relaxation rate
-    alpha = np.zeros(   num_rings )  #  alpha
-    baseline = np.zeros(   num_rings )  #  baseline
-    
-    if 'fit_variables' in kwargs:
-        additional_var  = kwargs['fit_variables']        
-        _vars =[ k for k in list( additional_var.keys()) if additional_var[k] is False]
-    else:
-        _vars = []        
-    if function=='simple_exponential' or function=='simple':
-        _vars = np.unique ( _vars + ['alpha']) 
-        mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars= list( _vars)   )        
-    elif function=='stretched_exponential' or function=='stretched':        
-        mod = Model(stretched_auto_corr_scat_factor)#,  independent_vars=  _vars)
-    else:
-        print ("The %s is not supported.The supported functions include simple_exponential and stretched_exponential"%function)
-    mod.set_param_hint( 'baseline',   min=0.5, max= 2.5 )
-    mod.set_param_hint( 'beta',   min=0.0,  max=1.0 )
-    mod.set_param_hint( 'alpha',   min=0.0 )
-    mod.set_param_hint( 'relaxation_rate',   min=0.0,  max= 1000  )  
-    _guess_val = dict( beta=.1, alpha=1.0, relaxation_rate =0.005, baseline=1.0)    
-    if 'guess_values' in kwargs:         
-        guess_values  = kwargs['guess_values']         
-        _guess_val.update( guess_values )  
-   
-    _beta=_guess_val['beta']
-    _alpha=_guess_val['alpha']
-    _relaxation_rate = _guess_val['relaxation_rate']
-    _baseline= _guess_val['baseline']    
-    pars  = mod.make_params( beta=_beta, alpha=_alpha, relaxation_rate =_relaxation_rate, baseline= _baseline)    
-    for v in _vars:
-        pars['%s'%v].vary = False
-    fit_res = []
-    for i in range(num_rings):  
-        if fit_range is not None:
-            y=g2[1:, i][fit_range[0]:fit_range[1]]
-            lags=taus[1:][fit_range[0]:fit_range[1]]
-        else:
-            y=g2[1:, i]
-            lags=taus[1:]
-        result1 = mod.fit(y, pars, x =lags )
-        fit_res.append( result1)        
-        rate[i] = result1.best_values['relaxation_rate']
-        beta[i] = result1.best_values['beta']  
-        baseline[i] =  result1.best_values['baseline'] 
-        alpha[i] = result1.best_values['alpha']        
-    fit_para_res = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )    
-    return fit_res, fit_para_res
 
 def plot_fit_saxs_g2( g2, fit_res, fit_para_res, res_pargs=None,  return_fig=False,tight=True,*argv,**kwargs):
     
