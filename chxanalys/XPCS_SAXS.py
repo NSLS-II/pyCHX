@@ -1715,7 +1715,7 @@ def get_g2_fit( g2, res_pargs=None, function='simple_exponential', *argv,**kwarg
                                 relaxation_rate =_relaxation_rate, baseline= _baseline)        
     for v in _vars:
         pars['%s'%v].vary = False
-    print( pars )
+    #print( pars )
     fit_res = []
     model_data = []    
     for i in range(num_rings):  
@@ -1729,7 +1729,7 @@ def get_g2_fit( g2, res_pargs=None, function='simple_exponential', *argv,**kwarg
         fit_res.append( result1) 
         model_data.append(  result1.best_fit )
         
-        print(  result1.best_values['freq'] )
+        #print(  result1.best_values['freq'] )
         
     return fit_res, lags, np.array( model_data ).T
 
