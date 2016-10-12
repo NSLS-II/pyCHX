@@ -15,6 +15,72 @@ from chxanalys.chx_compress import ( compress_eigerdata, read_compressed_eigerda
 
 from chxanalys.chx_correlationc import ( cal_g2c )
 
+
+############
+##developed at Octo 11, 2016
+def get_qr( data, Qr, Qz, qr, qz,  mask = None   ):
+    
+    qr_1d ={}
+    columns=[]
+    for i,qzc_ in enumerate(qz_center):        
+        #print (i,qzc_)
+        label_array_qz = get_qmap_label( qz, qz_edge[i*2:2*i+2])
+        #print (qzc_, qz_edge[i*2:2*i+2])
+        label_array_qzr,qzc,qrc = get_qzrmap(label_array_qz, label_array_qr,qz_center, qr_center  )
+        #print (np.unique(label_array_qzr ))    
+        if mask is not None:label_array_qzr *=   mask
+        roi_pixel_num = np.sum( label_array_qzr, axis=0)
+        qr_ = qr  *label_array_qzr
+        data_ = data*label_array_qzr    
+        qr_ave = np.sum( qr_, axis=0)/roi_pixel_num
+        data_ave = np.sum( data_, axis=0)/roi_pixel_num 
+        qr_ave,data_ave =   zip(* sorted(  zip( * [ qr_ave[~np.isnan(qr_ave)] ,   data_ave[~np.isnan( data_ave)] ]) ) )  
+        
+        if i==0:
+            N_interp = len( qr_ave  )            
+            
+        qr_ave_intp =  np.linspace( np.min( qr_ave ), np.max( qr_ave ), N_interp)
+        data_ave = np.interp(  qr_ave_intp, qr_ave, data_ave)          
+        qr_1d[i]= [qr_ave_intp, data_ave]
+        columns.append( ['qr%s'%i, str(round(qzc_,4))] )   
+        if i==0:
+            df =  np.hstack(  [ (qr_ave_intp).reshape( N_interp,1) , 
+                               data_ave.reshape( N_interp,1) ] )
+        else:
+            df = np.hstack(  [ df, (qr_ave_intp).reshape( N_interp,1) ,
+                              data_ave.reshape( N_interp,1) ] ) 
+    return df
+            
+def get_qr_from_time_series( FD, Qr, Qz, qr, qz,times_series):
+    '''
+    Get a qr as a function of time
+    FD: the compress file handler
+    time series: a list of time, 
+            e.g., np.arange( start_frame, end_frame, step_frame )
+    Qr: qr center
+    Qz: qz center
+    qr:qr map
+    qz: qz map 
+    '''   
+    
+    Nt = len( times_series )
+    for i in range(Nt-1):
+        beg = times_series[i]
+        end = times_series[i+1]
+        avg_imgx = get_avg_imgc( FD,  beg=beg,end=end,sampling = 1, plot_ = False )
+        qr_1dx = get_qr( avg_imgx, Qr, Qz, qr, qz, mask = None  )
+        if i==0:        
+            qr_1d = np.zeros(  [qr_1dx.shape[0], Nt+1] )
+            qr_1d[:,0] = qr_1dx[:,0]
+            qr_1d[:,1] = qr_1dx[:,1]
+        else:        
+            qr_1d[:,i+1] = qr_1dx[:,1]
+    return qr_1d
+        
+        
+        
+        
+
 ##########################################
 ###Functions for GiSAXS
 ##########################################
@@ -52,7 +118,7 @@ def get_incident_angles( inc_x0, inc_y0, refl_x0, refl_y0, pixelsize=[75,75], Ls
         get incident_angle (alphai), the title angle (phi)
     '''
     px,py = pixelsize
-    phi = np.arctan2( (refl_x0 - inc_x0)*px *10**(-6), (refl_y0 - inc_y0)*py *10**(-6) )    
+    phi = np.arctan2( (-refl_x0 + inc_x0)*px *10**(-6), (refl_y0 - inc_y0)*py *10**(-6) )    
     alphai = np.arctan2( (refl_y0 -inc_y0)*py *10**(-6),  Lsd ) /2.     
     #thetai = np.arctan2(  (rcenx - bcenx)*px *10**(-6), Lsd   ) /2.  #??   
     
@@ -121,12 +187,6 @@ def convert_gisaxs_pixel_to_q( inc_x0, inc_y0, refl_x0, refl_y0,
         
     
 
-    if edges is None:
-        if num_angles!=1:
-            spacing =  (outer_angle - inner_angle - num_angles* width )/(num_angles-1)      # spacing between rings
-        else:
-            spacing = 0
-        edges = roi.ring_edges(inner_angle, width, spacing, num_angles)
     
     
 
