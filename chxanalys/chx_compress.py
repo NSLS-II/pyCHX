@@ -1,13 +1,14 @@
 import os
 import matplotlib.pyplot as plt
 from chxanalys.chx_libs import (np, roi, time, datetime, os,  getpass, db, get_images,LogNorm, RUN_GUI)
+from chxanalys.chx_generic_functions import create_time_slice
 import struct    
 from tqdm import tqdm
 
 
 def compress_eigerdata( images, mask, md, filename, force_compress=False, 
                         bad_pixel_threshold=1e15, bad_pixel_low_threshold=0, 
-                       hot_pixel_threshold=2**30, nobytes=4  ):
+                       hot_pixel_threshold=2**30, nobytes=4,bins=1  ):
     
     
     
@@ -15,17 +16,17 @@ def compress_eigerdata( images, mask, md, filename, force_compress=False,
         print ("Create a new compress file with filename as :%s."%filename)
         return init_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
-                                    bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes= nobytes  )        
+                                    bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes= nobytes, bins=bins  )        
     else:
         if not os.path.exists( filename ):
             print ("Create a new compress file with filename as :%s."%filename)
             return init_compress_eigerdata( images, mask, md, filename, 
                        bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
-                      bad_pixel_low_threshold=bad_pixel_low_threshold,    nobytes= nobytes )  
+                      bad_pixel_low_threshold=bad_pixel_low_threshold,    nobytes= nobytes, bins=bins  )  
         else:      
             print ("Using already created compressed file with filename as :%s."%filename)
             beg=0
-            end= len(images)
+            end= len(images)//bins
             return read_compressed_eigerdata( mask, filename, beg, end, 
                             bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
                        bad_pixel_low_threshold=bad_pixel_low_threshold     )  
@@ -59,7 +60,7 @@ def read_compressed_eigerdata( mask, filename, beg, end,
 
 def init_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
-                            bad_pixel_low_threshold=0,nobytes=4  ):    
+                            bad_pixel_low_threshold=0,nobytes=4, bins=1  ):    
     '''
         Compress the eiger data 
         
@@ -69,6 +70,7 @@ def init_compress_eigerdata( images, mask, md, filename,
         Find badframe_list for where image sum above bad_pixel_threshold
         Generate a compressed data with filename
         
+        if bins!=1, will bin the images with bin number as bins
     
         Header contains 1024 bytes ['Magic value', 'beam_center_x', 'beam_center_y', 'count_time', 'detector_distance', 
            'frame_time', 'incident_wavelength', 'x_pixel_size', 'y_pixel_size', 
@@ -85,6 +87,8 @@ def init_compress_eigerdata( images, mask, md, filename,
     fp = open( filename,'wb' )
     #Make Header 1024 bytes   
     #md = images.md
+    if bins!=1:
+        nobytes=8
     Header = struct.pack('@16s8d7I916x',b'Version-COMP0001',
                         md['beam_center_x'],md['beam_center_y'], md['count_time'], md['detector_distance'],
                         md['frame_time'],md['incident_wavelength'], md['x_pixel_size'],md['y_pixel_size'],
@@ -95,7 +99,8 @@ def init_compress_eigerdata( images, mask, md, filename,
       
     fp.write( Header)  
     
-    imgsum  =  np.zeros(    len( images )  ) 
+    Nimg_ = len( images)    
+    
     avg_img = np.zeros_like(    images[0], dtype= np.float ) 
     Nopix =  float( avg_img.size )
     n=0
@@ -105,18 +110,29 @@ def init_compress_eigerdata( images, mask, md, filename,
         dtype= np.int16
     elif nobytes==4:
         dtype= np.int32
+    elif nobytes==8:
+        dtype=np.float64
     else:
         print ( "Wrong type of nobytes, only support 2 [np.int16] or 4 [np.int32]")
-        dtype= np.int32
+        dtype= np.int32        
         
-    for img in tqdm( images ):       
         
+    Nimg =   Nimg_//bins 
+    time_edge = np.array(create_time_slice( N= Nimg_, 
+                                    slice_num= Nimg, slice_width= bins ))    
+    
+    imgsum  =  np.zeros(    Nimg   )         
+    if bins!=1:
+        print('The frames will be binned by %s'%bins) 
+     
+    for n in  tqdm( range(Nimg) ):            
+        t1,t2 = time_edge[n]
+        img = np.average(  images[t1:t2], axis=0   )        
         mask &= img < hot_pixel_threshold   
-        p = np.where( (np.ravel(img)>0) &  np.ravel(mask) )[0] #don't use masked data        
+        p = np.where( (np.ravel(img)>0) &  np.ravel(mask) )[0] #don't use masked data  
         v = np.ravel( np.array( img, dtype= dtype )) [p]
         dlen = len(p)         
-        imgsum[n] = v.sum()
-        
+        imgsum[n] = v.sum()         
         if imgsum[n] >=bad_pixel_threshold:
             dlen = 0
             fp.write(  struct.pack( '@I', dlen  ))    
@@ -127,8 +143,12 @@ def init_compress_eigerdata( images, mask, md, filename,
             #s_fmt ='@I{}i{}{}'.format( dlen,dlen,'ih'[nobytes==2])
             fp.write(  struct.pack( '@I', dlen   ))
             fp.write(  struct.pack( '@{}i'.format( dlen), *p))
-            fp.write(  struct.pack( '@{}{}'.format( dlen,'ih'[nobytes==2]), *v))        
-        n +=1      
+            if bins==1:
+                fp.write(  struct.pack( '@{}{}'.format( dlen,'ih'[nobytes==2]), *v)) 
+            else:
+                fp.write(  struct.pack( '@{}{}'.format( dlen,'dd'[nobytes==2]  ), *v)) 
+        #n +=1     
+        
     fp.close() 
     frac /=good_count
     print( "The fraction of pixel occupied by photon is %6.3f%% "%(100*frac) ) 
@@ -147,7 +167,7 @@ def init_compress_eigerdata( images, mask, md, filename,
         
     return   mask, avg_img, imgsum, bad_frame_list
         
-        
+
  
 """    Description:
 
@@ -223,6 +243,8 @@ class Multifile:
             self.valtype = np.uint16
         elif (self.byts == 4):
             self.valtype = np.uint32
+        elif (self.byts == 8): 
+            self.valtype = np.float64
         #now convert pieces of these bytes to our data
         self.dlen =np.fromfile(self.FID,dtype=np.int32,count=1)[0]        
         
@@ -301,7 +323,60 @@ def pass_FD(FD,n):
 
 
 
-def get_avg_imgc( FD,  beg=None,end=None,sampling = 100, plot_ = False,  *argv,**kwargs):   
+class Multifile_Bins( object  ):
+    '''
+    Bin a compressed file with bins number
+    See Multifile for details for Multifile_class
+    '''
+    def __init__(self, FD, bins=100):
+        '''
+        FD: the handler of a compressed Eiger frames
+        bins: bins number
+       '''          
+        
+        self.FD=FD
+        if (FD.end - FD.beg)%bins:
+            print ('Please give a better bins number and make the length of FD/bins= integer')
+        else:    
+            self.bins = bins
+            self.md = FD.md
+            #self.beg = FD.beg  
+            self.beg = 0
+            Nimg = (FD.end - FD.beg)
+            slice_num =   Nimg//bins 
+            self.end =  slice_num        
+            self.time_edge = np.array(create_time_slice( N= Nimg, 
+                                    slice_num= slice_num, slice_width= bins )) + FD.beg
+            self.get_bin_frame()
+        
+    def get_bin_frame(self): 
+        FD= self.FD
+        self.frames = np.zeros( [ FD.md['ncols'],FD.md['nrows'], len(self.time_edge)] )
+        for n in  tqdm( range(len(self.time_edge))):
+            #print (n)
+            t1,t2 = self.time_edge[n]
+            #print( t1, t2)
+            self.frames[:,:,n] = get_avg_imgc( FD, beg=t1,end=t2, sampling = 1,
+                                              plot_ = False, show_progress = False )
+    def rdframe(self,n):
+        return self.frames[:,:,n]
+
+    def rdrawframe(self,n): 
+        x_= np.ravel(  self.rdframe(n) )
+        p=  np.where( x_ ) [0]
+        v =  np.array( x_[ p ])
+        return ( np.array(p, dtype=np.int32), v)
+            
+            
+
+            
+                
+    
+    
+    
+
+
+def get_avg_imgc( FD,  beg=None,end=None,sampling = 100, plot_ = False, show_progress=True, *argv,**kwargs):   
     '''Get average imagef from a data_series by every sampling number to save time'''
     #avg_img = np.average(data_series[:: sampling], axis=0)
     
@@ -312,11 +387,22 @@ def get_avg_imgc( FD,  beg=None,end=None,sampling = 100, plot_ = False,  *argv,*
         
     avg_img = FD.rdframe(beg)
     n=1    
-    for  i in tqdm(range( sampling-1 + beg , end, sampling  ), desc= 'Averaging images' ):  
-        (p,v) = FD.rdrawframe(i)
-        if len(p)>0:
-            np.ravel(avg_img )[p] +=   v
-            n += 1            
+    if show_progress:
+        
+        print(  sampling-1 + beg , end, sampling )
+        
+        for  i in tqdm(range( sampling-1 + beg , end, sampling  ), desc= 'Averaging images' ):  
+            (p,v) = FD.rdrawframe(i)
+            if len(p)>0:
+                np.ravel(avg_img )[p] +=   v
+                n += 1  
+    else:
+        for  i in range( sampling-1 + beg , end, sampling  ):  
+            (p,v) = FD.rdrawframe(i)
+            if len(p)>0:
+                np.ravel(avg_img )[p] +=   v
+                n += 1          
+            
     avg_img /= n     
     if plot_:
         if RUN_GUI:
