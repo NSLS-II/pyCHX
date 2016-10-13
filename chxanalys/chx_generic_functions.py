@@ -1,6 +1,18 @@
 from chxanalys.chx_libs import *
 #from tqdm import *
 
+
+def generate_edge( centers, width):
+    '''YG. 10/14/2016
+    give centers and width (number or list) to get edges'''
+    edges = np.zeros( [ len(centers),2])
+    edges[:,0] =  centers - width
+    edges[:,1] =  centers + width
+    return edges
+
+
+
+
 #####
 #load data by databroker    
 
@@ -229,7 +241,8 @@ def RemoveHot( img,threshold= 1E7, plot_=True ):
 
 
 def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,path=None, 
-             aspect=None, logs=False,vmin=None,vmax=None,return_fig=False,cmap='viridis', show_time=True, file_name =None,
+             aspect=None, logs=False,vmin=None,vmax=None,return_fig=False,cmap='viridis', 
+             show_time= False, file_name =None,
              *argv,**kwargs ):    
     """a simple function to show image by using matplotlib.plt imshow
     pass *argv,**kwargs to imshow
@@ -277,6 +290,7 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
             fp = path + '%s'%( file_name ) + CurTime + '.png'       
         else:
             fp = path + '%s'%( image_name ) + '.png'
+            
         plt.savefig( fp, dpi=fig.dpi)        
     #plt.show()
     if return_fig:
