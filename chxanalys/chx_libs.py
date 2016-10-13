@@ -5,7 +5,7 @@ This module is for the necessary packages for the XPCS analysis
 """
 
 
-
+from skbeam.core.utils import multi_tau_lags
 
 from databroker import DataBroker as db, get_images, get_table, get_events, get_fields
 from filestore.api import register_handler, deregister_handler
