@@ -387,10 +387,8 @@ def get_avg_imgc( FD,  beg=None,end=None,sampling = 100, plot_ = False, show_pro
         
     avg_img = FD.rdframe(beg)
     n=1    
-    if show_progress:
-        
-        print(  sampling-1 + beg , end, sampling )
-        
+    if show_progress:        
+        #print(  sampling-1 + beg , end, sampling )        
         for  i in tqdm(range( sampling-1 + beg , end, sampling  ), desc= 'Averaging images' ):  
             (p,v) = FD.rdrawframe(i)
             if len(p)>0:
