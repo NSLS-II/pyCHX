@@ -1669,6 +1669,8 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', one_plot=False,
                     
                 ax.semilogx(taus[1:], result1.best_fit, '-r')
                 
+                #print(  result1.best_values['relaxation_rate'],  result1.best_values['beta'] )
+                
                 txts = r'$q_z$' + r'$_%s$'%qz_ind + r'$\tau$' + r'$ = %.3f$'%(1/rate[i]) +  r'$ s$'
                 ax.text(x =0.02, y=.55 +.3 - 0.1*qz_ind, s=txts, fontsize=14, transform=ax.transAxes)  
 
