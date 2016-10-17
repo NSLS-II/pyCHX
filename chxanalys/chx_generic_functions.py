@@ -11,6 +11,38 @@ def generate_edge( centers, width):
     return edges
 
 
+def export_scan_scalar( uid, x='dcm_b', y= ['xray_eye1_stats1_total'],
+                       path='/XF11ID/analysis/2016_3/commissioning/Results/' ):
+    '''YG. 10/17/2016
+    export uid data to a txt file
+    uid: unique scan id
+    x: the x-col 
+    y: the y-cols
+    path: save path
+    Example:
+        data = export_scan_scalar( uid, x='dcm_b', y= ['xray_eye1_stats1_total'],
+                       path='/XF11ID/analysis/2016_3/commissioning/Results/exported/' )
+    A plot for the data:
+        d.plot(x='dcm_b', y = 'xray_eye1_stats1_total', marker='o', ls='-', color='r')
+        
+    '''
+    from databroker import DataBroker as db, get_images, get_table, get_events, get_fields 
+    from chxanalys.chx_generic_functions import  trans_data_to_pd
+    
+    hdr = db[uid]
+    print( get_fields( hdr ) )
+    data = get_table( db[uid] )
+    xp = data[x]
+    datap = np.zeros(  [len(xp), len(y)+1])
+    datap[:,0] = xp
+    for i, yi in enumerate(y):
+        datap[:,i+1] = data[yi]
+        
+    datap = trans_data_to_pd( datap, label=[x] + [yi for yi in y])   
+    datap.to_csv( path + 'uid=%s.csv'%uid)
+    return datap
+
+
 
 
 #####
