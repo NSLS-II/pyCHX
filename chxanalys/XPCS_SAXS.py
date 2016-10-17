@@ -1147,7 +1147,7 @@ def get_each_ring_mean_intensity( data_series, ring_mask, sampling, timeperframe
             #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
             path = kwargs['path']              
             #fp = path + "Uid= %s--Mean intensity of each ring-"%uid + CurTime + '.png'     
-            fp = path + "uid=%s--Mean-intensity-of-each-ring-"%uid   + '.png'   
+            fp = path + "uid=%s--Mean-intensity-of-each-ROI-"%uid   + '.png'   
             
             fig.savefig( fp, dpi=fig.dpi)
         
@@ -2838,7 +2838,7 @@ def fit_saxs_g2( g2, res_pargs=None, function='simple_exponential',
     #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
          
     #fp = path + 'g2--uid=%s'%(uid) + CurTime + '--Fit.png'
-    fp = path + 'uid=%s--%s) '%(uid,ylabel) + '--fit-.png'
+    fp = path + 'uid=%s--%s'%(uid,ylabel) + '--fit-.png'
     fig.savefig( fp, dpi=fig.dpi)        
     
     fig.tight_layout()       
