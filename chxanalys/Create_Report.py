@@ -427,10 +427,12 @@ class create_pdf_report( object ):
         #add waterfall plot
         imgf = self.wat_file
         image = self.data_dir + imgf
-        im = Image.open( image )
+        if os.path.exists(image):
+            im = Image.open( image )
         ratio = float(im.size[1])/im.size[0]
         height= 160
-        c.drawImage( image, 80, top,  width= height/ratio,height=height,mask=None)
+        if os.path.exists(image):
+            c.drawImage( image, 80, top,  width= height/ratio,height=height,mask=None)
 
         c.setFont("Helvetica", 16)
         c.setFillColor( blue) 
@@ -438,7 +440,8 @@ class create_pdf_report( object ):
 
         c.setFont("Helvetica", 12)
         c.setFillColor(red) 
-        c.drawString( 80, top- 5,  'filename: %s'%imgf    )
+        if os.path.exists(image):
+            c.drawString( 80, top- 5,  'filename: %s'%imgf    )
 
 
         #add mean-intensity of each roi
