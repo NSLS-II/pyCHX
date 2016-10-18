@@ -1458,6 +1458,7 @@ def plot_saxs_two_g2( g2, taus, g2b, tausb,res_pargs=None, return_fig=False, *ar
     if return_fig:
         return fig
     
+    
 #plot g2 results
 def plot_saxs_rad_ang_g2( g2, taus, res_pargs=None, master_angle_plot= False,return_fig=False,*argv,**kwargs):     
     '''plot g2 results of segments with radius and angle partation , 
@@ -1594,6 +1595,14 @@ def stretched_auto_corr_scat_factor_with_vibration(x, beta, relaxation_rate, alp
     return beta * (1 + amp*np.cos(  2*np.pi*freq* x) )* np.exp(-2 * relaxation_rate * x)**alpha + baseline
 
 
+def flow_para_function_with_vibration( x, beta, relaxation_rate, flow_velocity, freq, amp, baseline=1): 
+    
+    vibration_part = (1 + amp*np.cos(  2*np.pi*freq* x) )    
+    Diff_part=    np.exp(-2 * relaxation_rate * x)
+    Flow_part =  np.pi**2/(16*x*flow_velocity) *  abs(  erf(  np.sqrt(   4/np.pi * 1j* x * flow_velocity ) ) )**2  
+    
+    return  beta* vibration_part* Diff_part * Flow_part + baseline
+
 
 def flow_para_function( x, beta, relaxation_rate, flow_velocity, baseline=1):    
     Diff_part=    np.exp(-2 * relaxation_rate * x)
@@ -1605,7 +1614,49 @@ def get_flow_velocity( average_velocity, shape_factor):
     return average_velocity * (1- shape_factor)/(1+  shape_factor)
 
 
+    
+############################################
+##a good func to save g2 for all types of geogmetries
+############################################ 
 
+def save_g2(  g2, taus, qr=None, qz=None, uid='uid', path=None ):
+    
+    '''save g2 results, 
+       res_pargs should contain
+           g2: one-time correlation function
+           taus, lags of g2
+           qr: the qr center, same length as g2
+           qz: the qz or angle center, same length as g2
+           path:
+           uid:
+      
+      '''    
+    
+    df = DataFrame(     np.hstack( [ (taus).reshape( len(g2),1) ,  g2] )  ) 
+    t,qs = g2.shape
+    if qr is None:
+        qr = range( qs )
+    if qz is None:        
+        df.columns = (   ['tau'] + [str(qr_)  for qr_ in qr ]    )
+    else:
+        df.columns = (   ['tau'] + [ str(qr_) + str(qz_)  for (qr_,qz_) in zip(qr,qz) ]    )
+    
+    #dt =datetime.now()
+    #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)  
+    
+    #if filename is None:
+    filename = 'uid=%s--g2.csv' % (uid)
+    #filename += '-uid=%s-%s.csv' % (uid,CurTime)   
+    #filename += '-uid=%s.csv' % (uid) 
+    filename1 = os.path.join(path, filename)
+    df.to_csv(filename1)
+    print( 'The correlation function is saved in %s with filename as %s'%( path, filename))
+
+
+
+############################################
+##a good func to fit g2 for all types of geogmetries
+############################################ 
 
 
 
@@ -1678,7 +1729,10 @@ def get_g2_fit( g2, res_pargs=None, function='simple_exponential', *argv,**kwarg
     elif function=='stretched_vibration':        
         mod = Model(stretched_auto_corr_scat_factor_with_vibration)#,  independent_vars=  _vars)        
     elif function=='flow_para_function' or  function=='flow_para':         
-        mod = Model(flow_para_function)#,  independent_vars=  _vars)        
+        mod = Model(flow_para_function)#,  independent_vars=  _vars) 
+    elif function=='flow_para_function_with_vibration' or  function=='flow_vibration':            
+        mod = Model( flow_para_function_with_vibration )
+        
     else:
         print ("The %s is not supported.The supported functions include simple_exponential and stretched_exponential"%function)
         
@@ -1687,9 +1741,9 @@ def get_g2_fit( g2, res_pargs=None, function='simple_exponential', *argv,**kwarg
     mod.set_param_hint( 'alpha',   min=0.0 )
     mod.set_param_hint( 'relaxation_rate',   min=0.0,  max= 1000  )  
     
-    if function=='flow_para_function' or  function=='flow_para':
-        mod.set_param_hint( 'flow_velocity', min=0)
-    if function=='stretched_vibration':     
+    if function=='flow_para_function' or  function=='flow_para' or function=='flow_vibration': 
+        mod.set_param_hint( 'flow_velocity', min=0)        
+    if function=='stretched_vibration' or function=='flow_vibration':     
         mod.set_param_hint( 'freq', min=0)
         mod.set_param_hint( 'amp', min=0)
         
@@ -1712,7 +1766,15 @@ def get_g2_fit( g2, res_pargs=None, function='simple_exponential', *argv,**kwarg
         _freq =_guess_val['freq'] 
         _amp = _guess_val['amp'] 
         pars  = mod.make_params( beta=_beta, alpha=_alpha, freq=_freq, amp = _amp,
+                                relaxation_rate =_relaxation_rate, baseline= _baseline)
+        
+    if  function=='flow_vibration':
+        _flow_velocity =_guess_val['flow_velocity']    
+        _freq =_guess_val['freq'] 
+        _amp = _guess_val['amp'] 
+        pars  = mod.make_params( beta=_beta,  freq=_freq, amp = _amp,flow_velocity=_flow_velocity,
                                 relaxation_rate =_relaxation_rate, baseline= _baseline)        
+        
     for v in _vars:
         pars['%s'%v].vary = False
     #print( pars )
@@ -1736,7 +1798,11 @@ def get_g2_fit( g2, res_pargs=None, function='simple_exponential', *argv,**kwarg
 
 
 
+############################################
+##a good func to plot g2 for all types of geogmetries
+############################################ 
 
+        
 
 
 def plot_g2( g2, res_pargs, tau_2=None, g2_2=None, fit_res=None,  geometry='saxs', function='simple_exponential', 
@@ -1772,12 +1838,10 @@ def plot_g2( g2, res_pargs, tau_2=None, g2_2=None, fit_res=None,  geometry='saxs
         
     master_plot:  can support 'angle' or 'qr' for saxs
                                'qz' or 'qr' for gisaxs
-                  if not None, take master_plot = 'angle' for example, it will plot the different qr for one angle
-    one_plot: if True, plot all images in one pannel
-    
-                    
+                  if not None, 
+                  take master_plot = 'angle' for example, it will plot the different qr for one angle
+    one_plot: if True, plot all images in one pannel 
     kwargs:
-
                     
     Returns
     -------        
@@ -1812,7 +1876,7 @@ def plot_g2( g2, res_pargs, tau_2=None, g2_2=None, fit_res=None,  geometry='saxs
         
     if one_plot:       
         
-        if master_plot == 'qz':
+        if master_plot == 'qz' or master_plot == 'angle':
             first_var = num_qz
             sec_var = num_qr
         else:
@@ -1826,7 +1890,7 @@ def plot_g2( g2, res_pargs, tau_2=None, g2_2=None, fit_res=None,  geometry='saxs
                 fig = plt.figure(figsize=(10, 12)) 
             #fig = plt.figure()
             
-            if master_plot == 'qz':
+            if master_plot == 'qz' or master_plot == 'angle':
                 if geometry=='ang_saxs':
                     title_qr = 'Angle= %.2f'%( qz_center[qr_ind]) + r'$^\circ$' 
                     filename = 'Angle= %.2f'%( qz_center[qr_ind])
@@ -1844,7 +1908,7 @@ def plot_g2( g2, res_pargs, tau_2=None, g2_2=None, fit_res=None,  geometry='saxs
                     title_qr=''
                     filename=''
 
-            plt.title('uid= %s:--->'%uid + title_qr,fontsize=20, y =1.1) 
+            plt.title('uid= %s:--->'%uid + title_qr,fontsize=20, y =1.06) 
             #print (qz_ind,title_qz)
             #if num_qr!=1:plt.axis('off')
             if sec_var!=1:            
@@ -1860,7 +1924,7 @@ def plot_g2( g2, res_pargs, tau_2=None, g2_2=None, fit_res=None,  geometry='saxs
                 ax = fig.add_subplot(sx,sy,sn+1 )
                 ax.set_ylabel( r"$g_2$" + '(' + r'$\tau$' + ')' ) 
                 ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
-                if master_plot == 'qz': 
+                if master_plot == 'qz' or master_plot == 'angle':
                     i = sn + qr_ind * num_qr       
                     if geometry=='ang_saxs' or  geometry=='gi_saxs' or geometry=='saxs':                                      
                         title_qz =  r'$Q_r= $'+'%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'                    
@@ -1885,7 +1949,8 @@ def plot_g2( g2, res_pargs, tau_2=None, g2_2=None, fit_res=None,  geometry='saxs
                     
  
                 if fit_res is not None:
-                    result1 = fit_res[i]        
+                    result1 = fit_res[i]    
+                    #print (result1.best_values)
                     rate = result1.best_values['relaxation_rate']
                     beta = result1.best_values['beta'] 
                     baseline =  result1.best_values['baseline'] 
@@ -1893,30 +1958,43 @@ def plot_g2( g2, res_pargs, tau_2=None, g2_2=None, fit_res=None,  geometry='saxs
                         alpha =1.0 
                     elif function=='stretched_exponential' or function=='stretched':
                         alpha = result1.best_values['alpha']
-                    elif function=='stretched_vibration':
-                        alpha = result1.best_values['alpha']    
+                    elif function=='stretched_vibration': 
+                        alpha = result1.best_values['alpha']
                         freq = result1.best_values['freq'] 
-                    if function=='flow_para_function' or  function=='flow_para':
-                        flow = result1.best_values['flow_velocity']    
+                    elif function=='flow_vibration': 
+                        freq = result1.best_values['freq'] 
+                    if function=='flow_para_function' or  function=='flow_para' or  function=='flow_vibration': 
+                        flow = result1.best_values['flow_velocity']                          
 
                     txts = r'$\gamma$' + r'$ = %.3f$'%(1/rate) +  r'$ s$'
                     x=0.25
                     y0=0.9
                     fontsize = 12
-                    ax.text(x =x, y= y0, s=txts, fontsize=fontsize, transform=ax.transAxes)     
-                    txts = r'$\alpha$' + r'$ = %.3f$'%(alpha)  
-                    #txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
-                    ax.text(x =x, y= y0-.1, s=txts, fontsize=fontsize, transform=ax.transAxes) 
+                    
+                    
+                    #print( 'gamma here')
+                    #print (sn,i)
+                    
+                    
+                    ax.text(x =x, y= y0, s=txts, fontsize=fontsize, transform=ax.transAxes) 
+                    #print(function)
+                    dt=0
+                    if function!='flow_para_function' and  function!='flow_para' and function!='flow_vibration':
+                        txts = r'$\alpha$' + r'$ = %.3f$'%(alpha)  
+                        dt +=0.1
+                        #txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
+                        ax.text(x =x, y= y0-dt, s=txts, fontsize=fontsize, transform=ax.transAxes) 
                     txts = r'$baseline$' + r'$ = %.3f$'%( baseline) 
-                    ax.text(x =x, y= y0-.2, s=txts, fontsize=fontsize, transform=ax.transAxes) 
-                    if function=='flow_para_function' or  function=='flow_para':
+                    dt +=0.1
+                    ax.text(x =x, y= y0- dt, s=txts, fontsize=fontsize, transform=ax.transAxes) 
+                    if function=='flow_para_function' or  function=='flow_para' or  function=='flow_vibration': 
                         txts = r'$flow_v$' + r'$ = %.3f$'%( flow) 
-                        ax.text(x =x, y= y0-.3, s=txts, fontsize=fontsize, transform=ax.transAxes)                        
-                    if function=='stretched_vibration':
+                        dt += 0.1
+                        ax.text(x =x, y= y0- dt, s=txts, fontsize=fontsize, transform=ax.transAxes)                        
+                    if function=='stretched_vibration'  or  function=='flow_vibration': 
                         txts = r'$vibration$' + r'$ = %.1f Hz$'%( freq) 
-                        ax.text(x =x, y= y0-.3, s=txts, fontsize=fontsize, transform=ax.transAxes)  
-
-                
+                        dt += 0.1
+                        ax.text(x =x, y= y0-dt, s=txts, fontsize=fontsize, transform=ax.transAxes)               
                     
                 
                 if 'ylim' in kwargs:
@@ -1940,7 +2018,278 @@ def plot_g2( g2, res_pargs, tau_2=None, g2_2=None, fit_res=None,  geometry='saxs
 
         
         
+def plot_g2_not_work( g2, taus,  qr=None, qz=None, uid='uid', path=None, 
+            tau_2=None, g2_2=None, fit_res=None,  geometry='saxs', function='simple_exponential', 
+            one_plot=False,
+             return_fig=False, *argv,**kwargs):    
+    '''
+    Octo 18,2016, Y.G.@CHX
+    
+    Plot one-time correlation function (with fit) for different geometry
+    
+    The support functions include simple exponential and stretched/compressed exponential
+    Parameters
+    ---------- 
+    g2: one-time correlation function [taus, qs]
+    taus, taus for g2
+    qr: the qr center, same length as g2
+    qz: the qz or angle center, same length as g2
+    path: the path for save
+    uid:   uid, or filename
+    
+    tau_2: if not None, will plot g2 with g2_fit using tau_fit as x
+    g2_2: if not None, will plot g2 with the g2_fit
+    fit_res: give all the fitting parameters for showing in the plot    
+    
         
+    function: 
+        'simple_exponential': fit by a simple exponential function, defined as  
+                    beta * np.exp(-2 * relaxation_rate * lags) + baseline
+        'streched_exponential': fit by a streched exponential function, defined as  
+                    beta * (np.exp(-2 * relaxation_rate * lags))**alpha + baseline  
+    geometry:
+        'saxs':  a saxs with Qr partition
+        'ang_saxs': a saxs with Qr and angular partition
+        'gi_saxs': gisaxs with Qz, Qr
+        
+    master_plot:  can support 'angle' or 'qr' for saxs
+                               'qz' or 'qr' for gisaxs
+                  if not None, 
+                  take master_plot = 'angle' for example, it will plot the different qr for one angle
+    
+    kwargs:
+                    
+    Returns
+    -------        
+    the plot
+
+    '''
+    
+    t,qs = g2.shape
+    if qr is None:
+        qr = range( qs )
+    num_qr = len(  np.unique(qr) )
+    N = len(qr)
+    qr_center = qr
+    
+    if qz is None:
+        num_qz = 0   
+    else:
+        qz_center = qz
+        num_qz = len(  np.unique(qz) )
+    
+    sx = int(round(np.sqrt(  N )) )
+    sx=4
+    if N%sx == 0: 
+        sy = int(N/sx)
+    else: 
+        sy=int(N/sx+1)  
+    if sy%4==0:   
+        Nplt = sy//4
+    else:
+        Nplt= sy//4+1
+        
+    for ny in range(Nplt): 
+        N1, N2 = ny*16, (ny+1)*16
+        fig, axs = plt.subplots(sy,sx, figsize=(10, 12))
+        aX,aY = axs.shape
+        for sn in range(N1,N2):         
+            ax = axs[sn//aY, sn%aY]    
+            ax.set_ylabel( r"$g_2$" + '(' + r'$\tau$' + ')' ) 
+            ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16)            
+            if geometry=='ang_saxs' or  geometry=='gi_saxs' or geometry=='saxs':                                      
+                title_qr =  r'$Q_r= $'+'%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$' 
+                if num_qz!=0: 
+                    if geometry=='ang_saxs':
+                        title_qz = 'Ang= ' + '%.2f'%( qz_center[sn]) + r'$^\circ$' + '( %d )'%(sn)
+                    elif geometry=='gi_saxs':
+                        title_qz =   r'$Q_z= $'+ '%.5f  '%( qz_center[sn]) + r'$\AA^{-1}$'  
+                    else:
+                        title_qz = ''                        
+
+
+            ax.set_title( title_qr, y =1.1, fontsize=12) 
+            if title_qz!='':
+                ax.set_title( title_qz, y =1.05, fontsize=12) 
+
+            y=g2[:, sn]
+            ax.semilogx(taus, y, '-o', markersize=6)  
+            if g2_2 is not None:                    
+                y=g2_2[:, i]
+                ax.semilogx( tau_2, y, '-r', markersize=6)  
+
+            if sn ==0:
+                ax.legend(loc='best', fontsize = 6)
+
+            if 'ylim' in kwargs:
+                ax.set_ylim( kwargs['ylim'])
+            elif 'vlim' in kwargs:
+                vmin, vmax =kwargs['vlim']
+                ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])                
+            else:
+                pass
+            if 'xlim' in kwargs:
+                ax.set_xlim( kwargs['xlim'])             
+
+
+        file_name =   'uid=%s--g2'%(uid)
+        fp = path + file_name  + '-.png'
+        plt.savefig( fp, dpi=fig.dpi)        
+        fig.set_tight_layout(True)              
+    
+    
+    
+    
+    
+    
+    
+    if num_qr>=num_qz:
+        master_plot = 'qz'
+    else:
+        master_plot = 'qr'        
+        
+    if master_plot == 'qz':
+        first_var = num_qz
+        sec_var = num_qr
+    else:
+        first_var=num_qr
+        sec_var = num_qz  
+        
+        
+    if not one_plot:        
+        for qr_ind in range( 0  ):
+            if RUN_GUI:
+                fig = Figure(figsize=(10, 12))            
+            else:
+                fig = plt.figure(figsize=(10, 12)) 
+            #fig = plt.figure()
+
+            if master_plot == 'qz':
+                if geometry=='ang_saxs':
+                    title_qr = 'Angle= %.2f'%( qz_center[qr_ind]) + r'$^\circ$' 
+                    filename = 'Angle= %.2f'%( qz_center[qr_ind])
+                elif geometry=='gi_saxs':
+                    title_qr = 'Qz= %.2f'%( qz_center[qr_ind]) + r'$\AA^{-1}$' 
+                    filename = 'Qz= %.2f'%( qz_center[qr_ind])
+                else:
+                    title_qr = ''
+                    filename=''
+            else: #qr
+                if geometry=='ang_saxs' or geometry=='gi_saxs':
+                    title_qr = 'Qr= %.5f  '%( qr_center[qr_ind]) + r'$\AA^{-1}$' 
+                    filename='Qr= %.5f  '%( qr_center[qr_ind])
+                else:
+                    title_qr=''
+                    filename=''
+            plt.title('uid= %s:--->'%uid + title_qr,fontsize=20, y =1.05) 
+            if sec_var!=1:            
+                plt.axis('off')         
+            sx = int(round(np.sqrt(  sec_var  )) )
+            if sec_var%sx == 0: 
+                sy = int(sec_var/sx)
+            else: 
+                sy=int(sec_var/sx+1) 
+
+             
+            
+
+def dum():
+              
+    sx = int(round(np.sqrt(  sec_var  )) )
+
+    if sec_var%sx == 0: 
+        sy = int(sec_var/sx)
+    else: 
+        sy=int(sec_var/sx+1)             
+
+    for sn in range( sec_var ):
+        ax = fig.add_subplot(sx,sy,sn+1 )
+        ax.set_ylabel( r"$g_2$" + '(' + r'$\tau$' + ')' ) 
+        ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
+        if master_plot == 'qz' or master_plot == 'angle':
+            i = sn + qr_ind * num_qr       
+            if geometry=='ang_saxs' or  geometry=='gi_saxs' or geometry=='saxs':                                      
+                title_qz =  r'$Q_r= $'+'%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'                    
+        else: #if the first one is qr
+            i = sn + qr_ind * num_qz
+            if geometry=='ang_saxs':
+                title_qz = 'Ang= ' + '%.2f'%( qz_center[sn]) + r'$^\circ$' + '( %d )'%(i)
+            elif geometry=='gi_saxs':
+                title_qz =   r'$Q_z= $'+ '%.5f  '%( qz_center[sn]) + r'$\AA^{-1}$'  
+            else:
+                title_qz = ''                        
+
+        title = title_qz
+        ax.set_title( title , y =1.1, fontsize=12) 
+
+        y=g2[:, i]
+        ax.semilogx(taus, y, '-o', markersize=6)   
+
+        if g2_2 is not None:                    
+            y=g2_2[:, i]
+            ax.semilogx( tau_2, y, '-r', markersize=6)                    
+
+
+        if fit_res is not None:
+            result1 = fit_res[i]        
+            rate = result1.best_values['relaxation_rate']
+            beta = result1.best_values['beta'] 
+            baseline =  result1.best_values['baseline'] 
+            if function=='simple_exponential' or function=='simple':
+                alpha =1.0 
+            elif function=='stretched_exponential' or function=='stretched':
+                alpha = result1.best_values['alpha']
+            elif function=='stretched_vibration':
+                alpha = result1.best_values['alpha']    
+                freq = result1.best_values['freq'] 
+            if function=='flow_para_function' or  function=='flow_para':
+                flow = result1.best_values['flow_velocity']    
+
+            txts = r'$\gamma$' + r'$ = %.3f$'%(1/rate) +  r'$ s$'
+            x=0.25
+            y0=0.9
+            fontsize = 12
+            ax.text(x =x, y= y0, s=txts, fontsize=fontsize, transform=ax.transAxes)     
+            txts = r'$\alpha$' + r'$ = %.3f$'%(alpha)  
+            #txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
+            ax.text(x =x, y= y0-.1, s=txts, fontsize=fontsize, transform=ax.transAxes) 
+            txts = r'$baseline$' + r'$ = %.3f$'%( baseline) 
+            ax.text(x =x, y= y0-.2, s=txts, fontsize=fontsize, transform=ax.transAxes) 
+            if function=='flow_para_function' or  function=='flow_para':
+                txts = r'$flow_v$' + r'$ = %.3f$'%( flow) 
+                ax.text(x =x, y= y0-.3, s=txts, fontsize=fontsize, transform=ax.transAxes)                        
+            if function=='stretched_vibration':
+                txts = r'$vibration$' + r'$ = %.1f Hz$'%( freq) 
+                ax.text(x =x, y= y0-.3, s=txts, fontsize=fontsize, transform=ax.transAxes)  
+
+
+
+
+        if 'ylim' in kwargs:
+            ax.set_ylim( kwargs['ylim'])
+        elif 'vlim' in kwargs:
+            vmin, vmax =kwargs['vlim']
+            ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])                
+        else:
+            pass
+        if 'xlim' in kwargs:
+            ax.set_xlim( kwargs['xlim'])              
+    if sn ==0:
+        ax.legend(loc='best', fontsize = 6)
+
+    file_name =   'uid=%s--g2-%s'%(uid, filename)
+    fp = path + file_name  + '-.png'
+    plt.savefig( fp, dpi=fig.dpi)        
+    fig.set_tight_layout(True)        
+    if return_fig:
+        return fig               
+
+
+        
+        
+        
+        
+                
             
 def dummy():        
 
@@ -2402,6 +2751,13 @@ def fit_saxs_rad_ang_g2( g2,  res_pargs=None,function='simple_exponential', fit_
         
     return result
                 
+
+
+    
+    
+    
+    
+    
     
  
 def save_seg_saxs_g2(  g2, res_pargs, time_label=True, *argv,**kwargs):     
