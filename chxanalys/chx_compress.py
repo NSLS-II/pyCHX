@@ -42,7 +42,14 @@ def compress_eigerdata( images, mask, md, filename,  force_compress=False,
     else:
         if not os.path.exists( filename ):
             print ("Create a new compress file with filename as :%s."%filename)
-            return init_compress_eigerdata( images, mask, md, filename, 
+            if para_compress:
+                print( 'Using a multiprocess to compress the data.')
+                return para_compress_eigerdata( images, mask, md, filename, 
+                        bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
+                                    bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes= nobytes, bins=bins,
+                                     num_sub=num_sub   )
+            else:
+                return init_compress_eigerdata( images, mask, md, filename, 
                        bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
                       bad_pixel_low_threshold=bad_pixel_low_threshold,    nobytes= nobytes, bins=bins  )  
         else:      
