@@ -212,7 +212,8 @@ class create_pdf_report( object ):
                             'Incident Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y']) )
             c.drawString(280, top-ds*6, '||' )       
             c.drawString(350, top-ds*6, 
-                'Reflect Center: [%s, %s] (pixel)'%(md['refl_center_x'], md['refl_center_y']) )            
+                'Reflect Center: [%s, %s] (pixel)'%(md['refl_center_x'], md['refl_center_y']) )  
+            
         
         c.drawString(30, top-ds*7, 'Mask file: %s'%md['mask_file'] )
         
@@ -291,18 +292,20 @@ class create_pdf_report( object ):
             fn_pos = 350
             
         image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height= 180
-        c.drawImage( image, 320, top - ds,  width= height/ratio,height=height,mask=None)
+        
+        if os.path.exists(image):
+            im = Image.open( image )
+            ratio = float(im.size[1])/im.size[0]
+            height= 180
+            c.drawImage( image, 320, top - ds,  width= height/ratio,height=height,mask=None)
 
-        c.setFont("Helvetica", 16)
-        c.setFillColor( blue) 
-        c.drawString( lab_pos, top- 35,  label   )
+            c.setFont("Helvetica", 16)
+            c.setFillColor( blue) 
+            c.drawString( lab_pos, top- 35,  label   )
 
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( fn_pos, top- 230,  'filename: %s'%imgf    )  
+            c.setFont("Helvetica", 12)
+            c.setFillColor(red) 
+            c.drawString( fn_pos, top- 230,  'filename: %s'%imgf    )  
             
         if new_page:
             c.showPage()
@@ -344,17 +347,18 @@ class create_pdf_report( object ):
         #add q_Iq
         imgf = self.ROI_on_Iq_file
         image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height= 180
-        c.drawImage( image, 320, top - ds,  width= height/ratio,height=height,mask=None)
+        if os.path.exists(image):
+            im = Image.open( image )
+            ratio = float(im.size[1])/im.size[0]
+            height= 180
+            c.drawImage( image, 320, top - ds,  width= height/ratio,height=height,mask=None)
 
-        c.setFont("Helvetica", 16)
-        c.setFillColor( blue) 
-        c.drawString( 420, top- 35,  'ROI on Iq'    )
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( 350, top- 260,  'filename: %s'%imgf    )
+            c.setFont("Helvetica", 16)
+            c.setFillColor( blue) 
+            c.drawString( 420, top- 35,  'ROI on Iq'    )
+            c.setFont("Helvetica", 12)
+            c.setFillColor(red) 
+            c.drawString( 350, top- 260,  'filename: %s'%imgf    )
         
         if new_page:
             c.showPage()
@@ -506,17 +510,19 @@ class create_pdf_report( object ):
         else:
             imgf =  q_rate_file
         image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height= 180
-        c.drawImage( image, 350, top,  width= height/ratio,height=height,mask= 'auto')
+        if os.path.exists(image):
+            im = Image.open( image )
+        
+            ratio = float(im.size[1])/im.size[0]
+            height= 180
+            c.drawImage( image, 350, top,  width= height/ratio,height=height,mask= 'auto')
 
-        c.setFont("Helvetica", 16)
-        c.setFillColor( blue) 
-        c.drawString( 450, top + 230,  'q-rate fit  plot'    )
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( 380, top- 5,  'filename: %s'%imgf    )
+            c.setFont("Helvetica", 16)
+            c.setFillColor( blue) 
+            c.drawString( 450, top + 230,  'q-rate fit  plot'    )
+            c.setFont("Helvetica", 12)
+            c.setFillColor(red) 
+            c.drawString( 380, top- 5,  'filename: %s'%imgf    )
         
         if new_page:
             c.showPage()
