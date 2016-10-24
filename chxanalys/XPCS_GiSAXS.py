@@ -1154,6 +1154,8 @@ def plot_gisaxs_g2( g2, taus, res_pargs=None, one_plot = False, *argv,**kwargs):
         if num_qz==1:
             if num_qr==1:
                 fig = plt.figure(figsize=(8,8)) 
+            else:
+                fig = plt.figure(figsize=(10, 12))
         else:
             fig = plt.figure(figsize=(10, 12))
             
@@ -1161,6 +1163,9 @@ def plot_gisaxs_g2( g2, taus, res_pargs=None, one_plot = False, *argv,**kwargs):
         if num_qz!=1:
             if num_qr!=1:
                 plt.axis('off')
+        if num_qz==1:
+            if num_qr!=1:
+                plt.axis('off')            
         
         sx = int(round(np.sqrt(num_qr)) )
         if num_qr%sx == 0: 
@@ -1173,7 +1178,8 @@ def plot_gisaxs_g2( g2, taus, res_pargs=None, one_plot = False, *argv,**kwargs):
             ax.set_ylabel("g2") 
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
 
-            title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
+            #title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
+            title_qr = " Qr= " + '%.5s  '%( qr_center[sn]) + r'$\AA^{-1}$'
             title = title_qr
             ax.set_title( title  )
             
@@ -1310,7 +1316,10 @@ def plot_gisaxs_two_g2( g2, taus, g2b, tausb,res_pargs=None,one_plot=False, *arg
         if num_qz!=1:
             if num_qr!=1:
                 plt.axis('off')
-        
+        if num_qz==1:
+            if num_qr!=1:
+                plt.axis('off')
+                
         sx = int(round(np.sqrt(num_qr)) )
         if num_qr%sx == 0: 
             sy = int(num_qr/sx)
@@ -1322,7 +1331,8 @@ def plot_gisaxs_two_g2( g2, taus, g2b, tausb,res_pargs=None,one_plot=False, *arg
             ax.set_ylabel("g2") 
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
 
-            title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
+            title_qr = " Qr= " + '%.5s  '%( qr_center[sn]) + r'$\AA^{-1}$'
+            #title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
             title = title_qr
             ax.set_title( title  )
             
@@ -1622,6 +1632,8 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', one_plot=False,
         if num_qz==1:
             if num_qr==1:
                 fig = plt.figure(figsize=(8,8)) 
+            else:
+                fig = plt.figure(figsize=(10, 12))
         else:
             fig = plt.figure(figsize=(10, 12))
             
@@ -1641,7 +1653,8 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', one_plot=False,
             ax.set_ylabel("g2") 
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
 
-            title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
+            #title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
+            title_qr = " Qr= " + '%.5s  '%( qr_center[sn]) + r'$\AA^{-1}$'
             title = title_qr
             ax.set_title( title  )
 
