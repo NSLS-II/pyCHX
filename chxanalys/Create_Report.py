@@ -451,18 +451,19 @@ class create_pdf_report( object ):
         #add mean-intensity of each roi
         imgf = self.Mean_inten_t_file
         image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height= 160
-        c.drawImage( image, 360, top,  width= height/ratio,height=height,mask=None)
+        if os.path.exists(image):
+            im = Image.open( image )
+            ratio = float(im.size[1])/im.size[0]
+            height= 160
+            c.drawImage( image, 360, top,  width= height/ratio,height=height,mask=None)
 
-        c.setFont("Helvetica", 16)
-        c.setFillColor( blue) 
-        c.drawString( 330, top + height,  'Mean-intensity-of-each-ROI'    )
+            c.setFont("Helvetica", 16)
+            c.setFillColor( blue) 
+            c.drawString( 330, top + height,  'Mean-intensity-of-each-ROI'    )
 
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( 310, top- 5,  'filename: %s'%imgf    )
+            c.setFont("Helvetica", 12)
+            c.setFillColor(red) 
+            c.drawString( 310, top- 5,  'filename: %s'%imgf    )
         
         if new_page:
             c.showPage()
@@ -550,6 +551,8 @@ class create_pdf_report( object ):
 
         imgf = self.g2_fit_file
         image = self.data_dir + imgf
+        if not os.path.exists(image):
+            image = self.data_dir + self.g2_file
         im = Image.open( image )
         ratio = float(im.size[1])/im.size[0]
         height= 300
@@ -567,17 +570,18 @@ class create_pdf_report( object ):
         top = top + 70 #
         imgf = self.q_rate_file
         image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height= 180
-        c.drawImage( image, 350, top,  width= height/ratio,height=height,mask= 'auto')
+        if  os.path.exists(image):
+            im = Image.open( image )
+            ratio = float(im.size[1])/im.size[0]
+            height= 180
+            c.drawImage( image, 350, top,  width= height/ratio,height=height,mask= 'auto')
 
-        c.setFont("Helvetica", 16)
-        c.setFillColor( blue) 
-        c.drawString( 450, top + 230,  'q-rate fit  plot'    )
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( 380, top- 5,  'filename: %s'%imgf    )
+            c.setFont("Helvetica", 16)
+            c.setFillColor( blue) 
+            c.drawString( 450, top + 230,  'q-rate fit  plot'    )
+            c.setFont("Helvetica", 12)
+            c.setFillColor(red) 
+            c.drawString( 380, top- 5,  'filename: %s'%imgf    )
         
         if new_page:
             c.showPage()
