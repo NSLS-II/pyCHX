@@ -391,41 +391,43 @@ class create_pdf_report( object ):
         elif self.report_type == 'gisaxs':
             ipos = 200
         imgf = self.img_sum_t_file
+        
         image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height= 140
-        c.drawImage( image, ipos, top,  width= height/ratio,height=height,mask=None)
-
-        c.setFont("Helvetica", 16)
-        c.setFillColor( blue) 
-        c.drawString( ipos + 60, top1 - 20 ,  'img sum ~ t'    )
-
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( ipos, top- 5,  'filename: %s'%imgf    )
-
-
-        #plot iq~t
-        if self.report_type == 'saxs':
-            
-            imgf = self.Iq_t_file
-            image = self.data_dir + imgf
+        if os.path.exists(image):
             im = Image.open( image )
             ratio = float(im.size[1])/im.size[0]
             height= 140
-            c.drawImage( image, 350, top,  width= height/ratio,height=height,mask=None)
+            c.drawImage( image, ipos, top,  width= height/ratio,height=height,mask=None)
 
             c.setFont("Helvetica", 16)
             c.setFillColor( blue) 
-            c.drawString( 420, top1-20 ,  'iq ~ t'    )
+            c.drawString( ipos + 60, top1 - 20 ,  'img sum ~ t'    )
 
             c.setFont("Helvetica", 12)
             c.setFillColor(red) 
-            c.drawString( 360, top- 5,  'filename: %s'%imgf    )
-        elif self.report_type == 'gisaxs':
-            pass
-            
+            c.drawString( ipos, top- 5,  'filename: %s'%imgf    )
+
+
+            #plot iq~t
+            if self.report_type == 'saxs':
+
+                imgf = self.Iq_t_file
+                image = self.data_dir + imgf
+                im = Image.open( image )
+                ratio = float(im.size[1])/im.size[0]
+                height= 140
+                c.drawImage( image, 350, top,  width= height/ratio,height=height,mask=None)
+
+                c.setFont("Helvetica", 16)
+                c.setFillColor( blue) 
+                c.drawString( 420, top1-20 ,  'iq ~ t'    )
+
+                c.setFont("Helvetica", 12)
+                c.setFillColor(red) 
+                c.drawString( 360, top- 5,  'filename: %s'%imgf    )
+            elif self.report_type == 'gisaxs':
+                pass
+
 
         top = top1 - 340
         #add waterfall plot
