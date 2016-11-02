@@ -130,7 +130,7 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
         print ('Bad frame list are: %s' %bad_frame_list)
     else:
         print ('No bad frames are involved.')    
-
+    print( 'Combining the seperated compressed files together...')
     combine_compressed( filename, Nf, del_old=True)    
     return   mask, avg_img, imgsum, bad_frame_list
 
