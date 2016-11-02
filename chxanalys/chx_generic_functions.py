@@ -2,6 +2,70 @@ from chxanalys.chx_libs import *
 #from tqdm import *
 
 
+
+def create_cross_mask(  image, center, wy_left=4, wy_right=4, wx_up=4, wx_down=4,
+                     center_circle = True, center_radius=10
+                     ):
+    '''
+    Give image and the beam center to create a cross-shaped mask
+    wy_left: the width of left h-line
+    wy_right: the width of rigth h-line
+    wx_up: the width of up v-line
+    wx_down: the width of down v-line
+    center_circle: if True, create a circle with center and center_radius
+    
+    Return:
+    the cross mask
+    '''
+    from skimage.draw import line_aa, line, polygon, circle
+    
+    imy, imx = image.shape   
+    cx,cy = center
+    bst_mask = np.zeros_like( image , dtype = bool)   
+    ###
+    #for right part    
+    wy = wy_right
+    x = np.array( [ cx, imx, imx, cx  ])  
+    y = np.array( [ cy-wy, cy-wy, cy + wy, cy + wy])
+    rr, cc = polygon( y,x)
+    bst_mask[rr,cc] =1
+    
+    ###
+    #for left part    
+    wy = wy_left
+    x = np.array( [0,  cx, cx,0  ])  
+    y = np.array( [ cy-wy, cy-wy, cy + wy, cy + wy])
+    rr, cc = polygon( y,x)
+    bst_mask[rr,cc] =1    
+    
+    ###
+    #for up part    
+    wx = wx_up
+    x = np.array( [ cx-wx, cx + wx, cx+wx, cx-wx  ])  
+    y = np.array( [ cy, cy, imy, imy])
+    rr, cc = polygon( y,x)
+    bst_mask[rr,cc] =1    
+    
+    ###
+    #for low part    
+    wx = wx_down
+    x = np.array( [ cx-wx, cx + wx, cx+wx, cx-wx  ])  
+    y = np.array( [ 0,0, cy, cy])
+    rr, cc = polygon( y,x)
+    bst_mask[rr,cc] =1   
+    
+    rr, cc = circle( cy, cx, center_radius)
+    bst_mask[rr,cc] =1   
+    
+    
+    full_mask= ~bst_mask
+    
+    return full_mask
+    
+    
+    
+
+
 def generate_edge( centers, width):
     '''YG. 10/14/2016
     give centers and width (number or list) to get edges'''
