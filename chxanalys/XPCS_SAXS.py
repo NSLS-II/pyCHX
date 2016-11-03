@@ -3443,7 +3443,8 @@ def plot_gamma():
 
 
 
-def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, fit = True, compress=True  ):
+def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, good_start=10, force_compress=False,
+                                  fit = True, compress=True  ):
     ''''Aug 16, 2016, YG@CHX-NSLS2
     Do SAXS-XPCS analysis for multi uid data
     uids: a list of uids to be analyzed    
@@ -3488,7 +3489,7 @@ def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, fit = Tr
             print( 'The %i--th uid to be analyzed is : %s'%(i, uid) )
             try:
                 detector = get_detector( db[uid ] )
-                imgs = load_data( uid, detector  )  
+                imgs = load_data( uid, detector, reverse= True   )  
             except:
                 print( 'The %i--th uid: %s can not load data'%(i, uid) )
                 imgs=0
@@ -3505,7 +3506,7 @@ def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, fit = Tr
                 if compress:
                     filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%uid                     
                     mask, avg_img, imgsum, bad_frame_list = compress_eigerdata(imgs, mask, md_, filename, 
-                                            force_compress= False, bad_pixel_threshold= 5e9,nobytes=4,
+                                    force_compress= force_compress, bad_pixel_threshold= 5e9,nobytes=4,
                                             para_compress=True, num_sub= 100)                     
                     try:
                         md['Measurement']= db[uid]['start']['Measurement']
@@ -3536,12 +3537,12 @@ def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, fit = Tr
                     min_inten = 10
 
                     #good_start = np.where( np.array(imgsum) > min_inten )[0][0]
-                    good_start = 2
+                    good_start = good_start
 
                     good_start = max(good_start, np.where( np.array(imgsum) > min_inten )[0][0] )   
 
                     print ('With compression, the good_start frame number is: %s '%good_start)
-                    FD = Multifile(filename, 0, len(imgs)) 
+                    FD = Multifile(filename, good_start, len(imgs)) 
 
                     hmask = create_hot_pixel_mask( avg_img, 1e8)
                     qp, iq, q = get_circular_average( avg_img, mask * hmask, pargs=setup_pargs, nx=None,
@@ -3558,7 +3559,7 @@ def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, fit = Tr
                     sampling = 1000  #sampling should be one  
 
                     #good_start = check_shutter_open( imgsra,  min_inten=5, time_edge = [0,10], plot_ = False )
-                    good_start = 2
+                    good_start = good_start
 
                     good_series = apply_mask( imgsa[good_start:  ], mask )
 
