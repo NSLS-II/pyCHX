@@ -435,7 +435,7 @@ class create_pdf_report( object ):
         image = self.data_dir + imgf
         if os.path.exists(image):
             im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
+            ratio = float(im.size[1])/im.size[0]
         height= 160
         if os.path.exists(image):
             c.drawImage( image, 80, top,  width= height/ratio,height=height,mask=None)
@@ -704,7 +704,7 @@ class create_pdf_report( object ):
 
 
 
-def create_multi_pdf_reports_for_uids( uids, g2, data_dir, report_type='saxs' ):
+def create_multi_pdf_reports_for_uids( uids, g2, data_dir, report_type='saxs', append_name='' ):
     ''' Aug 16, YG@CHX-NSLS-II 
         Create multi pdf reports for each uid in uids
         uids: a list of uids to be reported
@@ -716,9 +716,12 @@ def create_multi_pdf_reports_for_uids( uids, g2, data_dir, report_type='saxs' ):
         i=1
         for sub_key in list( g2[key].keys() ):
             uid_i = uids[key][sub_key]
-            data_dir_ = os.path.join( data_dir, '%s/'%uid_i)        
-
-            c= create_pdf_report(  data_dir_, uid_i,data_dir,report_type=report_type )    
+            data_dir_ = os.path.join( data_dir, '%s/'%uid_i ) 
+            if append_name!='':
+                uid_name = uid_i + append_name
+            else:
+                uid_name = uid_i
+            c= create_pdf_report(  data_dir_, uid_i,data_dir,report_type=report_type, filename="XPCS_Analysis_Report_for_uid=%s.pdf"%uid_name )    
             #Page one: Meta-data/Iq-Q/ROI
             c.report_header(page=1)
             c.report_meta( top=730)
