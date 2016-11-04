@@ -264,18 +264,19 @@ class create_pdf_report( object ):
         c.setFont("Helvetica", 14)
         imgf = self.avg_img_file  
         image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height=  180
-        c.drawImage( image, 60, top - ds,  width= height/ratio,height=height,mask=None)
+        if os.path.exists(image):
+            im = Image.open( image )
+            ratio = float(im.size[1])/im.size[0]
+            height=  180
+            c.drawImage( image, 60, top - ds,  width= height/ratio,height=height,mask=None)
 
-        c.setFont("Helvetica", 16)
-        c.setFillColor( blue) 
-        c.drawString( 90, top- 35,  'Average Intensity Image'    )
+            c.setFont("Helvetica", 16)
+            c.setFillColor( blue) 
+            c.drawString( 90, top- 35,  'Average Intensity Image'    )
 
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( 80, top- 230,  'filename: %s'%imgf    )
+            c.setFont("Helvetica", 12)
+            c.setFillColor(red) 
+            c.drawString( 80, top- 230,  'filename: %s'%imgf    )
 
         #add q_Iq
         if self.report_type == 'saxs':
