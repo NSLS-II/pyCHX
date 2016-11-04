@@ -5,7 +5,8 @@ This module is for the SAXS XPCS analysis
 """
 
 
-from chxanalys.chx_libs import  ( colors, colors_copy, markers, markers_copy,Figure, RUN_GUI)
+from chxanalys.chx_libs import  ( colors, colors_copy, markers, markers_copy,
+                                 colors_,  markers_, Figure, RUN_GUI)
 from chxanalys.chx_generic_functions import *
 from scipy.special import erf
 
@@ -14,8 +15,47 @@ from chxanalys.chx_compress_analysis import ( compress_eigerdata, read_compresse
                                              Multifile,get_each_ring_mean_intensityc,get_avg_imgc, mean_intensityc )
 
 from chxanalys.chx_correlationc import ( cal_g2c,Get_Pixel_Arrayc,auto_two_Arrayc,get_pixelist_interp_iq,)
+from chxanalys.chx_correlationp import ( cal_g2p)
 
+    
+markers =  ['D',  'd', 'o', 'v', 'H', 'x', '*', '>', 'p',
+             's', '_', 'h', '+',             
+             '<',  '^', '8', '.', '|', ',', '3', '2', '4', '1',]
 
+markers = np.array(   markers *10 )
+
+colors = np.array( ['darkorange', 'mediumturquoise', 'seashell', 'mediumaquamarine', 'darkblue', 
+           'yellowgreen', 'cyan', 'mintcream', 'royalblue', 'springgreen', 'slategray',
+           'yellow', 'slateblue', 'darkslateblue', 'papayawhip', 'bisque', 'firebrick', 
+           'burlywood',  'dodgerblue', 'dimgrey', 'chartreuse', 'deepskyblue', 'honeydew', 
+           'orchid',  'teal', 'steelblue', 'plum', 'limegreen', 'antiquewhite', 
+           'linen', 'saddlebrown', 'grey', 'khaki',  'hotpink', 'darkslategray', 
+           'forestgreen',  'lightsalmon', 'turquoise', 'navajowhite', 'peachpuff',
+           'greenyellow', 'darkgrey', 'darkkhaki', 'slategrey', 'indigo',
+           'darkolivegreen', 'aquamarine', 'moccasin', 'beige', 'ivory', 'olivedrab',
+           'whitesmoke', 'paleturquoise', 'blueviolet', 'tomato', 'aqua', 'palegoldenrod', 
+           'cornsilk', 'navy', 'mediumvioletred', 'palevioletred', 'aliceblue', 'azure', 
+             'orangered', 'lightgrey', 'lightpink', 'orange', 'lightsage', 'wheat', 
+           'darkorchid', 'mediumslateblue', 'lightslategray', 'green', 'lawngreen', 'tan', 
+           'mediumseagreen', 'darksalmon', 'pink', 'oldlace', 'sienna', 'dimgray', 'fuchsia',
+           'lemonchiffon', 'maroon', 'salmon', 'gainsboro', 'indianred', 'crimson',
+           'olive', 'mistyrose', 'lime', 'lightblue', 'darkgreen', 'lightgreen', 'deeppink', 
+           'palegreen', 'thistle', 'lightcoral', 'lightgray', 'lightskyblue', 'mediumspringgreen', 
+           'mediumblue', 'peru', 'lightgoldenrodyellow', 'darkseagreen', 'mediumorchid', 
+           'coral', 'lightyellow', 'chocolate', 'lavenderblush', 'darkred', 'lightseagreen', 
+           'darkviolet', 'lightcyan', 'cadetblue', 'blanchedalmond', 'midnightblue', 
+           'darksage', 'lightsteelblue', 'darkcyan', 'floralwhite', 'darkgray', 'magenta',
+           'lavender', 'sandybrown', 'cornflowerblue', 'sage',  'gray', 
+           'mediumpurple', 'lightslategrey', 'powderblue',  'seagreen', 'skyblue',
+           'silver', 'darkmagenta', 'darkslategrey', 'darkgoldenrod', 'rosybrown', 
+           'goldenrod',   'darkturquoise', 
+                    'gold', 'purple', 
+                  'violet', 'blue',  'brown', 'red', 'black'] *10 )
+colors = colors[::-1]
+colors_ = itertools.cycle(   colors  )
+#colors_ = itertools.cycle(sorted_colors_ )
+markers_ = itertools.cycle( markers )
+    
     
     
 def bin_1D(x, y, nx=None, min_x=None, max_x=None):
@@ -2135,12 +2175,7 @@ def plot_g2_not_work( g2, taus,  qr=None, qz=None, uid='uid', path=None,
         file_name =   'uid=%s--g2'%(uid)
         fp = path + file_name  + '-.png'
         plt.savefig( fp, dpi=fig.dpi)        
-        fig.set_tight_layout(True)              
-    
-    
-    
-    
-    
+        fig.set_tight_layout(True)    
     
     
     if num_qr>=num_qz:
@@ -3400,19 +3435,14 @@ def fit_q2_rate( q2, rate, plot_=True, *argv,**kwargs):
     print ('The fitted diffusion coefficient D0 is:  %.2E   A^2S-1'%D0[0])
     if plot_:
         fig,ax = plt.subplots()
-        plt.title('Q2-Rate--uid= %s_Fit'%uid,fontsize=20, y =1.06)   
-        
+        plt.title('Q2-Rate--uid= %s_Fit'%uid,fontsize=20, y =1.06) 
         ax.plot(q2,rate, 'ro', ls='')
-        ax.plot(x,  gmfit(x),  ls='-')
-        
+        ax.plot(x,  gmfit(x),  ls='-')        
         txts = r'$D0: %.2f$'%D0[0] + r' $A^2$' + r'$s^{-1}$'
-        ax.text(x =0.15, y=.75, s=txts, fontsize=14, transform=ax.transAxes) 
-        
-        
+        ax.text(x =0.15, y=.75, s=txts, fontsize=14, transform=ax.transAxes)         
         
         ax.set_ylabel('Relaxation rate 'r'$\gamma$'"($s^{-1}$)")
-        ax.set_xlabel("$q^2$"r'($\AA^{-2}$)')
-              
+        ax.set_xlabel("$q^2$"r'($\AA^{-2}$)')              
         dt =datetime.now()
         CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)     
         #fp = path + 'Q2-Rate--uid=%s'%(uid) + CurTime + '--Fit.png'
@@ -3443,7 +3473,8 @@ def plot_gamma():
 
 
 
-def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, good_start=10, force_compress=False,
+def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, good_start=10, good_end= None,
+                                  force_compress=False,
                                   fit = True, compress=True, para_run=False  ):
     ''''Aug 16, 2016, YG@CHX-NSLS2
     Do SAXS-XPCS analysis for multi uid data
@@ -3538,18 +3569,21 @@ def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, good_sta
 
                     #good_start = np.where( np.array(imgsum) > min_inten )[0][0]
                     good_start = good_start
-
-                    good_start = max(good_start, np.where( np.array(imgsum) > min_inten )[0][0] )   
-
+                    
+                    if good_end is None:
+                        good_end = len(imgs)
+                    FD = Multifile(filename, good_start, good_end )                         
+                        
+                    good_start = max(good_start, np.where( np.array(imgsum) > min_inten )[0][0] ) 
                     print ('With compression, the good_start frame number is: %s '%good_start)
-                    FD = Multifile(filename, good_start, len(imgs)) 
-
+                    print ('The good_end frame number is: %s '%good_end)
+                    
                     hmask = create_hot_pixel_mask( avg_img, 1e8)
                     qp, iq, q = get_circular_average( avg_img, mask * hmask, pargs=setup_pargs, nx=None,
                             plot_ = False, show_pixel= True, xlim=[0.001,.05], ylim = [0.0001, 500])                
 
                     norm = get_pixelist_interp_iq( qp, iq, ring_mask, center)
-                    if para_run:
+                    if not para_run:
                         g2, lag_steps_  =cal_g2c( FD,  ring_mask, bad_frame_list,good_start, num_buf = 8, 
                                 imgsum= None, norm= norm )  
                     else:
@@ -3558,6 +3592,11 @@ def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, good_sta
 
                     if len( lag_steps) < len(lag_steps_):
                         lag_steps = lag_steps_
+                    
+                    FD=0
+                    avg_img, imgsum, bad_frame_list = [0,0,0]
+                    md['avg_img']=0
+                    imgs=0
 
                 else:
                     sampling = 1000  #sampling should be one  
@@ -3605,5 +3644,68 @@ def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, good_sta
     
     
     
+def plot_mul_g2( g2s, md ):
+    '''
+    Plot multi g2 functions generated by  multi_uids_saxs_xpcs_analysis
+    Will create a large plot with q_number pannels
+    Each pannel (for each q) will show a number (run number of g2 functions     
+    '''
     
+    q_ring_center = md['q_ring_center']    
+    sids = md['sids'] 
+    useful_uids = md['useful_uids'] 
+    taus =md['taus'] 
+    run_num = md['run_num'] 
+    sub_num =  md['sub_num'] 
+    uid_ = md['uid_']
+
+    fig = plt.figure(figsize=(12, 20)) 
+    plt.title('uid= %s:--->'%uid_ ,fontsize=20, y =1.06) 
+
+    Nq = len(q_ring_center)
+    if Nq!=1:            
+        plt.axis('off')                 
+    sx = int(round(np.sqrt(  Nq  )) )
+
+    if Nq%sx == 0: 
+        sy = int(Nq/sx)
+    else: 
+        sy=int(Nq/sx+1) 
+
+    for sn in range( Nq ):
+        ax = fig.add_subplot(sx,sy,sn+1 )
+        ax.set_ylabel( r"$g_2$" + '(' + r'$\tau$' + ')' ) 
+        ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
+
+        for run_seq in range(run_num): 
+            i=0    
+            for sub_seq in range(  0, sub_num   ): 
+                #print( run_seq, sub_seq )
+                uid = useful_uids[run_seq +1][ sub_seq +1 ] 
+                sid = sids[i]
+                if i ==0:
+                    title = r'$Q_r= $'+'%.5f  '%( q_ring_center[sn]) + r'$\AA^{-1}$' 
+                    ax.set_title( title , y =1.1, fontsize=12) 
+                y=g2s[run_seq+1][sub_seq+1][:, sn]
+                len_tau = len( taus ) 
+                len_g2 = len( y )
+                len_ = min( len_tau, len_g2)
+
+                #print ( len_tau, len(y))
+                #ax.semilogx(taus[1:len_], y[1:len_], marker = '%s'%next(markers_), color='%s'%next(colors_), 
+                #            markersize=6, label = '%s'%sid) 
+                
+                ax.semilogx(taus[1:len_], y[1:len_], marker =  markers[i], color= colors[i], 
+                            markersize=6, label = '%s'%sid)                 
+                
+                if sn ==0:
+                    ax.legend(loc='best', fontsize = 6)
+
+                i = i + 1
+    fig.set_tight_layout(True)    
+ 
+                
+                
+            
+            
     
