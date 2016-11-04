@@ -57,6 +57,8 @@ import itertools
 
 
 mcolors = itertools.cycle(['b', 'g', 'r', 'c', 'm', 'y', 'k','darkgoldenrod','oldlace', 'brown','dodgerblue'   ])
+
+
 markers = itertools.cycle(list(plt.Line2D.filled_markers))
 lstyles = itertools.cycle(['-', '--', '-.','.',':'])
 
@@ -70,6 +72,44 @@ markers_copy = itertools.cycle( ["o", "2", "p", "1", "s", "*", "4",  "+", "8", "
 
 RUN_GUI = False  #if True for gui setup; else for notebook; the main code difference is the Figure() or plt.figure(figsize=(8, 6))
 
+
+markers =  {'*': 'star', '2': 'tri_up',  'o': 'circle', '_': 'hline', '.': 'point', 'd': 'thin_diamond', 
+                     '4': 'tri_right',   'x': 'x',  '+': 'plus', '<': 'triangle_left',
+                     '|': 'vline', '8': 'octagon',  's': 'square', 
+                     'p': 'pentagon', ',': 'pixel', '^': 'triangle_up', 'D': 'diamond', 
+                     'H': 'hexagon2', '3': 'tri_left', '>': 'triangle_right', 'h': 'hexagon1',
+                     'v': 'triangle_down', '1': 'tri_down'}
+
+markers = np.array( [ i for i in markers.keys()] *10 )
+colors = np.array( ['darkorange', 'mediumturquoise', 'seashell', 'mediumaquamarine', 'darkblue', 
+           'yellowgreen', 'cyan', 'mintcream', 'royalblue', 'springgreen', 'slategray',
+           'yellow', 'slateblue', 'darkslateblue', 'papayawhip', 'bisque', 'firebrick', 
+           'burlywood', 'gold', 'dodgerblue', 'dimgrey', 'chartreuse', 'deepskyblue', 'honeydew', 
+           'orchid', 'red', 'teal', 'steelblue', 'plum', 'limegreen', 'antiquewhite', 
+           'linen', 'saddlebrown', 'grey', 'khaki', 'violet', 'hotpink', 'darkslategray', 
+           'forestgreen', 'blue', 'lightsalmon', 'turquoise', 'navajowhite', 'peachpuff',
+           'greenyellow', 'darkgrey', 'darkkhaki', 'slategrey', 'indigo',
+           'darkolivegreen', 'aquamarine', 'moccasin', 'beige', 'ivory', 'olivedrab',
+           'whitesmoke', 'paleturquoise', 'blueviolet', 'tomato', 'aqua', 'palegoldenrod', 
+           'cornsilk', 'navy', 'mediumvioletred', 'palevioletred', 'aliceblue', 'azure', 
+           'snow', 'orangered', 'lightgrey', 'lightpink', 'orange', 'lightsage', 'wheat', 
+           'darkorchid', 'mediumslateblue', 'lightslategray', 'green', 'lawngreen', 'tan', 
+           'mediumseagreen', 'darksalmon', 'pink', 'oldlace', 'sienna', 'dimgray', 'fuchsia',
+           'lemonchiffon', 'purple', 'maroon', 'salmon', 'gainsboro', 'indianred', 'crimson',
+           'olive', 'mistyrose', 'lime', 'lightblue', 'darkgreen', 'lightgreen', 'deeppink', 
+           'palegreen', 'thistle', 'lightcoral', 'lightgray', 'lightskyblue', 'mediumspringgreen', 
+           'mediumblue', 'peru', 'lightgoldenrodyellow', 'darkseagreen', 'mediumorchid', 
+           'coral', 'lightyellow', 'chocolate', 'lavenderblush', 'darkred', 'lightseagreen', 
+           'darkviolet', 'lightcyan', 'cadetblue', 'blanchedalmond', 'midnightblue', 
+           'darksage', 'lightsteelblue', 'darkcyan', 'floralwhite', 'darkgray', 'magenta',
+           'lavender', 'sandybrown', 'cornflowerblue', 'sage',  'gray', 
+           'mediumpurple', 'lightslategrey', 'powderblue', 'brown', 'seagreen', 'skyblue',
+           'silver', 'darkmagenta', 'darkslategrey', 'darkgoldenrod', 'rosybrown', 
+           'goldenrod',   'darkturquoise', 'black'] *10 )
+
+colors_ = itertools.cycle(   colors[::-1] )
+#colors_ = itertools.cycle(sorted_colors_ )
+markers_ = itertools.cycle( markers )
 
 
 
