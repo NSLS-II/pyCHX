@@ -3444,7 +3444,7 @@ def plot_gamma():
 
 
 def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, good_start=10, force_compress=False,
-                                  fit = True, compress=True  ):
+                                  fit = True, compress=True, para_run=False  ):
     ''''Aug 16, 2016, YG@CHX-NSLS2
     Do SAXS-XPCS analysis for multi uid data
     uids: a list of uids to be analyzed    
@@ -3549,8 +3549,12 @@ def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, good_sta
                             plot_ = False, show_pixel= True, xlim=[0.001,.05], ylim = [0.0001, 500])                
 
                     norm = get_pixelist_interp_iq( qp, iq, ring_mask, center)
-                    g2, lag_steps_  =cal_g2c( FD,  ring_mask, bad_frame_list,good_start, num_buf = 8, 
-                                imgsum= None, norm= norm )   
+                    if para_run:
+                        g2, lag_steps_  =cal_g2c( FD,  ring_mask, bad_frame_list,good_start, num_buf = 8, 
+                                imgsum= None, norm= norm )  
+                    else:
+                        g2, lag_steps_  =cal_g2p( FD,  ring_mask, bad_frame_list,good_start, num_buf = 8, 
+                                imgsum= None, norm= norm )  
 
                     if len( lag_steps) < len(lag_steps_):
                         lag_steps = lag_steps_
