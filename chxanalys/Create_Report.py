@@ -14,7 +14,7 @@ python Create_Report.py  /XF11ID/analysis/2016_2/yuzhang/Results/August/af8f66/ 
 '''
 
 
-
+import h5py
 
 from reportlab.pdfgen  import  canvas
 from reportlab.lib.units import inch, cm , mm   
@@ -763,4 +763,69 @@ def create_one_pdf_reports_for_uids( uids, g2, data_dir, filename='all_in_one', 
     c.done() 
     
     
+def save_res_h5( full_uid, data_dir, save_two_time=False ):
+    '''
+       YG. Nov 10, 2016 
+       save the results to a h5 file
+       will save meta data/avg_img/mask/roi (ring_mask or box_mask)/
+       will aslo save multi-tau calculated one-time correlation function g2/taus
+       will also save two-time derived one-time correlation function /g2b/taus2
+       if save_two_time if True, will save two-time correaltion function
+    '''
+    with h5py.File(data_dir + '%s.h5'%full_uid, 'w') as hf:  
+        #write meta data
+        meta_data = hf.create_dataset("meta_data", (1,), dtype='i')
+        for key in md.keys():        
+            try:
+                meta_data.attrs[key] = md[key]
+            except:
+                pass
+
+        shapes = md['avg_img'].shape
+        avg_h5 = hf.create_dataset("avg_img", data = md['avg_img']  )
+        mask_h5 = hf.create_dataset("mask", data = md['mask']  )
+        roi_h5 = hf.create_dataset("roi", data = md['ring_mask']  )
+
+        g2_h5 = hf.create_dataset("g2", data = g2 )
+        taus_h5 = hf.create_dataset("taus", data = taus )
+
+        if save_two_time:
+            g12b_h5 = hf.create_dataset("g12b", data = g12b )
+        g2b_h5 = hf.create_dataset("g2b", data = g2b )
+        taus2_h5 = hf.create_dataset("taus2", data = taus2 )
+
+def printname(name):
+    print (name)
+#f.visit(printname)
+def load_res_h5( full_uid, data_dir   ):
+    '''YG. Nov 10, 2016 
+       load results from a h5 file
+       will load meta data/avg_img/mask/roi (ring_mask or box_mask)/
+       will aslo load multi-tau calculated one-time correlation function g2/taus
+       will also load two-time derived one-time correlation function /g2b/taus2
+       if save_two_time if True, will load two-time correaltion function
     
+    '''
+    with h5py.File(data_dir + '%s.h5'%full_uid, 'r') as hf:        
+        meta_data_h5 = hf.get( "meta_data"  )
+        meta_data = {}
+        for att in meta_data_h5.attrs:        
+            meta_data[att] =  meta_data_h5.attrs[att]         
+        avg_h5 = np.array( hf.get("avg_img" ) )        
+        mask_h5 = np.array(hf.get("mask" ))
+        roi_h5 =np.array( hf.get("roi"  ))
+        g2_h5 = np.array( hf.get("g2"  ))
+        taus_h5 = np.array( hf.get("taus"  ))
+        g2b_h5 = np.array( hf.get("g2b"))
+        taus2_h5 = np.array( hf.get("taus2"))
+        if 'g12b' in hf:
+            g12b_h5 =   np.array( hf.get("g12b"))
+    
+    if 'g12b' in hf:
+        return meta_data, avg_h5, mask_h5,roi_h5, g2_h5, taus_h5, g2b_h5, taus2_h5, g12b    
+    else:    
+        return meta_data, avg_h5, mask_h5,roi_h5, g2_h5, taus_h5, g2b_h5, taus2_h5    
+
+
+
+
