@@ -2002,7 +2002,9 @@ def plot_gisaxs_g4( g4, taus, res_pargs=None, one_plot=False, *argv,**kwargs):
 
 
 
-def multi_uids_gisaxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, fit = True, compress=True  ):
+def multi_uids_gisaxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None,good_start=10, good_end= None, 
+                                    force_compress=False,
+                                    fit = True, compress=True, para_run=False  ):  
     ''''Sep 16, 2016, YG@CHX-NSLS2
     Do SAXS-XPCS analysis for multi uid data
     uids: a list of uids to be analyzed    
@@ -2070,7 +2072,9 @@ def multi_uids_gisaxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, fit = 
                 if compress:
                     filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%uid 
                     maskr, avg_imgr, imgsum, bad_frame_list = compress_eigerdata(imgsr, maskr, md_, filename, 
-                                        force_compress= False, bad_pixel_threshold= 5e10, nobytes=4)
+                                force_compress= force_compress, bad_pixel_threshold= 5e9,nobytes=4,
+                                            para_compress=True, num_sub= 100)                   
+                                        
                     try:
                         md['Measurement']= db[uid]['start']['Measurement']
                         #md['sample']=db[uid]['start']['sample'] 
@@ -2094,14 +2098,25 @@ def multi_uids_gisaxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, fit = 
 
                     min_inten = 0
                     #good_start = np.where( np.array(imgsum) > min_inten )[0][0]
-                    good_start = 0
-                    good_start = max(good_start, np.where( np.array(imgsum) > min_inten )[0][0] )   
-
+                    #good_start = 0
+                    #good_start = max(good_start, np.where( np.array(imgsum) > min_inten )[0][0] )   
+                    
+                    good_start = good_start
+                    if good_end is None:
+                        good_end_ = len(imgs)
+                    else:
+                        good_end_= good_end
+                    FD = Multifile(filename, good_start, good_end_ ) 
+                    good_start = max(good_start, np.where( np.array(imgsum) > min_inten )[0][0] ) 
                     print ('With compression, the good_start frame number is: %s '%good_start)
-                    FD = Multifile(filename, good_start, len(imgs)) 
-
-                    g2, lag_steps_  =cal_g2c( FD,  box_maskr, bad_frame_list, good_start, num_buf = 8, 
+                    print ('The good_end frame number is: %s '%good_end_)                   
+                    
+                    if not para_run:
+                        g2, lag_steps_  =cal_g2c( FD,  box_maskr, bad_frame_list,good_start, num_buf = 8, 
                                 imgsum= None, norm= None )   
+                    else:
+                        g2, lag_steps_  =cal_g2p( FD,  box_maskr, bad_frame_list,good_start, num_buf = 8, 
+                                imgsum= None, norm= None ) 
 
                     if len( lag_steps) < len(lag_steps_):
                         lag_steps = lag_steps_
@@ -2118,7 +2133,7 @@ def multi_uids_gisaxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, fit = 
 
                     if  len(bad_frame_list):
                         bad_image_process = True
-                    print( bad_image_process  ) 
+                    print( bad_image_process  )
 
                     g2, lag_steps_  =cal_g2( good_series,  box_maskr, bad_image_process,
                                        bad_frame_list, good_start, num_buf = 8 )
