@@ -3515,7 +3515,9 @@ def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, good_sta
         g2s[ run_seq + 1] = {}    
         useful_uids[ run_seq + 1] = {}  
         i=0    
-        for sub_seq in range(  0, sub_num   ):        
+        for sub_seq in range(  0, sub_num   ):   
+            #good_end=good_end
+            
             uid = uids[ sub_seq + run_seq * sub_num  ]        
             print( 'The %i--th uid to be analyzed is : %s'%(i, uid) )
             try:
@@ -3571,12 +3573,14 @@ def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, good_sta
                     good_start = good_start
                     
                     if good_end is None:
-                        good_end = len(imgs)
-                    FD = Multifile(filename, good_start, good_end )                         
+                        good_end_ = len(imgs)
+                    else:
+                        good_end_= good_end
+                    FD = Multifile(filename, good_start, good_end_ )                         
                         
                     good_start = max(good_start, np.where( np.array(imgsum) > min_inten )[0][0] ) 
                     print ('With compression, the good_start frame number is: %s '%good_start)
-                    print ('The good_end frame number is: %s '%good_end)
+                    print ('The good_end frame number is: %s '%good_end_)
                     
                     hmask = create_hot_pixel_mask( avg_img, 1e8)
                     qp, iq, q = get_circular_average( avg_img, mask * hmask, pargs=setup_pargs, nx=None,
