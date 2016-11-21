@@ -1,5 +1,6 @@
 from pyOlog import LogEntry,  Attachment,OlogClient
 from pyOlog import SimpleOlogClient
+from pyOlog.OlogDataTypes import  Logbook
 
 
 def update_olog_id( logid, text, attachments):   
@@ -22,7 +23,9 @@ def update_olog_id( logid, text, attachments):
                                     username= 'xf11id', password= '***REMOVED***' )
     
     old_text =  olog_client.find( id = logid )[0]['text']    
-    upd = LogEntry( text= old_text + '\n'+text,   attachments=  attachments )  
+    upd = LogEntry( text= old_text + '\n'+text,   attachments=  attachments,
+                      logbooks= [Logbook( name = 'Operations', owner=None, active=True)]
+                  )  
     upL = client.updateLog( logid, upd )
     
 def update_olog_uid( uid, text, attachments):  
