@@ -308,7 +308,7 @@ def create_hot_pixel_mask(img, threshold, center=None, center_radius=300 ):
     bst_mask = np.ones_like( img , dtype = bool)    
     if center is not None:    
         from skimage.draw import  circle    
-        imy, imx = image.shape   
+        imy, imx = img.shape   
         cy,cx = center        
         rr, cc = circle( cy, cx, center_radius)
         bst_mask[rr,cc] =0 
