@@ -291,11 +291,33 @@ def load_mask( path, mask_name, plot_ = False, reverse=False, *argv,**kwargs):
     return mask
 
 
-def create_hot_pixel_mask(img, threshold):
-    '''create a hot pixel mask by giving threshold'''
+
+def create_hot_pixel_mask(img, threshold, center=None, center_radius=300 ):
+    '''create a hot pixel mask by giving threshold
+       Input:
+           img: the image to create hot pixel mask
+           threshold: the threshold above which will be considered as hot pixels
+           center: optional, default=None
+                             else, as a two-element list (beam center), i.e., [center_x, center_y]
+           if center is not None, the hot pixel will not include a circle region 
+                           which is defined by center and center_radius ( in unit of pixel)
+       Output:
+           a bool types numpy array (mask), 1 is good and 0 is excluded   
+    
+    '''
+    bst_mask = np.ones_like( img , dtype = bool)    
+    if center is not None:    
+        from skimage.draw import  circle    
+        imy, imx = image.shape   
+        cy,cx = center        
+        rr, cc = circle( cy, cx, center_radius)
+        bst_mask[rr,cc] =0 
+    
     hmask = np.ones_like( img )
-    hmask[np.where( img > threshold)]=0
+    hmask[np.where( img * bst_mask  > threshold)]=0
     return hmask
+
+
 
 
 def apply_mask( imgs, mask):
