@@ -473,19 +473,19 @@ def cal_g2p( FD, ring_mask, bad_frame_list=None,
     
     pool =  Pool(processes= len(inputs) )
     internal_state = None       
-    
+    print( 'Starting assign the tasks...')
     if norm is not None:            
         results = [ apply_async( pool, lazy_one_timep, ( FD, num_lev, num_buf, ring_masks[i],
                         internal_state,  bad_frame_list, imgsum,
-                                    norms[i], ) ) for i in tqdm( inputs )  ]  
+                                    norms[i], ) ) for i in  ( inputs )  ]  
     else:
         #print ('for norm is None')        
         results = [ apply_async( pool, lazy_one_timep, ( FD, num_lev, num_buf, ring_masks[i], 
                         internal_state,   bad_frame_list,imgsum, None,
-                                     ) ) for i in tqdm( inputs )  ]    
+                                     ) ) for i in  ( inputs )  ]    
         
-
-    res = [r.get() for r in results]    
+    print( 'Starting running the tasks...')
+    res = [r.get() for r in tqdm(results)]    
     #print( res )
     
     lag_steps  = res[0][1]  
@@ -493,7 +493,7 @@ def cal_g2p( FD, ring_mask, bad_frame_list=None,
     for i in inputs:
         g2[:,i] = res[i][0][:,0]        
     print( 'G2 calculation DONE!')
-
+    del results
     return  g2, lag_steps    
          
     
