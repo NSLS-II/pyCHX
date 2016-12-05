@@ -7,7 +7,7 @@ This module will provide XSVS analysis tools
 
 from __future__ import (absolute_import, division, print_function)
 import six
-import numpy as np
+
 import time
 
 from skbeam.core import roi
@@ -23,7 +23,14 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from datetime import datetime
 
-def xsvs(image_sets, label_array, number_of_img, timebin_num=2, time_bin=None,
+import numpy as np
+import scipy as sp
+import scipy.stats as st
+from scipy.optimize import leastsq
+from scipy.optimize import minimize
+
+
+def xsvs(image_sets, label_array, number_of_img, timebin_num=2, time_bin=None,only_first_level=False,
          max_cts=None, bad_images = None, threshold=None):   
     """
     This function will provide the probability density of detecting photons
@@ -89,7 +96,8 @@ def xsvs(image_sets, label_array, number_of_img, timebin_num=2, time_bin=None,
 
     # create integration times
     if time_bin is None:time_bin = geometric_series(timebin_num, number_of_img)
-
+    if only_first_level:
+        time_bin = [1]
     # number of times in the time bin
     num_times = len(time_bin)
 
@@ -124,7 +132,7 @@ def xsvs(image_sets, label_array, number_of_img, timebin_num=2, time_bin=None,
         track_level = np.zeros( num_times )
         track_bad_level = np.zeros( num_times )
         # to increment buffer
-        cur = np.full(num_times, timebin_num)
+        cur = np.int_( np.full(num_times, timebin_num) )
 
         # to track how many images processed in each level
         img_per_level = np.zeros(num_times, dtype=np.int64)
@@ -160,6 +168,8 @@ def xsvs(image_sets, label_array, number_of_img, timebin_num=2, time_bin=None,
                     img_.mask = True         
         
             buf[0, cur[0] - 1] = img_
+            
+            #print( n, np.sum(buf[0, cur[0] - 1] ), np.sum( img ) )
 
             _process(num_roi, 0, cur[0] - 1, buf, img_per_level, labels,
                      max_cts, bin_edges[0], prob_k, prob_k_pow,track_bad_level)
@@ -177,6 +187,8 @@ def xsvs(image_sets, label_array, number_of_img, timebin_num=2, time_bin=None,
             #while level < num_times:
                 #if not track_level[level]:
                     #track_level[level] = 1
+            if only_first_level:
+                processing = 0
             while processing:
                 if track_level[level]:
                     prev = 1 + (cur[level - 1] - 2) % timebin_num
@@ -590,7 +602,7 @@ def plot_sxvs( Knorm_bin_edges, spe_cts_all, uid=None,q_ring_center=None,xlim=[0
     
     
     
-def fit_xsvs( Knorm_bin_edges, bin_edges,spe_cts_all, K_mean=None,func= 'bn',threshold=1e-7,
+def fit_xsvs1( Knorm_bin_edges, bin_edges,spe_cts_all, K_mean=None,func= 'bn',threshold=1e-7,
              uid=None,q_ring_center=None,xlim=[0,3.5], ylim=None,time_steps=None):
     '''a convinent function to plot sxvs results
          supporting fit function include:
@@ -815,11 +827,281 @@ def plot_xsvs_g2( g2, taus, res_pargs=None, *argv,**kwargs):
     plt.show()
 
     
+###########################3    
+
+#
+
+
+def nbinomlog(p, hist, x, N):
+    """ Residuals for maximum likelihood fit to nbinom distribution.
+        Vary M (shape param) and mu (count rate) vary (using leastsq)"""
+    mu,M = p
+    mu=abs(mu)
+    M= abs(M)
+    w=np.where(hist>0.0);
+    Np=N * st.nbinom.pmf(x,M,1.0/(1.0+mu/M))    
+    err=2*(Np-hist)
+    err[w] = err[w] - 2*hist[w]*np.log(Np[w]/hist[w])#note: sum(Np-hist)==0 
+    return np.sqrt(np.abs( err ))
+    #return err
+
+
+def nbinomlog1(p, hist, x, N,mu):
+    """ Residuals for maximum likelihood fit to nbinom distribution.
+        Vary M (shape param) but mu (count rate) fixed (using leastsq)"""
+    M = abs(p[0])
+    w=np.where(hist>0.0);
+    Np=N * st.nbinom.pmf(x,M,1.0/(1.0+mu/M))
+    err=2*(Np-hist)
+    err[w] = err[w] - 2*hist[w]*np.log(Np[w]/hist[w])#note: sum(Np-hist)==0
+    return np.sqrt( np.abs(err) )
+    
+
+
+def nbinomlog1_notworknow(p, hist,x, N, mu):
+    """ Residuals for maximum likelihood fit to nbinom distribution.
+        Vary M (shape param) but mu (count rate) fixed (using leastsq)"""
+    M = abs(p[0])
+    w=np.where(hist>0.0);
+    Np=N * st.nbinom.pmf(x,M,1.0/(1.0+mu/M))
+    err=2*(Np-hist)
+    err[w] = err[w] - 2*hist[w]*np.log(Np[w]/hist[w])#note: sum(Np-hist)==0
+    #return np.sqrt(err)
+    return err
+
+
+def nbinomres(p, hist, x, N):
+    ''' residuals to leastsq() to fit normal chi-square'''
+    mu,M = p
+    Np=N * st.nbinom.pmf(x,M,1.0/(1.0+mu/M))
+    err = (hist - Np)/np.sqrt(Np)
+    return err
+
+
+
+
+
     
     
+def get_xsvs_fit(spe_cts_all, K_mean, varyK=True,
+                 max_bins= None, qth=None, g2=None, times=None,taus=None):
+    '''
+    Fit the xsvs by Negative Binomial Function using max-likelihood chi-squares
+    '''
+    
+    max_cts=  spe_cts_all[0][0].shape[0] -1    
+    num_times, num_rings = spe_cts_all.shape 
+    if max_bins is not None:        
+        num_times = min( num_times, max_bins  )
+        
+    bin_edges, bin_centers, Knorm_bin_edges, Knorm_bin_centers = get_bin_edges(
+      num_times, num_rings, K_mean, int(max_cts+2)  )
+    
+    if g2 is not None:
+        g2c = g2.copy()
+        g2c[0] = g2[1]
+    ML_val = {}
+    KL_val = {}    
+    K_ =[]
+    if qth is not None:
+        range_ = range(qth, qth+1)
+    else:
+        range_ = range( num_rings)
+    for i in range_:         
+        N=1        
+        ML_val[i] =[]
+        KL_val[i]= []
+
+        if g2 is not None:
+            mi_g2 = 1/( g2c[:,i] -1 ) 
+            m_=np.interp( times, taus,  mi_g2  )            
+        for j in range(   num_times  ): 
+            x_, x, y = bin_edges[j, i][:-1], Knorm_bin_edges[j, i][:-1], spe_cts_all[j, i]            
+            if g2 is not None:
+                m0=m_[j]
+            else:
+                m0= 10            
+            #resultL = minimize(nbinom_lnlike,  [K_mean[i] * 2**j, m0], args=(x_, y) ) 
+            #the normal leastsq
+            #result_n = leastsq(nbinomres, [K_mean[i] * 2**j, m0], args=(y,x_,N),full_output=1)             
+            #not vary K
+            if not varyK:
+                resultL = leastsq(nbinomlog1, [ m0], args=(y, x_, N, K_mean[i] * 2**j ),
+                                  ftol=1.49012e-38, xtol=1.49012e-38, factor=100,
+                                  full_output=1)
+                ML_val[i].append(  abs(resultL[0][0] )  )            
+                KL_val[i].append( K_mean[i] * 2**j )  #   resultL[0][0] )
+                
+            else:
+                #vary M and K
+                resultL = leastsq(nbinomlog, [K_mean[i] * 2**j, m0], args=(y,x_,N),
+                            ftol=1.49012e-38, xtol=1.49012e-38, factor=100,full_output=1)
+                
+                ML_val[i].append(  abs(resultL[0][1] )  )            
+                KL_val[i].append( abs(resultL[0][0]) )  #   resultL[0][0] )
+                #print( j, m0, resultL[0][1], resultL[0][0], K_mean[i] * 2**j    )            
+            if j==0:                    
+                K_.append( KL_val[i][0] )
+    return ML_val, KL_val, np.array( K_ )  
+            
+
+def plot_xsvs_fit(  spe_cts_all, ML_val, KL_val, K_mean, xlim =[0,15], ylim=[1e-8,1], q_ring_center=None,
+                  uid='uid', qth=None,  times=None,fontsize=3):  
+    
+    fig = plt.figure(figsize=(9, 6))
+    plt.title('uid= %s'%uid+" Fitting with Negative Binomial Function", fontsize=20, y=1.02)  
+    plt.axes(frameon=False)
+    plt.xticks([])
+    plt.yticks([])
+    
+    max_cts=  spe_cts_all[0][0].shape[0] -1    
+    num_times, num_rings = spe_cts_all.shape   
+        
+    bin_edges, bin_centers, Knorm_bin_edges, Knorm_bin_centers = get_bin_edges(
+                      num_times, num_rings, K_mean, int(max_cts+2)  )
+    
+    if qth is not None:
+        range_ = range(qth, qth+1)
+        num_times = len( ML_val[qth] )
+    else:
+        range_ = range( num_rings)
+        num_times = len( ML_val[0] )
+    #for i in range(num_rings):
+    
+    sx = int(round(np.sqrt( len(range_)) ))    
+    
+    if len(range_)%sx == 0: 
+        sy = int(len(range_)/sx)
+    else:
+        sy=int(len(range_)/sx+1) 
+    n = 1
+    for i in range_:         
+        axes = fig.add_subplot(sx, sy,n )            
+        axes.set_xlabel("K/<K>")
+        axes.set_ylabel("P(K)")
+        n +=1
+        for j in range(   num_times  ):        
+            #print( i, j )            
+            x_, x, y = bin_edges[j, i][:-1], Knorm_bin_edges[j, i][:-1], spe_cts_all[j, i] 
+            # Using the best K and M values interpolate and get more values for fitting curve
+
+            xscale = bin_edges[j, i][:-1][1]/ Knorm_bin_edges[j, i][:-1][1]
+            fitx = np.linspace(0, max_cts*2**j, 5000     )
+            fitx_ = fitx / xscale             
+
+            #fity = nbinom_dist( fitx, K_val[i][j], M_val[i][j] )  
+            fitL = nbinom_dist( fitx, KL_val[i][j], ML_val[i][j] )  
+
+            if j == 0:
+                art, = axes.semilogy( fitx_,fitL, '-r',  label="nbinom_L") 
+                #art, = axes.semilogy( fitx_,fity, '--b',  label="nbinom") 
+            else:
+                art, = axes.plot( fitx_,fitL, '-r')
+                #art, = axes.plot( fitx_,fity, '--b')
+            if i==0:  
+                if times is not None:
+                    label =  str( times[j] * 1000)+" ms"
+                else:
+                    label = 'Bin_%s'%(2**j)
+                    
+                art, = axes.plot(x, y, 'o',  label= label)
+            else:
+                art, = axes.plot( x, y, 'o',  )
+
+            axes.set_xlim( xlim )
+            axes.set_ylim( ylim)
+
+            axes.set_title("Q="+ '%.4f  '%(q_ring_center[i])+ r'$\AA^{-1}$')
+            axes.legend(loc='best', fontsize = fontsize)
+    plt.show()
+    fig.tight_layout() 
+    
+
+def get_max_countc(FD, labeled_array ):
+    """Compute the max intensity of ROIs in the compressed file (FD)
+
+    Parameters
+    ----------
+    FD: Multifile class
+        compressed file
+    labeled_array : array
+        labeled array; 0 is background.
+        Each ROI is represented by a nonzero integer. It is not required that
+        the ROI labels are contiguous
+    index : int, list, optional
+        The ROI's to use. If None, this function will extract averages for all
+        ROIs
+
+    Returns
+    -------
+    max_intensity : a float
+    index : list
+        The labels for each element of the `mean_intensity` list
+    """
+    
+    qind, pixelist = roi.extract_label_indices(  labeled_array  ) 
+    timg = np.zeros(    FD.md['ncols'] * FD.md['nrows']   , dtype=np.int32   ) 
+    timg[pixelist] =   np.arange( 1, len(pixelist) + 1  ) 
+    
+    if labeled_array.shape != ( FD.md['ncols'],FD.md['nrows']):
+        raise ValueError(
+            " `image` shape (%d, %d) in FD is not equal to the labeled_array shape (%d, %d)" %( FD.md['ncols'],FD.md['nrows'], labeled_array.shape[0], labeled_array.shape[1]) )
+
+    max_inten =0 
+    for  i in tqdm(range( FD.beg, FD.end, 1  ), desc= 'Get max intensity of ROIs in all frames' ):    
+        (p,v) = FD.rdrawframe(i)
+        w = np.where( timg[p] )[0]
+        
+        max_inten = max( max_inten, np.max(v[w]) )        
+    return max_inten
+
+
+
+def get_contrast( ML_val):
+    nq,nt = len( ML_val.keys() ),  len( ML_val[list(ML_val.keys())[0]])
+    contrast_factorL = np.zeros( [ nq,nt] )
+    for i in range(nq):    
+        for j in range(nt):        
+            contrast_factorL[i, j] =  1/ML_val[i][j]
+    return contrast_factorL
+
     
     
+def plot_g2_contrast( contrast_factorL, g2, times, taus, q_ring_center=None, uid=None, vlim=[0.8,1.2], qth = None):
+    nq,nt = contrast_factorL.shape     
     
+    if qth is not None:
+        range_ = range(qth, qth+1)        
+    else:
+        range_ = range( nq)         
+    num_times = nt  
+    nr = len(range_)
+    sx = int(round(np.sqrt( nr) )) 
+    if nr%sx==0:
+        sy = int(nr/sx)
+    else:
+        sy = int(nr/sx+1)
+    #fig = plt.figure(figsize=(14, 10))   
     
+    fig = plt.figure()
+    plt.title('uid= %s_'%uid + "Contrast Factor for Each Q Rings", fontsize=14, y =1.08)  
+    if qth is None:
+        plt.axis('off')
+    n=1    
+    for sn in range_:
+        #print( sn )
+        ax = fig.add_subplot(sx, sy, n )
+        n +=1
+        yL= contrast_factorL[sn, :]  
+        g = g2[1:,sn] -1         
+        ax.semilogx(times[:nt], yL, "-bs",  label='vis')  
+        ax.semilogx(taus[1:], g, "-rx", label='xpcs')
+        ax.set_title(" Q=" + '%.5f  '%(q_ring_center[sn]) + r'$\AA^{-1}$') 
+                    
+        #ym = np.mean( g )
+        ax.set_ylim([ g.min() * vlim[0], g.max()* vlim[1] ])  
+
+    fig.tight_layout() 
+   
     
     
