@@ -110,7 +110,24 @@ def export_scan_scalar( uid, x='dcm_b', y= ['xray_eye1_stats1_total'],
 
 
 #####
-#load data by databroker    
+#load data by databroker   
+
+def get_flatfield( uid, reverse=False ):
+    import h5py
+    detector = get_detector( db[uid ] )
+    sud = get_sid_filenames(db[uid])
+    master_path = '%s_master.h5'%(sud[2][0])
+    print( master_path)
+    f= h5py.File(master_path, 'r')
+    k= 'entry/instrument/detector/detectorSpecific/' #data_collection_date'
+    d= np.array( f[ k]['flatfield'] )
+    f.close()
+    if reverse:        
+        d = reverse_updown( d )
+        
+    return d
+
+
 
 def get_detector( header ):
     keys = [k for k, v in header.descriptors[0]['data_keys'].items()     if 'external' in v]
