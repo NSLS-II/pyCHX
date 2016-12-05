@@ -138,6 +138,15 @@ class create_pdf_report( object ):
         self.two_g2_file = 'uid=%s--g2--two-g2-.png'%uid
         self.four_time_file = 'uid=%s--g4-.png'%uid
         
+        self.xsvs_fit_file = 'uid=%s--xsvs-fit-.png'%uid
+        self.contrast_file = 'uid=%s--contrast-.png'%uid
+        
+        self.flow_g2v = 'uid=%s_1a_mqv--g2-v_fit-.png'%uid
+        self.flow_g2p = 'uid=%s_1a_mqp--g2-p_fit-.png'%uid
+        
+        self.flow_g2v_rate_fit = 'uid=%s_v_fit_rate--Q-Rate--fit-.png'%uid 
+        self.flow_g2p_rate_fit = 'uid=%s_p_fit_rate--Q-Rate--fit-.png'%uid 
+        
         #self.report_header(page=1, top=730, new_page=False)
         #self.report_meta(new_page=False)
         
@@ -645,6 +654,7 @@ class create_pdf_report( object ):
         if new_page:
             c.showPage()
             c.save()
+            
 
     def report_four_time( self, top= 720, new_page=False):
         '''create the one time correlation function report
@@ -684,7 +694,158 @@ class create_pdf_report( object ):
 
         if new_page:
             c.showPage()
-            c.save()            
+            c.save()  
+
+            
+    def report_flow_pv_g2( self, top= 720, new_page=False):
+        '''create the one time correlation function report
+           Two images:
+               Two Time Correlation Function
+               two one-time correlatoin function from multi-one-time and from diagonal two-time
+        '''   
+        c= self.c
+        uid=self.uid
+        #add sub-title, Time-dependent plot
+        c.setFont("Helvetica", 20)
+        
+        ds = 20
+        self.sub_title_num +=1
+        c.drawString(10, top, "%s. Flow Analysis"%self.sub_title_num )  #add title
+        c.setFont("Helvetica", 14)
+        
+        top1=top
+        top = top1 - 330
+        #add xsvs fit       
+        
+        imgf = self.flow_g2v
+        image = self.data_dir + imgf
+        im = Image.open( image )
+        ratio = float(im.size[1])/im.size[0]
+        height= 300
+        c.drawImage( image, 80, top,  width= height/ratio,height=height,mask=None)     
+
+        c.setFont("Helvetica", 16)
+        c.setFillColor( blue) 
+        c.drawString( 210, top + 300 ,  'XPCS Vertical Flow'    )
+        c.setFont("Helvetica", 12)
+        c.setFillColor(red) 
+        c.drawString( 180, top- 10,  'filename: %s'%imgf    )
+        
+        
+        
+        imgf = self.flow_g2v_rate_fit
+        image = self.data_dir + imgf
+        im = Image.open( image )
+        ratio = float(im.size[1])/im.size[0]
+        height= 200
+        c.drawImage( image, 350, top+50,  width= height/ratio,height=height,mask=None)     
+        c.setFont("Helvetica", 12)
+        c.setFillColor(red) 
+        c.drawString( 350, top- 10 +50,  'filename: %s'%imgf    )
+        
+        
+        
+        
+        
+        top = top - 340
+        #add contrast fit
+        imgf = self.flow_g2p
+        image = self.data_dir + imgf
+        im = Image.open( image )
+        ratio = float(im.size[1])/im.size[0]
+        height= 300
+        c.drawImage( image, 80, top,  width= height/ratio,height=height,mask=None)
+
+        c.setFont("Helvetica", 16)
+        c.setFillColor( blue) 
+        c.drawString( 210, top + 310, 'XPCS Parallel Flow'  )        
+        c.setFont("Helvetica", 12)
+        c.setFillColor(red) 
+        c.drawString( 180, top- 10,  'filename: %s'%imgf    )
+        
+        
+
+        
+        imgf = self.flow_g2p_rate_fit
+        image = self.data_dir + imgf
+        im = Image.open( image )
+        ratio = float(im.size[1])/im.size[0]
+        height= 200
+        c.drawImage( image, 350, top+50,  width= height/ratio,height=height,mask=None)     
+        c.setFont("Helvetica", 12)
+        c.setFillColor(red) 
+        c.drawString( 350, top- 10+50,  'filename: %s'%imgf    )
+        
+
+        if new_page:
+            c.showPage()
+            c.save()   
+
+        
+        
+        
+    def report_xsvs( self, top= 720, new_page=False):
+        '''create the one time correlation function report
+           Two images:
+               Two Time Correlation Function
+               two one-time correlatoin function from multi-one-time and from diagonal two-time
+        '''   
+        c= self.c
+        uid=self.uid
+        #add sub-title, Time-dependent plot
+        c.setFont("Helvetica", 20)
+        
+        ds = 20
+        self.sub_title_num +=1
+        c.drawString(10, top, "%s. Visibility Analysis"%self.sub_title_num )  #add title
+        c.setFont("Helvetica", 14)
+        
+        top1=top
+        top = top1 - 330
+        #add xsvs fit        
+        imgf = self.xsvs_fit_file
+        image = self.data_dir + imgf
+        im = Image.open( image )
+        ratio = float(im.size[1])/im.size[0]
+        height= 300
+        c.drawImage( image, 100, top,  width= height/ratio,height=height,mask=None)       
+        
+        
+
+        c.setFont("Helvetica", 16)
+        c.setFillColor( blue) 
+        c.drawString( 210, top + 300 ,  'XSVS_Fit_by_Negtive_Binomal Function'    )
+        
+        
+
+        c.setFont("Helvetica", 12)
+        c.setFillColor(red) 
+        c.drawString( 180, top- 10,  'filename: %s'%imgf    )
+        top = top - 340
+        #add contrast fit
+        imgf = self.contrast_file
+        image = self.data_dir + imgf
+        im = Image.open( image )
+        ratio = float(im.size[1])/im.size[0]
+        height= 300
+        c.drawImage( image, 100, top,  width= height/ratio,height=height,mask=None)
+
+        c.setFont("Helvetica", 16)
+        c.setFillColor( blue) 
+        c.drawString( 210, top + 310, 'contrast get from xsvs and xpcs'  )
+
+         
+        
+        c.setFont("Helvetica", 12)
+        c.setFillColor(red) 
+        c.drawString( 180, top- 10,  'filename: %s'%imgf    )
+
+        if new_page:
+            c.showPage()
+            c.save()
+      
+
+            
 
     def new_page(self):
         c=self.c
@@ -704,7 +865,8 @@ class create_pdf_report( object ):
         print('*'*40)
 
 
-
+            
+            
 def create_multi_pdf_reports_for_uids( uids, g2, data_dir, report_type='saxs', append_name='' ):
     ''' Aug 16, YG@CHX-NSLS-II 
         Create multi pdf reports for each uid in uids
@@ -722,13 +884,20 @@ def create_multi_pdf_reports_for_uids( uids, g2, data_dir, report_type='saxs', a
                 uid_name = uid_i + append_name
             else:
                 uid_name = uid_i
-            c= create_pdf_report(  data_dir_, uid_i,data_dir,report_type=report_type, filename="XPCS_Analysis_Report_for_uid=%s.pdf"%uid_name )    
+            c= create_pdf_report(  data_dir_, uid_i,data_dir,
+                            report_type=report_type, filename="XPCS_Analysis_Report_for_uid=%s.pdf"%uid_name )    
             #Page one: Meta-data/Iq-Q/ROI
             c.report_header(page=1)
             c.report_meta( top=730)
-            c.report_one_time( top= 500 )
+            #c.report_one_time( top= 500 )
+            #c.new_page()
+            if report_type =='flow':
+                c.report_flow_pv_g2( top= 720)    
             c.save_page()
             c.done() 
+            
+         
+            
 
             
 def create_one_pdf_reports_for_uids( uids, g2, data_dir, filename='all_in_one', report_type='saxs' ):
