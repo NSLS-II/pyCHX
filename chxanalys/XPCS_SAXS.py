@@ -17,6 +17,10 @@ from chxanalys.chx_compress_analysis import ( compress_eigerdata, read_compresse
 from chxanalys.chx_correlationc import ( cal_g2c,Get_Pixel_Arrayc,auto_two_Arrayc,get_pixelist_interp_iq,)
 from chxanalys.chx_correlationp import ( cal_g2p)
 
+
+from pandas import DataFrame 
+import os
+
     
 markers =  ['D',  'd', 'o', 'v', 'H', 'x', '*', '>', 'p',
              's', '_', 'h', '+',             
@@ -1846,7 +1850,7 @@ def get_g2_fit( g2, res_pargs=None, function='simple_exponential', *argv,**kwarg
 
 
 def plot_g2( g2, res_pargs, tau_2=None, g2_2=None, fit_res=None,  geometry='saxs', function='simple_exponential', 
-            master_plot=None, one_plot= True, plot_g1=False,return_fig=False, *argv,**kwargs):    
+            master_plot=None, one_plot= True, plot_g1=False,return_fig=False, append_name=None,*argv,**kwargs):    
     '''
     Octo 8,2016, Y.G.@CHX
     
@@ -1933,10 +1937,10 @@ def plot_g2( g2, res_pargs, tau_2=None, g2_2=None, fit_res=None,  geometry='saxs
             if master_plot == 'qz' or master_plot == 'angle':
                 if geometry=='ang_saxs':
                     title_qr = 'Angle= %.2f'%( qz_center[qr_ind]) + r'$^\circ$' 
-                    filename = 'Angle= %.2f'%( qz_center[qr_ind])
+                    filename = 'Angle= %.2f'%( qz_center[qr_ind])                    
                 elif geometry=='gi_saxs':
                     title_qr = 'Qz= %.2f'%( qz_center[qr_ind]) + r'$\AA^{-1}$' 
-                    filename = 'Qz= %.2f'%( qz_center[qr_ind])
+                    filename = 'Qz= %.2f'%( qz_center[qr_ind])                    
                 else:
                     title_qr = ''
                     filename=''
@@ -1947,8 +1951,12 @@ def plot_g2( g2, res_pargs, tau_2=None, g2_2=None, fit_res=None,  geometry='saxs
                 else:
                     title_qr=''
                     filename=''
-
-            plt.title('uid= %s:--->'%uid + title_qr,fontsize=20, y =1.06) 
+                    
+            filename =''
+            uid_ = uid[:5]
+            til = 'uid= %s:--->'%uid_ + title_qr
+            
+            plt.title( til,fontsize=20, y =1.06) 
             #print (qz_ind,title_qz)
             #if num_qr!=1:plt.axis('off')
             if sec_var!=1:            
@@ -1977,7 +1985,7 @@ def plot_g2( g2, res_pargs, tau_2=None, g2_2=None, fit_res=None,  geometry='saxs
                     else:
                         title_qz = ''                        
 
-                title = title_qz
+                title = title_qz                
                 ax.set_title( title , y =1.1, fontsize=12) 
                 
                 y=g2[:, i]
@@ -2051,6 +2059,9 @@ def plot_g2( g2, res_pargs, tau_2=None, g2_2=None, fit_res=None,  geometry='saxs
                 
         file_name =   'uid=%s--g2-%s'%(uid, filename)
         fp = path + file_name  + '-.png'
+        if append_name is not None:
+            fp = path + file_name  + append_name +'-.png'
+         
         plt.savefig( fp, dpi=fig.dpi)        
         fig.set_tight_layout(True)        
     if return_fig:
@@ -3241,6 +3252,23 @@ def fit_saxs_g2( g2, res_pargs=None, function='simple_exponential',
 
 
 
+def save_g2_fit_para_tocsv( fit_res, filename, path):
+    '''save g2 fitted parameter to csv file
+    '''
+    col = list( fit_res[0].best_values.keys() )
+    m,n = len( fit_res ), len( col )
+    data = np.zeros( [m,n] )
+    for i in range( m ):
+        data[i] = list( fit_res[i].best_values.values() )
+    df = DataFrame( data ) 
+    df.columns = col    
+    filename1 = os.path.join(path, filename + '.csv')
+    df.to_csv(filename1)
+    print( "The g2 fitting parameters are saved in %s"%filename1)
+    return df
+    
+    
+
 def power_func(x, D0, power=2):
     return D0 * x**power
 
@@ -3472,6 +3500,225 @@ def plot_gamma():
     
 
 
+def multi_uids_saxs_flow_xpcs_analysis(   uids, md, run_num=1, sub_num=None, good_start=10, good_end= None,
+                                  force_compress=False, fit_vibration = True,
+                                  fit = True, compress=True, para_run=False  ):
+    
+    
+    ''''Aug 16, 2016, YG@CHX-NSLS2
+    Do SAXS-XPCS analysis for multi uid data
+    uids: a list of uids to be analyzed    
+    md: metadata, should at least include
+        mask: array, mask data
+        data_dir: the path to save data, the result will be saved in data_dir/uid/...
+        dpix:
+        Ldet:
+        lambda:
+        timeperframe:
+        center
+    run_num: the run number
+    sub_num: the number in each sub-run
+    fit: if fit, do fit for g2 and show/save all fit plots
+    compress: apply a compress algorithm
+    
+    Save g2/metadata/g2-fit plot/g2 q-rate plot/ of each uid in data_dir/uid/...
+    return:
+    g2s: a dictionary, {run_num: sub_num: g2_of_each_uid}   
+    taus,
+    use_uids: return the valid uids
+    '''
+    
+    
+    g2s = {} # g2s[run_number][sub_seq]  =  g2 of each uid
+    lag_steps = [0]    
+    useful_uids = {}
+    if sub_num is None:
+        sub_num = len( uids )//run_num    
+
+    mask = md['mask']    
+    data_dir = md['data_dir']
+    #ring_mask = md['ring_mask']
+    #q_ring_center = md['q_ring_center']
+    
+    seg_mask_v = md['seg_mask_v']
+    seg_mask_p = md['seg_mask_p']
+    rcen_p, acen_p = md['rcen_p'], md['acen_v']
+    rcen_v, acen_v = md['rcen_p'], md['acen_v']
+    
+    lag_steps =[0]
+    
+    for run_seq in range(run_num):
+        g2s[ run_seq + 1] = {}    
+        useful_uids[ run_seq + 1] = {}  
+        i=0    
+        for sub_seq in range(  0, sub_num   ):   
+            #good_end=good_end
+            
+            uid = uids[ sub_seq + run_seq * sub_num  ]        
+            print( 'The %i--th uid to be analyzed is : %s'%(i, uid) )
+            try:
+                detector = get_detector( db[uid ] )
+                imgs = load_data( uid, detector, reverse= True   )  
+            except:
+                print( 'The %i--th uid: %s can not load data'%(i, uid) )
+                imgs=0
+
+            data_dir_ = os.path.join( data_dir, '%s/'%uid)
+            os.makedirs(data_dir_, exist_ok=True)
+
+            i +=1            
+            if imgs !=0:            
+                imgsa = apply_mask( imgs, mask )
+                Nimg = len(imgs)
+                md_ = imgs.md  
+                useful_uids[ run_seq + 1][i] = uid
+                g2s[run_seq + 1][i] = {}
+                #if compress:
+                filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%uid   
+                #update code here to use new pass uid to compress, 2016, Dec 3
+                if False:
+                    mask, avg_img, imgsum, bad_frame_list = compress_eigerdata(imgs, mask, md_, filename, 
+                                force_compress= force_compress, bad_pixel_threshold= 2.4e18,nobytes=4,
+                                        para_compress=True, num_sub= 100)  
+                if True:
+                    mask, avg_img, imgsum, bad_frame_list = compress_eigerdata(uid,  mask, md_, filename, 
+                                force_compress= False, bad_pixel_threshold= 2.4e18, nobytes=4,
+                                        para_compress= True, num_sub= 100, dtypes='uid', reverse=True  ) 
+
+                try:
+                    md['Measurement']= db[uid]['start']['Measurement']
+                    #md['sample']=db[uid]['start']['sample']     
+                    #md['sample']= 'PS205000-PMMA-207000-SMMA3'
+                    print( md['Measurement'] )
+
+                except:
+                    md['Measurement']= 'Measurement'
+                    md['sample']='sample'                    
+
+                dpix = md['x_pixel_size'] * 1000.  #in mm, eiger 4m is 0.075 mm
+                lambda_ =md['incident_wavelength']    # wavelegth of the X-rays in Angstroms
+                Ldet = md['detector_distance'] * 1000      # detector to sample distance (mm)
+                exposuretime= md['count_time']
+                acquisition_period = md['frame_time']
+                timeperframe = acquisition_period#for g2
+                #timeperframe = exposuretime#for visiblitly
+                #timeperframe = 2  ## manual overwrite!!!! we apparently writing the wrong metadata....
+                center= md['center']
+
+                setup_pargs=dict(uid=uid, dpix= dpix, Ldet=Ldet, lambda_= lambda_, 
+                            timeperframe=timeperframe, center=center, path= data_dir_)
+
+                md['avg_img'] = avg_img                  
+                #plot1D( y = imgsum[ np.array( [i for i in np.arange( len(imgsum)) if i not in bad_frame_list])],
+                #   title ='Uid= %s--imgsum'%uid, xlabel='Frame', ylabel='Total_Intensity', legend=''   )
+                min_inten = 10
+
+                #good_start = np.where( np.array(imgsum) > min_inten )[0][0]
+                good_start = good_start
+
+                if good_end is None:
+                    good_end_ = len(imgs)
+                else:
+                    good_end_= good_end
+                FD = Multifile(filename, good_start, good_end_ )                         
+
+                good_start = max(good_start, np.where( np.array(imgsum) > min_inten )[0][0] ) 
+                print ('With compression, the good_start frame number is: %s '%good_start)
+                print ('The good_end frame number is: %s '%good_end_)
+
+                norm = None
+                ###################
+
+                #Do correlaton here
+                for nconf, seg_mask in enumerate( [seg_mask_v, seg_mask_p  ]):
+                    if nconf==0:
+                        conf='v'
+                    else:
+                        conf='p'
+                        
+                    rcen = md['rcen_%s'%conf]
+                    acen = md['acen_%s'%conf]
+                        
+                    if not para_run:                         
+                        g2, lag_stepsv  =cal_g2( FD,  seg_mask, bad_frame_list,good_start, num_buf = 8, 
+                                                 ) 
+                    else:
+                        g2, lag_stepsv  =cal_g2p( FD,  seg_mask, bad_frame_list,good_start, num_buf = 8, 
+                                                imgsum= None, norm=norm )   
+
+                    if len( lag_steps) < len(lag_stepsv):
+                        lag_steps = lag_stepsv  
+                    taus = lag_steps * timeperframe
+                    res_pargs = dict(taus=taus, q_ring_center=np.unique(rcen), 
+                                     ang_center= np.unique(acen),  path= data_dir_, uid=uid +'_1a_mq%s'%conf       )
+                    save_g2( g2, taus=taus, qr=rcen, qz=acen, uid=uid +'_1a_mq%s'%conf, path= data_dir_ ) 
+                    
+                    if nconf==0:
+                        g2s[run_seq + 1][i]['v'] = g2  #perpendular
+                    else:
+                        g2s[run_seq + 1][i]['p'] = g2  #parallel
+                    
+                    if fit:
+                        if False:
+                            g2_fit_result, taus_fit, g2_fit = get_g2_fit( g2,  res_pargs=res_pargs, 
+                                    function = 'stretched_vibration',  vlim=[0.95, 1.05], 
+                                    fit_variables={'baseline':True, 'beta':True, 'alpha':False,'relaxation_rate':True,
+                                      'freq':fit_vibration, 'amp':True},
+                                   fit_range= None,                                
+                                    guess_values={'baseline':1.0,'beta':0.05,'alpha':1.0,'relaxation_rate':0.01,
+                                     'freq': 60, 'amp':.1})
+                            
+                        if nconf==0:#for vertical
+                            function = 'stretched'                            
+                            g2_fit_result, taus_fit, g2_fit = get_g2_fit( g2,  res_pargs=res_pargs, 
+                                    function = function,  vlim=[0.95, 1.05], 
+                                    fit_variables={'baseline':True, 'beta':True, 'alpha':False,'relaxation_rate':True,
+                                       },
+                                   fit_range= None,                                
+                                    guess_values={'baseline':1.0,'beta':0.05,'alpha':1.0,'relaxation_rate':0.01,
+                                     })
+                        else:
+                            function =  'flow_para'
+                            g2_fit_result, taus_fit, g2_fit = get_g2_fit( g2,  res_pargs=res_pargs, 
+                                function = function,  vlim=[0.99, 1.05], fit_range= None,
+                                fit_variables={'baseline':True, 'beta':True, 'alpha':False,'relaxation_rate':True,
+                                      'flow_velocity':True,  },
+                                    guess_values={'baseline':1.0,'beta':0.05,'alpha':1.0,'relaxation_rate':0.01,
+                             'flow_velocity':1, } )                       
+
+                        
+                        save_g2( g2_fit, taus=taus_fit,qr=rcen, qz=acen, 
+                                uid=uid +'_1a_mq%s'%conf+'_fit', path= data_dir_ )
+
+                        res_pargs_fit = dict(taus=taus, q_ring_center= np.unique(rcen), 
+                                    ang_center= [acen[0]],  path=data_dir_, uid=uid +'_1a_mq%s'%conf+'_fit'       )
+
+                        plot_g2( g2, res_pargs= res_pargs, tau_2 = taus_fit, g2_2 = g2_fit,  
+                                        fit_res= g2_fit_result, function = function,     
+                                        master_plot = 'qz',vlim=[0.95, 1.05],
+                                        geometry='ang_saxs', append_name= conf +'_fit'  )
+
+                        dfv = save_g2_fit_para_tocsv(g2_fit_result, 
+                                                filename= uid +'_1a_mq'+conf+'_fit_para', path=data_dir_ ) 
+ 
+                        fit_q_rate(  np.unique(rcen)[:],dfv['relaxation_rate'], power_variable= False, 
+                                   uid=uid +'_'+conf+'_fit_rate', path= data_dir_ )
+
+                        #psave_obj( fit_result, data_dir_ + 'uid=%s-g2-fit-para'%uid )                      
+                    psave_obj(  md, data_dir_ + 'uid=%s-md'%uid ) #save the setup parameters                
+                
+                FD=0
+                avg_img, imgsum, bad_frame_list = [0,0,0]
+                md['avg_img']=0
+                imgs=0 
+                print ('*'*40)
+                print()
+                
+     
+    taus = taus 
+    return g2s, taus, useful_uids
+
+
 
 def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, good_start=10, good_end= None,
                                   force_compress=False,
@@ -3537,10 +3784,17 @@ def multi_uids_saxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None, good_sta
                 md_ = imgs.md  
                 useful_uids[ run_seq + 1][i] = uid
                 if compress:
-                    filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%uid                     
-                    mask, avg_img, imgsum, bad_frame_list = compress_eigerdata(imgs, mask, md_, filename, 
-                                    force_compress= force_compress, bad_pixel_threshold= 5e9,nobytes=4,
-                                            para_compress=True, num_sub= 100)                     
+                    filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%uid   
+                    #update code here to use new pass uid to compress, 2016, Dec 3
+                    if False:
+                        mask, avg_img, imgsum, bad_frame_list = compress_eigerdata(imgs, mask, md_, filename, 
+                                    force_compress= force_compress, bad_pixel_threshold= 2.4e18,nobytes=4,
+                                            para_compress=True, num_sub= 100)  
+                    if True:
+                        mask, avg_img, imgsum, bad_frame_list = compress_eigerdata(uid,  mask, md_, filename, 
+                                    force_compress= True, bad_pixel_threshold= 2.4e18, nobytes=4,
+                                            para_compress= True, num_sub= 100, dtypes='uid', reverse=True  ) 
+                    
                     try:
                         md['Measurement']= db[uid]['start']['Measurement']
                         #md['sample']=db[uid]['start']['sample']     
