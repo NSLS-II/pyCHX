@@ -16,7 +16,8 @@ def update_olog_id( logid, text, attachments):
     update_olog_id( logid=29327, text='add_test_atch', attachmenents= atch )    
     
     '''
-    olog_client=SimpleOlogClient(  url='https://logbook.nsls2.bnl.gov/Olog-11-ID/Olog', 
+    url='https://logbook.nsls2.bnl.gov/Olog-11-ID/Olog'
+    olog_client=SimpleOlogClient(  url= url, 
                                     username= 'xf11id', password= '***REMOVED***'   )
     
     client = OlogClient( url='https://logbook.nsls2.bnl.gov/Olog-11-ID/Olog', 
@@ -26,7 +27,8 @@ def update_olog_id( logid, text, attachments):
     upd = LogEntry( text= old_text + '\n'+text,   attachments=  attachments,
                       logbooks= [Logbook( name = 'Operations', owner=None, active=True)]
                   )  
-    upL = client.updateLog( logid, upd )
+    upL = client.updateLog( logid, upd )    
+    print( 'The url=%s was successfully updated with %s and with the attachments'%(url, text))
     
 def update_olog_uid( uid, text, attachments):  
     '''Update olog book  logid entry cotaining uid string with text and attachments files
