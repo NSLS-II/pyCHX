@@ -72,8 +72,6 @@ markers_copy = itertools.cycle( ["o", "2", "p", "1", "s", "*", "4",  "+", "8", "
 
 RUN_GUI = False  #if True for gui setup; else for notebook; the main code difference is the Figure() or plt.figure(figsize=(8, 6))
 
- 
-
 markers =  ['o',   'H', 'D', 'v',  '^', '<',  '>', 'p',
                 's',  'h',   '*', 'd', 
             '$I$','$L$', '$O$','$V$','$E$', 
@@ -81,7 +79,6 @@ markers =  ['o',   'H', 'D', 'v',  '^', '<',  '>', 'p',
             '8', '1', '3', '2', '4',     '+',   'x',  '_',   '|', ',',  '1',]
 
 markers = np.array(   markers *100 )
-
 colors = np.array( ['darkorange', 'mediumturquoise', 'seashell', 'mediumaquamarine', 'darkblue', 
            'yellowgreen',  'mintcream', 'royalblue', 'springgreen', 'slategray',
            'yellow', 'slateblue', 'darkslateblue', 'papayawhip', 'bisque', 'firebrick', 
@@ -110,9 +107,7 @@ colors = np.array( ['darkorange', 'mediumturquoise', 'seashell', 'mediumaquamari
                  'purple',   'olive', 'gold','powderblue',  'peachpuff','violet', 'lime',  'greenyellow', 'tan',    'skyblue',
                     'magenta',   'black', 'brown',   'green', 'cyan', 'red','blue'] *100 )
 
-
 colors = colors[::-1]
-
 
 colors_ = itertools.cycle(   colors  )
 #colors_ = itertools.cycle(sorted_colors_ )
