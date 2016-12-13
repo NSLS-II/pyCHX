@@ -32,12 +32,24 @@ def map_async(pool, fun, args ):
  
     
     
-def compress_eigerdata( images, mask, md, filename,  force_compress=False, 
+def compress_eigerdata( images, mask, md, filename=None,  force_compress=False, 
                         bad_pixel_threshold=1e15, bad_pixel_low_threshold=0, 
-                       hot_pixel_threshold=2**30, nobytes=4,bins=1, 
-                       para_compress= False, num_sub=100, dtypes='images',reverse =True ):   
+                       hot_pixel_threshold=2**30, nobytes=4,bins=1, bad_frame_list=None,
+                       para_compress= False, num_sub=100, dtypes='uid',reverse =True ):   
     
+    end= len(images)//bins
     
+    if filename is None:
+        filename=  '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%md['uid']
+        
+    if dtypes!= 'uid':
+        para_compress= False  
+    else:
+        images='foo'
+        para_compress=  True
+    
+    #print( dtypes )
+        
     if force_compress:
         print ("Create a new compress file with filename as :%s."%filename)
         if para_compress:
@@ -66,23 +78,16 @@ def compress_eigerdata( images, mask, md, filename,  force_compress=False,
                       bad_pixel_low_threshold=bad_pixel_low_threshold,    nobytes= nobytes, bins=bins  )  
         else:      
             print ("Using already created compressed file with filename as :%s."%filename)
-            beg=0
-            
-            if dtypes=='uid':
-                uid=images
-                detector = get_detector( db[uid ] )
-                images = load_data( uid, detector, reverse= reverse    )                
-                
-            end= len(images)//bins
+            beg=0            
             return read_compressed_eigerdata( mask, filename, beg, end, 
                             bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
-                       bad_pixel_low_threshold=bad_pixel_low_threshold     )  
+                       bad_pixel_low_threshold=bad_pixel_low_threshold ,bad_frame_list=bad_frame_list    )  
 
 
         
 def read_compressed_eigerdata( mask, filename, beg, end,
                               bad_pixel_threshold=1e15, hot_pixel_threshold=2**30,
-                             bad_pixel_low_threshold=0):   
+                             bad_pixel_low_threshold=0,bad_frame_list=None):   
     '''
         Read already compress eiger data           
         Return 
@@ -94,16 +99,18 @@ def read_compressed_eigerdata( mask, filename, beg, end,
     ''' 
     FD = Multifile( filename, beg, end)    
     imgsum  =  np.zeros(   FD.end- FD.beg, dtype= np.float  )     
-    avg_img = np.zeros(  [FD.md['ncols'], FD.md['nrows'] ] , dtype= np.float )
+    avg_img = np.zeros(  [FD.md['ncols'], FD.md['nrows'] ] , dtype= np.float )    
     
-    avg_img = get_avg_imgc( FD,  beg=None,end=None,sampling = 1, plot_ = False ) 
     
-    imgsum, bad_frame_list = get_each_frame_intensityc( FD, sampling = 1, 
+    imgsum, bad_frame_list_ = get_each_frame_intensityc( FD, sampling = 1, 
             bad_pixel_threshold=bad_pixel_threshold, bad_pixel_low_threshold=bad_pixel_low_threshold,
-                                    hot_pixel_threshold=hot_pixel_threshold, plot_ = False)    
+                                    hot_pixel_threshold=hot_pixel_threshold, plot_ = False,
+                                            bad_frame_list=bad_frame_list)     
+    
+    avg_img = get_avg_imgc( FD,  beg=None,end=None,sampling = 1, plot_ = False,bad_frame_list=bad_frame_list_ ) 
 
     FD.FID.close()
-    return   mask, avg_img, imgsum, bad_frame_list
+    return   mask, avg_img, imgsum, bad_frame_list_
 
 
 
@@ -111,9 +118,9 @@ def read_compressed_eigerdata( mask, filename, beg, end,
 
 def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
-                            bad_pixel_low_threshold=0, nobytes=4, bins=1, dtypes='images',reverse =True ):
+                            bad_pixel_low_threshold=0, nobytes=4, bins=1, dtypes='uid',reverse =True ):
     if dtypes=='uid':
-        uid=images
+        uid= md['uid'] #images
         detector = get_detector( db[uid ] )
         images_ = load_data( uid, detector, reverse= reverse    )
         N= len(images_)
@@ -125,16 +132,10 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
         Nf = N//num_sub  
     create_compress_header( md, filename +'-header', nobytes, bins  )    
     #print( 'done for header here')
-    results = para_segment_compress_eigerdata( images=images, mask=mask,  filename=filename, num_sub=num_sub,
-                        bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
+    results = para_segment_compress_eigerdata( images=images, mask=mask, md=md, filename=filename, num_sub=num_sub, bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
                             bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes=nobytes, bins=bins, dtypes=dtypes  )
- 
-    #print ( 'Done here')    
-    #res_ = np.array( [r.get() for r in results]     )     
     
     res_ = np.array( [ results[k].get() for k in   list(sorted(results.keys()))   ]     )     
-    
-    #res_ = np.array( [ results[k]  for k in list(sorted(results.keys())) ]     )   
     print()
     imgsum = np.zeros( N )
     bad_frame_list = np.zeros( N, dtype=bool )
@@ -142,12 +143,9 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
         mask_, avg_img_, imgsum_, bad_frame_list_ = res_[i]
         imgsum[i*num_sub: (i+1)*num_sub] = imgsum_
         bad_frame_list[i*num_sub: (i+1)*num_sub] = bad_frame_list_
-        #if len(bad_frame_list_)!=0:
-        #    bad_frame_list_ += i*num_sub
         if i==0:
             mask = mask_
-            avg_img = avg_img_
-            #bad_frame_list = list( bad_frame_list_ )             
+            avg_img = avg_img_                    
         else:
             mask *= mask_        
             avg_img += avg_img_        
@@ -156,6 +154,7 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
     bad_frame_list = np.where(  bad_frame_list )[0]    
     avg_img /= Nf
     
+    #print( Nf )
     #if len( bad_frame_list)!=0:
     #    bad_frame_list = np.concatenate(  bad_frame_list )    
     
@@ -196,14 +195,9 @@ def  combine_binary_files(filename, old_files, del_old = False):
             os.remove( ftemp )
     fn_.close()
 
-
-
-
-#def para_segment_compress_eigerdata( images, mask,  filename, num_sub=100,
-#                        bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
-#                            bad_pixel_low_threshold=0, nobytes=4, bins=1  ): 
+ 
     
-def para_segment_compress_eigerdata( images, mask,  filename, num_sub=100,
+def para_segment_compress_eigerdata( images, mask,  md, filename, num_sub=100,
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
                             bad_pixel_low_threshold=0, nobytes=4, bins=1,  dtypes='images',reverse =True  ):    
     '''
@@ -211,12 +205,10 @@ def para_segment_compress_eigerdata( images, mask,  filename, num_sub=100,
     ''' 
     
     if dtypes=='uid':
-        uid=images
+        uid=  md['uid'] #images
         detector = get_detector( db[uid ] )
         images_ = load_data( uid, detector, reverse= reverse    )
         N = len(images_)
-    #ev, = get_events(db[uid ], [detector], fill=True  ) 
-    #imgs = ev['data'][detector]
     else:
         N = len(images)
     if N%num_sub:
@@ -228,114 +220,23 @@ def para_segment_compress_eigerdata( images, mask,  filename, num_sub=100,
     print( 'It will create %i temporary files for parallel compression.'%Nf)
     inputs= range( Nf )      
     fns = [  filename + '_temp-%i.tmp'%i for i in inputs] 
-    
-    if True:   #this is a good one 
-        #print( 'here')
-        pool =  Pool(processes= len(inputs) )  
-        result = {}        
-        for i in  inputs:
-        #for i in  tqdm (inputs ):
-            #print( i )
-            result[i] =   pool.apply_async(  segment_compress_eigerdata, [
-                    images,  mask,  fns[i],bad_pixel_threshold, hot_pixel_threshold, 
-                             bad_pixel_low_threshold, nobytes, bins, 
-                            i*num_sub, (i+1)*num_sub, dtypes, reverse  ]  )   
-        pool.close()
-        pool.join()   
-        return result 
-    
-    
-    #pool =  Pool(processes= len(inputs) )  
-    
-    #results = [ apply_async( pool, segment_compress_eigerdata, (
-    #            images[i*num_sub: (i+1)*num_sub], mask,  fns[i],bad_pixel_threshold, hot_pixel_threshold, 
-    #                    bad_pixel_low_threshold, nobytes, bins 
-    #                         ) ) for i in tqdm( inputs )  ] 
-    
-    
-    
-    if  False: #not work very well   
-        #pool =  Pool(processes= len(inputs) )  
-        tasks =  [ (images[i*num_sub: (i+1)*num_sub], mask,  fns[i],bad_pixel_threshold, hot_pixel_threshold, 
-                             bad_pixel_low_threshold, nobytes, bins ) for i in tqdm(inputs)]
-        #result = {}     
-        with closing(  Pool(processes= len(inputs) )  ) as pool:
-            results   = pool.map_async( pool, segment_compress_eigerdata, tasks )
-            #pool.close()
-            #pool.join() 
-        return results 
 
+    pool =  Pool(processes= len(inputs) )  
+    result = {}        
+    for i in  inputs:
+    #for i in  tqdm (inputs ):
+        #print( i )
+        result[i] =   pool.apply_async(  segment_compress_eigerdata, [
+                images,  mask,  md, fns[i],bad_pixel_threshold, hot_pixel_threshold, 
+                         bad_pixel_low_threshold, nobytes, bins, 
+                        i*num_sub, (i+1)*num_sub, dtypes, reverse  ]  )   
+    pool.close()
+    pool.join()   
+    return result 
     
-    if False:   #this is a good one 
-        #print( 'here')
-        pool =  Pool(processes= len(inputs) )  
-        result = {}        
-        for i in tqdm( inputs ):
-            result[i] = ( pool.apply_async(  segment_compress_eigerdata, [
-                    images[i*num_sub: (i+1)*num_sub], mask,  fns[i],bad_pixel_threshold, hot_pixel_threshold, 
-                             bad_pixel_low_threshold, nobytes, bins, dtypes, reverse ]  )  ).get()
-        pool.close()
-        pool.join()   
-        return result      
-    if False:   #this is a good one 
-        #print( 'here')
-        pool =  Pool(processes= len(inputs) )  
-        result = {}        
-        for i in  inputs:
-        #for i in  tqdm (inputs ):
-            #print( i )
-            result[i] =   pool.apply_async(  segment_compress_eigerdata, [
-                    images[i*num_sub: (i+1)*num_sub], mask,  fns[i],bad_pixel_threshold, hot_pixel_threshold, 
-                             bad_pixel_low_threshold, nobytes, bins ]  )   
-        pool.close()
-        pool.join()   
-        return result 
-    
-    
-    if False:    
-        pool =  Pool(processes= len(inputs) )  
-        result = {}    
-        
-        ready_list = []
-        def dummy_func(index, ready_list):
-            #global ready_list
-            ready_list.append(index)
-            
-        #for i in tqdm( inputs ):
-        for i in  inputs:    
-            result[i] = (  
-                apply_async( pool, segment_compress_eigerdata, (
-                    images[i*num_sub: (i+1)*num_sub], mask,  fns[i],bad_pixel_threshold, hot_pixel_threshold, 
-                             bad_pixel_low_threshold, nobytes, bins 
-                                 ),   
-                           callback= dummy_func )  )             
-        
-            for ready in ready_list:
-                result[ready].wait()
-                del result[ready]
-            ready_list = []
-            
-        # clean up
-        pool.close()
-        pool.join()   
-        return result
-    
-    if False:
-        with closing(  Pool(processes= len(inputs) )  ) as pool:
-            results =  [apply_async( pool, segment_compress_eigerdata, (
-                images[i*num_sub: (i+1)*num_sub], mask,  fns[i],bad_pixel_threshold, hot_pixel_threshold, 
-                        bad_pixel_low_threshold, nobytes, bins 
-                             )) for i in     tqdm( inputs )    ]    
-    
-    
-        return results
 
-  
-#def segment_compress_eigerdata( images,  mask,  filename, 
-#                        bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
-#                            bad_pixel_low_threshold=0, nobytes=4, bins=1  ):     
 
-def segment_compress_eigerdata( images,  mask,  filename, 
+def segment_compress_eigerdata( images,  mask, md, filename, 
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
                             bad_pixel_low_threshold=0, nobytes=4, bins=1, 
                                N1=None, N2=None, dtypes='images',reverse =True    ):     
@@ -344,7 +245,7 @@ def segment_compress_eigerdata( images,  mask,  filename,
     '''     
     
     if dtypes=='uid':
-        uid=images
+        uid= md['uid'] #images
         detector = get_detector( db[uid ] )
         images = load_data( uid, detector, reverse= reverse    )[N1:N2]
     
@@ -783,7 +684,8 @@ class Multifile_Bins( object  ):
     
 
 
-def get_avg_imgc( FD,  beg=None,end=None,sampling = 100, plot_ = False, show_progress=True, *argv,**kwargs):   
+def get_avg_imgc( FD,  beg=None,end=None,sampling = 100, plot_ = False, bad_frame_list=None,
+                 show_progress=True, *argv,**kwargs):   
     '''Get average imagef from a data_series by every sampling number to save time'''
     #avg_img = np.average(data_series[:: sampling], axis=0)
     
@@ -793,22 +695,40 @@ def get_avg_imgc( FD,  beg=None,end=None,sampling = 100, plot_ = False, show_pro
         end = FD.end
         
     avg_img = FD.rdframe(beg)
-    n=1    
+    n=1        
+  
+    flag=True
     if show_progress:        
-        #print(  sampling-1 + beg , end, sampling )        
-        for  i in tqdm(range( sampling-1 + beg , end, sampling  ), desc= 'Averaging images' ):  
-            (p,v) = FD.rdrawframe(i)
-            if len(p)>0:
-                np.ravel(avg_img )[p] +=   v
-                n += 1  
+        #print(  sampling-1 + beg , end, sampling )    
+        if bad_frame_list is None:
+            bad_frame_list =[]
+        fra_num = int( (end - sampling-1 + beg )/sampling ) - len( bad_frame_list )            
+        for  i in tqdm(range( sampling-1 + beg , end, sampling  ), desc= 'Averaging %s images'% fra_num):  
+            if bad_frame_list is not None:
+                if i in bad_frame_list:
+                    flag= False
+                else:
+                    flag=True                  
+            #print(i, flag)
+            if flag:
+                (p,v) = FD.rdrawframe(i)   
+                if len(p)>0:
+                    np.ravel(avg_img )[p] +=   v
+                    n += 1  
     else:
         for  i in range( sampling-1 + beg , end, sampling  ):  
-            (p,v) = FD.rdrawframe(i)
-            if len(p)>0:
-                np.ravel(avg_img )[p] +=   v
-                n += 1          
+            if bad_frame_list is not None:
+                if i in bad_frame_list:
+                    flag= False
+                else:
+                    flag=True 
+            if flag:
+                (p,v) = FD.rdrawframe(i)
+                if len(p)>0:
+                    np.ravel(avg_img )[p] +=   v
+                    n += 1          
             
-    avg_img /= n     
+    avg_img /= n  
     if plot_:
         if RUN_GUI:
             fig = Figure()
@@ -917,7 +837,7 @@ def mean_intensityc(FD, labeled_array,  sampling=1, index=None):
 def get_each_frame_intensityc( FD, sampling = 1, 
                              bad_pixel_threshold=1e10, bad_pixel_low_threshold=0, 
                               hot_pixel_threshold=2**30,                             
-                             plot_ = False,  *argv,**kwargs):   
+                             plot_ = False, bad_frame_list=None, *argv,**kwargs):   
     '''Get the total intensity of each frame by sampling every N frames
        Also get bad_frame_list by check whether above  bad_pixel_threshold  
        
@@ -960,11 +880,12 @@ def get_each_frame_intensityc( FD, sampling = 1,
         
         plt.show()
        
-    bad_frame_list = np.where(   ( np.array(imgsum) > bad_pixel_threshold ) | ( np.array(imgsum) <= bad_pixel_low_threshold)  )[0] +  FD.beg  
+    bad_frame_list_ = np.where(   ( np.array(imgsum) > bad_pixel_threshold ) | ( np.array(imgsum) <= bad_pixel_low_threshold)  )[0] +  FD.beg  
     
-    #|  (np.array(imgsum)==0) )[0] +  FD.beg  
-    
-    #print (  np.array(imgsum), bad_pixel_threshold,  bad_pixel_low_threshold)
+    if  bad_frame_list is not None:    
+        bad_frame_list = np.unique(   np.concatenate([bad_frame_list, bad_frame_list_]) )
+    else:
+        bad_frame_list = bad_frame_list_  
     
     if len(bad_frame_list):
         print ('Bad frame list length is: %s' %len(bad_frame_list))
