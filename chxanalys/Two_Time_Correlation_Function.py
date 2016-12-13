@@ -899,7 +899,7 @@ def masked_g12( g12, badframes_list):
 
 
 
-def show_C12(C12, q_ind=0, return_fig=False, *argv,**kwargs):  
+def show_C12(C12,  q_ind=0, return_fig=False, *argv,**kwargs):  
  
     '''
     plot one-q of two-time correlation function
@@ -920,6 +920,12 @@ def show_C12(C12, q_ind=0, return_fig=False, *argv,**kwargs):
   
     #strs =  [ 'timeperframe', 'N1', 'N2', 'vmin', 'vmax', 'title'] 
     
+    if 'uid' in kwargs:
+        uid=kwargs['uid']
+    else:
+        uid='uid'
+        
+        
     shape = C12.shape
     if isinstance(q_ind, int):
         C12_num = q_ind
@@ -967,9 +973,9 @@ def show_C12(C12, q_ind=0, return_fig=False, *argv,**kwargs):
             extent=[0, data.shape[0]*timeperframe, 0, data.shape[0]*timeperframe ] )
     if title:
         if isinstance(q_ind, int):
-            tit = '%s-%s frames--Qth= %s'%(N1,N2,C12_num)            
+            tit = 'uid=%s-[%s-%s] frames--Qth= %s'%(uid,N1,N2,C12_num)            
         else:
-            tit =  '%s-%s frames--Qzth= %s--Qrth= %s'%(N1,N2, qz_ind, qr_ind )
+            tit =  'uid=%s-[%s-%s] frames--Qzth= %s--Qrth= %s'%(uid,N1,N2, qz_ind, qr_ind )
         ax.set_title( tit  )
     else:
         tit=''
@@ -984,10 +990,7 @@ def show_C12(C12, q_ind=0, return_fig=False, *argv,**kwargs):
     if 'save' in kwargs:
         save=kwargs['save']
     
-    if 'uid' in kwargs:
-        uid=kwargs['uid']
-    else:
-        uid='uid'
+
         
     if save:
         dt =datetime.now()
