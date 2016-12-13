@@ -530,6 +530,9 @@ def cal_g2p2( FD, ring_mask, bad_frame_list=None,
 def auto_two_Arrayp(  data_pixel, rois, index=None):
     
     ''' 
+    TODO list
+    will try to use dask
+    
     Dec 16, 2015, Y.G.@CHX
     a numpy operation method to get two-time correlation function using parallel computation
     
@@ -568,17 +571,32 @@ def auto_two_Arrayp(  data_pixel, rois, index=None):
     
 
     inputs = range( len(qlist) ) 
-    pool =  Pool(processes= len(inputs) )    
+    
     
     data_pixel_qis = [0]* len(qlist)
     for i in inputs:         
         pixelist_qi =  np.where( qind ==  qlist[i] )[0] 
         data_pixel_qis[i] =    data_pixel[:,pixelist_qi]    
     
+    #pool =  Pool(processes= len(inputs) )  
+    #results = [ apply_async( pool, _get_two_time_for_one_q, ( qlist[i], 
+    #                                    data_pixel_qis[i], nopr, noframes ) ) for i in tqdm( inputs )  ]        
+    #res = [r.get() for r in results]    
     
-    results = [ apply_async( pool, _get_two_time_for_one_q, ( qlist[i], 
-                                        data_pixel_qis[i], nopr, noframes ) ) for i in tqdm( inputs )  ]        
-    res = [r.get() for r in results]    
+    
+    
+    pool =  Pool(processes= len(inputs) )  
+    results = {}        
+    for i in  inputs:        
+        results[i] =   pool.apply_async(  _get_two_time_for_one_q, [
+                            qlist[i], data_pixel_qis[i], nopr, noframes
+                               ]  )  
+    pool.close()
+    pool.join()     
+    res = np.array( [ results[k].get() for k in   list(sorted(results.keys()))   ]     )   
+    
+    #print('here')
+    
     for i in inputs:
         qi=qlist[i]
         g12b[:,:,qi -1 ] = res[i]        
@@ -587,6 +605,9 @@ def auto_two_Arrayp(  data_pixel, rois, index=None):
 
 
 def _get_two_time_for_one_q( qi, data_pixel_qi, nopr, noframes   ):
+    
+    #print( data_pixel_qi.shape)
+    
     sum1 = (np.average( data_pixel_qi, axis=1)).reshape( 1, noframes   )  
     sum2 = sum1.T 
     two_time_qi = np.dot(   data_pixel_qi, data_pixel_qi.T)  /sum1  / sum2  / nopr[qi -1]
