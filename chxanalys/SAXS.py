@@ -11,7 +11,7 @@ This module is for the static SAXS analysis, such as fit form factor
 #import matplotlib.pyplot as plt
 #from matplotlib.colors import LogNorm
 from chxanalys.chx_libs import *
-
+from chxanalys.chx_generic_functions import show_img
 
 def mono_sphere_form_factor_intensity( x, radius, delta_rho=100):
     '''
@@ -382,8 +382,47 @@ def fit_form_factor( q, iq,  guess_values, fit_range=None, fit_variables = None,
     return result
                 
 
-
-
+    
+    
+def show_saxs_qmap( img, pargs, width=200,vmin=.1, vmax=300, logs=True,image_name='', 
+                   save=False, show_pixel=False):
+    '''
+    Show a SAXS q-map by giving 
+    Parameter:
+        image: the frame
+        setup pargs, a dictionary, including
+            dpix    #in mm, eiger 4m is 0.075 mm
+            lambda_     # wavelegth of the X-rays in Angstroms
+            Ldet     # detector to sample distance (mm)
+            path  where to save data
+            center: beam center in pixel
+        width: the showed area centered at center
+    Return:
+        None 
+    '''
+    
+    Ldet = pargs['Ldet']
+    dpix = pargs['dpix']
+    lambda_ =  pargs['lambda_']    
+    center = pargs['center']
+    path= pargs['path']
+    
+    
+    w= width
+  
+    if not show_pixel:
+        two_theta = utils.radius_to_twotheta(Ldet, [w * dpix])
+        qext  = utils.twotheta_to_q(two_theta, lambda_)[0] 
+        show_img( 1e-15+ img[center[0]-w:center[0]+w, center[1]-w:center[1]+w], 
+        xlabel=r"$q_x$" +  '('+r'$\AA^{-1}$'+')', 
+         ylabel= r"$q_y$" +  '('+r'$\AA^{-1}$'+')', extent=[-qext,qext,-qext,qext],
+            vmin=vmin, vmax=vmax, logs= logs, image_name= image_name, save= save, path=path) 
+    else:        
+        #qext = w
+        show_img( 1e-15+ img[center[0]-w:center[0]+w, center[1]-w:center[1]+w], 
+        xlabel= 'pixel',  ylabel= 'pixel', 
+            vmin=vmin, vmax=vmax, logs= logs, image_name= image_name, save= save, path=path)     
+    
 
 
 def exm_plot():
