@@ -1,6 +1,147 @@
 from chxanalys.chx_libs import *
 #from tqdm import *
 
+def ployfit( y, x=None, order = 20 ):
+    '''
+    fit data (one-d array) by a ploynominal function
+    return the fitted one-d array
+    '''
+    if x is None:
+        x = range(len(y))
+    pol = np.polyfit(x, y, order)
+    return np.polyval(pol, x)
+    
+
+
+def get_bad_frame_list( imgsum, fit=True, polyfit_order = 30,legend_size = 12,
+                       plot=True, scale=1.0 ):
+    '''
+    imgsum: the sum intensity of a time series
+    scale: the scale of deviation
+    '''
+        
+    if fit:
+        pfit = ployfit( imgsum, order = polyfit_order)
+        data = imgsum - pfit
+        if plot:
+            fig = plt.figure( )
+            
+            ax = fig.add_subplot(2,1,1 )             
+            plot1D( imgsum, ax = ax,legend='data',legend_size=legend_size  )
+            plot1D( pfit,ax=ax, legend='ploy-fit', title='imgsum',legend_size=legend_size  )
+            
+            ax2 = fig.add_subplot(2,1,2 )      
+            plot1D( data, ax = ax2,legend='difference' )
+            ymin = data.mean()-scale *data.std()
+            ymax =  data.mean()+scale *data.std()
+            plot1D(x=[0,len(imgsum)], y=[ymin,ymin], ax = ax2, ls='--',lw= 3, legend='low_thresh', legend_size=legend_size  )
+            plot1D(x=[0,len(imgsum)], y=[ymax,ymax], ax = ax2 , ls='--' , lw= 3, legend='high_thresh',
+                  title='imgsum_to_find_bad_frame',legend_size=legend_size  )
+            
+        
+    else:
+        data = imgsum       
+        
+    return np.where( np.abs(data -data.mean()) > scale *data.std() )[0] 
+ 
+
+def save_dict_csv( mydict, filename, mode='w'):
+    import csv
+    with open(filename, mode) as csv_file:
+        spamwriter = csv.writer(csv_file)        
+        for key, value in mydict.items():  
+            spamwriter.writerow([key, value])
+            
+            
+
+def read_dict_csv( filename ): 
+    import csv
+    with open(filename, 'r') as csv_file:
+        reader = csv.reader(csv_file)
+        mydict = dict(reader)
+    return mydict
+
+
+def find_bad_pixels( FD, bad_frame_list, uid='uid'):
+    bpx = []
+    bpy=[]
+    for n in bad_frame_list:
+        if n>= FD.beg and n<=FD.end:
+            f = FD.rdframe(n)
+            w = np.where(  f == f.max())
+            if len(w[0])==1:
+                bpx.append(   w[0][0]  )
+                bpy.append(   w[1][0]  )
+    
+    
+    return trans_data_to_pd( [bpx,bpy], label=[ uid+'_x', uid +'_y' ], dtype='list')
+
+
+
+
+
+def mask_exclude_badpixel( bp,  mask, uid ):
+    
+    for i in range( len(bp)):
+        mask[ int( bp[bp.columns[0]][i] ), int( bp[bp.columns[1]][i] )]=0 
+    return mask
+
+
+
+def print_dict( dicts, keys=None):
+    '''
+    print keys: values in a dicts
+    if keys is None: print all the keys
+    '''
+    if keys is None:
+        keys = list( dicts.keys())
+    for k in keys: 
+        try:
+            print('%s--> %s'%(k, dicts[k]) )
+        except:
+            pass
+        
+        
+def get_meta_data( uid,*argv,**kwargs ):
+    '''
+    Y.G. Dev Dec 8, 2016
+    
+    Get metadata from a uid
+    Parameters:
+        uid: the unique data acquisition id
+        kwargs: overwrite the meta data, for example 
+            get_meta_data( uid = uid, sample = 'test') --> will overwrtie the meta's sample to test
+    return:
+        meta data of the uid: a dictionay
+        with keys:
+            detector            
+            suid: the simple given uid
+            uid: full uid
+            filename: the full path of the data
+            start_time: the data acquisition starting time in a human readable manner
+        And all the input metadata
+        
+            
+    
+    '''
+    import time    
+    md ={}
+    md['detector'] = get_detector( db[uid ] )    
+    md['suid'] = uid  #short uid
+    md['filename'] = get_sid_filenames(db[uid])[2][0]    
+    ev, = get_events(db[uid], [md['detector']], fill= False) 
+    dec =  list( ev['descriptor']['configuration'].keys() )[0]
+    for k,v in ev['descriptor']['configuration'][dec]['data'].items():
+        md[k.strip(dec + '_')]= v
+    for k,v in ev['descriptor']['run_start'].items():
+        if k!= 'plan_args':
+            md[k]= v 
+    md['start_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(md['time']))    
+    md['stop_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime( ev['time']   ))  
+    md['img_shape'] = ev['descriptor']['data_keys'][md['detector']]['shape'][:2][::-1]
+    for k,v in kwargs.items():
+        md[k] =v        
+    return md
 
 
 def create_cross_mask(  image, center, wy_left=4, wy_right=4, wx_up=4, wx_down=4,
@@ -374,10 +515,10 @@ def RemoveHot( img,threshold= 1E7, plot_=True ):
 ############
 ###plot data
 
-
 def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,path=None, 
              aspect=None, logs=False,vmin=None,vmax=None,return_fig=False,cmap='viridis', 
-             show_time= False, file_name =None,
+             show_time= False, file_name =None, ylabel=None, xlabel=None, extent=None,
+             show_colorbar=True, tight=True, show_ticks=True,
              *argv,**kwargs ):    
     """a simple function to show image by using matplotlib.plt imshow
     pass *argv,**kwargs to imshow
@@ -390,7 +531,6 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
     -------
     None
     """ 
-    
     if ax is None:
         if RUN_GUI:
             fig = Figure()
@@ -399,20 +539,32 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
             fig, ax = plt.subplots()
     else:
         fig, ax=ax
-        
+
     if not logs:
-        #im=ax.imshow(img, origin='lower' ,cmap='viridis',interpolation="nearest" , vmin=vmin,vmax=vmax)
-        im=ax.imshow(image, origin='lower' ,cmap=cmap,interpolation="nearest", vmin=vmin,vmax=vmax)  #vmin=0,vmax=1,
+        im=ax.imshow(image, origin='lower' ,cmap=cmap,interpolation="nearest", vmin=vmin,vmax=vmax,
+                    extent=extent)  #vmin=0,vmax=1,
     else:
         im=ax.imshow(image, origin='lower' ,cmap=cmap,
-        interpolation="nearest" , norm=LogNorm(vmin,  vmax))          
+                interpolation="nearest" , norm=LogNorm(vmin,  vmax),extent=extent)          
         
-    fig.colorbar(im)
+    if show_colorbar:
+        fig.colorbar(im)
     ax.set_title( image_name )
     if xlim is not None:
-        ax.set_xlim(   xlim  )
+        ax.set_xlim(   xlim  )        
     if ylim is not None:
         ax.set_ylim(   ylim )
+    
+    if not show_ticks:
+        ax.set_yticks([])
+        ax.set_xticks([])
+        
+    if ylabel is not None:
+        #ax.set_ylabel(ylabel)#, fontsize = 9)
+        ax.set_ylabel(  ylabel , fontsize = 16    )
+    if xlabel is not None:
+        ax.set_xlabel(xlabel , fontsize = 16)          
+        
     if aspect is not None:
         #aspect = image.shape[1]/float( image.shape[0] )
         ax.set_aspect(aspect)
@@ -426,13 +578,18 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
         else:
             fp = path + '%s'%( image_name ) + '.png'
             
-        plt.savefig( fp, dpi=fig.dpi)        
-    #plt.show()
+        plt.savefig( fp, dpi=fig.dpi) 
+        
+    fig.set_tight_layout(tight) 
+    
     if return_fig:
         return fig
+
+ 
     
     
-def plot1D( y,x=None, ax=None,return_fig=False,*argv,**kwargs):    
+def plot1D( y,x=None, ax=None,return_fig=False, ls='-',
+           legend_size=None, lw=None, *argv,**kwargs):    
     """a simple function to plot two-column data by using matplotlib.plot
     pass *argv,**kwargs to plot
     
@@ -474,21 +631,21 @@ def plot1D( y,x=None, ax=None,return_fig=False,*argv,**kwargs):
         logxy = True
         
     if x is None:
-        ax.plot( y, marker = 'o', ls='-',label= legend)#,*argv,**kwargs)
+        ax.plot( y, marker = 'o', ls=ls, label= legend, lw=lw)#,*argv,**kwargs)
         if logx:
-            ax.semilogx( y, marker = 'o', ls='-')#,*argv,**kwargs)
+            ax.semilogx( y, marker = 'o', ls=ls, lw=lw)#,*argv,**kwargs)
         if logy:
-            ax.semilogy( y, marker = 'o', ls='-')#,*argv,**kwargs)
+            ax.semilogy( y, marker = 'o', ls=ls, lw=lw)#,*argv,**kwargs)
         if logxy:
-            ax.loglog( y, marker = 'o', ls='-')#,*argv,**kwargs)
+            ax.loglog( y, marker = 'o',ls=ls, lw=lw)#,*argv,**kwargs)
     else:
-        ax.plot(x,y, marker='o',ls='-',label= legend)#,*argv,**kwargs)        
+        ax.plot(x,y, marker='o',ls=ls,label= legend, lw=lw)#,*argv,**kwargs)        
         if logx:
-            ax.semilogx( x,y, marker = 'o', ls='-')#,*argv,**kwargs)
+            ax.semilogx( x,y, marker = 'o', ls=ls, lw=lw)#,*argv,**kwargs)
         if logy:
-            ax.semilogy( x,y, marker = 'o', ls='-')#,*argv,**kwargs)
+            ax.semilogy( x,y, marker = 'o', ls=ls, lw=lw)#,*argv,**kwargs)
         if logxy:
-            ax.loglog( x,y, marker = 'o', ls='-')#,*argv,**kwargs) 
+            ax.loglog( x,y, marker = 'o', ls=ls, lw=lw)#,*argv,**kwargs) 
     
     if 'xlim' in kwargs.keys():
          ax.set_xlim(    kwargs['xlim']  )    
@@ -505,7 +662,7 @@ def plot1D( y,x=None, ax=None,return_fig=False,*argv,**kwargs):
         title =  'plot'
     ax.set_title( title ) 
     #ax.set_xlabel("$Log(q)$"r'($\AA^{-1}$)')    
-    ax.legend(loc = 'best')  
+    ax.legend(loc = 'best', fontsize=legend_size )
     if 'save' in kwargs.keys():
         if  kwargs['save']: 
             #dt =datetime.now()
@@ -887,7 +1044,7 @@ def trans_data_to_pd(data, label=None,dtype='array'):
     Input:
         data: list or np.array
         label: the coloum label of the data
-        dtype: list or array
+        dtype: list or array [[NOT WORK or dict (for dict only save the scalar not arrays values)]]
     Output:
         a pandas.DataFrame
     '''
@@ -895,12 +1052,15 @@ def trans_data_to_pd(data, label=None,dtype='array'):
     from numpy import arange,array
     import pandas as pd,sys    
     if dtype == 'list':
-        data=array(data).T        
+        data=array(data).T    
+        N,M=data.shape
     elif dtype == 'array':
-        data=array(data)        
+        data=array(data)   
+        N,M=data.shape        
     else:
         print("Wrong data type! Now only support 'list' and 'array' tpye")        
-    N,M=data.shape    
+       
+    
     index =  arange( N )
     if label is None:label=['data%s'%i for i in range(M)]
     #print label
