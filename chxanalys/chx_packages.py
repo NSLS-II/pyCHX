@@ -4,9 +4,12 @@ from chxanalys.chx_libs import (np, roi, time, datetime, os, get_events,
 
 from chxanalys.chx_generic_functions import (get_detector, get_fields, get_sid_filenames,  
  load_data, load_mask,get_fields, reverse_updown, ring_edges,get_avg_img,check_shutter_open,
-apply_mask, show_img,check_ROI_intensity,run_time, plot1D, get_each_frame_intensity,                                             
+apply_mask, show_img,check_ROI_intensity,run_time, plot1D, get_each_frame_intensity, 
 create_hot_pixel_mask,show_ROI_on_image,create_time_slice,save_lists, 
-                    save_arrays, psave_obj,pload_obj, get_non_uniform_edges )
+                    save_arrays, psave_obj,pload_obj, get_non_uniform_edges,
+                get_meta_data,   print_dict,    save_dict_csv,  read_dict_csv,
+                  get_bad_frame_list,  find_bad_pixels,  mask_exclude_badpixel, trans_data_to_pd                        
+                                            )
 
 
 from chxanalys.XPCS_SAXS import (get_circular_average,save_lists,get_ring_mask, get_each_ring_mean_intensity,
@@ -14,7 +17,8 @@ from chxanalys.XPCS_SAXS import (get_circular_average,save_lists,get_ring_mask, 
                             create_hot_pixel_mask,get_circular_average,get_t_iq,save_saxs_g2,
                             plot_saxs_g2,fit_saxs_g2,fit_q2_rate,plot_saxs_two_g2,fit_q_rate,
                             circular_average,plot_saxs_g4, get_t_iqc,multi_uids_saxs_xpcs_analysis,
-                             save_g2)
+                             save_g2,plot_t_iqc,
+                                get_g2_fit,plot_g2,save_g2_fit_para_tocsv  )
 
 
 from chxanalys.Two_Time_Correlation_Function import (show_C12, get_one_time_from_two_time,
@@ -25,16 +29,18 @@ from chxanalys.chx_compress import (combine_binary_files,
 
 from chxanalys.chx_compress_analysis import ( compress_eigerdata, read_compressed_eigerdata,
                                          Multifile,get_avg_imgc, get_each_frame_intensityc,
-            get_each_ring_mean_intensityc, mean_intensityc,cal_waterfallc,plot_waterfallc,  
+            get_each_ring_mean_intensityc, mean_intensityc,cal_waterfallc,plot_waterfallc, 
+                    cal_each_ring_mean_intensityc,plot_each_ring_mean_intensityc
 )
 
-from chxanalys.SAXS import fit_form_factor
+from chxanalys.SAXS import fit_form_factor,show_saxs_qmap
 from chxanalys.chx_correlationc import ( cal_g2c,Get_Pixel_Arrayc,auto_two_Arrayc,get_pixelist_interp_iq,)
 from chxanalys.chx_correlationp import (cal_g2p, auto_two_Arrayp)
 
 from chxanalys.Create_Report import (create_pdf_report, 
                             create_multi_pdf_reports_for_uids,create_one_pdf_reports_for_uids)
 
+from chxanalys.chx_olog import LogEntry,Attachment, update_olog_uid, update_olog_id
 
 from chxanalys.XPCS_GiSAXS import (get_qedge,get_qmap_label,get_qr_tick_label, get_reflected_angles,
 convert_gisaxs_pixel_to_q, show_qzr_map, get_1d_qr, get_qzrmap, show_qzr_roi,get_each_box_mean_intensity,
