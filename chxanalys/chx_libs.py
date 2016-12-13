@@ -72,44 +72,52 @@ markers_copy = itertools.cycle( ["o", "2", "p", "1", "s", "*", "4",  "+", "8", "
 
 RUN_GUI = False  #if True for gui setup; else for notebook; the main code difference is the Figure() or plt.figure(figsize=(8, 6))
 
+ 
 
-markers =  {'*': 'star', '2': 'tri_up',  'o': 'circle', '_': 'hline', '.': 'point', 'd': 'thin_diamond', 
-                     '4': 'tri_right',   'x': 'x',  '+': 'plus', '<': 'triangle_left',
-                     '|': 'vline', '8': 'octagon',  's': 'square', 
-                     'p': 'pentagon', ',': 'pixel', '^': 'triangle_up', 'D': 'diamond', 
-                     'H': 'hexagon2', '3': 'tri_left', '>': 'triangle_right', 'h': 'hexagon1',
-                     'v': 'triangle_down', '1': 'tri_down'}
+markers =  ['o',   'H', 'D', 'v',  '^', '<',  '>', 'p',
+                's',  'h',   '*', 'd', 
+            '$I$','$L$', '$O$','$V$','$E$', 
+            '$c$', '$h$','$x$','$b$','$e$','$a$','$m$','$l$','$i$','$n$', '$e$',
+            '8', '1', '3', '2', '4',     '+',   'x',  '_',   '|', ',',  '1',]
 
-markers = np.array( [ i for i in markers.keys()] *10 )
+markers = np.array(   markers *100 )
+
 colors = np.array( ['darkorange', 'mediumturquoise', 'seashell', 'mediumaquamarine', 'darkblue', 
-           'yellowgreen', 'cyan', 'mintcream', 'royalblue', 'springgreen', 'slategray',
+           'yellowgreen',  'mintcream', 'royalblue', 'springgreen', 'slategray',
            'yellow', 'slateblue', 'darkslateblue', 'papayawhip', 'bisque', 'firebrick', 
-           'burlywood', 'gold', 'dodgerblue', 'dimgrey', 'chartreuse', 'deepskyblue', 'honeydew', 
-           'orchid', 'red', 'teal', 'steelblue', 'plum', 'limegreen', 'antiquewhite', 
-           'linen', 'saddlebrown', 'grey', 'khaki', 'violet', 'hotpink', 'darkslategray', 
-           'forestgreen', 'blue', 'lightsalmon', 'turquoise', 'navajowhite', 'peachpuff',
-           'greenyellow', 'darkgrey', 'darkkhaki', 'slategrey', 'indigo',
+           'burlywood',  'dodgerblue', 'dimgrey', 'chartreuse', 'deepskyblue', 'honeydew', 
+           'orchid',  'teal', 'steelblue', 'limegreen', 'antiquewhite', 
+           'linen', 'saddlebrown', 'grey', 'khaki',  'hotpink', 'darkslategray', 
+           'forestgreen',  'lightsalmon', 'turquoise', 'navajowhite', 
+            'darkgrey', 'darkkhaki', 'slategrey', 'indigo',
            'darkolivegreen', 'aquamarine', 'moccasin', 'beige', 'ivory', 'olivedrab',
            'whitesmoke', 'paleturquoise', 'blueviolet', 'tomato', 'aqua', 'palegoldenrod', 
            'cornsilk', 'navy', 'mediumvioletred', 'palevioletred', 'aliceblue', 'azure', 
-           'snow', 'orangered', 'lightgrey', 'lightpink', 'orange', 'lightsage', 'wheat', 
-           'darkorchid', 'mediumslateblue', 'lightslategray', 'green', 'lawngreen', 'tan', 
+             'orangered', 'lightgrey', 'lightpink', 'orange', 'lightsage', 'wheat', 
+           'darkorchid', 'mediumslateblue', 'lightslategray', 'green', 'lawngreen', 
            'mediumseagreen', 'darksalmon', 'pink', 'oldlace', 'sienna', 'dimgray', 'fuchsia',
-           'lemonchiffon', 'purple', 'maroon', 'salmon', 'gainsboro', 'indianred', 'crimson',
-           'olive', 'mistyrose', 'lime', 'lightblue', 'darkgreen', 'lightgreen', 'deeppink', 
+           'lemonchiffon', 'maroon', 'salmon', 'gainsboro', 'indianred', 'crimson',
+            'mistyrose', 'lightblue', 'darkgreen', 'lightgreen', 'deeppink', 
            'palegreen', 'thistle', 'lightcoral', 'lightgray', 'lightskyblue', 'mediumspringgreen', 
            'mediumblue', 'peru', 'lightgoldenrodyellow', 'darkseagreen', 'mediumorchid', 
            'coral', 'lightyellow', 'chocolate', 'lavenderblush', 'darkred', 'lightseagreen', 
            'darkviolet', 'lightcyan', 'cadetblue', 'blanchedalmond', 'midnightblue', 
-           'darksage', 'lightsteelblue', 'darkcyan', 'floralwhite', 'darkgray', 'magenta',
+           'darksage', 'lightsteelblue', 'darkcyan', 'floralwhite', 'darkgray', 
            'lavender', 'sandybrown', 'cornflowerblue', 'sage',  'gray', 
-           'mediumpurple', 'lightslategrey', 'powderblue', 'brown', 'seagreen', 'skyblue',
+           'mediumpurple', 'lightslategrey',   'seagreen', 
            'silver', 'darkmagenta', 'darkslategrey', 'darkgoldenrod', 'rosybrown', 
-           'goldenrod',   'darkturquoise', 'black'] *10 )
+           'goldenrod',   'darkturquoise', 'plum',
+                 'purple',   'olive', 'gold','powderblue',  'peachpuff','violet', 'lime',  'greenyellow', 'tan',    'skyblue',
+                    'magenta',   'black', 'brown',   'green', 'cyan', 'red','blue'] *100 )
 
-colors_ = itertools.cycle(   colors[::-1] )
+
+colors = colors[::-1]
+
+
+colors_ = itertools.cycle(   colors  )
 #colors_ = itertools.cycle(sorted_colors_ )
-markers_ = itertools.cycle( markers )
-
+markers_ = itertools.cycle( markers )    
+    
+    
 
 
