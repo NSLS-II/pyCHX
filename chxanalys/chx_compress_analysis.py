@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from chxanalys.chx_libs import (np, roi, time, datetime, os,  getpass, db, get_images,LogNorm,Figure, RUN_GUI)
 #from chxanalys.chx_generic_functions import (get_circular_average)
 #from chxanalys.XPCS_SAXS import (get_circular_average)
+from chxanalys.chx_libs import  ( colors, markers, colors_,  markers_)
 
 import os
 from chxanalys.chx_generic_functions import ( save_arrays )
@@ -192,12 +193,93 @@ def get_waterfallc(FD, labeled_array, qindex=1, aspect = 1.0,
     return  wat
 
 
+def cal_each_ring_mean_intensityc( FD, ring_mask, sampling=1, timeperframe=None, *argv,**kwargs):   
+    
+    """
+    get time dependent mean intensity of each ring
+    """
+    
+    mean_int_sets, index_list = mean_intensityc(FD, ring_mask, sampling, index=None) 
+    if timeperframe is None: 
+        times = np.arange( FD.end - FD.beg  ) + FD.beg # get the time for each frame
+    else:
+        times = ( FD.beg + np.arange( FD.end - FD.beg ) )*timeperframe
+    num_rings = len( np.unique( ring_mask)[1:] )     
+    return times, mean_int_sets
+
+
+markers =  ['o',   'H', 'D', 'v',  '^', '<',  '>', 'p',
+                's',  'h',   '*', 'd', 
+            '$I$','$L$', '$O$','$V$','$E$', 
+            '$c$', '$h$','$x$','$b$','$e$','$a$','$m$','$l$','$i$','$n$', '$e$',
+            '8', '1', '3', '2', '4',     '+',   'x',  '_',   '|', ',',  '1',]
+
+markers = np.array(   markers *100 )
+
+colors = np.array( ['darkorange', 'mediumturquoise', 'seashell', 'mediumaquamarine', 'darkblue', 
+           'yellowgreen',  'mintcream', 'royalblue', 'springgreen', 'slategray',
+           'yellow', 'slateblue', 'darkslateblue', 'papayawhip', 'bisque', 'firebrick', 
+           'burlywood',  'dodgerblue', 'dimgrey', 'chartreuse', 'deepskyblue', 'honeydew', 
+           'orchid',  'teal', 'steelblue', 'limegreen', 'antiquewhite', 
+           'linen', 'saddlebrown', 'grey', 'khaki',  'hotpink', 'darkslategray', 
+           'forestgreen',  'lightsalmon', 'turquoise', 'navajowhite', 
+            'darkgrey', 'darkkhaki', 'slategrey', 'indigo',
+           'darkolivegreen', 'aquamarine', 'moccasin', 'beige', 'ivory', 'olivedrab',
+           'whitesmoke', 'paleturquoise', 'blueviolet', 'tomato', 'aqua', 'palegoldenrod', 
+           'cornsilk', 'navy', 'mediumvioletred', 'palevioletred', 'aliceblue', 'azure', 
+             'orangered', 'lightgrey', 'lightpink', 'orange', 'lightsage', 'wheat', 
+           'darkorchid', 'mediumslateblue', 'lightslategray', 'green', 'lawngreen', 
+           'mediumseagreen', 'darksalmon', 'pink', 'oldlace', 'sienna', 'dimgray', 'fuchsia',
+           'lemonchiffon', 'maroon', 'salmon', 'gainsboro', 'indianred', 'crimson',
+            'mistyrose', 'lightblue', 'darkgreen', 'lightgreen', 'deeppink', 
+           'palegreen', 'thistle', 'lightcoral', 'lightgray', 'lightskyblue', 'mediumspringgreen', 
+           'mediumblue', 'peru', 'lightgoldenrodyellow', 'darkseagreen', 'mediumorchid', 
+           'coral', 'lightyellow', 'chocolate', 'lavenderblush', 'darkred', 'lightseagreen', 
+           'darkviolet', 'lightcyan', 'cadetblue', 'blanchedalmond', 'midnightblue', 
+           'darksage', 'lightsteelblue', 'darkcyan', 'floralwhite', 'darkgray', 
+           'lavender', 'sandybrown', 'cornflowerblue', 'sage',  'gray', 
+           'mediumpurple', 'lightslategrey',   'seagreen', 
+           'silver', 'darkmagenta', 'darkslategrey', 'darkgoldenrod', 'rosybrown', 
+           'goldenrod',   'darkturquoise', 'plum',
+                 'purple',   'olive', 'gold','powderblue',  'peachpuff','violet', 'lime',  'greenyellow', 'tan',    'skyblue',
+                    'magenta',   'black', 'brown',   'green', 'cyan', 'red','blue'] *100 )
+
+
+colors = colors[::-1]
 
 
 
+def plot_each_ring_mean_intensityc( times, mean_int_sets, xlabel= 'Frame',save=False, *argv,**kwargs):   
+    
+    """
+    Plot time dependent mean intensity of each ring
+    """
+    num_rings = mean_int_sets.shape[1]
+    
+    fig, ax = plt.subplots(figsize=(8, 8))
+    uid = 'uid'
+    if 'uid' in kwargs.keys():
+        uid = kwargs['uid'] 
+        
+    ax.set_title("uid= %s--Mean intensity of each ROI"%uid)
+    for i in range(num_rings):
+        ax.plot( times, mean_int_sets[:,i], label="ROI "+str(i+1),marker = markers[i], color=colors[i], ls='-')
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel("Mean Intensity")
+    ax.legend(loc = 'best',fontsize='x-small') 
+
+    if save:            
+        path = kwargs['path'] 
+        fp = path + "uid=%s--Mean-intensity-of-each-ROI-"%uid  + '.png' 
+        fig.savefig( fp, dpi=fig.dpi)
+        save_arrays( np.hstack( [times.reshape(len(times),1), mean_int_sets]),
+                    label=  ['frame']+ ['ROI_%d'%i for i in range( num_rings ) ],
+                    filename='uid=%s-t-ROIs'%uid, path= path  ) 
+    plt.show()
 
 
-def get_each_ring_mean_intensityc( FD, ring_mask, sampling=1, timeperframe=None, plot_ = True , save=False, *argv,**kwargs):   
+
+def get_each_ring_mean_intensityc( FD, ring_mask, sampling=1, timeperframe=None, plot_ = False, save=False, *argv,**kwargs):   
     
     """
     get time dependent mean intensity of each ring
