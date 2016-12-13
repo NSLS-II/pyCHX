@@ -110,6 +110,14 @@ class create_pdf_report( object ):
         self.sub_title_num = 0
         
         '''global definition'''
+        
+        try:
+            beg = md['beg']
+            end=md['end']
+            uid_ = uid + '--fra-%s-%s'%(beg, end)
+        except:
+            uid_ = uid
+            
 
         self.avg_img_file = 'uid=%s--img-avg-.png'%uid   
         
@@ -121,7 +129,7 @@ class create_pdf_report( object ):
 
         
         if self.report_type =='saxs':
-            self.ROI_on_Iq_file = 'uid=%s--ROI-on-Iq-.png'%uid  
+            self.ROI_on_Iq_file = 'uid=%s--ROI-on-Iq-.png'%uid 
         else:
             self.ROI_on_Iq_file = 'uid=%s--qr_1d--ROI-.png'%uid 
         
@@ -130,22 +138,22 @@ class create_pdf_report( object ):
         self.wat_file= 'uid=%s--Waterfall-.png'%uid
         self.Mean_inten_t_file= 'uid=%s--Mean-intensity-of-each-ROI-.png'%uid
 
-        self.g2_file = 'uid=%s--g2-.png'%uid
-        self.g2_fit_file = 'uid=%s--g2--fit-.png'%uid
-        self.q_rate_file = 'uid=%s--Q-Rate--fit-.png'%uid    
+        self.g2_file = 'uid=%s--g2-.png'%uid_
+        self.g2_fit_file = 'uid=%s--g2--fit-.png'%uid_
+        self.q_rate_file = 'uid=%s--Q-Rate--fit-.png'%uid_    
 
-        self.two_time_file = 'uid=%s--Two-time-.png'%uid
-        self.two_g2_file = 'uid=%s--g2--two-g2-.png'%uid
-        self.four_time_file = 'uid=%s--g4-.png'%uid
+        self.two_time_file = 'uid=%s--Two-time-.png'%uid_
+        self.two_g2_file = 'uid=%s--g2--two-g2-.png'%uid_
+        self.four_time_file = 'uid=%s--g4-.png'%uid_
         
-        self.xsvs_fit_file = 'uid=%s--xsvs-fit-.png'%uid
-        self.contrast_file = 'uid=%s--contrast-.png'%uid
+        self.xsvs_fit_file = 'uid=%s--xsvs-fit-.png'%uid_
+        self.contrast_file = 'uid=%s--contrast-.png'%uid_
         
-        self.flow_g2v = 'uid=%s_1a_mqv--g2-v_fit-.png'%uid
-        self.flow_g2p = 'uid=%s_1a_mqp--g2-p_fit-.png'%uid
+        self.flow_g2v = 'uid=%s_1a_mqv--g2-v_fit-.png'%uid_
+        self.flow_g2p = 'uid=%s_1a_mqp--g2-p_fit-.png'%uid_
         
-        self.flow_g2v_rate_fit = 'uid=%s_v_fit_rate--Q-Rate--fit-.png'%uid 
-        self.flow_g2p_rate_fit = 'uid=%s_p_fit_rate--Q-Rate--fit-.png'%uid 
+        self.flow_g2v_rate_fit = 'uid=%s_v_fit_rate--Q-Rate--fit-.png'%uid_
+        self.flow_g2p_rate_fit = 'uid=%s_p_fit_rate--Q-Rate--fit-.png'%uid_ 
         
         #self.report_header(page=1, top=730, new_page=False)
         #self.report_meta(new_page=False)
@@ -179,7 +187,7 @@ class create_pdf_report( object ):
             c.save()
 
         
-    def report_meta(self, top=730, new_page=False):
+    def report_meta(self, top=740, new_page=False):
         '''create the meta data report,
         the meta data include:  
             uid
@@ -193,10 +201,14 @@ class create_pdf_report( object ):
             Pipeline notebook        
         '''
 
-        c=self.c
-        uid=self.uid
+        c=self.c        
         #load metadata
         md = self.md
+        try:
+            uid = md['uid']
+        except:
+            uid=self.uid
+            
         #add sub-title, metadata
         c.setFont("Helvetica", 20)
         
@@ -205,37 +217,42 @@ class create_pdf_report( object ):
         c.drawString(10, top, "%s. Metadata"%self.sub_title_num )  #add title
 
         top = top - 5
-        c.setFont("Helvetica", 12)
+        c.setFont("Helvetica", 11)
         i=1
-        c.drawString(30, top-ds*i, 'uid: %s'%uid )
+        c.drawString(30, top-ds*i, 'UID: %s'%uid )
         c.drawString(30, top-ds*2, 'Sample: %s'%md['sample'] )
-        c.drawString(30, top-ds*3, 'Measurement: %s'%md['Measurement'] )
-        c.drawString(30, top-ds*4, 'Wavelength: %s A-1'%md['incident_wavelength'] )
-        c.drawString(30, top-ds*5, 'Detector-Sample Distance: %s m'%(md['detector_distance']) )
+        c.drawString(30, top-ds*3, 'Data Acquisition From: %s To: %s'%(md['start_time'], md['stop_time'] ))        
+        c.drawString(30, top-ds*4, 'Measurement: %s'%md['Measurement'] )
+        c.drawString(30, top-ds*5, 'Wavelength: %s A | Num of Image: %d | Exposure time: %s ms | Acquire period: %s ms'%( md['incident_wavelength'],  int(md['number of images']),round(float(md['exposure time'])*1000,4), round(float(md['frame_time'])*1000,4)     ) )
+        
+        # shutter mode, feedback on/off, 'human' time stamp       
+        
+        c.drawString(30, top-ds*6, 'Detector-Sample Distance: %s m| FeedBack Mode: x -> %s & y -> %s| Shutter Mode: %s'%(
+                md['detector_distance'], md['feedback_x'], md['feedback_y'], md['shutter mode']  ) )
         
         if self.report_type == 'saxs':
-            c.drawString(30, top-ds*6, 
+            c.drawString(30, top-ds*7, 
                             'Beam Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y']) )
         elif self.report_type == 'gisaxs':
-            c.drawString(30, top-ds*6, 
+            c.drawString(30, top-ds*7, 
                             'Incident Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y']) )
-            c.drawString(280, top-ds*6, '||' )       
-            c.drawString(350, top-ds*6, 
+            c.drawString(280, top-ds*7, '||' )       
+            c.drawString(350, top-ds*7, 
                 'Reflect Center: [%s, %s] (pixel)'%(md['refl_center_x'], md['refl_center_y']) )  
             
         
-        c.drawString(30, top-ds*7, 'Mask file: %s'%md['mask_file'] )
+        c.drawString(30, top-ds*8, 'Mask file: %s'%md['mask_file'] )
         
         s=  'Data dir: %s'%self.data_dir     
         #c.setFont("Helvetica", 1000/( len(s ) )   )  
-        c.setFont("Helvetica", 12)
+        #c.setFont("Helvetica", 12)
         if (12*len(s )) >1000:
-            c.drawString(30, top-ds*8, s[:1000//12] )
-            c.drawString(30 + len('Data dir:')*6, top-ds*9, s[1000//12:] )
-            line = 9
+            c.drawString(30, top-ds*9, s[:1000//12] )
+            c.drawString(30 + len('Data dir:')*6, top-ds*10, s[1000//12:] )
+            line = 10
         else:              
-            c.drawString(30, top-ds*8, s)
-            line = 8
+            c.drawString(30, top-ds*9, s)
+            line = 9
         s = 'Pipeline notebook: %s'%md['NOTEBOOK_FULL_PATH']
         #c.setFont("Helvetica", 800/( len(s ) )   )   
         c.setFont("Helvetica", 12)
