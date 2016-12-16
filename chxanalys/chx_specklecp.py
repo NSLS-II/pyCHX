@@ -31,11 +31,13 @@ from scipy.optimize import minimize
 from tqdm import tqdm
 from multiprocessing import Pool
 import dill
+import itertools
 
 from chxanalys.chx_compress import ( run_dill_encoded,apply_async, map_async,pass_FD, go_through_FD  ) 
 
 
-def xsvsp(FD, label_array, number_of_img, only_first_level= True, timebin_num=2, time_bin=None,
+def xsvsp(FD, label_array,  only_two_levels= True,
+          only_first_level= False, timebin_num=2, time_bin=None,
          max_cts=None, bad_images = None, threshold= 1e8, imgsum=None, norm=None): 
     '''
     FD: a list of FD or a single FD
@@ -43,14 +45,15 @@ def xsvsp(FD, label_array, number_of_img, only_first_level= True, timebin_num=2,
     '''
     
     if not isinstance( FD, list):
-        prob_k, prob_k_std_dev =  xsvsp_single(FD, label_array, number_of_img, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
+        prob_k, prob_k_std_dev =  xsvsp_single(FD, label_array, only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
     else:
-        prob_k, prob_k_std_dev =  xsvsp_multi(FD, label_array, number_of_img, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
+        prob_k, prob_k_std_dev =  xsvsp_multi(FD, label_array,  only_two_levels,only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
         
     return prob_k, prob_k_std_dev
 
 
-def xsvsp_multi(FD_set, label_array, number_of_img, only_first_level= True, timebin_num=2, time_bin=None,
+def xsvsp_multi(FD_set, label_array,  only_two_levels= True,
+                only_first_level= False, timebin_num=2, time_bin=None,
          max_cts=None, bad_images = None, threshold=1e8, imgsum=None, norm=None):   
     '''
     FD_set: a list of FD
@@ -58,7 +61,7 @@ def xsvsp_multi(FD_set, label_array, number_of_img, only_first_level= True, time
     '''
     N = len( FD_set )
     for n in range(N):  
-        prob_k, prob_k_std_dev =  xsvsp_single(FD_set[n], label_array, number_of_img, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
+        prob_k, prob_k_std_dev =  xsvsp_single(FD_set[n], label_array,  only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
         if n==0:
             prob_k_all = prob_k
             prob_k_std_dev_all = prob_k_std_dev
@@ -70,13 +73,15 @@ def xsvsp_multi(FD_set, label_array, number_of_img, only_first_level= True, time
 
 
 
-def xsvsp_single(FD, label_array, number_of_img, only_first_level= True, timebin_num=2, time_bin=None,
+def xsvsp_single(FD, label_array,  only_two_levels= True,only_first_level= False,
+                 timebin_num=2, time_bin=None,
          max_cts=None, bad_images = None, threshold = 1e8, imgsum=None, norm=None): 
     '''
     Calculate probability density of detecting photons using parallel algorithm
     '''    
     
     noframes = FD.end - FD.beg +1   # number of frames, not "no frames"
+    number_of_img = noframes
     for i in range(FD.beg, FD.end):
         pass_FD(FD,i) 
     label_arrays = [   np.array(label_array==i, dtype = np.int64) 
@@ -96,15 +101,13 @@ def xsvsp_single(FD, label_array, number_of_img, only_first_level= True, timebin
     if norm is not None: 
         for i in  tqdm( inputs ): 
             results[i] =  apply_async( pool, xsvsc_single, ( FD, 
-                        label_arrays[i], number_of_img, only_first_level,
+                        label_arrays[i], only_two_levels, only_first_level,
                         timebin_num, time_bin, max_cts, bad_images, 
-                        threshold, imgsum, norms[i],progress_bar, ) ) 
-            
-            
+                        threshold, imgsum, norms[i],progress_bar, ) )             
     else:          
         for i in tqdm ( inputs ): 
             results[i] =  apply_async( pool, xsvsc_single, ( FD, 
-                        label_arrays[i], number_of_img, only_first_level,
+                        label_arrays[i],  only_two_levels, only_first_level,
                         timebin_num, time_bin, max_cts, bad_images, 
                         threshold, imgsum, None,progress_bar ) )           
     pool.close()  
@@ -130,7 +133,8 @@ def xsvsp_single(FD, label_array, number_of_img, only_first_level= True, timebin
 
 
 
-def xsvsc(FD, label_array, number_of_img, only_first_level= True, timebin_num=2, time_bin=None,
+def xsvsc(FD, label_array, only_two_levels= True,only_first_level= False,
+          timebin_num=2, time_bin=None,
          max_cts=None, bad_images = None, threshold= 1e8, imgsum=None, norm=None): 
     '''
     FD: a list of FD or a single FD
@@ -138,14 +142,16 @@ def xsvsc(FD, label_array, number_of_img, only_first_level= True, timebin_num=2,
     '''
     
     if not isinstance( FD, list):
-        prob_k, prob_k_std_dev =  xsvsc_single(FD, label_array, number_of_img, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
+        prob_k, prob_k_std_dev =  xsvsc_single(FD, label_array,  only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
     else:
-        prob_k, prob_k_std_dev =  xsvsc_multi(FD, label_array, number_of_img, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
+        prob_k, prob_k_std_dev =  xsvsc_multi(FD, label_array,  only_two_levels,
+only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
         
     return prob_k, prob_k_std_dev
 
 
-def xsvsc_multi(FD_set, label_array, number_of_img, only_first_level= True, timebin_num=2, time_bin=None,
+def xsvsc_multi(FD_set, label_array,  only_two_levels= True, only_first_level= False,
+                timebin_num=2, time_bin=None,
          max_cts=None, bad_images = None, threshold=1e8, imgsum=None, norm=None):   
     '''
     FD_set: a list of FD
@@ -153,7 +159,7 @@ def xsvsc_multi(FD_set, label_array, number_of_img, only_first_level= True, time
     '''
     N = len( FD_set )
     for n in range(N):  
-        prob_k, prob_k_std_dev =  xsvsc_single(FD_set[n], label_array, number_of_img, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
+        prob_k, prob_k_std_dev =  xsvsc_single(FD_set[n], label_array,  only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
         if n==0:
             prob_k_all = prob_k
             prob_k_std_dev_all = prob_k_std_dev
@@ -167,7 +173,8 @@ def xsvsc_multi(FD_set, label_array, number_of_img, only_first_level= True, time
 
     
 
-def xsvsc_single(FD, label_array, number_of_img, only_first_level= True, timebin_num=2, time_bin=None,
+def xsvsc_single(FD, label_array,  only_two_levels= True,
+                 only_first_level= False, timebin_num=2, time_bin=None,
          max_cts=None, bad_images = None, threshold= 1e8, imgsum=None, norm=None, progress_bar=True):   
     
     """
@@ -232,9 +239,15 @@ def xsvsc_single(FD, label_array, number_of_img, only_first_level= True, timebin
     u_labels = list(np.unique(labels))
     num_roi = len(u_labels)    
     # create integration times
-    if time_bin is None:time_bin = geometric_series(timebin_num, number_of_img)
+    noframes=  FD.end - FD.beg  +1  
+    number_of_img = noframes
+    if time_bin is None:
+        time_bin = geometric_series(timebin_num, noframes)
     if only_first_level:
         time_bin = [1]
+    elif only_two_levels:
+        time_bin = [1,2] 
+    #print(time_bin)    
     # number of times in the time bin
     num_times = len(time_bin)
     # number of pixels per ROI
@@ -248,7 +261,7 @@ def xsvsc_single(FD, label_array, number_of_img, only_first_level= True, timebin
     # get the bin edges for each time bin for each ROI
     bin_edges = np.zeros(prob_k.shape[0], dtype=prob_k.dtype)
     for i in range(num_times):
-        bin_edges[i] = np.arange(max_cts*2**i)
+        bin_edges[i] = np.arange(max_cts*timebin_num**i)
     #start_time = time.time()  # used to log the computation time (optionally) 
     bad_frame_list = bad_images
     if bad_frame_list is None:
@@ -268,7 +281,7 @@ def xsvsc_single(FD, label_array, number_of_img, only_first_level= True, timebin
     #cur =  np.full(num_times, timebin_num)         
     # to track how many images processed in each level
     img_per_level = np.zeros(num_times, dtype=np.int64)
-    noframes=  FD.end - FD.beg  +1  
+    
     if progress_bar:
         xr = tqdm(range( FD.beg , FD.end ))
     else:
@@ -318,7 +331,8 @@ def xsvsc_single(FD, label_array, number_of_img, only_first_level= True, timebin
         else:
             processing=0
         if only_first_level:
-            processing = 0
+            processing = 0 
+            
         while processing:
             #print( 'here')
             if track_level[level]:
@@ -340,16 +354,20 @@ def xsvsc_single(FD, label_array, number_of_img, only_first_level= True, timebin
             else:
                 track_level[level] = 1
                 processing = 0       
-                
+            #print( level )
         prob_k_std_dev = np.power((prob_k_pow -
                                np.power(prob_k, 2)), .5) 
+   
     for i in range(num_times):
-        if   isinstance(prob_k[i,0], float ):
-            for j in range( len(u_labels)):
-                prob_k[i,j] = np.array(  [0] * (len(bin_edges[i]) -1 ) )
-                prob_k_std_dev[i,j] = np.array(  [0] * (len(bin_edges[i]) -1 ) )
+        if  isinstance(prob_k[i,0], float ) or isinstance(prob_k[i,0], int ):
+            prob_k, prob_k_std_dev = prob_k[:i], prob_k_std_dev[:i]
+            #for j in range( len(u_labels)):                
+            #    prob_k[i,j] = np.array(  [0] * (len(bin_edges[i]) -1 ) )
+            #    prob_k_std_dev[i,j] = np.array(  [0] * (len(bin_edges[i]) -1 ) )
+                    
     
     return prob_k, prob_k_std_dev
+
 
 def _process(num_roi, level, buf_no, buf, img_per_level, labels,
              max_cts, bin_edges, prob_k, prob_k_pow,track_bad_level):
@@ -391,8 +409,7 @@ def _process(num_roi, level, buf_no, buf, img_per_level, labels,
     if not (np.isnan(data).any()):
         for j, label in enumerate(u_labels):        
             roi_data = data[labels == label]
-            spe_hist, bin_edges = np.histogram(roi_data, bins=bin_edges,
-                                           density=True)
+            spe_hist, bin_edges = np.histogram(roi_data, bins=bin_edges,  density=True)
             spe_hist = np.nan_to_num(spe_hist)
             prob_k[level, j] += (spe_hist -
                              prob_k[level, j])/( img_per_level[level] - track_bad_level[level] )
@@ -433,6 +450,129 @@ def normalize_bin_edges(num_times, num_rois, mean_roi, max_cts):
             norm_bin_centers[i, j] = bin_edges_to_centers(norm_bin_edges[i, j])
 
     return norm_bin_edges, norm_bin_centers
+
+def get_his_std_qi( data_pixel_qi, max_cts=None):
+    '''
+    YG. Dev 16, 2016
+    Calculate the photon histogram for one q by giving 
+    Parameters:
+        data_pixel_qi: one-D array, for the photon counts
+        max_cts: for bin max, bin will be [0,1,2,..., max_cts]
+    Return:
+        bins
+        his
+        std    
+    '''
+    if max_cts is None:
+        max_cts = np.max( data_pixel_qi ) +1
+    bins = np.arange(max_cts)
+    dqn, dqm = data_pixel_qi.shape
+    H = np.apply_along_axis(np.bincount, 1, np.int_(data_pixel_qi), minlength= max_cts )/dqm
+    his = np.average( H, axis=0)
+    std = np.std( H, axis=0 )
+    return bins, his, std
+
+def reshape_array( array, new_len):
+    '''
+    array: shape= [M,N]
+    new_len: the length of the new array, the reshaped shape will be [M//new_len, new_len, N]
+    
+    '''
+    M,N = array.shape
+    m = M//new_len
+    return array[:m*new_len,:].reshape( [m, new_len, N]  )
+    
+
+def get_binned_his_std_qi( data_pixel_qi, lag_steps, max_cts=None):
+    '''
+    YG. Dev 16, 2016
+    Calculate the binned photon histogram for one q by giving 
+    Parameters:
+        data_pixel_qi: one-D array, for the photon counts
+        lag_steps: the binned number
+        max_cts: for bin max, bin will be [0,1,2,..., max_cts]
+    Return:
+        bins
+        his
+        std    
+    '''
+    if max_cts is None:
+        max_cts = np.max( data_pixel_qi )   +1   
+    lag_steps = np.array(lag_steps)
+    lag_steps = lag_steps[np.nonzero( lag_steps )]
+    nologs = len(  lag_steps   )    
+    his=  np.zeros( [nologs], dtype=np.object) 
+    bins = np.zeros_like( his, dtype=np.object) 
+    std=  np.zeros_like( his, dtype=np.object) 
+    i=0    
+    for lag in lag_steps:        
+        data_pixel_qi_ = np.sum( reshape_array( data_pixel_qi, lag), axis=1)       
+        bins[i], his[i], std[i] = get_his_std_qi( data_pixel_qi_, max_cts * lag)
+        i +=1 
+    return  bins, his, std 
+    
+    
+def get_binned_his_std( data_pixel, rois, lag_steps, max_cts=None):
+    '''
+    YG. Dev 16, 2016
+    Calculate the binned photon histogram qs by giving 
+    Parameters:
+        data_pixel: one-D array, for the photon counts
+        lag_steps: the binned number
+        max_cts: for bin max, bin will be [0,1,2,..., max_cts]
+    Return:
+        bins
+        his
+        std    
+    '''
+    if max_cts is None:
+        max_cts = np.max( data_pixel )  +  1
+    qind, pixelist = roi.extract_label_indices(   rois  )    
+    noqs = len( np.unique(qind) )  
+    
+    lag_steps = np.array(lag_steps)
+    lag_steps = lag_steps[np.nonzero( lag_steps )]
+    
+    nologs = len(  lag_steps   )       
+    his=  np.zeros( [nologs, noqs ], dtype=np.object) 
+    bins = np.zeros( [nologs], dtype=np.object) 
+    std=  np.zeros_like( his, dtype=np.object)     
+    i=0    
+    for lag in tqdm( lag_steps ):        
+        data_pixel_ = np.sum( reshape_array( data_pixel, lag), axis=1) 
+        #print( data_pixel_.shape)
+        for qi in range(noqs):
+            pixelist_qi =  np.where( qind == qi+1)[0] 
+            bins[i], his[i,qi], std[i,qi] = get_his_std_qi( 
+                                data_pixel_[:,pixelist_qi], max_cts * lag)
+        i +=1 
+        
+    return  bins, his, std 
+
+
+def get_his_std( data_pixel, rois, max_cts=None):
+    '''
+    YG. Dev 16, 2016
+    Calculate the photon histogram for multi-q by giving 
+    Parameters:
+        data_pixel: multi-D array, for the photon counts
+        max_cts: for bin max, bin will be [0,1,2,..., max_cts]
+    Return:
+        bins
+        his
+        std    
+    '''    
+    if max_cts is None:
+        max_cts = np.max( data_pixel )   +  1 
+    qind, pixelist = roi.extract_label_indices(   rois  )    
+    noqs = len( np.unique(qind) )    
+    his=  np.zeros( [noqs], dtype=np.object) 
+    std=  np.zeros_like( his, dtype=np.object) 
+    for qi in range(noqs):
+        pixelist_qi =  np.where( qind == qi+1)[0] 
+        #print(qi, max_cts)
+        bins, his[qi], std[qi] = get_his_std_qi( data_pixel[:,pixelist_qi] , max_cts)
+    return  bins, his, std
 
 
 def get_bin_edges(num_times, num_rois, mean_roi, max_cts):
@@ -539,17 +679,15 @@ def nbinomlog(p, hist, x, hist_err=None, N=1):
     mu=abs(mu)
     M= abs(M)
     w=np.where(hist>0.0);
-    Np=N * st.nbinom.pmf(x,M,1.0/(1.0+mu/M))    
-    #err=2*(Np-hist)    
-    #err=2*(Np- hist)/np.sqrt(Np)    
+    Np=N * st.nbinom.pmf(x,M,1.0/(1.0+mu/M)) 
     err=2*(Np[w]-hist[w])
     err = err - 2*hist[w]*np.log(Np[w]/hist[w])#note: sum(Np-hist)==0   
     if hist_err is None:
-        hist_err= np.ones_like( Np )
-    scale = Np[w]/hist_err[w]
-    #scale = 1
+        hist_err= np.ones_like( Np ) 
+    scale = ( hist_err[w]**2 ) #/Np[w]     
+    #print('here')
     return np.sqrt(np.abs( err / scale ))
-    #return err
+
     
 def nbinomlog1(p, hist, x, hist_err, N, mu):
     """ Residuals for maximum likelihood fit to nbinom distribution.
@@ -560,20 +698,27 @@ def nbinomlog1(p, hist, x, hist_err, N, mu):
     err=2*(Np[w]-hist[w])
     if hist_err is None:
         hist_err= np.ones_like( Np )
-    scale = Np[w]/hist_err[w]    
+    #scale = Np[w]/hist_err[w]  
+    
+    #scale = ( hist_err[w]**2 )
+    scale = ( hist_err[w]/Np[w] )**2
+    
+    #scale = ( hist_err[w]/Np[w] )**1
+    
+    #print(scale)
     err = err - 2*hist[w]*np.log(Np[w]/hist[w])#note: sum(Np-hist)==0    
     return np.sqrt( np.abs(err/scale) )  
 
 
-def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None, varyK=True, 
-                  qth=None, max_bins=2, g2=None, times=None,taus=None):
+def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None,  varyK=True, 
+                  qth=None, max_bins=None, g2=None, times=None,taus=None):
     '''
     Fit the xsvs by Negative Binomial Function using max-likelihood chi-squares
     '''
     
     max_cts=  spe_cts_all[0][0].shape[0] -1    
     num_times, num_rings = spe_cts_all.shape 
-    if max_bins is not None:        
+    if max_bins is not None:  
         num_times = min( num_times, max_bins  )
         
     bin_edges, bin_centers, Knorm_bin_edges, Knorm_bin_centers = get_bin_edges(
@@ -614,10 +759,11 @@ def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None, varyK=True,
             
             if not varyK:
                 if yerr is None:
-                    fit_func = nbinomlog1_old
+                    fit_func = nbinomlog1  #_old
                 else:
-                    fit_func = nbinomlog1
-                resultL = leastsq(fit_func, [ m0], args=(y, x_, yerr, N, K_mean[i] * 2**j ),
+                    fit_func = nbinomlog1                
+                #print(j,i,m0, y.shape, x_.shape, yerr.shape, N,  K_mean[i] * 2**j)
+                resultL = leastsq(fit_func, [ m0 ], args=(y, x_, yerr, N, K_mean[i] * 2**j ),
                                   ftol=1.49012e-38, xtol=1.49012e-38, factor=100,
                                   full_output=1)
                 
@@ -627,7 +773,7 @@ def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None, varyK=True,
             else:
                 #vary M and K
                 if yerr is None:
-                    fit_func = nbinomlog_old
+                    fit_func = nbinomlog  #_old
                 else:
                     fit_func = nbinomlog
                 resultL = leastsq(fit_func, [K_mean[i] * 2**j, m0], args=(y,x_,yerr,N),
@@ -724,11 +870,12 @@ def plot_xsvs_fit(  spe_cts_all, ML_val, KL_val, K_mean, spec_std  =None,
                 #print(x.shape, y.shape, yerr.shape)
                 axes.errorbar( x,y, yerr, marker='o',  label= label)                 
 
-            if j == 0:
+            #if j == 0:
+            if j <2 :
                 label="nbinom_L" 
-                txts = r'$M=%s$'%round(ML_val[i][j],2) +'\n' + r'$K=%s$'%round(KL_val[i][j],2)
-                x=0.1
-                y0=0.2
+                txts = r'$M=%s$'%round(ML_val[i][j],2) +',' + r'$K=%s$'%round(KL_val[i][j],2)
+                x=0.05
+                y0=0.2 - j *0.1
                 if qth is None:
                     fontsize_ = fontsize *2
                 else:
@@ -787,16 +934,21 @@ def save_KM( K_mean, KL_val, ML_val, qs=None, uid=None, path=None ):
     import os
     kl = get_K( KL_val )
     ml = get_contrast( ML_val)
-    L = K_mean.shape[0]
+    L,n = kl.shape
     if qs is  None:
-        df = DataFrame(     np.hstack( [ (K_mean).reshape( L,1), kl.reshape( L,1),
-                                    contrast_factorL.reshape(L,1)   ] )  ) 
-        df.columns = ('K_mean', 'K_fit', 'Contrast_fit')
+        df = DataFrame(     np.hstack( [ (K_mean).reshape( L,1), kl.reshape( L,n),
+                                    ml.reshape(L,n)   ] )  ) 
+        
+        l = ['K_mean'] + ['K_fit_Bin%i'%s for s in range(1,n+1)] + ['Contrast_Fit_Bin%i'%s for s in range(1,n+1)]
+        df.columns = (x for x in l) 
     else:
         qs = np.array( qs )
-        df = DataFrame(     np.hstack( [ qs.reshape( L,1), (K_mean).reshape( L,1), kl.reshape( L,1),
-                                    ml.reshape(L,1)   ] )  ) 
-        df.columns = ('q','K_mean', 'K_fit', 'Contrast_fit')
+        df = DataFrame(     np.hstack( [ qs.reshape( L,1), (K_mean).reshape( L,1), kl.reshape( L,n),
+                                    ml.reshape(L,n)   ] )  ) 
+        
+        l = ['q'] + ['K_mean'] + ['K_fit_Bin%i'%s for s in range(1,n+1)] + ['Contrast_Fit_Bin%i'%s for s in range(1,n+1)]        
+        df.columns = (x for x in l) 
+        
         
     filename = 'uid=%s--xsvs_fitted_KM.csv' %(uid)
     filename1 = os.path.join(path, filename)
@@ -836,7 +988,8 @@ def plot_g2_contrast( contrast_factorL, g2, times, taus, q_ring_center=None,
         yL= contrast_factorL[sn, :]  
         g = g2[1:,sn] -1         
         ax.semilogx(times[:nt], yL, "-bs",  label='xsvs') 
-        ax.semilogx([times[:nt][-1], taus[1:][0]], [yL[-1],g[0]], "--bs",  label='') 
+        
+        #ax.semilogx([times[:nt][-1], taus[1:][0]], [yL[-1],g[0]], "--bs",  label='') 
         
         ax.semilogx(taus[1:], g, "-rx", label='xpcs')
         til = " Q=" + '%.5f  '%(q_ring_center[sn]) + r'$\AA^{-1}$'
