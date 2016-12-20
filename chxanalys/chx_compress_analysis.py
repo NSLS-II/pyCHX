@@ -143,7 +143,7 @@ def plot_waterfallc(wat, qindex=1, aspect = None,vmax=None, vmin=None,save=False
         else:
             uid = 'uid'
         #fp = path + "uid= %s--Waterfall-"%uid + CurTime + '.png'     
-        fp = path + "uid=%s--Waterfall-"%uid  + '.png'    
+        fp = path + "uid=%s--waterfall"%uid  + '.png'    
         plt.savefig( fp, dpi=fig.dpi)
         
     #plt.show()
@@ -228,16 +228,16 @@ def plot_each_ring_mean_intensityc( times, mean_int_sets, xlabel= 'Frame',save=F
         ax.plot( times, mean_int_sets[:,i], label="ROI "+str(i+1),marker = markers[i], color=colors[i], ls='-')
         ax.set_xlabel(xlabel)
         ax.set_ylabel("Mean Intensity")
-    ax.legend(loc = 'best',fontsize='x-small') 
+    ax.legend(loc = 'best',fontsize='x-small', fancybox=True, framealpha=0.5) 
 
     if save:            
         path = kwargs['path'] 
-        fp = path + "uid=%s--Mean-intensity-of-each-ROI-"%uid  + '.png' 
+        fp = path + "uid=%s--t-ROIs"%uid  + '.png' 
         fig.savefig( fp, dpi=fig.dpi)
         save_arrays( np.hstack( [times.reshape(len(times),1), mean_int_sets]),
                     label=  ['frame']+ ['ROI_%d'%i for i in range( num_rings ) ],
-                    filename='uid=%s-t-ROIs'%uid, path= path  ) 
-    plt.show()
+                    filename='uid=%s--t-ROIs'%uid, path= path  ) 
+    #plt.show()
 
 
 
