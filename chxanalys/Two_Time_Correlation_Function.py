@@ -197,7 +197,7 @@ def get_each_frame_ROI_intensity( data_pixel,
             #fp = path + "uid= %s--Waterfall-"%uid + CurTime + '.png'     
             fp = path + "uid=%s--imgsum-"%uid  + '.png'    
             fig.savefig( fp, dpi=fig.dpi)         
-        plt.show()        
+        #plt.show()        
     bad_frame_list = np.where( np.array(imgsum) > bad_pixel_threshold )[0]
     if len(bad_frame_list):
         print ('Bad frame list are: %s' %bad_frame_list)
@@ -504,7 +504,7 @@ def show_g12q_aged_g2( g12q, g2_aged,slice_width=10, timeperframe=1,vmin= 1, vma
         fp = path + "uid=%s--Aged_G2-"%uid  + '.png'    
         fig.savefig( fp, dpi=fig.dpi)  
             
-    plt.show()
+    #plt.show()
     
 
 
@@ -658,7 +658,7 @@ def show_g12q_taus( g12q, taus,  slice_width=10, timeperframe=1,vmin= 1, vmax= 1
         ax1.set_ylabel("g2")
         ax1.set_xscale('log')
     ax1.legend(fontsize='small', loc='best' ) 
-    plt.show()
+    #plt.show()
     
  
 
@@ -710,7 +710,7 @@ def histogram_taus(taus, hisbin=20, plot=True,timeperframe=1):
             ax1.set_ylabel(r"histgram of g2 @ tau",fontsize=15)
             #ax1.set_xscale('log')
         ax1.legend(fontsize='large', loc='best' ) 
-        plt.show()
+        #plt.show()
         
     return his       
 
@@ -997,7 +997,7 @@ def show_C12(C12,  q_ind=0, return_fig=False, *argv,**kwargs):
         CurTime = '-%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
         path=kwargs['path']
         #fp = path + 'Two-time--uid=%s'%(uid) + tit + CurTime + '.png'
-        fp = path + 'uid=%s--Two-time-'%(uid) + '.png'
+        fp = path + 'uid=%s--Two-time'%(uid) + '.png'
         plt.savefig( fp, dpi=fig.dpi)        
      
     if return_fig:

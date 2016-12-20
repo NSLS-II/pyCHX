@@ -45,11 +45,11 @@ def xsvsp(FD, label_array,  only_two_levels= True,
     '''
     
     if not isinstance( FD, list):
-        prob_k, prob_k_std_dev =  xsvsp_single(FD, label_array, only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
+        bin_edges,prob_k, prob_k_std_dev =  xsvsp_single(FD, label_array, only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
     else:
-        prob_k, prob_k_std_dev =  xsvsp_multi(FD, label_array,  only_two_levels,only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
+        bin_edges,prob_k, prob_k_std_dev =  xsvsp_multi(FD, label_array,  only_two_levels,only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
         
-    return prob_k, prob_k_std_dev
+    return bin_edges,prob_k, prob_k_std_dev
 
 
 def xsvsp_multi(FD_set, label_array,  only_two_levels= True,
@@ -61,7 +61,7 @@ def xsvsp_multi(FD_set, label_array,  only_two_levels= True,
     '''
     N = len( FD_set )
     for n in range(N):  
-        prob_k, prob_k_std_dev =  xsvsp_single(FD_set[n], label_array,  only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
+        bin_edges,prob_k, prob_k_std_dev =  xsvsp_single(FD_set[n], label_array,  only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
         if n==0:
             prob_k_all = prob_k
             prob_k_std_dev_all = prob_k_std_dev
@@ -69,11 +69,11 @@ def xsvsp_multi(FD_set, label_array,  only_two_levels= True,
             prob_k_all += (prob_k - prob_k_all)/(n + 1)
             prob_k_std_dev_all += ( prob_k_std_dev - prob_k_std_dev_all     )/(n+1)
             
-    return prob_k_all, prob_k_std_dev_all
+    return bin_edges, prob_k_all, prob_k_std_dev_all
 
 
 
-def xsvsp_single(FD, label_array,  only_two_levels= True,only_first_level= False,
+def xsvsp_single(FD, label_array,  only_two_levels= True, only_first_level= False,
                  timebin_num=2, time_bin=None,
          max_cts=None, bad_images = None, threshold = 1e8, imgsum=None, norm=None): 
     '''
@@ -113,22 +113,28 @@ def xsvsp_single(FD, label_array,  only_two_levels= True,only_first_level= False
     pool.close()  
     
     print( 'Starting running the tasks...')    
-    res =   [ results[k].get() for k in   tqdm( list(sorted(results.keys())) )   ]   
+    res =   [ results[k].get() for k in   tqdm( list(sorted(results.keys())) )   ] 
+    
        
     u_labels = list(np.unique(qind))
     num_roi = len(u_labels) 
-    if time_bin is None:time_bin = geometric_series(timebin_num, number_of_img)
-    if only_first_level:time_bin = [1]
-    num_times = len(time_bin)
+    if time_bin is None:
+        time_bin = geometric_series(timebin_num, number_of_img)
+    if only_first_level:
+        time_bin = [1]
+    elif only_two_levels:
+        time_bin = [1,2] 
+    #print(time_bin)    
+    # number of times in the time bin
+    num_times = len(time_bin)        
     prob_k = np.zeros([num_times, num_roi], dtype=np.object)
-    prob_k_std_dev = np.zeros_like( prob_k )   
-    
+    prob_k_std_dev = np.zeros_like( prob_k )      
     for i in inputs:
-         prob_k[:,i], prob_k_std_dev[:,i] = res[i][0][0], res[i][1] [0]       
+         bin_edges, prob_k[:,i], prob_k_std_dev[:,i] = res[i][0], res[i][1][:,0], res[i][2][:,0] 
     print( 'Histogram calculation DONE!')
     del results
     del res
-    return   prob_k, prob_k_std_dev
+    return   bin_edges, prob_k, prob_k_std_dev
     
 
 
@@ -142,12 +148,12 @@ def xsvsc(FD, label_array, only_two_levels= True,only_first_level= False,
     '''
     
     if not isinstance( FD, list):
-        prob_k, prob_k_std_dev =  xsvsc_single(FD, label_array,  only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
+        bin_edges, prob_k, prob_k_std_dev =  xsvsc_single(FD, label_array,  only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
     else:
-        prob_k, prob_k_std_dev =  xsvsc_multi(FD, label_array,  only_two_levels,
+        bin_edges, prob_k, prob_k_std_dev =  xsvsc_multi(FD, label_array,  only_two_levels,
 only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
         
-    return prob_k, prob_k_std_dev
+    return bin_edges, prob_k, prob_k_std_dev
 
 
 def xsvsc_multi(FD_set, label_array,  only_two_levels= True, only_first_level= False,
@@ -159,7 +165,7 @@ def xsvsc_multi(FD_set, label_array,  only_two_levels= True, only_first_level= F
     '''
     N = len( FD_set )
     for n in range(N):  
-        prob_k, prob_k_std_dev =  xsvsc_single(FD_set[n], label_array,  only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
+        bin_edges, prob_k, prob_k_std_dev =  xsvsc_single(FD_set[n], label_array,  only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
         if n==0:
             prob_k_all = prob_k
             prob_k_std_dev_all = prob_k_std_dev
@@ -167,7 +173,7 @@ def xsvsc_multi(FD_set, label_array,  only_two_levels= True, only_first_level= F
             prob_k_all += (prob_k - prob_k_all)/(n + 1)
             prob_k_std_dev_all += ( prob_k_std_dev - prob_k_std_dev_all     )/(n+1)
             
-    return prob_k_all, prob_k_std_dev_all
+    return bin_edges, prob_k_all, prob_k_std_dev_all
 
 
 
@@ -366,7 +372,7 @@ def xsvsc_single(FD, label_array,  only_two_levels= True,
             #    prob_k_std_dev[i,j] = np.array(  [0] * (len(bin_edges[i]) -1 ) )
                     
     
-    return prob_k, prob_k_std_dev
+    return bin_edges, prob_k, prob_k_std_dev
 
 
 def _process(num_roi, level, buf_no, buf, img_per_level, labels,
@@ -467,10 +473,41 @@ def get_his_std_qi( data_pixel_qi, max_cts=None):
         max_cts = np.max( data_pixel_qi ) +1
     bins = np.arange(max_cts)
     dqn, dqm = data_pixel_qi.shape
+    #get histogram here
     H = np.apply_along_axis(np.bincount, 1, np.int_(data_pixel_qi), minlength= max_cts )/dqm
+    #do average for different frame
     his = np.average( H, axis=0)
     std = np.std( H, axis=0 )
-    return bins, his, std
+    #cal average photon counts
+    kmean= np.average(data_pixel_qi )
+    return bins, his, std, kmean
+
+def get_his_std( data_pixel, rois, max_cts=None):
+    '''
+    YG. Dev 16, 2016
+    Calculate the photon histogram for multi-q by giving 
+    Parameters:
+        data_pixel: multi-D array, for the photon counts
+        max_cts: for bin max, bin will be [0,1,2,..., max_cts]
+    Return:
+        bins
+        his
+        std    
+    '''    
+    if max_cts is None:
+        max_cts = np.max( data_pixel )   +  1 
+    qind, pixelist = roi.extract_label_indices(   rois  )    
+    noqs = len( np.unique(qind) )    
+    his=  np.zeros( [noqs], dtype=np.object) 
+    std=  np.zeros_like( his, dtype=np.object) 
+    kmean =  np.zeros_like( his, dtype=np.object) 
+    for qi in range(noqs):
+        pixelist_qi =  np.where( qind == qi+1)[0] 
+        #print(qi, max_cts)
+        bins, his[qi], std[qi], kmean[qi] = get_his_std_qi( data_pixel[:,pixelist_qi] , max_cts)
+    return  bins, his, std, kmean
+
+
 
 def reshape_array( array, new_len):
     '''
@@ -504,13 +541,15 @@ def get_binned_his_std_qi( data_pixel_qi, lag_steps, max_cts=None):
     his=  np.zeros( [nologs], dtype=np.object) 
     bins = np.zeros_like( his, dtype=np.object) 
     std=  np.zeros_like( his, dtype=np.object) 
+    kmean= np.zeros_like( his, dtype=np.object) 
     i=0    
     for lag in lag_steps:        
         data_pixel_qi_ = np.sum( reshape_array( data_pixel_qi, lag), axis=1)       
-        bins[i], his[i], std[i] = get_his_std_qi( data_pixel_qi_, max_cts * lag)
+        bins[i], his[i], std[i], kmean[i] = get_his_std_qi( data_pixel_qi_, max_cts * lag)
         i +=1 
-    return  bins, his, std 
-    
+    return  bins, his, std, kmean 
+
+ 
     
 def get_binned_his_std( data_pixel, rois, lag_steps, max_cts=None):
     '''
@@ -537,42 +576,21 @@ def get_binned_his_std( data_pixel, rois, lag_steps, max_cts=None):
     his=  np.zeros( [nologs, noqs ], dtype=np.object) 
     bins = np.zeros( [nologs], dtype=np.object) 
     std=  np.zeros_like( his, dtype=np.object)     
+    kmean= np.zeros_like( his, dtype=np.object) 
     i=0    
     for lag in tqdm( lag_steps ):        
         data_pixel_ = np.sum( reshape_array( data_pixel, lag), axis=1) 
         #print( data_pixel_.shape)
         for qi in range(noqs):
             pixelist_qi =  np.where( qind == qi+1)[0] 
-            bins[i], his[i,qi], std[i,qi] = get_his_std_qi( 
-                                data_pixel_[:,pixelist_qi], max_cts * lag)
+            bins[i], his[i,qi], std[i,qi], kmean[i,qi] = get_his_std_qi( 
+                                data_pixel_[:,pixelist_qi], max_cts * lag)            
         i +=1 
         
-    return  bins, his, std 
+    return  bins, his, std, kmean
 
 
-def get_his_std( data_pixel, rois, max_cts=None):
-    '''
-    YG. Dev 16, 2016
-    Calculate the photon histogram for multi-q by giving 
-    Parameters:
-        data_pixel: multi-D array, for the photon counts
-        max_cts: for bin max, bin will be [0,1,2,..., max_cts]
-    Return:
-        bins
-        his
-        std    
-    '''    
-    if max_cts is None:
-        max_cts = np.max( data_pixel )   +  1 
-    qind, pixelist = roi.extract_label_indices(   rois  )    
-    noqs = len( np.unique(qind) )    
-    his=  np.zeros( [noqs], dtype=np.object) 
-    std=  np.zeros_like( his, dtype=np.object) 
-    for qi in range(noqs):
-        pixelist_qi =  np.where( qind == qi+1)[0] 
-        #print(qi, max_cts)
-        bins, his[qi], std[qi] = get_his_std_qi( data_pixel[:,pixelist_qi] , max_cts)
-    return  bins, his, std
+
 
 
 def get_bin_edges(num_times, num_rois, mean_roi, max_cts):
@@ -684,7 +702,10 @@ def nbinomlog(p, hist, x, hist_err=None, N=1):
     err = err - 2*hist[w]*np.log(Np[w]/hist[w])#note: sum(Np-hist)==0   
     if hist_err is None:
         hist_err= np.ones_like( Np ) 
-    scale = ( hist_err[w]**2 ) #/Np[w]     
+        
+    #scale = ( hist_err[w]**2 ) #/Np[w] 
+    #scale = ( hist_err[w]**1 )
+    scale =  1
     #print('here')
     return np.sqrt(np.abs( err / scale ))
 
@@ -697,21 +718,33 @@ def nbinomlog1(p, hist, x, hist_err, N, mu):
     Np=N * st.nbinom.pmf(x,M,1.0/(1.0+mu/M))
     err=2*(Np[w]-hist[w])
     if hist_err is None:
-        hist_err= np.ones_like( Np )
-    #scale = Np[w]/hist_err[w]  
-    
-    #scale = ( hist_err[w]**2 )
-    scale = ( hist_err[w]/Np[w] )**2
-    
-    #scale = ( hist_err[w]/Np[w] )**1
-    
-    #print(scale)
+        hist_err= np.ones_like( Np )    
+    #scale = ( hist_err[w] )**2  #fit much better than ( hist_err[w]/Np[w] )**2, but give a low-M value (high g2) 
+    #scale = ( hist_err[w]/hist[w] )**2    
+    #scale = ( hist_err[w]/hist[w] )**2    
+    #scale = (  hist_err[w]/hist[w]  )**0.1
+    if mu<=1:
+        power = 1
+    else:
+        power = 0.5        
+    scale = ( hist_err[w])** power 
     err = err - 2*hist[w]*np.log(Np[w]/hist[w])#note: sum(Np-hist)==0    
     return np.sqrt( np.abs(err/scale) )  
 
 
-def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None,  varyK=True, 
-                  qth=None, max_bins=None, g2=None, times=None,taus=None):
+def get_roi(data, threshold=1e-3):
+    ind = np.where(data>threshold)[0]
+    if len(ind) > len(data)-3:
+        ind = (np.array(ind[:-3]),)                    
+    elif len(ind) < 3:
+        ind = np.where(data>=0)[0]
+    return ind
+
+
+def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None, spec_bins=None, 
+                 lag_steps=None, varyK=True, 
+                  qth=None, max_bins=None,  rois_lowthres=None,
+                           g2=None, times=None,taus=None,):
     '''
     Fit the xsvs by Negative Binomial Function using max-likelihood chi-squares
     '''
@@ -719,17 +752,27 @@ def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None,  varyK=True,
     max_cts=  spe_cts_all[0][0].shape[0] -1    
     num_times, num_rings = spe_cts_all.shape 
     if max_bins is not None:  
-        num_times = min( num_times, max_bins  )
+        num_times = min( num_times, max_bins  ) 
         
-    bin_edges, bin_centers, Knorm_bin_edges, Knorm_bin_centers = get_bin_edges(
-      num_times, num_rings, K_mean, int(max_cts+2)  )
+    if spec_bins is None:
+        
+        bin_edges, bin_centers, Knorm_bin_edges, Knorm_bin_centers = get_bin_edges(
+      num_times, num_rings, K_mean[0], int(max_cts+2)  )
+    else:
+        bin_edges = spec_bins  
+        if lag_steps is None:
+            print('Please give lag_steps')
+        lag_steps = np.array(lag_steps)
+        lag_steps = lag_steps[np.nonzero( lag_steps )]
+        
     
     if g2 is not None:
         g2c = g2.copy()
         g2c[0] = g2[1]
     ML_val = {}
     KL_val = {}    
-    K_ =[]
+    #K_ = np.zeros_like(  K_mean  )
+    K_=[]
     if qth is not None:
         range_ = range(qth, qth+1)
     else:
@@ -738,12 +781,17 @@ def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None,  varyK=True,
         N=1        
         ML_val[i] =[]
         KL_val[i]= []
-
         if g2 is not None:
             mi_g2 = 1/( g2c[:,i] -1 ) 
             m_=np.interp( times, taus,  mi_g2  )            
         for j in range(   num_times  ): 
-            x_, x, y = bin_edges[j, i][:-1], Knorm_bin_edges[j, i][:-1], spe_cts_all[j, i]  
+            kmean_guess =  K_mean[j,i]
+            if spec_bins is None:                
+                x_, x, y = bin_edges[j, i][:-1], Knorm_bin_edges[j, i][:-1], spe_cts_all[j, i] 
+            else:                
+                #if j==0:
+                #    print(i,j, kmean_guess)
+                x_,x,y =  bin_edges[j],  bin_edges[j]/kmean_guess, spe_cts_all[j, i]
             if spec_std is not None:
                 yerr = spec_std[j, i]
             else:
@@ -755,28 +803,32 @@ def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None,  varyK=True,
             #resultL = minimize(nbinom_lnlike,  [K_mean[i] * 2**j, m0], args=(x_, y) ) 
             #the normal leastsq
             #result_n = leastsq(nbinomres, [K_mean[i] * 2**j, m0], args=(y,x_,N),full_output=1)             
-            #not vary K
-            
+            #not vary K 
+            #if j==0:
+            #    print(y)
+            if rois_lowthres is not None:
+                ind= get_roi(y, threshold=rois_lowthres)
+                y=y[ind]
+                x_ = x_[ind]
+                yerr = yerr[ind]
+            #if j==0:
+            #    print( y, x_)    
             if not varyK:
-                if yerr is None:
-                    fit_func = nbinomlog1  #_old
-                else:
-                    fit_func = nbinomlog1                
+                fit_func = nbinomlog1                
                 #print(j,i,m0, y.shape, x_.shape, yerr.shape, N,  K_mean[i] * 2**j)
-                resultL = leastsq(fit_func, [ m0 ], args=(y, x_, yerr, N, K_mean[i] * 2**j ),
+                resultL = leastsq(fit_func, [ m0 ], args=(y, x_, yerr, N, kmean_guess ),
                                   ftol=1.49012e-38, xtol=1.49012e-38, factor=100,
                                   full_output=1)
                 
                 ML_val[i].append(  abs(resultL[0][0] )  )            
-                KL_val[i].append( K_mean[i] * 2**j )  #   resultL[0][0] )
+                KL_val[i].append( kmean_guess )  #   resultL[0][0] )
                 
             else:
-                #vary M and K
-                if yerr is None:
-                    fit_func = nbinomlog  #_old
-                else:
-                    fit_func = nbinomlog
-                resultL = leastsq(fit_func, [K_mean[i] * 2**j, m0], args=(y,x_,yerr,N),
+                #vary M and K     
+                fit_func = nbinomlog
+                #print( 'here' )
+                    
+                resultL = leastsq(fit_func, [kmean_guess, m0], args=(y,x_,yerr,N),
                             ftol=1.49012e-38, xtol=1.49012e-38, factor=100,full_output=1)
                 
                 ML_val[i].append(  abs(resultL[0][1] )  )            
@@ -784,14 +836,19 @@ def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None,  varyK=True,
                 #print( j, m0, resultL[0][1], resultL[0][0], K_mean[i] * 2**j    )            
             if j==0:                    
                 K_.append( KL_val[i][0] )
+        
     
     return ML_val, KL_val, np.array( K_ )  
 
 
 
+
+
 def plot_xsvs_fit(  spe_cts_all, ML_val, KL_val, K_mean, spec_std  =None,
-                  xlim =[0,15], vlim=[.9,1], q_ring_center=None,
-                  uid='uid', qth=None,  times=None,fontsize=3, path=None, logy=True):  
+                  xlim =[0,15], vlim=[.9,1], q_ring_center=None, max_bins=None,
+                  uid='uid', qth=None,  times=None,fontsize=3, path=None, logy=True,
+                 spec_bins=None, lag_steps=None):
+   
     
     #if qth is None:
     #    fig = plt.figure(figsize=(10,12))
@@ -800,9 +857,20 @@ def plot_xsvs_fit(  spe_cts_all, ML_val, KL_val, K_mean, spec_std  =None,
     
     max_cts=  spe_cts_all[0][0].shape[0] -1    
     num_times, num_rings = spe_cts_all.shape   
+         
         
-    bin_edges, bin_centers, Knorm_bin_edges, Knorm_bin_centers = get_bin_edges(
-                      num_times, num_rings, K_mean, int(max_cts+2)  )
+    if spec_bins is None:
+        bin_edges, bin_centers, Knorm_bin_edges, Knorm_bin_centers = get_bin_edges(
+      num_times, num_rings, K_mean[0], int(max_cts+2)  )
+        
+    else:
+        bin_edges = spec_bins  
+        if lag_steps is None:
+            #lag_steps = times[:num_times]
+            print('Please give lag_steps')
+            
+        lag_steps = np.array(lag_steps)
+        lag_steps = lag_steps[np.nonzero( lag_steps )]        
     
     if qth is not None:
         range_ = range(qth, qth+1)
@@ -812,6 +880,9 @@ def plot_xsvs_fit(  spe_cts_all, ML_val, KL_val, K_mean, spec_std  =None,
         num_times = len( ML_val[0] )
     #for i in range(num_rings):
     
+    if max_bins is not None:  
+        num_times = min( num_times, max_bins  )
+        
     sx = int(round(np.sqrt( len(range_)) ))    
     
     if len(range_)%sx == 0: 
@@ -838,17 +909,26 @@ def plot_xsvs_fit(  spe_cts_all, ML_val, KL_val, K_mean, spec_std  =None,
         axes.set_xlabel("K/<K>")
         axes.set_ylabel("P(K)")
         n +=1
-        for j in range(   num_times  ):        
-            #print( i, j )            
-            x_, x, y = bin_edges[j, i][:-1], Knorm_bin_edges[j, i][:-1], spe_cts_all[j, i] 
+        for j in range(   num_times  ):  
+            kmean_guess =  K_mean[j,i]
+            L = len( spe_cts_all[j, i] )
+            if spec_bins is None:                
+                max_cts_ = max_cts*2**j
+                x_, x, y = bin_edges[j, i][:L], Knorm_bin_edges[j, i][:L], spe_cts_all[j, i] 
+                xscale = (x_/x)[1] # bin_edges[j, i][:-1][1]/ Knorm_bin_edges[j, i][:-1][1]
+                #print( xscale )
+            else:                
+                max_cts_ = max_cts * lag_steps[j]
+                x_,x,y =  bin_edges[j][:L],  bin_edges[j][:L]/kmean_guess, spe_cts_all[j, i]              
+                xscale  = kmean_guess
             # Using the best K and M values interpolate and get more values for fitting curve
-
-            xscale = bin_edges[j, i][:-1][1]/ Knorm_bin_edges[j, i][:-1][1]
-            fitx = np.linspace(0, max_cts*2**j, 5000     )
+            
+            fitx = np.linspace(0, max_cts_,  5000     )
             fitx_ = fitx / xscale 
+            
+            #print (j,i,kmean_guess,  xscale,   fitx.shape,KL_val[i][j], ML_val[i][j] )
             #fity = nbinom_dist( fitx, K_val[i][j], M_val[i][j] )  
-            fitL = nbinom_dist( fitx, KL_val[i][j], ML_val[i][j] ) 
-
+            fitL = nbinom_dist( fitx, KL_val[i][j], ML_val[i][j] )
                 
             if qth is None:
                 ith=0
@@ -868,12 +948,13 @@ def plot_xsvs_fit(  spe_cts_all, ML_val, KL_val, K_mean, spec_std  =None,
             else:
                 yerr= spec_std[j][i]
                 #print(x.shape, y.shape, yerr.shape)
-                axes.errorbar( x,y, yerr, marker='o',  label= label)                 
+                axes.errorbar( x,y, yerr, marker='o',  label= label)                
 
             #if j == 0:
             if j <2 :
                 label="nbinom_L" 
                 txts = r'$M=%s$'%round(ML_val[i][j],2) +',' + r'$K=%s$'%round(KL_val[i][j],2)
+                #print( ML_val[i] )
                 x=0.05
                 y0=0.2 - j *0.1
                 if qth is None:
@@ -905,7 +986,7 @@ def plot_xsvs_fit(  spe_cts_all, ML_val, KL_val, K_mean, spec_std  =None,
     fig.tight_layout() 
     plt.savefig( fp, dpi=fig.dpi)
     
-    plt.show()    
+    #plt.show()    
     
     
 
@@ -935,18 +1016,20 @@ def save_KM( K_mean, KL_val, ML_val, qs=None, uid=None, path=None ):
     kl = get_K( KL_val )
     ml = get_contrast( ML_val)
     L,n = kl.shape
+    m2,m1=K_mean.shape
     if qs is  None:
-        df = DataFrame(     np.hstack( [ (K_mean).reshape( L,1), kl.reshape( L,n),
+        df = DataFrame(     np.hstack( [ (K_mean).reshape( m1,m2), kl.reshape( L,n),
                                     ml.reshape(L,n)   ] )  ) 
         
-        l = ['K_mean'] + ['K_fit_Bin%i'%s for s in range(1,n+1)] + ['Contrast_Fit_Bin%i'%s for s in range(1,n+1)]
+        l = ['K_mean_%d'%i for i in range(m2)] + ['K_fit_Bin%i'%s for s in range(1,n+1)] + ['Contrast_Fit_Bin%i'%s for s in range(1,n+1)]
         df.columns = (x for x in l) 
     else:
         qs = np.array( qs )
-        df = DataFrame(     np.hstack( [ qs.reshape( L,1), (K_mean).reshape( L,1), kl.reshape( L,n),
+        #print(K_mean.shape)
+        df = DataFrame(     np.hstack( [ qs.reshape( L,1), (K_mean).reshape(m1,m2), kl.reshape( L,n),
                                     ml.reshape(L,n)   ] )  ) 
         
-        l = ['q'] + ['K_mean'] + ['K_fit_Bin%i'%s for s in range(1,n+1)] + ['Contrast_Fit_Bin%i'%s for s in range(1,n+1)]        
+        l = ['q'] + ['K_mean_%d'%i for i in range(m2)] + ['K_fit_Bin%i'%s for s in range(1,n+1)] + ['Contrast_Fit_Bin%i'%s for s in range(1,n+1)]        
         df.columns = (x for x in l) 
         
         
@@ -1012,7 +1095,7 @@ def plot_g2_contrast( contrast_factorL, g2, times, taus, q_ring_center=None,
     fp = path + file_name  + '.png'
     plt.savefig( fp, dpi=fig.dpi)
     
-    plt.show()    
+    #plt.show()    
     
     
         
@@ -1260,13 +1343,7 @@ def diff_mot_con_factor(times, relaxation_rate,
 
 
 
-def get_roi(data, threshold=1e-3):
-    roi = np.where(data>threshold)
-    if len(roi[0]) > len(data)-3:
-        roi = (np.array(roi[0][:-3]),)                    
-    elif len(roi[0]) < 3:
-        roi = np.where(data>=0)
-    return roi[0]
+
 
 
 
@@ -1526,3 +1603,83 @@ def plot_xsvs_g2( g2, taus, res_pargs=None, *argv,**kwargs):
     fig.savefig( fp, dpi=fig.dpi)        
     fig.tight_layout()  
     plt.show()
+
+
+
+
+def get_xsvs_fit_old1(spe_cts_all, K_mean, spec_std = None,  varyK=True, 
+                  qth=None, max_bins=None, g2=None, times=None,taus=None):
+    '''
+    Fit the xsvs by Negative Binomial Function using max-likelihood chi-squares
+    '''
+    
+    max_cts=  spe_cts_all[0][0].shape[0] -1    
+    num_times, num_rings = spe_cts_all.shape 
+    if max_bins is not None:  
+        num_times = min( num_times, max_bins  )
+        
+    bin_edges, bin_centers, Knorm_bin_edges, Knorm_bin_centers = get_bin_edges(
+      num_times, num_rings, K_mean, int(max_cts+2)  )
+    
+    if g2 is not None:
+        g2c = g2.copy()
+        g2c[0] = g2[1]
+    ML_val = {}
+    KL_val = {}    
+    K_ =[]
+    if qth is not None:
+        range_ = range(qth, qth+1)
+    else:
+        range_ = range( num_rings)
+    for i in range_:         
+        N=1        
+        ML_val[i] =[]
+        KL_val[i]= []
+
+        if g2 is not None:
+            mi_g2 = 1/( g2c[:,i] -1 ) 
+            m_=np.interp( times, taus,  mi_g2  )            
+        for j in range(   num_times  ): 
+            x_, x, y = bin_edges[j, i][:-1], Knorm_bin_edges[j, i][:-1], spe_cts_all[j, i]  
+            if spec_std is not None:
+                yerr = spec_std[j, i]
+            else:
+                yerr = None
+            if g2 is not None:
+                m0=m_[j]
+            else:
+                m0= 10            
+            #resultL = minimize(nbinom_lnlike,  [K_mean[i] * 2**j, m0], args=(x_, y) ) 
+            #the normal leastsq
+            #result_n = leastsq(nbinomres, [K_mean[i] * 2**j, m0], args=(y,x_,N),full_output=1)             
+            #not vary K
+            
+            if not varyK:
+                if yerr is None:
+                    fit_func = nbinomlog1  #_old
+                else:
+                    fit_func = nbinomlog1                
+                #print(j,i,m0, y.shape, x_.shape, yerr.shape, N,  K_mean[i] * 2**j)
+                resultL = leastsq(fit_func, [ m0 ], args=(y, x_, yerr, N, K_mean[i] * 2**j ),
+                                  ftol=1.49012e-38, xtol=1.49012e-38, factor=100,
+                                  full_output=1)
+                
+                ML_val[i].append(  abs(resultL[0][0] )  )            
+                KL_val[i].append( K_mean[i] * 2**j )  #   resultL[0][0] )
+                
+            else:
+                #vary M and K
+                if yerr is None:
+                    fit_func = nbinomlog  #_old
+                else:
+                    fit_func = nbinomlog
+                resultL = leastsq(fit_func, [K_mean[i] * 2**j, m0], args=(y,x_,yerr,N),
+                            ftol=1.49012e-38, xtol=1.49012e-38, factor=100,full_output=1)
+                
+                ML_val[i].append(  abs(resultL[0][1] )  )            
+                KL_val[i].append( abs(resultL[0][0]) )  #   resultL[0][0] )
+                #print( j, m0, resultL[0][1], resultL[0][0], K_mean[i] * 2**j    )            
+            if j==0:                    
+                K_.append( KL_val[i][0] )
+    
+    return ML_val, KL_val, np.array( K_ )      

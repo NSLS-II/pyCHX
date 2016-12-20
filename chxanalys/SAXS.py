@@ -236,7 +236,7 @@ def plot_form_factor_with_fit(q, iq, q_, result,  fit_power=2,  res_pargs=None, 
     fp = path + 'uid=%s--form_factor--fit-'%(uid )  + '.png'
     plt.savefig( fp, dpi=fig.dpi)        
     fig.tight_layout()  
-    plt.show()
+    #plt.show()
 
     if return_fig:
         return fig
@@ -375,7 +375,7 @@ def fit_form_factor( q, iq,  guess_values, fit_range=None, fit_variables = None,
     fp = path + 'uid=%s--form_factor--fit-'%(uid )  + '.png'
     fig.savefig( fp, dpi=fig.dpi)        
     fig.tight_layout()  
-    plt.show()
+    #plt.show()
 
     result = dict( radius =r, sigma = sigma, delta_rho = delta_rho  )
 

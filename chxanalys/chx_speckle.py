@@ -596,11 +596,10 @@ def plot_sxvs( Knorm_bin_edges, spe_cts_all, uid=None,q_ring_center=None,xlim=[0
             axes.set_xlim(xlim)
             axes.set_title("Q "+ '%.4f  '%(q_ring_center[i])+ r'$\AA^{-1}$')
             axes.legend(loc='best', fontsize = 6)
-    plt.show()
+    #plt.show()
     fig.tight_layout() 
 
-    
-    
+ 
     
 def fit_xsvs1( Knorm_bin_edges, bin_edges,spe_cts_all, K_mean=None,func= 'bn',threshold=1e-7,
              uid=None,q_ring_center=None,xlim=[0,3.5], ylim=None,time_steps=None):
@@ -730,7 +729,7 @@ def fit_xsvs1( Knorm_bin_edges, bin_edges,spe_cts_all, K_mean=None,func= 'bn',th
                           horizontalalignment='right', verticalalignment='bottom')
             axes.set_title("Q "+ '%.4f  '%(q_ring_center[i])+ r'$\AA^{-1}$')
             axes.legend(loc='best', fontsize = 6)
-    plt.show()
+    #plt.show()
     fig.tight_layout()  
     
     return M_val, K_val
@@ -824,7 +823,7 @@ def plot_xsvs_g2( g2, taus, res_pargs=None, *argv,**kwargs):
     fp = path + 'g2--uid=%s'%(uid) + CurTime + '.png'
     fig.savefig( fp, dpi=fig.dpi)        
     fig.tight_layout()  
-    plt.show()
+    #plt.show()
 
     
 ###########################3    
@@ -1013,7 +1012,7 @@ def plot_xsvs_fit(  spe_cts_all, ML_val, KL_val, K_mean, xlim =[0,15], ylim=[1e-
 
             axes.set_title("Q="+ '%.4f  '%(q_ring_center[i])+ r'$\AA^{-1}$')
             axes.legend(loc='best', fontsize = fontsize)
-    plt.show()
+    #plt.show()
     fig.tight_layout() 
     
 

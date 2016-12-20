@@ -1,5 +1,6 @@
 from chxanalys.chx_libs import *
 #from tqdm import *
+from chxanalys.chx_libs import  ( colors,  markers )
 
 def ployfit( y, x=None, order = 20 ):
     '''
@@ -14,12 +15,15 @@ def ployfit( y, x=None, order = 20 ):
 
 
 def get_bad_frame_list( imgsum, fit=True, polyfit_order = 30,legend_size = 12,
-                       plot=True, scale=1.0 ):
+                       plot=True, scale=1.0, good_start=None ):
     '''
     imgsum: the sum intensity of a time series
     scale: the scale of deviation
     '''
-        
+    if good_start is  None:
+        good_start=0
+    imgsum = imgsum[good_start:]
+    bd1 = [i for i in range(good_start)]
     if fit:
         pfit = ployfit( imgsum, order = polyfit_order)
         data = imgsum - pfit
@@ -41,8 +45,8 @@ def get_bad_frame_list( imgsum, fit=True, polyfit_order = 30,legend_size = 12,
         
     else:
         data = imgsum       
-        
-    return np.where( np.abs(data -data.mean()) > scale *data.std() )[0] 
+    bd2=  list(   np.where( np.abs(data -data.mean()) > scale *data.std() )[0]  )
+    return np.array( bd1 + bd2 )
  
 
 def save_dict_csv( mydict, filename, mode='w'):
@@ -142,6 +146,49 @@ def get_meta_data( uid,*argv,**kwargs ):
     for k,v in kwargs.items():
         md[k] =v        
     return md
+
+
+
+def get_max_countc(FD, labeled_array ):
+    """YG. 2016, Nov 18
+    Compute the max intensity of ROIs in the compressed file (FD)
+
+    Parameters
+    ----------
+    FD: Multifile class
+        compressed file
+    labeled_array : array
+        labeled array; 0 is background.
+        Each ROI is represented by a nonzero integer. It is not required that
+        the ROI labels are contiguous
+    index : int, list, optional
+        The ROI's to use. If None, this function will extract averages for all
+        ROIs
+
+    Returns
+    -------
+    max_intensity : a float
+    index : list
+        The labels for each element of the `mean_intensity` list
+    """
+    
+    qind, pixelist = roi.extract_label_indices(  labeled_array  ) 
+    timg = np.zeros(    FD.md['ncols'] * FD.md['nrows']   , dtype=np.int32   ) 
+    timg[pixelist] =   np.arange( 1, len(pixelist) + 1  ) 
+    
+    if labeled_array.shape != ( FD.md['ncols'],FD.md['nrows']):
+        raise ValueError(
+            " `image` shape (%d, %d) in FD is not equal to the labeled_array shape (%d, %d)" %( FD.md['ncols'],FD.md['nrows'], labeled_array.shape[0], labeled_array.shape[1]) )
+
+    max_inten =0 
+    for  i in tqdm(range( FD.beg, FD.end, 1  ), desc= 'Get max intensity of ROIs in all frames' ):    
+        (p,v) = FD.rdrawframe(i)
+        w = np.where( timg[p] )[0]
+        
+        max_inten = max( max_inten, np.max(v[w]) )        
+    return max_inten
+
+
 
 
 def create_cross_mask(  image, center, wy_left=4, wy_right=4, wx_up=4, wx_down=4,
@@ -588,7 +635,7 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
  
     
     
-def plot1D( y,x=None, ax=None,return_fig=False, ls='-',
+def plot1D( y,x=None, yerr=None, ax=None,return_fig=False, ls='-', 
            legend_size=None, lw=None, *argv,**kwargs):    
     """a simple function to plot two-column data by using matplotlib.plot
     pass *argv,**kwargs to plot
@@ -630,22 +677,35 @@ def plot1D( y,x=None, ax=None,return_fig=False, ls='-',
     if logx==True and logy==True:
         logxy = True
         
+    try:
+        marker = kwargs['marker']         
+    except:
+        try:
+            marker = kwargs['m'] 
+        except:            
+            marker= next(  markers_    )
+    try:
+        color =  kwargs['colors']
+    except:    
+        try:
+            color =  kwargs['c']
+        except: 
+            color = next(  colors_    ) 
     if x is None:
-        ax.plot( y, marker = 'o', ls=ls, label= legend, lw=lw)#,*argv,**kwargs)
-        if logx:
-            ax.semilogx( y, marker = 'o', ls=ls, lw=lw)#,*argv,**kwargs)
-        if logy:
-            ax.semilogy( y, marker = 'o', ls=ls, lw=lw)#,*argv,**kwargs)
-        if logxy:
-            ax.loglog( y, marker = 'o',ls=ls, lw=lw)#,*argv,**kwargs)
+        x=range(len(y))
+    if yerr is None:    
+        ax.plot(x,y, marker=marker,color=color,ls=ls,label= legend, lw=lw)#,*argv,**kwargs)
     else:
-        ax.plot(x,y, marker='o',ls=ls,label= legend, lw=lw)#,*argv,**kwargs)        
-        if logx:
-            ax.semilogx( x,y, marker = 'o', ls=ls, lw=lw)#,*argv,**kwargs)
-        if logy:
-            ax.semilogy( x,y, marker = 'o', ls=ls, lw=lw)#,*argv,**kwargs)
-        if logxy:
-            ax.loglog( x,y, marker = 'o', ls=ls, lw=lw)#,*argv,**kwargs) 
+        ax.errorbar(x,y,yerr, marker=marker,color=color,ls=ls,label= legend, lw=lw)#,*argv,**kwargs)
+    if logx:
+        ax.set_xscale('log')
+    if logy:
+        ax.set_yscale('log')
+    if logxy:
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+         
+ 
     
     if 'xlim' in kwargs.keys():
          ax.set_xlim(    kwargs['xlim']  )    
@@ -700,7 +760,7 @@ def check_shutter_open( data_series,  min_inten=0, time_edge = [0,10], plot_ = F
         ax.set_title('uid=%s--imgsum'%uid)
         ax.set_xlabel( 'Frame' )
         ax.set_ylabel( 'Total_Intensity' ) 
-        plt.show()       
+        #plt.show()       
     shutter_open_frame = np.where( np.array(imgsum) > min_inten )[0][0]
     print ('The first frame with open shutter is : %s'%shutter_open_frame )
     return shutter_open_frame
@@ -740,7 +800,7 @@ def get_each_frame_intensity( data_series, sampling = 50,
             #fp = path + "Uid= %s--Waterfall-"%uid + CurTime + '.png'     
             fp = path + "uid=%s--imgsum-"%uid  + '.png'    
             fig.savefig( fp, dpi=fig.dpi)        
-        plt.show()  
+        #plt.show()  
         
     bad_frame_list = np.where( np.array(imgsum) > bad_pixel_threshold )[0]
     if len(bad_frame_list):
@@ -879,7 +939,7 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
         else:
             uid = 'uid'
         #fp = path + "Uid= %s--Waterfall-"%uid + CurTime + '.png'     
-        fp = path + "uid=%s--ROI-on-Image-"%uid  + '.png'    
+        fp = path + "uid=%s--ROI-on-Image"%uid  + '.png'    
         plt.savefig( fp, dpi=fig.dpi)      
     #plt.show()
     if return_fig:
@@ -940,7 +1000,7 @@ def get_avg_img( data_series, sampling = 100, plot_ = False , save=False, *argv,
             #fp = path + "uid= %s--Waterfall-"%uid + CurTime + '.png'     
             fp = path + "uid=%s--avg-img-"%uid  + '.png'    
             fig.savefig( fp, dpi=fig.dpi)        
-        plt.show()
+        #plt.show()
 
     return avg_img
 
@@ -975,10 +1035,13 @@ def check_ROI_intensity( avg_img, ring_mask, ring_number=3 , save=False, *argv,*
         path = kwargs['path'] 
         #fp = path + "Uid= %s--Waterfall-"%uid + CurTime + '.png'     
         #fp = path + "uid=%s--check-ROI-intensity-"%uid  + '.png'  
-        fp = path + "uid= %s--Mean-intensity-of-each-ROI-"%uid  + '.png' 
-        fig.savefig( fp, dpi=fig.dpi)  
+        fp = path + "uid= %s--Mean-intensity-of-one-ROI"%uid  + '.png'         
+        fig.savefig( fp, dpi=fig.dpi) 
+        
+        save_lists( [range( len(  pixel[0][0] )), pixel[0][0]], label=['pixel_list', 'roi_intensity'],
+                filename="uid= %s--Mean-intensity-of-one-ROI"%uid  , path= path)
     
-    plt.show()
+    #plt.show()
     return pixel[0][0]
 
 #from tqdm import tqdm
