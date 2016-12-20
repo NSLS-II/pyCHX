@@ -183,7 +183,7 @@ def plot_t_qrc( qr_1d, frame_edge, save=False, pargs=None,fontsize=8, *argv,**kw
         save_arrays(  np.vstack( [q, np.array(iqs)]).T, 
                     label=  ['q_A-1']+ ['Fram-%s-%s'%(t[0],t[1]) for t in frame_edge],
                     filename='uid=%s-q-Iqt'%uid, path= path  )
-    plt.show()        
+    #plt.show()        
     
     #return qp, np.array( iqs ),q
 
@@ -453,7 +453,7 @@ def show_qz(qz):
     im=ax.imshow(qz, origin='lower' ,cmap='viridis',vmin=qz.min(),vmax= qz.max() )
     fig.colorbar(im)
     ax.set_title( 'Q-z')
-    plt.show()
+    #plt.show()
     
 def show_qr(qr):
     '''Dec 16, 2015, Y.G.@CHX
@@ -464,7 +464,7 @@ def show_qr(qr):
     im=ax.imshow(qr, origin='lower' ,cmap='viridis',vmin=qr.min(),vmax= qr.max() )
     fig.colorbar(im)
     ax.set_title( 'Q-r')
-    plt.show()    
+    #plt.show()    
 
 def show_alphaf(alphaf,):
     '''Dec 16, 2015, Y.G.@CHX
@@ -477,7 +477,7 @@ def show_alphaf(alphaf,):
     #im=ax.imshow(alphaf, origin='lower' ,cmap='viridis',norm= LogNorm(vmin=0.0001,vmax=2.00))    
     fig.colorbar(im)
     ax.set_title( 'alphaf')
-    plt.show()    
+    #plt.show()    
     
 
     
@@ -620,7 +620,7 @@ def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,
         #fp = path + 'Uid= %s--Circular Average'%uid + CurTime + '.png'     
         fp = path + 'uid=%s--qr_1d-'%uid  + '.png'  
         fig.savefig( fp, dpi=fig.dpi)           
-    plt.show()  
+    #plt.show()  
     return df
 
 
@@ -678,7 +678,7 @@ def plot_qr_1d_with_ROI( qr_1d, qr_center,  loglog=False, save=True, setup_pargs
     
         fp = path + 'uid=%s--qr_1d--ROI-'%uid  + '.png'  
         fig.savefig( fp, dpi=fig.dpi)           
-    plt.show()  
+    #plt.show()  
     
 
 
@@ -933,7 +933,7 @@ def show_qzr_map(  qr, qz, inc_x0, data=None, Nzline=10,Nrline=10 ,
         path=kwargs['path']
         fp = path + 'uid=%s--Q-zr-Map-'%(uid) + '.png'
         fig.savefig( fp, dpi=fig.dpi)         
-    plt.show() 
+    #plt.show() 
     
     
     return  zticks,zticks_label,rticks,rticks_label
@@ -1052,7 +1052,7 @@ def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, *argv,**kwargs):
         path=kwargs['path']
         fp = path + 'uid=%s--ROI-on-Image-'%(uid) + '.png'
         fig.savefig( fp, dpi=fig.dpi)         
-    plt.show() 
+    #plt.show() 
     
     
     
@@ -1147,7 +1147,7 @@ def plot_gisaxs_g2( g2, taus, res_pargs=None, one_plot = False, *argv,**kwargs):
             fp = path + 'uid=%s--g2-qz=%s'%(uid,qz_center[qz_ind])  + '.png'        
             fig.savefig( fp, dpi=fig.dpi)        
             fig.tight_layout()  
-            plt.show() 
+            #plt.show() 
                         
     else:  
         
@@ -1205,7 +1205,7 @@ def plot_gisaxs_g2( g2, taus, res_pargs=None, one_plot = False, *argv,**kwargs):
         fp = path + 'uid=%s--g2'%(uid)  + '.png'        
         fig.savefig( fp, dpi=fig.dpi)        
         fig.tight_layout()  
-        plt.show()
+        #plt.show()
 
         
         
@@ -1307,7 +1307,7 @@ def plot_gisaxs_two_g2( g2, taus, g2b, tausb,res_pargs=None,one_plot=False, *arg
             fp = path + 'uid=%s--two-g2-qz=%s'%(uid,qz_center[qz_ind])  + '.png'        
             fig.savefig( fp, dpi=fig.dpi)         
             fig.tight_layout()  
-            plt.show()
+            #plt.show()
         
 
     else: 
@@ -1372,7 +1372,7 @@ def plot_gisaxs_two_g2( g2, taus, g2b, tausb,res_pargs=None,one_plot=False, *arg
         
         fig.savefig( fp, dpi=fig.dpi)        
         fig.tight_layout()  
-        plt.show()
+        #plt.show()
 
         
         
@@ -1623,7 +1623,7 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', one_plot=False,
             fp = path + 'uid=%s--g2-qz=%s--fit'%(uid,qz_center[qz_ind])  + '.png'
             fig.savefig( fp, dpi=fig.dpi)
             fig.tight_layout()  
-            plt.show()
+            #plt.show()
             
             
     else:
@@ -1705,7 +1705,7 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', one_plot=False,
         fp = path + 'uid=%s--g2--fit-'%(uid)  + '.png'        
         fig.savefig( fp, dpi=fig.dpi)        
         fig.tight_layout()  
-        plt.show()
+        #plt.show()
 
         
     
@@ -1768,7 +1768,7 @@ def get_each_box_mean_intensity( data_series, box_mask, sampling, timeperframe, 
         fp = path + 'uid=%s--Mean-intensity-of-each-ROI-'%(uid)  + '.png'
         fig.savefig( fp, dpi=fig.dpi) 
         
-        plt.show()
+        #plt.show()
     return times, mean_int_sets
 
 
@@ -1852,7 +1852,7 @@ def fit_qr_qz_rate( qr, qz, rate, plot_=True,  *argv,**kwargs):
         fig.savefig( fp, dpi=fig.dpi)    
 
         fig.tight_layout() 
-        plt.show()
+        #plt.show()
 
     return D0
 
@@ -1951,7 +1951,7 @@ def plot_gisaxs_g4( g4, taus, res_pargs=None, one_plot=False, *argv,**kwargs):
             fp = path + 'uid=%s--g4-qz=%s'%(uid,qz_center[qz_ind])  + '.png'        
             fig.savefig( fp, dpi=fig.dpi)        
             fig.tight_layout()  
-            plt.show() 
+            #plt.show() 
                         
     else:  
         fig = plt.figure(figsize=(12, 10))
@@ -1997,7 +1997,7 @@ def plot_gisaxs_g4( g4, taus, res_pargs=None, one_plot=False, *argv,**kwargs):
         fp = path + 'uid=%s--g4-'%(uid)  + '.png'        
         fig.savefig( fp, dpi=fig.dpi)        
         fig.tight_layout()  
-        plt.show()
+        #plt.show()
 
 
 

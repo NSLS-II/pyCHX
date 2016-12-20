@@ -8,7 +8,8 @@ apply_mask, show_img,check_ROI_intensity,run_time, plot1D, get_each_frame_intens
 create_hot_pixel_mask,show_ROI_on_image,create_time_slice,save_lists, 
                     save_arrays, psave_obj,pload_obj, get_non_uniform_edges,
                 get_meta_data,   print_dict,    save_dict_csv,  read_dict_csv,
-                  get_bad_frame_list,  find_bad_pixels,  mask_exclude_badpixel, trans_data_to_pd                        
+                  get_bad_frame_list,  find_bad_pixels,  mask_exclude_badpixel, trans_data_to_pd,
+    get_max_countc                                             ,
                                             )
 
 
@@ -47,3 +48,11 @@ convert_gisaxs_pixel_to_q, show_qzr_map, get_1d_qr, get_qzrmap, show_qzr_roi,get
 save_gisaxs_g2,plot_gisaxs_g2, fit_gisaxs_g2,plot_gisaxs_two_g2,plot_qr_1d_with_ROI,fit_qr_qz_rate,
                               multi_uids_gisaxs_xpcs_analysis,plot_gisaxs_g4,
                               get_t_qrc, plot_t_qrc)
+
+from chxanalys.chx_specklecp import  ( xsvsc, xsvsp, get_xsvs_fit,plot_xsvs_fit, save_KM,plot_g2_contrast,
+                                      get_binned_his_std, get_contrast )
+
+
+
+
+
