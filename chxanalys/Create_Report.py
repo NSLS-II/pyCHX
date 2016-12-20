@@ -13,6 +13,11 @@ python Create_Report.py  /XF11ID/analysis/2016_2/yuzhang/Results/August/af8f66/ 
 
 '''
 
+def check_dict_keys( dicts, key):
+    if key not in list(dicts.keys()):
+        dicts[key] = 'unknown'
+        
+        
 
 import h5py
 
@@ -34,8 +39,39 @@ from datetime import datetime
 
 import sys,os
 
- 
- 
+
+def add_one_line_string( c, s,  top, left=30, fontsize = 11  ):
+    if (fontsize*len(s )) >1000:
+        fontsize = 1000./(len(s))
+    c.setFont("Helvetica", fontsize   )
+    c.drawString(left, top, s)
+    
+        
+        
+def add_image_string( c, imgf, data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top ): 
+    
+    image = data_dir + imgf 
+    if os.path.exists(image):
+        im = Image.open( image )
+        ratio = float(im.size[1])/im.size[0]
+        height= img_height
+        c.drawImage( image, img_left, img_top,  width= height/ratio,height=height,mask=None)
+
+        c.setFont("Helvetica", 16)
+        c.setFillColor( blue ) 
+        c.drawString(str1_left, str1_top,str1    )
+        c.setFont("Helvetica", 12)
+        c.setFillColor(red) 
+        c.drawString(str2_left, str2_top, 'filename: %s'%imgf    )
+    else:
+        c.setFillColor( blue ) 
+        c.drawString( str1_left, str1_top, str1)
+        c.setFillColor(red) 
+        c.drawString(  str1_left, str1_top -40,  '-->Not Calculated!'   )
+            
+            
 
 class create_pdf_report( object ):
     
@@ -72,9 +108,13 @@ class create_pdf_report( object ):
           A PDF file with name as "XPCS Analysis Report for uid=%s"%uid in out_dir folder
     '''       
     
-    def __init__( self, data_dir, uid, out_dir=None, filename=None, load=True, report_type='saxs' ):
+    def __init__( self, data_dir, uid, out_dir=None, filename=None, load=True, user=None,
+                 report_type='saxs' ):
         self.data_dir = data_dir
         self.uid = uid
+        if user is None:
+            user = 'chx'
+        self.user = user
         if out_dir is None:
             out_dir = data_dir 
         if not os.path.exists(out_dir):
@@ -93,7 +133,8 @@ class create_pdf_report( object ):
         filename=out_dir + filename
         c = canvas.Canvas( filename, pagesize=letter)
         self.filename= filename
-        c.setTitle("XPCS Analysis Report for uid=%s"%uid)
+        #c.setTitle("XPCS Analysis Report for uid=%s"%uid)
+        c.setTitle(filename)
         self.c = c
         if load:
             self.load_metadata()
@@ -105,6 +146,7 @@ class create_pdf_report( object ):
         #load metadata        
         meta_file = 'uid=%s-md'%uid
         md = pload_obj( data_dir + meta_file )         
+        self.metafile = data_dir + meta_file
         
         self.md = md        
         self.sub_title_num = 0
@@ -119,41 +161,42 @@ class create_pdf_report( object ):
             uid_ = uid
             
 
-        self.avg_img_file = 'uid=%s--img-avg-.png'%uid   
+        self.avg_img_file = 'uid=%s--img-avg.png'%uid   
         
-        self.ROI_on_img_file = 'uid=%s--ROI-on-Image-.png'%uid
+        self.ROI_on_img_file = 'uid=%s--ROI-on-Image.png'%uid
         
-        self.qiq_file = 'uid=%s--Circular-Average-.png'%uid  
-        self.qiq_fit_file = 'uid=%s--form_factor--fit-.png'%uid 
+        self.qiq_file = 'uid=%s--q-Iq.png'%uid  
+        self.qiq_fit_file = 'uid=%s--form_factor--fit.png'%uid 
         self.qr_1d_file = 'uid=%s--qr_1d-.png'%uid
 
         
         if self.report_type =='saxs':
-            self.ROI_on_Iq_file = 'uid=%s--ROI-on-Iq-.png'%uid 
+            self.ROI_on_Iq_file = 'uid=%s--ROI-on-Iq.png'%uid 
         else:
-            self.ROI_on_Iq_file = 'uid=%s--qr_1d--ROI-.png'%uid 
+            self.ROI_on_Iq_file = 'uid=%s--qr_1d--ROI.png'%uid 
         
-        self.Iq_t_file = 'uid=%s--Iq-t-.png'%uid
+        self.Iq_t_file = 'uid=%s--q-Iqt.png'%uid
         self.img_sum_t_file = 'uid=%s--img-sum-t.png'%uid
-        self.wat_file= 'uid=%s--Waterfall-.png'%uid
-        self.Mean_inten_t_file= 'uid=%s--Mean-intensity-of-each-ROI-.png'%uid
+        self.wat_file= 'uid=%s--waterfall.png'%uid
+        self.Mean_inten_t_file= 'uid=%s--t-ROIs.png'%uid       
 
-        self.g2_file = 'uid=%s--g2-.png'%uid_
-        self.g2_fit_file = 'uid=%s--g2--fit-.png'%uid_
-        self.q_rate_file = 'uid=%s--Q-Rate--fit-.png'%uid_    
 
-        self.two_time_file = 'uid=%s--Two-time-.png'%uid_
-        self.two_g2_file = 'uid=%s--g2--two-g2-.png'%uid_
-        self.four_time_file = 'uid=%s--g4-.png'%uid_
+        self.g2_file = 'uid=%s--g2.png'%uid_
+        self.g2_fit_file = 'uid=%s--g2--fit.png'%uid_
+        self.q_rate_file = 'uid=%s--Q-Rate--fit.png'%uid_    
+
+        self.two_time_file = 'uid=%s--Two-time.png'%uid_
+        self.two_g2_file = 'uid=%s--g2--two-g2.png'%uid_
+        self.four_time_file = 'uid=%s--g4.png'%uid_
         
-        self.xsvs_fit_file = 'uid=%s--xsvs-fit-.png'%uid_
-        self.contrast_file = 'uid=%s--contrast-.png'%uid_
+        self.xsvs_fit_file = 'uid=%s--xsvs-fit.png'%uid_
+        self.contrast_file = 'uid=%s--contrast.png'%uid_
         
-        self.flow_g2v = 'uid=%s_1a_mqv--g2-v_fit-.png'%uid_
-        self.flow_g2p = 'uid=%s_1a_mqp--g2-p_fit-.png'%uid_
+        self.flow_g2v = 'uid=%s_1a_mqv--g2-v_fit.png'%uid_
+        self.flow_g2p = 'uid=%s_1a_mqp--g2-p_fit.png'%uid_
         
-        self.flow_g2v_rate_fit = 'uid=%s_v_fit_rate--Q-Rate--fit-.png'%uid_
-        self.flow_g2p_rate_fit = 'uid=%s_p_fit_rate--Q-Rate--fit-.png'%uid_ 
+        self.flow_g2v_rate_fit = 'uid=%s_v_fit_rate--Q-Rate--fit.png'%uid_
+        self.flow_g2p_rate_fit = 'uid=%s_p_fit_rate--Q-Rate--fit.png'%uid_ 
         
         #self.report_header(page=1, top=730, new_page=False)
         #self.report_meta(new_page=False)
@@ -165,13 +208,17 @@ class create_pdf_report( object ):
         c= self.c
         CurTime = self.CurTime
         uid=self.uid
-        
+        user=self.user
         c.setFillColor(black)
         c.setFont("Helvetica", 14)
         #add page number
         c.drawString(250, 10, "Page--%s--"%( page ) )  
         #add time stamp
-        c.drawString(380, 10, "created at %s@CHX"%( CurTime ) ) 
+        
+        #c.drawString(350, 10, "Created at %s@CHX-by-%s"%( CurTime,user ) ) 
+        s_ = "Created at %s@CHX-By-%s"%( CurTime,user )
+        add_one_line_string( c, s_, 10,  left=350,fontsize = 11  )  
+        
         #add title
         #c.setFont("Helvetica", 22)
         title = "XPCS Analysis Report for uid=%s"%uid        
@@ -207,63 +254,48 @@ class create_pdf_report( object ):
         try:
             uid = md['uid']
         except:
-            uid=self.uid
-            
+            uid=self.uid            
         #add sub-title, metadata
-        c.setFont("Helvetica", 20)
-        
+        c.setFont("Helvetica", 20)        
         ds = 15
         self.sub_title_num += 1
         c.drawString(10, top, "%s. Metadata"%self.sub_title_num )  #add title
-
-        top = top - 5
-        c.setFont("Helvetica", 11)
-        i=1
-        c.drawString(30, top-ds*i, 'UID: %s'%uid )
-        c.drawString(30, top-ds*2, 'Sample: %s'%md['sample'] )
-        c.drawString(30, top-ds*3, 'Data Acquisition From: %s To: %s'%(md['start_time'], md['stop_time'] ))        
-        c.drawString(30, top-ds*4, 'Measurement: %s'%md['Measurement'] )
-        c.drawString(30, top-ds*5, 'Wavelength: %s A | Num of Image: %d | Exposure time: %s ms | Acquire period: %s ms'%( md['incident_wavelength'],  int(md['number of images']),round(float(md['exposure time'])*1000,4), round(float(md['frame_time'])*1000,4)     ) )
+        top = top - 5        
+        fontsize = 11
+        c.setFont("Helvetica",  fontsize)
         
-        # shutter mode, feedback on/off, 'human' time stamp       
-        
-        c.drawString(30, top-ds*6, 'Detector-Sample Distance: %s m| FeedBack Mode: x -> %s & y -> %s| Shutter Mode: %s'%(
-                md['detector_distance'], md['feedback_x'], md['feedback_y'], md['shutter mode']  ) )
-        
+        nec_keys = [   'sample', 'start_time', 'stop_time','Measurement' ,'exposure time' ,'incident_wavelength',
+                       'frame_time','detector_distance', 'feedback_x', 'feedback_y', 'shutter mode',
+                    'beam_center_x', 'beam_center_y', 'refl_center_x', 'refl_center_y','mask_file','bad_frame_list']
+        for key in nec_keys:
+            check_dict_keys(md, key)                    
+                    
+        s = []
+        s.append( 'UID: %s'%uid ) ###line 1, for uid
+        s.append('Sample: %s'%md['sample'] )   ####line 2 sample   
+        s.append('Data Acquisition From: %s To: %s'%(md['start_time'], md['stop_time']))####line 3 Data Acquisition time
+        s.append(    'Measurement: %s'%md['Measurement']  ) ####line 4 'Measurement
+        s.append( 'Wavelength: %s A | Num of Image: %d | Exposure time: %s ms | Acquire period: %s ms'%( md['incident_wavelength'],  int(md['number of images']),round(float(md['exposure time'])*1000,4), round(float(md['frame_time'])*1000,4) ) )   ####line 5 'lamda...
+        s.append( 'Detector-Sample Distance: %s m| FeedBack Mode: x -> %s & y -> %s| Shutter Mode: %s'%(
+                md['detector_distance'], md['feedback_x'], md['feedback_y'], md['shutter mode']  ) )  ####line 6 'Detector-Sample Distance..
         if self.report_type == 'saxs':
-            c.drawString(30, top-ds*7, 
-                            'Beam Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y']) )
+            s7= 'Beam Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y'])
         elif self.report_type == 'gisaxs':
-            c.drawString(30, top-ds*7, 
-                            'Incident Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y']) )
-            c.drawString(280, top-ds*7, '||' )       
-            c.drawString(350, top-ds*7, 
-                'Reflect Center: [%s, %s] (pixel)'%(md['refl_center_x'], md['refl_center_y']) )  
+            s7= ('Incident Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y']) +
+                '   ||   ' + 
+                'Reflect Center: [%s, %s] (pixel)'%(md['refl_center_x'], md['refl_center_y']) ) 
+        s7 += ' || ' + 'BadLen: %s'%len(md['bad_frame_list'])
             
-        
-        c.drawString(30, top-ds*8, 'Mask file: %s'%md['mask_file'] )
-        
-        s=  'Data dir: %s'%self.data_dir     
-        #c.setFont("Helvetica", 1000/( len(s ) )   )  
-        #c.setFont("Helvetica", 12)
-        if (12*len(s )) >1000:
-            c.drawString(30, top-ds*9, s[:1000//12] )
-            c.drawString(30 + len('Data dir:')*6, top-ds*10, s[1000//12:] )
-            line = 10
-        else:              
-            c.drawString(30, top-ds*9, s)
-            line = 9
-        s = 'Pipeline notebook: %s'%md['NOTEBOOK_FULL_PATH']
-        #c.setFont("Helvetica", 800/( len(s ) )   )   
-        c.setFont("Helvetica", 12)
-        
-        line +=1
-        if (12*len(s )) >1000:
-            c.drawString(30, top-ds*line, s[:1000//12] )
-            c.drawString(30+  len('Pipeline notebook:')*6, top-ds*(line+1), s[1000//12:] )
-        else:              
-            c.drawString(30, top-ds*line, s)
-
+        s.append( s7  ) ####line 7 'Beam center...      
+        s.append(   'Mask file: %s'%md['mask_file'] )  ####line 8 mask filename
+        s.append(    'Analysis Results Dir: %s'%self.data_dir    )  ####line 9 results folder
+        s.append(   'Metadata Dir: %s.csv-&.pkl'%self.metafile   )  ####line 10 metadata folder
+        #s.append(  'Pipeline notebook: %s'%md['NOTEBOOK_FULL_PATH']    )  ####line 11 notebook folder        
+                    
+        line =1 
+        for s_ in s:            
+            add_one_line_string( c, s_,  top -ds*line ,  left=30,fontsize = fontsize  )  
+            line += 1  
         
         if new_page:
             c.showPage()
@@ -288,21 +320,11 @@ class create_pdf_report( object ):
 
         #add average image
         c.setFont("Helvetica", 14)
-        imgf = self.avg_img_file  
-        image = self.data_dir + imgf
-        if os.path.exists(image):
-            im = Image.open( image )
-            ratio = float(im.size[1])/im.size[0]
-            height=  180
-            c.drawImage( image, 60, top - ds,  width= height/ratio,height=height,mask=None)
-
-            c.setFont("Helvetica", 16)
-            c.setFillColor( blue) 
-            c.drawString( 90, top- 35,  'Average Intensity Image'    )
-
-            c.setFont("Helvetica", 12)
-            c.setFillColor(red) 
-            c.drawString( 80, top- 230,  'filename: %s'%imgf    )
+        
+        imgf = self.avg_img_file         
+        add_image_string( c, imgf, self.data_dir, img_left=60, img_top=top-ds, img_height=180, 
+                     str1_left=90, str1_top = top-35,str1='Average Intensity Image',
+                     str2_left = 80, str2_top = top -230 )            
 
         #add q_Iq
         if self.report_type == 'saxs':
@@ -316,29 +338,14 @@ class create_pdf_report( object ):
             imgf = self.qr_1d_file
             label = 'Qr-1D'
             lab_pos = 420
-            fn_pos = 350
-            
-        image = self.data_dir + imgf
-        
-        if os.path.exists(image):
-            im = Image.open( image )
-            ratio = float(im.size[1])/im.size[0]
-            height= 180
-            c.drawImage( image, 320, top - ds,  width= height/ratio,height=height,mask=None)
-
-            c.setFont("Helvetica", 16)
-            c.setFillColor( blue) 
-            c.drawString( lab_pos, top- 35,  label   )
-
-            c.setFont("Helvetica", 12)
-            c.setFillColor(red) 
-            c.drawString( fn_pos, top- 230,  'filename: %s'%imgf    )  
-            
+            fn_pos = 350            
+              
+        add_image_string( c, imgf, self.data_dir, img_left=320, img_top=top-ds, img_height=180, 
+                     str1_left=lab_pos, str1_top = top-35,str1=label,
+                     str2_left = fn_pos, str2_top = top -230 )             
         if new_page:
             c.showPage()
-            c.save()
-            
-           
+            c.save() 
 
     def report_ROI( self, top= 300, new_page=False):
         '''create the static analysis report
@@ -355,42 +362,29 @@ class create_pdf_report( object ):
         self.sub_title_num +=1
         c.drawString(10, top, "%s. Define of ROI"%self.sub_title_num )  #add title
         #add ROI on image
-        c.setFont("Helvetica", 14)
+        c.setFont("Helvetica", 14)          
         imgf = self.ROI_on_img_file
-        image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height= 240
-        #c.drawInlineImage( image, 30, top - ds*1.1,  width= height/ratio,height=height)
-        c.drawImage( image, 60, top - ds*1.15,  width= height/ratio,height=height,mask= 'auto')
-        c.setFont("Helvetica", 16)
-        c.setFillColor( blue) 
-        c.drawString( 110, top- 35,  'ROI on Image'    )
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( 60, top- 260,  'filename: %s'%imgf    )
-        
+        label = 'ROI on Image' 
+        add_image_string( c, imgf, self.data_dir, img_left= 60, img_top=top - ds*1.15, img_height=240, 
+                     str1_left=110, str1_top = top-35,str1=label,
+                     str2_left = 60, str2_top = top -260 )       
         
         #add q_Iq
-        imgf = self.ROI_on_Iq_file
-        image = self.data_dir + imgf
-        if os.path.exists(image):
-            im = Image.open( image )
-            ratio = float(im.size[1])/im.size[0]
-            height= 180
-            c.drawImage( image, 320, top - ds,  width= height/ratio,height=height,mask=None)
+        imgf = self.ROI_on_Iq_file        
+        img_height=180
+        img_left,img_top =320, top - ds        
+        str1_left, str1_top,str1= 420, top- 35,  'ROI on Iq'
+        str2_left, str2_top = 350, top- 260
+                
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top )
 
-            c.setFont("Helvetica", 16)
-            c.setFillColor( blue) 
-            c.drawString( 420, top- 35,  'ROI on Iq'    )
-            c.setFont("Helvetica", 12)
-            c.setFillColor(red) 
-            c.drawString( 350, top- 260,  'filename: %s'%imgf    )
         
         if new_page:
             c.showPage()
-            c.save()
-
+            c.save()           
+            
 
     def report_time_analysis( self, top= 720,new_page=False):
         '''create the time dependent analysis report
@@ -412,87 +406,64 @@ class create_pdf_report( object ):
         
         
         top = top1 - 160
+        
         #add img_sum_t
         if self.report_type == 'saxs':
             ipos = 80
         elif self.report_type == 'gisaxs':
             ipos = 200
-        imgf = self.img_sum_t_file
-        
-        image = self.data_dir + imgf
-        if os.path.exists(image):
-            im = Image.open( image )
-            ratio = float(im.size[1])/im.size[0]
-            height= 140
-            c.drawImage( image, ipos, top,  width= height/ratio,height=height,mask=None)
+            
+        imgf = self.img_sum_t_file         
+        img_height=140
+        img_left,img_top = ipos, top    
+        str1_left, str1_top,str1= ipos + 60, top1 - 20 ,  'img sum ~ t'
+        str2_left, str2_top = ipos, top- 5
+                
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top )
+            
+        #plot iq~t
+        if self.report_type == 'saxs':
+            imgf = self.Iq_t_file
+            image = self.data_dir + imgf
+            
+                           
+            img_height=140
+            img_left,img_top = 350, top  
+            str1_left, str1_top,str1= 420, top1-20 ,  'iq ~ t' 
+            str2_left, str2_top = 360, top- 5
 
-            c.setFont("Helvetica", 16)
-            c.setFillColor( blue) 
-            c.drawString( ipos + 60, top1 - 20 ,  'img sum ~ t'    )
-
-            c.setFont("Helvetica", 12)
-            c.setFillColor(red) 
-            c.drawString( ipos, top- 5,  'filename: %s'%imgf    )
-
-
-            #plot iq~t
-            if self.report_type == 'saxs':
-
-                imgf = self.Iq_t_file
-                image = self.data_dir + imgf
-                im = Image.open( image )
-                ratio = float(im.size[1])/im.size[0]
-                height= 140
-                c.drawImage( image, 350, top,  width= height/ratio,height=height,mask=None)
-
-                c.setFont("Helvetica", 16)
-                c.setFillColor( blue) 
-                c.drawString( 420, top1-20 ,  'iq ~ t'    )
-
-                c.setFont("Helvetica", 12)
-                c.setFillColor(red) 
-                c.drawString( 360, top- 5,  'filename: %s'%imgf    )
-            elif self.report_type == 'gisaxs':
-                pass
-
-
+            add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                         str1_left, str1_top,str1,
+                         str2_left, str2_top ) 
+        elif self.report_type == 'gisaxs':
+            pass
+            
         top = top1 - 340
         #add waterfall plot
         imgf = self.wat_file
-        image = self.data_dir + imgf
-        if os.path.exists(image):
-            im = Image.open( image )
-            ratio = float(im.size[1])/im.size[0]
-        height= 160
-        if os.path.exists(image):
-            c.drawImage( image, 80, top,  width= height/ratio,height=height,mask=None)
+        
+        img_height=160
+        img_left,img_top = 80, top
+        str1_left, str1_top,str1= 140, top + img_height,  'waterfall plot'
+        str2_left, str2_top = 80, top- 5
 
-        c.setFont("Helvetica", 16)
-        c.setFillColor( blue) 
-        c.drawString( 140, top + height,  'waterfall plot'    )
-
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        if os.path.exists(image):
-            c.drawString( 80, top- 5,  'filename: %s'%imgf    )
-
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top ) 
 
         #add mean-intensity of each roi
         imgf = self.Mean_inten_t_file
-        image = self.data_dir + imgf
-        if os.path.exists(image):
-            im = Image.open( image )
-            ratio = float(im.size[1])/im.size[0]
-            height= 160
-            c.drawImage( image, 360, top,  width= height/ratio,height=height,mask=None)
+        
+        img_height=160
+        img_left,img_top = 360, top
+        str1_left, str1_top,str1= 330, top + img_height,  'Mean-intensity-of-each-ROI'
+        str2_left, str2_top = 310, top- 5
 
-            c.setFont("Helvetica", 16)
-            c.setFillColor( blue) 
-            c.drawString( 330, top + height,  'Mean-intensity-of-each-ROI'    )
-
-            c.setFont("Helvetica", 12)
-            c.setFillColor(red) 
-            c.drawString( 310, top- 5,  'filename: %s'%imgf    )
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top ) 
         
         if new_page:
             c.showPage()
