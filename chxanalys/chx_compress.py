@@ -15,14 +15,16 @@ from contextlib import closing
 from multiprocessing import Pool
 import dill
 import sys
+import gc
 
 
-def run_dill_encoded(what):
-    #print( 'here')
+
+
+def run_dill_encoded(what):    
     fun, args = dill.loads(what)
     return fun(*args)
 
-def apply_async(pool, fun, args,callback=None):    
+def apply_async(pool, fun, args, callback=None):    
     return pool.apply_async( run_dill_encoded, (dill.dumps((fun, args)),), callback= callback)
 
 
@@ -30,12 +32,20 @@ def map_async(pool, fun, args ):
     return pool.map_async(run_dill_encoded,  (dill.dumps((fun, args)),))
 
  
-    
+def pass_FD(FD,n):
+    #FD.rdframe(n)
+    FD.seekimg(n)
+
+def go_through_FD(FD):    
+    for i in range(FD.beg, FD.end):
+        pass_FD(FD,i)
+        
     
 def compress_eigerdata( images, mask, md, filename=None,  force_compress=False, 
                         bad_pixel_threshold=1e15, bad_pixel_low_threshold=0, 
                        hot_pixel_threshold=2**30, nobytes=4,bins=1, bad_frame_list=None,
-                       para_compress= False, num_sub=100, dtypes='uid',reverse =True ):   
+                       para_compress= False, num_sub=100, dtypes='uid',reverse =True,
+                      num_max_para_process=500):   
     
     end= len(images)//bins
     
@@ -45,8 +55,9 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
     if dtypes!= 'uid':
         para_compress= False  
     else:
-        images='foo'
-        para_compress=  True
+        if para_compress:
+            images='foo'
+            #para_compress=   True
     
     #print( dtypes )
         
@@ -57,7 +68,8 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
             return para_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
                                     bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes= nobytes, bins=bins,
-                                     num_sub=num_sub, dtypes=dtypes, reverse=reverse   ) 
+                                     num_sub=num_sub, dtypes=dtypes, reverse=reverse,
+                                          num_max_para_process=num_max_para_process) 
                     
         else:
             return init_compress_eigerdata( images, mask, md, filename, 
@@ -71,7 +83,8 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
                 return para_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
                                     bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes= nobytes, bins=bins,
-                                     num_sub=num_sub, dtypes=dtypes, reverse=reverse    )
+                                     num_sub=num_sub, dtypes=dtypes, reverse=reverse,
+                                              num_max_para_process=num_max_para_process)
             else:
                 return init_compress_eigerdata( images, mask, md, filename, 
                        bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
@@ -118,7 +131,8 @@ def read_compressed_eigerdata( mask, filename, beg, end,
 
 def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
-                            bad_pixel_low_threshold=0, nobytes=4, bins=1, dtypes='uid',reverse =True ):
+                            bad_pixel_low_threshold=0, nobytes=4, bins=1, dtypes='uid',reverse =True,
+                           num_max_para_process=500, cpu_core_number=72 ):
     if dtypes=='uid':
         uid= md['uid'] #images
         detector = get_detector( db[uid ] )
@@ -126,14 +140,23 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
         N= len(images_)
     else:
         N = len(images)
-    if N%num_sub:
-        Nf = N// num_sub +1
-    else:
-        Nf = N//num_sub  
+        
+    Nf  =  int( np.ceil( N/ num_sub  ) )
+  
+    if Nf >   cpu_core_number:
+        print("The process number is larger than %s (XF11ID server core number)"%cpu_core_number)
+        num_sub_old = num_sub
+        num_sub = int( np.ceil(N/cpu_core_number))
+        Nf  =  int( np.ceil( N/ num_sub  ) )
+        print ("The sub compressed file number was changed from %s to %s"%( num_sub_old, num_sub )
+              
+        
     create_compress_header( md, filename +'-header', nobytes, bins  )    
-    #print( 'done for header here')
-    results = para_segment_compress_eigerdata( images=images, mask=mask, md=md, filename=filename, num_sub=num_sub, bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
-                            bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes=nobytes, bins=bins, dtypes=dtypes  )
+    #print( 'done for header here')    
+    results = para_segment_compress_eigerdata( images=images, mask=mask, md=md,filename=filename, 
+                    num_sub=num_sub, bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
+                    bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes=nobytes, bins=bins, dtypes=dtypes,
+                                             num_max_para_process=num_max_para_process)
     
     res_ = np.array( [ results[k].get() for k in   list(sorted(results.keys()))   ]     )     
     print()
@@ -148,15 +171,9 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
             avg_img = avg_img_                    
         else:
             mask *= mask_        
-            avg_img += avg_img_        
-            #bad_frame_list.append( bad_frame_list_  )
-            
+            avg_img += avg_img_             
     bad_frame_list = np.where(  bad_frame_list )[0]    
-    avg_img /= Nf
-    
-    #print( Nf )
-    #if len( bad_frame_list)!=0:
-    #    bad_frame_list = np.concatenate(  bad_frame_list )    
+    avg_img /= Nf   
     
     if len(bad_frame_list):
         print ('Bad frame list are: %s' %bad_frame_list)
@@ -170,36 +187,24 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
     
     return   mask, avg_img, imgsum, bad_frame_list
 
-
-
 def combine_compressed( filename,  Nf, del_old=True):
     old_files = np.concatenate(  np.array([ [filename +'-header'], 
-                                            [filename  + '_temp-%i.tmp'%i for i in range(Nf) ]]))
-    
-    combine_binary_files(filename, old_files, del_old  )  
-    
-    
-    
-
+                                            [filename  + '_temp-%i.tmp'%i for i in range(Nf) ]]))    
+    combine_binary_files(filename, old_files, del_old  ) 
     
 def  combine_binary_files(filename, old_files, del_old = False):
     '''Combine binary files together'''
-
     fn_ = open(filename, 'wb')
-    for ftemp in old_files:  
-        #print( ftemp )
-        #ft = open(ftemp, 'rb')
-        shutil.copyfileobj( open(ftemp, 'rb'), fn_)        
-        #ft.close()
+    for ftemp in old_files: 
+        shutil.copyfileobj( open(ftemp, 'rb'), fn_) 
         if del_old:
             os.remove( ftemp )
-    fn_.close()
-
- 
+    fn_.close() 
     
 def para_segment_compress_eigerdata( images, mask,  md, filename, num_sub=100,
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
-                            bad_pixel_low_threshold=0, nobytes=4, bins=1,  dtypes='images',reverse =True  ):    
+                            bad_pixel_low_threshold=0, nobytes=4, bins=1,  dtypes='images',reverse =True,
+                                   num_max_para_process=50):    
     '''
     parallelly compressed eiger data without header, this function is for parallel compress
     ''' 
@@ -210,7 +215,8 @@ def para_segment_compress_eigerdata( images, mask,  md, filename, num_sub=100,
         images_ = load_data( uid, detector, reverse= reverse    )
         N = len(images_)
     else:
-        N = len(images)
+        N = len(images)        
+
     if N%num_sub:
         Nf = N// num_sub +1
         print('The average image intensity would be slightly not correct, about 1% error.')
@@ -218,23 +224,33 @@ def para_segment_compress_eigerdata( images, mask,  md, filename, num_sub=100,
     else:
         Nf = N//num_sub
     print( 'It will create %i temporary files for parallel compression.'%Nf)
-    inputs= range( Nf )      
-    fns = [  filename + '_temp-%i.tmp'%i for i in inputs] 
 
-    pool =  Pool(processes= len(inputs) )  
-    result = {}        
-    for i in  inputs:
-    #for i in  tqdm (inputs ):
-        #print( i )
-        result[i] =   pool.apply_async(  segment_compress_eigerdata, [
-                images,  mask,  md, fns[i],bad_pixel_threshold, hot_pixel_threshold, 
-                         bad_pixel_low_threshold, nobytes, bins, 
-                        i*num_sub, (i+1)*num_sub, dtypes, reverse  ]  )   
-    pool.close()
-    pool.join()   
-    return result 
-    
-
+    if Nf> num_max_para_process:
+        N_runs = np.int( np.ceil( Nf/float(num_max_para_process)))  
+        print('The parallel run number: %s is larger than num_max_para_process: %s'%(Nf, num_max_para_process ))
+    else:
+        N_runs= 1        
+    result = {}   
+    #print( mask_filename )# + '*'* 10 + 'here' )
+    for nr in range( N_runs ):
+        if (nr+1)*num_max_para_process > Nf:
+            inputs= range( num_max_para_process*nr, Nf )
+        else:            
+            inputs= range( num_max_para_process*nr, num_max_para_process*(nr + 1 ) )          
+        fns = [  filename + '_temp-%i.tmp'%i for i in inputs]
+        #print( nr, inputs, )
+        pool =  Pool(processes= len(inputs) ) #, maxtasksperchild=1000 )      
+        #print( inputs )        
+        for i in  inputs:
+            if i*num_sub <= N:
+                result[i] = pool.apply_async(  segment_compress_eigerdata, [
+                    images,  mask,  md,  filename + '_temp-%i.tmp'%i,bad_pixel_threshold, hot_pixel_threshold,    bad_pixel_low_threshold, nobytes, bins, 
+                            i*num_sub, (i+1)*num_sub, dtypes, reverse  ]  )  
+       
+        pool.close()
+        pool.join()
+        pool.terminate() 
+    return result     
 
 def segment_compress_eigerdata( images,  mask, md, filename, 
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
@@ -242,23 +258,20 @@ def segment_compress_eigerdata( images,  mask, md, filename,
                                N1=None, N2=None, dtypes='images',reverse =True    ):     
     '''
     Create a compressed eiger data without header, this function is for parallel compress
+    for parallel compress don't pass any non-scalar parameters
     '''     
     
     if dtypes=='uid':
         uid= md['uid'] #images
         detector = get_detector( db[uid ] )
-        images = load_data( uid, detector, reverse= reverse    )[N1:N2]
-    
-    fp = open( filename,'wb' )        
-    Nimg_ = len( images)
-    
-    #print( images )
-    
-    avg_img = np.zeros_like(    images[0], dtype= np.float ) 
+        images = load_data( uid, detector, reverse= reverse    )[N1:N2] 
+    Nimg_ = len( images)    
+    M,N = images[0].shape
+    avg_img = np.zeros( [M,N], dtype= np.float )    
     Nopix =  float( avg_img.size )
     n=0
     good_count = 0
-    frac = 0.0
+    #frac = 0.0
     if nobytes==2:
         dtype= np.int16
     elif nobytes==4:
@@ -267,78 +280,47 @@ def segment_compress_eigerdata( images,  mask, md, filename,
         dtype=np.float64
     else:
         print ( "Wrong type of nobytes, only support 2 [np.int16] or 4 [np.int32]")
-        dtype= np.int32 
-        
+        dtype= np.int32         
     Nimg =   Nimg_//bins 
     time_edge = np.array(create_time_slice( N= Nimg_, 
-                                    slice_num= Nimg, slice_width= bins ))    
-    
+                                    slice_num= Nimg, slice_width= bins ))  
     imgsum  =  np.zeros(    Nimg   )         
     if bins!=1:
         print('The frames will be binned by %s'%bins) 
-    
-    #print ( 'the frame number is %s'%Nimg )
+    fp = open( filename,'wb' )    
     for n in   range(Nimg):            
-        t1,t2 = time_edge[n]        
-        #print( t1, t2, n, Nimg)  
+        t1,t2 = time_edge[n]  
         if bins!=1:
-            img = np.average(  images[t1:t2], axis=0   )   
+            img = np.array( np.average(  images[t1:t2], axis=0   )   , dtype=np.int32)
         else:
-            img =  images[t1]
-        #print( 'the p is' )
-        #print(  ''   )
-        mask &= img < hot_pixel_threshold   
-        
-        #print( img.shape, mask.shape )
-        p = np.where( (np.ravel(img)>0) &  np.ravel(mask) )[0] #don't use masked data  
-        v = np.ravel( np.array( img, dtype= dtype )) [p]
-        
-        #print( 'the p is %s'%p )
-        
+            img =   np.array( images[t1], dtype=np.int32) 
+        mask &= img < hot_pixel_threshold         
+        p = np.where( (np.ravel(img)>0) *  np.ravel(mask) )[0] #don't use masked data 
+        v = np.ravel( np.array( img, dtype= dtype )) [p] 
         dlen = len(p)         
-        imgsum[n] = v.sum()         
+        imgsum[n] = v.sum()  
         if (imgsum[n] > bad_pixel_threshold) or (imgsum[n] <=bad_pixel_low_threshold):
             dlen = 0
             fp.write(  struct.pack( '@I', dlen  ))    
         else:      
-            np.ravel(avg_img )[p] +=   v
-            good_count +=1 
-            frac += dlen/Nopix
-            #s_fmt ='@I{}i{}{}'.format( dlen,dlen,'ih'[nobytes==2])
+            np.ravel( avg_img )[p] +=   v
+            good_count +=1             
             fp.write(  struct.pack( '@I', dlen   ))
             fp.write(  struct.pack( '@{}i'.format( dlen), *p))
             if bins==1:
                 fp.write(  struct.pack( '@{}{}'.format( dlen,'ih'[nobytes==2]), *v)) 
             else:
-                fp.write(  struct.pack( '@{}{}'.format( dlen,'dd'[nobytes==2]  ), *v)) 
-        #n +=1     
+                fp.write(  struct.pack( '@{}{}'.format( dlen,'dd'[nobytes==2]  ), *v))        #n +=1
+        del  p,v, img 
+        fp.flush() 
         
-    fp.close() 
-    frac /=good_count
-    #print( "The fraction of pixel occupied by photon is %6.3f%% "%(100*frac) ) 
-    avg_img /= good_count
-    
-    #print( 'the good count is %s'%good_count)
-    
-    #bad_frame_list1 = np.where( np.array(imgsum) > bad_pixel_threshold  )[0]
-    #bad_frame_list2 = np.where( np.array(imgsum) < bad_pixel_low_threshold  )[0]
-    #bad_frame_list =   np.unique( np.concatenate( [bad_frame_list1, bad_frame_list2]) )   
-    #bad_frame_list = np.where(  (np.array(imgsum) > bad_pixel_threshold) & (np.array(imgsum) <= bad_pixel_low_threshold)  )[0]
-    
-    bad_frame_list =  (np.array(imgsum) > bad_pixel_threshold) | (np.array(imgsum) <= bad_pixel_low_threshold)  
-    
-    
-    #if len(bad_frame_list):
-    #    print ('Bad frame list are: %s' %bad_frame_list)
-    #else:
-    #    print ('No bad frames are involved.')
-    #print('finish one process',)
-    
-    sys.stdout.write('#')
-    del images
-    sys.stdout.flush()
-
-    #print( 'Should release memory here')
+    fp.close()  
+    avg_img /= good_count    
+    bad_frame_list =  (np.array(imgsum) > bad_pixel_threshold) | (np.array(imgsum) <= bad_pixel_low_threshold)
+    sys.stdout.write('#')    
+    sys.stdout.flush()    
+    #del  images, mask, avg_img, imgsum, bad_frame_list
+    #print( 'Should release memory here')    
     return   mask, avg_img, imgsum, bad_frame_list
         
     
@@ -364,6 +346,7 @@ def create_compress_header( md, filename, nobytes=4, bins=1  ):
     fp.write( Header)       
     fp.close()     
         
+
 
 def init_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
