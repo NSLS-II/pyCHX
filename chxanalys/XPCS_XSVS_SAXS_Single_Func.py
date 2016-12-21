@@ -1,4 +1,4 @@
-#from chxanalys.chx_packages import *
+from chxanalys.chx_packages import *
 
 def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
     force_compress =  run_pargs['force_compress'] 
