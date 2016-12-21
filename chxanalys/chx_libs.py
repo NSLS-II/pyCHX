@@ -54,7 +54,7 @@ from tqdm import tqdm
 
 import collections
 import itertools 
-
+import random
 
 mcolors = itertools.cycle(['b', 'g', 'r', 'c', 'm', 'y', 'k','darkgoldenrod','oldlace', 'brown','dodgerblue'   ])
 

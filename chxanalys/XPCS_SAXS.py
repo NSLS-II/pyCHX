@@ -195,13 +195,9 @@ def get_circular_average( avg_img, mask, pargs, show_pixel=True,  min_x=None, ma
     qp_ = qp * dpix
     #  convert bin_centers from r [um] to two_theta and then to q [1/px] (reciprocal space)
     two_theta = utils.radius_to_twotheta(Ldet, qp_)
-    q = utils.twotheta_to_q(two_theta, lambda_)
-    
-    #qp = qp_/dpix
-    
+    q = utils.twotheta_to_q(two_theta, lambda_)    
     if plot_:
-        if  show_pixel:       
-        
+        if  show_pixel: 
             fig = plt.figure(figsize=(8, 6))
             ax1 = fig.add_subplot(111)
             #ax2 = ax1.twiny()        
@@ -212,7 +208,7 @@ def get_circular_average( avg_img, mask, pargs, show_pixel=True,  min_x=None, ma
             #ax1.set_xlabel('q ('r'$\AA^{-1}$)')
             #ax2.cla()
             ax1.set_ylabel('I(q)')
-            title = ax1.set_title('Uid= %s--Circular Average'%uid)      
+            title = ax1.set_title('uid= %s--Circular Average'%uid)      
             
         else:
             fig = plt.figure(figsize=(8, 6))
@@ -221,39 +217,28 @@ def get_circular_average( avg_img, mask, pargs, show_pixel=True,  min_x=None, ma
             ax1.set_xlabel('q ('r'$\AA^{-1}$)')        
             ax1.set_ylabel('I(q)')
             title = ax1.set_title('uid= %s--Circular Average'%uid)     
-            ax2=None 
-        
-                    
+            ax2=None                     
         if 'xlim' in kwargs.keys():
             ax1.set_xlim(    kwargs['xlim']  )    
             x1,x2 =  kwargs['xlim']
-            w = np.where( (q >=x1 )&( q<=x2) )[0]                        
-            #if ax2 is not None:
-            #    ax2.set_xlim(  [ qp[w[0]], qp[w[-1]]]     ) 
-            
-            
+            w = np.where( (q >=x1 )&( q<=x2) )[0] 
         if 'ylim' in kwargs.keys():
-            ax1.set_ylim(    kwargs['ylim']  )        
+            ax1.set_ylim(    kwargs['ylim']  )       
           
         title.set_y(1.1)
         fig.subplots_adjust(top=0.85)
-
-        if save:
-            #dt =datetime.now()
-            #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
-            path = pargs['path']
-            #fp = path + 'Uid= %s--Circular Average'%uid + CurTime + '.png'     
-            fp = path + 'uid=%s--q-Iq'%uid  + '.png'  
-            fig.savefig( fp, dpi=fig.dpi)            
-            save_lists(  [q, iq], label=['q_A-1', 'Iq'],  filename='uid=%s--q-Iq'%uid, path= path  )
-        
-        #plt.show()
-        
+        path = pargs['path']
+        fp = path + 'uid=%s--q-Iq'%uid  + '.png'  
+        fig.savefig( fp, dpi=fig.dpi)
+    if save:
+        path = pargs['path']
+        save_lists(  [q, iq], label=['q_A-1', 'Iq'],  filename='uid=%s--q-Iq'%uid, path= path  )        
     return  qp, iq, q
 
  
  
-def plot_circular_average( qp, iq, q,  pargs, show_pixel=True,   save=False,return_fig=False, *argv,**kwargs):
+def plot_circular_average( qp, iq, q,  pargs, show_pixel= False, 
+                          save=True,return_fig=False, *argv,**kwargs):
     
     if RUN_GUI:
         fig = Figure()
@@ -267,15 +252,13 @@ def plot_circular_average( qp, iq, q,  pargs, show_pixel=True,   save=False,retu
         ax1.semilogy(qp, iq, '-o')
         ax1.set_xlabel('q (pixel)')  
         ax1.set_ylabel('I(q)')
-        title = ax1.set_title('Uid= %s--Circular Average'%uid)  
+        title = ax1.set_title('uid= %s--Circular Average'%uid)  
     else:
         ax1.semilogy(q,  iq , '-o') 
         ax1.set_xlabel('q ('r'$\AA^{-1}$)')        
         ax1.set_ylabel('I(q)')
         title = ax1.set_title('uid= %s--Circular Average'%uid)     
         ax2=None 
-
-
     if 'xlim' in kwargs.keys():
         ax1.set_xlim(    kwargs['xlim']  )    
         x1,x2 =  kwargs['xlim']
@@ -283,19 +266,13 @@ def plot_circular_average( qp, iq, q,  pargs, show_pixel=True,   save=False,retu
         #if ax2 is not None:
         #    ax2.set_xlim(  [ qp[w[0]], qp[w[-1]]]     )             
     if 'ylim' in kwargs.keys():
-        ax1.set_ylim(    kwargs['ylim']  )        
-
+        ax1.set_ylim(    kwargs['ylim']  ) 
     title.set_y(1.1)
     fig.subplots_adjust(top=0.85)
-
     if save:
-        #dt =datetime.now()
-        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
         path = pargs['path']
-        #fp = path + 'Uid= %s--Circular Average'%uid + CurTime + '.png'     
-        fp = path + 'uid=%s--Circular-Average-'%uid  + '.png'  
-        plt.savefig( fp, dpi=fig.dpi)            
-        save_lists(  [q, iq], label=['q_A-1', 'Iq'],  filename='uid=%s-q-Iq'%uid, path= path  )
+        fp = path + 'uid=%s--q-Iq'%uid  + '.png'  
+        fig.savefig( fp, dpi=fig.dpi)
     if return_fig:
         return fig        
 
@@ -358,7 +335,7 @@ def get_angular_average( avg_img, mask, pargs,   min_r, max_r,
             fp = path + 'uid=%s--Ang-Iq-t-'%uid   + '.png'   
             fig.savefig( fp, dpi=fig.dpi)
             
-        plt.show()
+        #plt.show()
  
         
     return  angq, ang
@@ -505,7 +482,7 @@ def get_t_iqc( FD, frame_edge, mask, pargs, nx=1500, plot_ = False , save=False,
                         label=  ['q_A-1']+ ['Fram-%s-%s'%(t[0],t[1]) for t in frame_edge],
                         filename='uid=%s-q-Iqt'%uid, path= path  )
             
-        plt.show()        
+        #plt.show()        
     
     return qp, np.array( iqs ),q
 
@@ -716,7 +693,7 @@ def get_t_ang( data_series, frame_edge, mask, center, pixel_size, min_r, max_r,p
             fp = path + 'uid=%s--Ang-Iq-t-'%uid  + '.png'         
             fig.savefig( fp, dpi=fig.dpi)
             
-        plt.show()
+        #plt.show()
         
     
     return qp, np.array( iqs ) 
@@ -2331,7 +2308,7 @@ def fit_saxs_rad_ang_g2( g2,  res_pargs=None,function='simple_exponential', fit_
         fp = path + 'uid=%s--g2--qr-%s--fit-'%(uid, q_ring_center[qr_ind] )  + '.png'
         fig.savefig( fp, dpi=fig.dpi)        
         fig.tight_layout()  
-        plt.show()
+        #plt.show()
         
 
     result = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )
@@ -2800,7 +2777,7 @@ def fit_saxs_g2( g2, res_pargs=None, function='simple_exponential',
     fig.savefig( fp, dpi=fig.dpi)        
     
     fig.tight_layout()       
-    plt.show()
+    #plt.show()
 
     result = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )
     
@@ -2900,7 +2877,7 @@ def fit_q_rate( q, rate, plot_=True, power_variable=False, *argv,**kwargs):
         fig.savefig( fp, dpi=fig.dpi)    
     
         fig.tight_layout() 
-        plt.show()
+        #plt.show()
         
     return D0
 
@@ -3039,7 +3016,7 @@ def fit_q2_rate( q2, rate, plot_=True, *argv,**kwargs):
         fig.savefig( fp, dpi=fig.dpi)    
     
         fig.tight_layout() 
-        plt.show()
+        #plt.show()
         
     return D0
 
@@ -3056,7 +3033,7 @@ def plot_gamma():
     #ax.set_ylabel('Log( Beta0 'r'$\beta$'"($s^{-1}$)")
     ax.set_ylabel('Log( Gamma )')
     ax.set_xlabel("$Log(q)$"r'($\AA^{-1}$)')
-    plt.show()
+    #plt.show()
 
     
 

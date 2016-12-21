@@ -1,6 +1,6 @@
 from chxanalys.chx_libs import (np, roi, time, datetime, os, get_events, 
                             getpass, db, get_images,LogNorm, plt,tqdm, utils, Model,
-                           multi_tau_lags)
+                           multi_tau_lags,  random)
 
 from chxanalys.chx_generic_functions import (get_detector, get_fields, get_sid_filenames,  
  load_data, load_mask,get_fields, reverse_updown, ring_edges,get_avg_img,check_shutter_open,
@@ -9,7 +9,7 @@ create_hot_pixel_mask,show_ROI_on_image,create_time_slice,save_lists,
                     save_arrays, psave_obj,pload_obj, get_non_uniform_edges,
                 get_meta_data,   print_dict,    save_dict_csv,  read_dict_csv,
                   get_bad_frame_list,  find_bad_pixels,  mask_exclude_badpixel, trans_data_to_pd,
-    get_max_countc                                             ,
+    get_max_countc,find_uids ,    check_bad_uids
                                             )
 
 
@@ -19,7 +19,7 @@ from chxanalys.XPCS_SAXS import (get_circular_average,save_lists,get_ring_mask, 
                             plot_saxs_g2,fit_saxs_g2,fit_q2_rate,plot_saxs_two_g2,fit_q_rate,
                             circular_average,plot_saxs_g4, get_t_iqc,multi_uids_saxs_xpcs_analysis,
                              save_g2,plot_t_iqc,
-                                get_g2_fit,plot_g2,save_g2_fit_para_tocsv  )
+                                get_g2_fit,plot_g2,save_g2_fit_para_tocsv, plot_circular_average  )
 
 
 from chxanalys.Two_Time_Correlation_Function import (show_C12, get_one_time_from_two_time,
@@ -39,7 +39,8 @@ from chxanalys.chx_correlationc import ( cal_g2c,Get_Pixel_Arrayc,auto_two_Array
 from chxanalys.chx_correlationp import (cal_g2p, auto_two_Arrayp)
 
 from chxanalys.Create_Report import (create_pdf_report, 
-                            create_multi_pdf_reports_for_uids,create_one_pdf_reports_for_uids)
+                            create_multi_pdf_reports_for_uids,create_one_pdf_reports_for_uids,
+                                    make_pdf_report)
 
 from chxanalys.chx_olog import LogEntry,Attachment, update_olog_uid, update_olog_id
 

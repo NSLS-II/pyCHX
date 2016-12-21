@@ -758,10 +758,13 @@ def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None, spec_bins=None,
         
         bin_edges, bin_centers, Knorm_bin_edges, Knorm_bin_centers = get_bin_edges(
       num_times, num_rings, K_mean[0], int(max_cts+2)  )
+        
     else:
         bin_edges = spec_bins  
         if lag_steps is None:
             print('Please give lag_steps')
+            lag_steps = [1,2]
+            print('The lag_steps is changed to %s'%lag_steps)
         lag_steps = np.array(lag_steps)
         lag_steps = lag_steps[np.nonzero( lag_steps )]
         
@@ -821,13 +824,11 @@ def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None, spec_bins=None,
                                   full_output=1)
                 
                 ML_val[i].append(  abs(resultL[0][0] )  )            
-                KL_val[i].append( kmean_guess )  #   resultL[0][0] )
-                
+                KL_val[i].append( kmean_guess )  #   resultL[0][0] )                
             else:
                 #vary M and K     
                 fit_func = nbinomlog
-                #print( 'here' )
-                    
+                #print( 'here' )                    
                 resultL = leastsq(fit_func, [kmean_guess, m0], args=(y,x_,yerr,N),
                             ftol=1.49012e-38, xtol=1.49012e-38, factor=100,full_output=1)
                 
@@ -835,9 +836,7 @@ def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None, spec_bins=None,
                 KL_val[i].append( abs(resultL[0][0]) )  #   resultL[0][0] )
                 #print( j, m0, resultL[0][1], resultL[0][0], K_mean[i] * 2**j    )            
             if j==0:                    
-                K_.append( KL_val[i][0] )
-        
-    
+                K_.append( KL_val[i][0] ) 
     return ML_val, KL_val, np.array( K_ )  
 
 
@@ -1068,20 +1067,20 @@ def plot_g2_contrast( contrast_factorL, g2, times, taus, q_ring_center=None,
         #print( sn )
         ax = fig.add_subplot(sx, sy, n )
         n +=1
-        yL= contrast_factorL[sn, :]  
-        g = g2[1:,sn] -1         
+        yL= contrast_factorL[sn, :] 
         ax.semilogx(times[:nt], yL, "-bs",  label='xsvs') 
-        
+        ylim = [ yL.min() * vlim[0], yL.max()* vlim[1] ]
+        if (g2!=[]) and (g2 is not None):             
+            g = g2[1:,sn] -1         
+            ax.semilogx(taus[1:], g, "-rx", label='xpcs')
+            ylim = [ g.min() * vlim[0], g.max()* vlim[1] ]     
         #ax.semilogx([times[:nt][-1], taus[1:][0]], [yL[-1],g[0]], "--bs",  label='') 
-        
-        ax.semilogx(taus[1:], g, "-rx", label='xpcs')
         til = " Q=" + '%.5f  '%(q_ring_center[sn]) + r'$\AA^{-1}$'
         if qth is not None:
             til = title + til
-        ax.set_title( til) 
-                    
+        ax.set_title( til)                     
         #ym = np.mean( g )
-        ax.set_ylim([ g.min() * vlim[0], g.max()* vlim[1] ]) 
+        ax.set_ylim( ylim ) 
         #if qth is not None:legend_size=12  
         if n==2:    
             ax.legend(loc = 'best', fontsize=legend_size )
@@ -1374,7 +1373,7 @@ def plot_sxvs( Knorm_bin_edges, spe_cts_all, uid=None,q_ring_center=None,xlim=[0
             axes.set_xlim(xlim)
             axes.set_title("Q "+ '%.4f  '%(q_ring_center[i])+ r'$\AA^{-1}$')
             axes.legend(loc='best', fontsize = 6)
-    plt.show()
+    #plt.show()
     fig.tight_layout() 
 
     
@@ -1508,7 +1507,7 @@ def fit_xsvs1( Knorm_bin_edges, bin_edges,spe_cts_all, K_mean=None,func= 'bn',th
                           horizontalalignment='right', verticalalignment='bottom')
             axes.set_title("Q "+ '%.4f  '%(q_ring_center[i])+ r'$\AA^{-1}$')
             axes.legend(loc='best', fontsize = 6)
-    plt.show()
+    #plt.show()
     fig.tight_layout()  
     
     return M_val, K_val
@@ -1602,7 +1601,7 @@ def plot_xsvs_g2( g2, taus, res_pargs=None, *argv,**kwargs):
     fp = path + 'g2--uid=%s'%(uid) + CurTime + '.png'
     fig.savefig( fp, dpi=fig.dpi)        
     fig.tight_layout()  
-    plt.show()
+    #plt.show()
 
 
 
