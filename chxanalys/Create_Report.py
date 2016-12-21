@@ -264,18 +264,24 @@ class create_pdf_report( object ):
         fontsize = 11
         c.setFont("Helvetica",  fontsize)
         
-        nec_keys = [   'sample', 'start_time', 'stop_time','Measurement' ,'exposure time' ,'incident_wavelength',
+        nec_keys = [   'sample', 'start_time', 'stop_time','Measurement' ,'exposure time' ,'incident_wavelength', 'cam_acquire_t',
                        'frame_time','detector_distance', 'feedback_x', 'feedback_y', 'shutter mode',
                     'beam_center_x', 'beam_center_y', 'refl_center_x', 'refl_center_y','mask_file','bad_frame_list']
         for key in nec_keys:
-            check_dict_keys(md, key)                    
+            check_dict_keys(md, key) 
+        
+        try:
+            exposuretime= md['cam_acquire_t']     #exposure time in sec
+        except:    
+            exposuretime= md['count_time']     #exposure time in sec
+    
                     
         s = []
         s.append( 'UID: %s'%uid ) ###line 1, for uid
         s.append('Sample: %s'%md['sample'] )   ####line 2 sample   
         s.append('Data Acquisition From: %s To: %s'%(md['start_time'], md['stop_time']))####line 3 Data Acquisition time
         s.append(    'Measurement: %s'%md['Measurement']  ) ####line 4 'Measurement
-        s.append( 'Wavelength: %s A | Num of Image: %d | Exposure time: %s ms | Acquire period: %s ms'%( md['incident_wavelength'],  int(md['number of images']),round(float(md['exposure time'])*1000,4), round(float(md['frame_time'])*1000,4) ) )   ####line 5 'lamda...
+        s.append( 'Wavelength: %s A | Num of Image: %d | Exposure time: %s ms | Acquire period: %s ms'%( md['incident_wavelength'],  int(md['number of images']),round(float(exposuretime)*1000,4), round(float(md['frame_time'])*1000,4) ) )   ####line 5 'lamda...
         s.append( 'Detector-Sample Distance: %s m| FeedBack Mode: x -> %s & y -> %s| Shutter Mode: %s'%(
                 md['detector_distance'], md['feedback_x'], md['feedback_y'], md['shutter mode']  ) )  ####line 6 'Detector-Sample Distance..
         if self.report_type == 'saxs':
@@ -984,5 +990,43 @@ def load_res_h5( full_uid, data_dir   ):
         return meta_data, avg_h5, mask_h5,roi_h5, g2_h5, taus_h5, g2b_h5, taus2_h5    
 
 
+def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username, 
+                    run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs
+                   ):
+
+    c= create_pdf_report(  data_dir, uid, pdf_out_dir, filename= pdf_filename, user= username)    
+    #Page one: Meta-data/Iq-Q/ROI
+    c.report_header(page=1)
+    c.report_meta( top=730)
+    c.report_static( top=550, iq_fit = run_fit_form )
+    c.report_ROI( top= 300)
+    #Page Two: img~t/iq~t/waterfall/mean~t/g2/rate~q
+    c.new_page()
+    c.report_header(page=2)
+    c.report_time_analysis( top= 720)
+    if run_one_time: 
+        c.report_one_time( top= 350)
+        #Page Three: two-time/two g2   
+    page = 2
 
 
+    if run_two_time:
+        c.new_page()
+        page +=1
+        c.report_header(page= page)
+        c.report_two_time(  top= 720 )      
+
+    if run_four_time:
+        c.new_page()
+        page +=1
+        c.report_header(page= page)
+        c.report_four_time(  top= 720 ) 
+
+    if run_xsvs:
+        c.new_page()
+        page +=1
+        c.report_header(page= page)
+        c.report_xsvs(  top= 720 )          
+
+    c.save_page()
+    c.done() 
