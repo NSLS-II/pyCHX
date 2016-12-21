@@ -189,7 +189,7 @@ def get_waterfallc(FD, labeled_array, qindex=1, aspect = 1.0,
         fp = path + "uid=%s--Waterfall-"%uid  + '.png'    
         fig.savefig( fp, dpi=fig.dpi) 
         
-    plt.show()
+    #plt.show()
     return  wat
 
 
@@ -282,7 +282,7 @@ def get_each_ring_mean_intensityc( FD, ring_mask, sampling=1, timeperframe=None,
                         label=  ['frame']+ ['ROI_%d'%i for i in range( num_rings ) ],
                         filename='uid=%s-t-ROIs'%uid, path= path  )  
         
-        plt.show()
+        #plt.show()
         
     return times, mean_int_sets
 

@@ -148,7 +148,7 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
         num_sub_old = num_sub
         num_sub = int( np.ceil(N/cpu_core_number))
         Nf  =  int( np.ceil( N/ num_sub  ) )
-        print ("The sub compressed file number was changed from %s to %s"%( num_sub_old, num_sub )
+        print ("The sub compressed file number was changed from %s to %s"%( num_sub_old, num_sub ))
               
         
     create_compress_header( md, filename +'-header', nobytes, bins  )    
