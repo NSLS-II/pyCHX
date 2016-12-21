@@ -2,6 +2,55 @@ from chxanalys.chx_libs import *
 #from tqdm import *
 from chxanalys.chx_libs import  ( colors,  markers )
 
+
+def check_bad_uids(uids, mask, img_choice_N = 10):
+    '''Y.G. Dec 22, 2016
+        Find bad uids by checking the average intensity by a selection of the number img_choice_N of frames for the uid. If the average intensity is zeros, the uid will be considered as bad uid.
+        Parameters:
+            uids: list, a list of uid
+            mask: array, bool type numpy.array
+            img_choice_N: random select number of the uid
+        Return:
+            buids, list, bad uids    
+    '''   
+    import random
+    buids = []
+    for uid in uids:
+        detector = get_detector( db[uid ] )
+        imgs = load_data( uid, detector  )
+        img_samp_index = random.sample( range(len(imgs)), img_choice_N)
+        imgsa = apply_mask( imgs, mask )
+        avg_img =  get_avg_img( imgsa, img_samp_index, plot_ = False, uid =uid)
+        if avg_img.max() == 0:
+            buids.append( uid ) 
+            print( 'The bad uid is: %s'%uid )
+    print( 'The total and bad uids number are %s--%s, repsectively.'%( len(uids), len(buids) ) )        
+    return buids          
+    
+
+
+def find_uids(start_time, stop_time ):
+    '''Y.G. Dec 22, 2016
+        A wrap funciton to find uids by giving start and end time
+        Return:
+        sids: list, scan id
+        uids: list, uid
+    
+    '''
+    hdrs = db(start_time= start_time, stop_time = stop_time)
+    print ('Totally %s uids are found'%(len(hdrs)))
+    sids=[]
+    uids=[]
+    for hdr in hdrs:
+        s= get_sid_filenames( hdr)
+        print (s[1][:8])
+        sids.append( s[0] )
+        uids.append( s[1][:8] )
+    sids=sids[::-1]
+    uids=uids[::-1]
+    return sids, uids
+
+
 def ployfit( y, x=None, order = 20 ):
     '''
     fit data (one-d array) by a ploynominal function
@@ -15,7 +64,7 @@ def ployfit( y, x=None, order = 20 ):
 
 
 def get_bad_frame_list( imgsum, fit=True, polyfit_order = 30,legend_size = 12,
-                       plot=True, scale=1.0, good_start=None ):
+                       plot=True, scale=1.0, good_start=None, uid='uid',path=None ):
     '''
     imgsum: the sum intensity of a time series
     scale: the scale of deviation
@@ -28,11 +77,10 @@ def get_bad_frame_list( imgsum, fit=True, polyfit_order = 30,legend_size = 12,
         pfit = ployfit( imgsum, order = polyfit_order)
         data = imgsum - pfit
         if plot:
-            fig = plt.figure( )
-            
+            fig = plt.figure( )            
             ax = fig.add_subplot(2,1,1 )             
             plot1D( imgsum, ax = ax,legend='data',legend_size=legend_size  )
-            plot1D( pfit,ax=ax, legend='ploy-fit', title='imgsum',legend_size=legend_size  )
+            plot1D( pfit,ax=ax, legend='ploy-fit', title=uid + '_imgsum',legend_size=legend_size  )
             
             ax2 = fig.add_subplot(2,1,2 )      
             plot1D( data, ax = ax2,legend='difference' )
@@ -41,7 +89,9 @@ def get_bad_frame_list( imgsum, fit=True, polyfit_order = 30,legend_size = 12,
             plot1D(x=[0,len(imgsum)], y=[ymin,ymin], ax = ax2, ls='--',lw= 3, legend='low_thresh', legend_size=legend_size  )
             plot1D(x=[0,len(imgsum)], y=[ymax,ymax], ax = ax2 , ls='--' , lw= 3, legend='high_thresh',
                   title='imgsum_to_find_bad_frame',legend_size=legend_size  )
-            
+            if path is not None:
+                fp = path + '%s'%( uid ) + '_imgsum_analysis'  + '.png' 
+                plt.savefig( fp, dpi=fig.dpi)            
         
     else:
         data = imgsum       
@@ -181,11 +231,13 @@ def get_max_countc(FD, labeled_array ):
             " `image` shape (%d, %d) in FD is not equal to the labeled_array shape (%d, %d)" %( FD.md['ncols'],FD.md['nrows'], labeled_array.shape[0], labeled_array.shape[1]) )
 
     max_inten =0 
-    for  i in tqdm(range( FD.beg, FD.end, 1  ), desc= 'Get max intensity of ROIs in all frames' ):    
-        (p,v) = FD.rdrawframe(i)
-        w = np.where( timg[p] )[0]
-        
-        max_inten = max( max_inten, np.max(v[w]) )        
+    for  i in tqdm(range( FD.beg, FD.end, 1  ), desc= 'Get max intensity of ROIs in all frames' ):
+        try:
+            (p,v) = FD.rdrawframe(i)
+            w = np.where( timg[p] )[0]
+            max_inten = max( max_inten, np.max(v[w]) )  
+        except:
+            pass
     return max_inten
 
 
@@ -835,7 +887,7 @@ def create_time_slice( N, slice_num, slice_width, edges=None ):
     return time_edge
 
 
-def show_label_array_on_image(ax, image, label_array, cmap=None,norm=None, log_img=True,alpha=0.3,
+def show_label_array_on_image(ax, image, label_array, cmap=None,norm=None, log_img=True,alpha=0.3, vmin=0.1, vmax=5,
                               imshow_cmap='gray', **kwargs):  #norm=LogNorm(), 
     """
     This will plot the required ROI's(labeled array) on the image
@@ -864,12 +916,14 @@ def show_label_array_on_image(ax, image, label_array, cmap=None,norm=None, log_i
         The artist added to the axes
     """
     ax.set_aspect('equal')
+    
+    #print (vmin, vmax )
     if log_img:
-        im = ax.imshow(image, cmap=imshow_cmap, interpolation='none',norm=LogNorm(norm),**kwargs)  #norm=norm,
+        im = ax.imshow(image, cmap=imshow_cmap, interpolation='none',norm=LogNorm(vmin,  vmax),**kwargs)  #norm=norm,
     else:
-        im = ax.imshow(image, cmap=imshow_cmap, interpolation='none',norm=norm,**kwargs)  #norm=norm,
+        im = ax.imshow(image, cmap=imshow_cmap, interpolation='none',vmin=vmin, vmax=vmax,**kwargs)  #norm=norm,
         
-    im_label = mpl_plot.show_label_array(ax, label_array, cmap=cmap, norm=norm, alpha=alpha,
+    im_label = mpl_plot.show_label_array(ax, label_array, cmap=cmap, vmin=vmin, vmax=vmax, alpha=alpha,
                                 **kwargs)  # norm=norm,
     
     
@@ -878,7 +932,7 @@ def show_label_array_on_image(ax, image, label_array, cmap=None,norm=None, log_i
     
     
 def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on = True,
-                       save=False, return_fig = False, rect_reqion=None,
+                       save=False, return_fig = False, rect_reqion=None, log_img = True, vmin=0.01, vmax=5,  
                        *argv,**kwargs):
     
     '''show ROI on an image
@@ -888,24 +942,26 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
         rwidth: the plot range around the center  
     
     '''
-    
-    vmin=0.01    
-    if 'vmin' in kwargs.keys():
-        vmin = kwargs['vmin']
-        
-    vmax=5
-    if 'vmax' in kwargs.keys():
-        vmax = kwargs['vmax']
+
         
     if RUN_GUI:
         fig = Figure(figsize=(8,8))
         axes = fig.add_subplot(111)
     else:
         fig, axes = plt.subplots(figsize=(8,8))
-        
+    
+    #print( vmin, vmax)
+    #norm=LogNorm(vmin,  vmax)
+    
     axes.set_title("ROI on Image")
+    if log_img:
+        if vmin==0:
+            vmin += 1e-10
+    
+    vmax = max(1, vmax ) 
+    
     im,im_label = show_label_array_on_image(axes, image, ROI, imshow_cmap='viridis',
-                            cmap='Paired',alpha=alpha,
+                            cmap='Paired',alpha=alpha, log_img=log_img,
                              vmin=vmin, vmax=vmax,  origin="lower")
     if rect_reqion is  None:
         if center is not None:
@@ -974,9 +1030,18 @@ def crop_image(  image,  crop_mask  ):
     return img_crop
             
 
-def get_avg_img( data_series, sampling = 100, plot_ = False , save=False, *argv,**kwargs):   
+def get_avg_img( data_series,  img_samp_index=None, sampling = 100, plot_ = False , save=False, *argv,**kwargs):   
     '''Get average imagef from a data_series by every sampling number to save time'''
-    avg_img = np.average(data_series[:: sampling], axis=0)
+    if img_samp_index is None:
+        avg_img = np.average(data_series[:: sampling], axis=0)
+    else:
+        avg_img = np.zeros_like( data_series[0] )
+        n=0
+        for i in img_samp_index:
+            avg_img += data_series[i]
+            n +=1
+        avg_img = np.array( avg_img) / n
+    
     if plot_:
         fig, ax = plt.subplots()
         uid = 'uid'
