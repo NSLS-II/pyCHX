@@ -1030,3 +1030,71 @@ def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username,
 
     c.save_page()
     c.done() 
+ 
+def export_xpcs_results_to_h5( filename, export_dir, export_dict ):
+    '''
+       YG. Dec 22, 2016 
+       save the results to a h5 file
+       
+       filename:  the h5 file name
+       export_dir: the exported file folder
+       export_dict: dict, with keys as md, g2, g4 et.al.
+    '''   
+    import h5py     
+    fout = export_dir + filename
+    with h5py.File(fout, 'w') as hf: 
+        for key in list(export_dict.keys()):
+            #print(key)
+            if key=='md':
+                md= export_dict['md']
+                meta_data = hf.create_dataset("md", (1,), dtype='i')
+                for key_ in md.keys(): 
+                    try:
+                        meta_data.attrs[key_] = md[key_]
+                    except:
+                        pass     
+                    #if key_ in ['pixel_mask', "avg_img","mask" ,"roi"  ]:
+                    #    try:                            
+                    #        data = hf.create_dataset( key_, data = md[key_]  )
+                    #    except:
+                    #        pass
+            elif key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds']:
+                export_dict[key].to_hdf( fout, key=key,  mode='a',   )                
+            else:
+                data = hf.create_dataset(key, data = export_dict[key] )
+    print( 'The xpcs analysis results are exported to %s with filename as %s'%(export_dir , filename))
+            
+def extract_xpcs_results_from_h5( filename, import_dir ):
+    '''
+       YG. Dec 22, 2016 
+       extract data from a h5 file
+       
+       filename:  the h5 file name
+       import_dir: the imported file folder
+       return:
+           extact_dict: dict, with keys as md, g2, g4 et.al.
+    '''   
+    
+    import pandas as pds 
+    import numpy as np
+    extract_dict = {}
+    extract_dict['md'] = {}
+    fp = import_dir + filename
+    pds_type_keys = []
+    with h5py.File( fp, 'r') as hf:  
+        #print (list( hf.keys()) )
+        for key in list( hf.keys()): 
+            if key in ['md']:
+                md = hf.get('md')
+                for key in list(md.attrs):
+                    extract_dict['md'][key] = md.attrs[key] 
+            #elif key in ["avg_img", 'roi', 'mask', 'pixel_mask']:                 
+            #    extract_dict['md'][key] =  np.array( hf.get( key ) )
+            elif key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds']:
+                pds_type_keys.append( key )                
+            else:    
+                extract_dict[key] = np.array( hf.get( key  ))
+    for key in pds_type_keys:
+        extract_dict[key] = pds.read_hdf(fp, key= key )                
+    return extract_dict
+    
