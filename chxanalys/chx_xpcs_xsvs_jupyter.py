@@ -6,7 +6,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
     run_fit_form = run_pargs['run_fit_form']
     run_waterfall = run_pargs['run_waterfall'] 
     run_t_ROI_Inten = run_pargs['run_t_ROI_Inten'] 
-    run_fit_g2 = run_pargs['run_fit_g2'], 
+    #run_fit_g2 = run_pargs['run_fit_g2'], 
+    fit_g2_func = run_pargs['fit_g2_func']
     run_one_time = run_pargs['run_one_time'] 
     run_two_time = run_pargs['run_two_time'] 
     run_four_time = run_pargs['run_four_time']
@@ -29,7 +30,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
         width = run_pargs['width']
         qcenters = run_pargs['qcenters']  
         
-  
+    taus=None;g2=None;tausb=None;g2b=None;g12b=None;taus4=None;g4=None;times_xsv=None;contrast_factorL=None; 
+    
     qth_interest = run_pargs['qth_interest']
     use_sqnorm = run_pargs['use_sqnorm']
     pdf_version = run_pargs['pdf_version']
@@ -52,8 +54,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
     md.update( imgs.md );Nimg = len(imgs);
     pixel_mask =  1- np.int_( np.array( imgs.md['pixel_mask'], dtype= bool)  )
     print( 'The data are: %s' %imgs )
-
-    print_dict( md,  ['suid', 'number of images', 'uid', 'scan_id', 'start_time', 'stop_time', 'sample', 'Measurement',
+    if False:
+        print_dict( md,  ['suid', 'number of images', 'uid', 'scan_id', 'start_time', 'stop_time', 'sample', 'Measurement',
                   'acquire period', 'exposure time', 
          'det_distanc', 'beam_center_x', 'beam_center_y', ] )
 
@@ -133,7 +135,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
                ylabel='Total_Intensity', legend='imgsum', save=True, path=data_dir)
         show_saxs_qmap( avg_img, setup_pargs, width=600,vmin=.1, vmax=np.max(avg_img*.1), logs=True,
                        image_name= 'uid=%s--img-avg'%uid,  save=True) 
-        np.save(  data_dir + 'uid=%s--img-avg'%uid, avg_img)
+        #np.save(  data_dir + 'uid=%s--img-avg'%uid, avg_img)
 
         hmask = create_hot_pixel_mask( avg_img, threshold = 100, center=center, center_radius= 400)
         qp, iq, q = get_circular_average( avg_img, mask * hmask, pargs=setup_pargs  )
@@ -201,12 +203,14 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
         if use_sqnorm:
             norm = get_pixelist_interp_iq( qp, iq, ring_mask, center)
         else:
-            norm=None   
-
-
-        g2=[]
-        taus=[]
-
+            norm=None 
+            
+        define_good_series = False
+        if define_good_series:
+            FD = Multifile(filename, beg = good_start, end = Nimg)
+            uid_ = uid + '--fra-%s-%s'%(FD.beg, FD.end)
+            print( uid_ )
+    
         if run_one_time:    
             t0 = time.time()
             if use_imgsum_norm:
@@ -219,34 +223,30 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
             run_time(t0)
             taus = lag_steps * timeperframe
             res_pargs = dict(taus=taus, q_ring_center=q_ring_center, path=data_dir, uid=uid_  ) 
-            save_g2( g2, taus=taus, qr= q_ring_center, qz=None, uid=uid_, path= data_dir )
-            if not run_fit_g2:
-                plot_g2( g2, res_pargs= res_pargs,  master_plot='qz',vlim=[0.95, 1.05], geometry='saxs', append_name=  ''  )    
-
-            if run_fit_g2:
-                g2_fit_result, taus_fit, g2_fit = get_g2_fit( g2,  res_pargs=res_pargs, 
-                            function = 'stretched',  vlim=[0.95, 1.05], fit_range= None,  
-                        fit_variables={'baseline':True, 'beta':True, 'alpha':False,'relaxation_rate':True},                                  
+            #save_g2( g2, taus=taus, qr= q_ring_center, qz=None, uid=uid_, path= data_dir )
+            g2_pds = save_g2( g2, taus=taus, qr= q_ring_center, qz=None, uid=uid_+'--g2.csv', path= data_dir, return_res=True )
+            #if not run_fit_g2:
+            #plot_g2( g2, res_pargs= res_pargs,  master_plot='qz',vlim=[0.95, 1.05], geometry='saxs', append_name=  ''  )          
+            g2_fit_result, taus_fit, g2_fit = get_g2_fit( g2,  res_pargs=res_pargs, 
+                            function = fit_g2_func ,  vlim=[0.95, 1.05], fit_range= None,  
+                        fit_variables={'baseline':True, 'beta':True, 'alpha':False,'relaxation_rate':True}, 
                         guess_values={'baseline':1.0,'beta':0.05,'alpha':1.0,'relaxation_rate':0.01,})  
 
-                res_pargs_fit = dict(taus=taus_fit, q_ring_center= q_ring_center,  
+            res_pargs_fit = dict(taus=taus_fit, q_ring_center= q_ring_center,  
                                      path=data_dir, uid=uid +'_fra-%s-%s'%(FD.beg, FD.end) +'_g2_fit'       )
 
-            if run_fit_g2:
-                dfv = save_g2_fit_para_tocsv(g2_fit_result, 
-                                filename= 'uid=%s'%uid_  +'_g2_fit_paras', path=data_dir )
-            if run_fit_g2:
-                plot_g2( g2, res_pargs= res_pargs, tau_2 = taus_fit, g2_2 = g2_fit,  
-                    fit_res= g2_fit_result, function = 'stretched', master_plot='qz',    
+            g2_fit_paras = save_g2_fit_para_tocsv(g2_fit_result, 
+                                filename= 'uid=%s'%uid_  +'_g2_fit_paras.csv', path=data_dir )
+
+            plot_g2( g2, res_pargs= res_pargs, tau_2 = taus_fit, g2_2 = g2_fit,  
+                    fit_res= g2_fit_result, function = fit_g2_func, master_plot='qz',    
                    vlim=[0.95, 1.05], geometry='saxs', append_name=  '-fit'  )
 
-            if run_fit_g2:
-                fit_q_rate(  q_ring_center[:],dfv['relaxation_rate'], power_variable= False, 
+            fit_q_rate(  q_ring_center[:],g2_fit_paras['relaxation_rate'], power_variable= False, 
                        uid=uid_  , path= data_dir )
 
         # For two-time
         data_pixel = None
-
         if run_two_time:    
             data_pixel =   Get_Pixel_Arrayc( FD, pixelist,  norm=norm ).get_data()
             t0=time.time()    
@@ -270,28 +270,30 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
             run_time(t0)
             tausb = np.arange( g2b.shape[0])[:max_taus] *timeperframe
             res_pargsb = dict(taus=tausb, q_ring_center=q_ring_center,  path=data_dir, uid=uid_       )
-            save_g2( g2b, taus=tausb, qr= q_ring_center, qz=None, uid=uid_ +'-fromTwotime', path= data_dir )
+            #save_g2( g2b, taus=tausb, qr= q_ring_center, qz=None, uid=uid_ +'-fromTwotime', path= data_dir )
+            g2b_pds = save_g2( g2b, taus=tausb, qr= q_ring_center, qz=None, uid=uid_ +'--g2b.csv', path= data_dir, return_res=True )
+
             #plot_saxs_g2( g2b, tausb,  vlim=[0.95, 1.05], res_pargs=res_pargsb) 
 
 
             g2_fit_resultb, taus_fitb, g2_fitb = get_g2_fit( g2b,  res_pargs=res_pargsb, 
-                        function = 'stretched',  vlim=[0.95, 1.05], fit_range= None,  
+                        function = fit_g2_func,  vlim=[0.95, 1.05], fit_range= None,  
                         fit_variables={'baseline':True, 'beta':True, 'alpha':False,'relaxation_rate':True},                                  
                         guess_values={'baseline':1.0,'beta':0.05,'alpha':1.0,'relaxation_rate':0.01,})  
 
             res_pargs_fitb = dict(taus=taus_fitb, q_ring_center= q_ring_center,  
                                  path=data_dir, uid=uid_  +'_g2b_fit'       )
 
-            dfvb = save_g2_fit_para_tocsv(g2_fit_resultb, 
+            g2b_fit_paras = save_g2_fit_para_tocsv(g2_fit_resultb, 
                             filename= 'uid=%s'%uid_  + '_g2b_fit_paras', path=data_dir )
 
 
             plot_g2( g2b, res_pargs= res_pargsb, tau_2 = taus_fitb, g2_2 = g2_fitb,  
-                fit_res= g2_fit_resultb, function = 'stretched', master_plot='qz',    
+                fit_res= g2_fit_resultb, function = fit_g2_func, master_plot='qz',    
                vlim=[0.95, 1.05], geometry='saxs', append_name= '-b-fit'  )
-
-
-            plot_saxs_two_g2( g2, taus, 
+            
+            if run_two_time and run_one_time:
+                plot_saxs_two_g2( g2, taus, 
                          g2b, tausb, res_pargs=res_pargs, vlim=[.95, 1.05], uid= uid_  )
 
         # Four Time Correlation
@@ -301,31 +303,28 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
             g4 = get_four_time_from_two_time(g12b, g2=g2b)[:max_taus]
             run_time(t0)
 
-
             taus4 = np.arange( g4.shape[0])*timeperframe
             res_pargs4 = dict(taus=taus4, q_ring_center=q_ring_center, path=data_dir, uid=uid_      )
-            save_saxs_g2(   g4,  res_pargs4, taus=taus4, filename= 'uid=%s'%uid_  + '--g4.csv' )             
+            #save_saxs_g2(   g4,  res_pargs4, taus=taus4, filename= 'uid=%s'%uid_  + '--g4.csv' )             
+            g4_pds = save_g2( g4, taus=taus4, qr= q_ring_center, qz=None, uid=uid_ +'--g4.csv', path= data_dir, return_res=True )
 
             plot_saxs_g4( g4, taus4,  vlim=[0.95, 1.05], logx=True, res_pargs=res_pargs4) 
 
 
-        # Speckel Visiblity
-
+        # Speckel Visiblity   
         if run_xsvs:    
             max_cts = get_max_countc(FD, ring_mask )
             qind, pixelist = roi.extract_label_indices(   ring_mask  )
             noqs = len( np.unique(qind) )
             nopr = np.bincount(qind, minlength=(noqs+1))[1:]
-            time_steps = np.array( utils.geometric_series(2,   len(imgs)   ) )
-            num_times = len(time_steps)
-            #times = time_steps * exposuretime    
-            times = exposuretime + (2**(  np.arange( len(time_steps) ) ) -1 ) * acquisition_period
-            #print( 'The time steps are :%s'%time_steps )
+            #time_steps = np.array( utils.geometric_series(2,   len(imgs)   ) )
+            time_steps = [0,1]  #only run the first two levels
+            num_times = len(time_steps)    
+            times_xsvs = exposuretime + (2**(  np.arange( len(time_steps) ) ) -1 ) * acquisition_period    
             print( 'The max counts are: %s'%max_cts )
-            #print( times )
 
         ### Do historam 
-            if ring_avg == None:
+            if ring_avg is  None:
                 times_roi, mean_int_sets = cal_each_ring_mean_intensityc(FD, ring_mask, timeperframe = None,  ) 
                 ring_avg = np.average( mean_int_sets, axis=0)
 
@@ -336,19 +335,19 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
             run_time(t0)
             run_xsvs_all_lags = False
             if run_xsvs_all_lags:
-                times = exposuretime +  lag_steps * acquisition_period
+                times_xsvs = exposuretime +  lag_steps * acquisition_period
                 if data_pixel is None:
                     data_pixel =   Get_Pixel_Arrayc( FD, pixelist,  norm=norm ).get_data()       
                 t0=time.time()
                 spec_bins, spec_his, spec_std, spec_kmean = get_binned_his_std(data_pixel, np.int_(ring_mask), lag_steps )
-                run_time(t0)
-
-
-            save_arrays( spec_his, label= q_ring_center, filename = 'uid=%s--spec_his'%uid_, path=data_dir )
-            save_arrays( spec_std, label= q_ring_center, filename = 'uid=%s--spec_std'%uid_, path=data_dir )
-            np.save(  data_dir + 'uid=%s--spec_his'%uid_, spec_his)
-            np.save(  data_dir + 'uid=%s--spec_std'%uid_, spec_std)
-            np.save(  data_dir + 'uid=%s--K_mean'%uid_, spec_kmean)
+                run_time(t0) 
+            spec_pds =  save_bin_his_std( spec_bins, spec_his, spec_std, filename=uid_+'_spec_res.csv', path=data_dir ) 
+            #spec_his_pds = save_arrays( spec_his, label= q_ring_center, filename = 'uid=%s--spec_his.csv'%uid_, path=data_dir,return_res=True )
+            #spec_std_pds = save_arrays( spec_std, label= q_ring_center, filename = 'uid=%s--spec_std.csv'%uid_, path=data_dir,return_res=True )
+            #spec_bins_pds = save_lists( spec_bins, label= q_ring_center, filename = 'uid=%s--spec_bins.csv'%uid_, path=data_dir,return_res=True )
+            #np.save(  data_dir + 'uid=%s--spec_his'%uid_, spec_his)
+            #np.save(  data_dir + 'uid=%s--spec_std'%uid_, spec_std)
+            #np.save(  data_dir + 'uid=%s--K_mean'%uid_, spec_kmean)
 
 
             ### Do historam fit by negtive binominal function with maximum likehood method
@@ -372,32 +371,24 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
 
             plot_xsvs_fit(  spec_his, ML_val, KL_val, K_mean = spec_kmean, spec_std=spec_std,
                           xlim = [0,10], vlim =[.9, 1.1],
-                uid=uid_, qth= qth_interest, logy= True, times= times, q_ring_center=q_ring_center, path=data_dir)
+                uid=uid_, qth= qth_interest, logy= True, times= times_xsvs, q_ring_center=q_ring_center, path=data_dir)
 
             plot_xsvs_fit(  spec_his, ML_val, KL_val, K_mean = spec_kmean, spec_std = spec_std,
                           xlim = [0,15], vlim =[.9, 1.1],
-                uid=uid_, qth= None, logy= True, times= times, q_ring_center=q_ring_center, path=data_dir )
+                uid=uid_, qth= None, logy= True, times= times_xsvs, q_ring_center=q_ring_center, path=data_dir )
 
-        ### Get contrast
+            ### Get contrast
             contrast_factorL = get_contrast( ML_val)
-            df = save_KM(  spec_kmean, KL_val, ML_val, qs=q_ring_center, uid=uid , path = data_dir )
-        ### Plot contrast with g2 restuls
-
-            plot_g2_contrast( contrast_factorL, g2, times, taus, q_ring_center, 
+            spec_km_pds = save_KM(  spec_kmean, KL_val, ML_val, qs=q_ring_center, level_time=times_xsvs, uid=uid , path = data_dir )
+            #print( spec_km_pds )
+    
+            plot_g2_contrast( contrast_factorL, g2, times_xsvs, taus, q_ring_center, 
                              vlim=[0.8,1.2], qth = qth_interest, uid=uid_,path = data_dir, legend_size=14)
 
-            plot_g2_contrast( contrast_factorL, g2, times, taus, q_ring_center, 
+            plot_g2_contrast( contrast_factorL, g2, times_xsvs, taus, q_ring_center, 
                              vlim=[0.8,1.2], qth = None, uid=uid_,path = data_dir, legend_size=4)
-
-
-
-        # Creat PDF Report
-        pdf_out_dir = os.path.join('/XF11ID/analysis/', CYCLE, username, 'Results/')     
-        pdf_filename = "XPCS_Analysis_Report_for_uid=%s%s.pdf"%(uid,pdf_version)
-        if run_xsvs:
-            pdf_filename = "XPCS_XSVS_Analysis_Report_for_uid=%s%s.pdf"%(uid,pdf_version)
-
-        #pdf_filename
+        
+        #update some md
         md['mask_file']= mask_path + mask_name
         md['mask'] = mask
         md['NOTEBOOK_FULL_PATH'] = None
@@ -414,14 +405,32 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
         md['metadata_file'] = data_dir + 'md.csv-&-md.pkl'
         psave_obj(  md, data_dir + 'uid=%s-md'%uid ) #save the setup parameters
         save_dict_csv( md,  data_dir + 'uid=%s-md.csv'%uid, 'w')
+        
+        ## Export Results to a h5 files
+        Exdt = {} 
+        Exdt['md']=md
+        Exdt['roi']= ring_mask;Exdt['avg_img'] = avg_img;Exdt['mask']=mask;Exdt['pixel_mask']=pixel_mask
+        if run_one_time:Exdt['taus']= taus;Exdt['g2']=g2;Exdt['g2_fit_paras']=g2_fit_paras
+        if run_two_time:Exdt['tausb']= tausb;Exdt['g2b']=g2b;Exdt['g12b']=g12b;Exdt['g2b_fit_paras']=g2b_fit_paras    
+        if run_four_time:Exdt['taus4']= taus4;Exdt['g4']=g4
+        if run_xsvs:
+            Exdt['spec_pds']=spec_pds;Exdt['times_xsvs']= times_xsvs;
+            Exdt['spec_km_pds']=spec_km_pds;Exdt['contrast_factorL']= contrast_factorL 
+    
+        export_xpcs_results_to_h5( md['uid'] + '_Res.h5', data_dir, export_dict = Exdt )
+        #extract_dict = extract_xpcs_results_from_h5( filename = '%s_Res.h5'% md['uid'], import_dir = data_dir )
 
+        # Creat PDF Report
+        pdf_out_dir = os.path.join('/XF11ID/analysis/', CYCLE, username, 'Results/')     
+        pdf_filename = "XPCS_Analysis_Report_for_uid=%s%s.pdf"%(uid,pdf_version)
+        if run_xsvs:
+            pdf_filename = "XPCS_XSVS_Analysis_Report_for_uid=%s%s.pdf"%(uid,pdf_version)
+        #pdf_filename
         make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username, 
                         run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs
                        ) 
-
         ## Attach the PDF report to Olog 
         if att_pdf_report:
-
             os.environ['HTTPS_PROXY'] = 'https://proxy:8888'
             os.environ['no_proxy'] = 'cs.nsls2.local,localhost,127.0.0.1'
             pname = pdf_out_dir + pdf_filename 
@@ -432,7 +441,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
                 print("I can't attach this PDF: %s due to a duplicated filename. Please give a different PDF file."%pname)
 
         if show_plot:
-            plt.show()             
+            plt.show()          
 
         if return_res:
             res = {}
@@ -448,7 +457,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
                 res['taus4']=taus4
             if run_xsvs:
                 res['contrast_factorL'] = contrast_factorL 
-                res['times']= times
+                res['times_xsvs']= times_xsvs
             return res
     
 #uid = '3ff4ee'
