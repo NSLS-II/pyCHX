@@ -1,6 +1,53 @@
 from chxanalys.chx_packages import *
 
 def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
+    '''Y.G. Dec 22, 2016
+       Run XPCS XSVS analysis for a single uid
+       Parameters:
+           uid: unique id
+           run_pargs: dict, control run type and setup parameters, such as q range et.al.
+       Return:
+       save analysis result to csv/png/h5 files
+       return_res: if true, return a dict, containing g2,g4,g12,contrast et.al. depending on the run type
+       An example for the run_pargs:
+       
+    run_pargs=  dict(   
+                    force_compress =  True,#False, 
+                    para_compress = True,
+                    run_fit_form = False,
+                    run_waterfall = True,#False,
+                    run_t_ROI_Inten = True,
+                    #run_fit_g2 = True,
+                    fit_g2_func = 'stretched',
+                    run_one_time = True,#False,
+                    run_two_time = True,#False,
+                    run_four_time = False,
+                    run_xsvs=True,
+                    att_pdf_report = True,
+                    show_plot = False,
+
+                    CYCLE = '2016_3', 
+                    mask_path = '/XF11ID/analysis/2016_3/masks/',
+                    mask_name = 'Nov28_4M_SAXS_mask.npy', 
+                    good_start   = 5, 
+
+                    uniformq = True,
+                    inner_radius= 0.005, #0.005 for 50 nm, 0.006, #for 10nm/coralpor
+                    outer_radius = 0.04, #0.04 for 50 nm, 0.05, #for 10nm/coralpor 
+                    num_rings = 12,
+                    gap_ring_number = 6, 
+                    number_rings= 1,    
+                    #qcenters = [ 0.00235,0.00379,0.00508,0.00636,0.00773, 0.00902] #in A-1             
+                    #width = 0.0002  
+                    qth_interest = 1, #the intested single qth             
+                    use_sqnorm = False,
+                    use_imgsum_norm = True,
+
+                    pdf_version = '_1' #for pdf report name    
+                  )
+           
+    '''
+    
     force_compress =  run_pargs['force_compress'] 
     para_compress = run_pargs['para_compress']
     run_fit_form = run_pargs['run_fit_form']
@@ -34,7 +81,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
     
     qth_interest = run_pargs['qth_interest']
     use_sqnorm = run_pargs['use_sqnorm']
-    pdf_version = run_pargs['pdf_version']
+    pdf_version = run_pargs['pdf_version']    
     
     
     username = getpass.getuser()
@@ -138,16 +185,16 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
         #np.save(  data_dir + 'uid=%s--img-avg'%uid, avg_img)
 
         hmask = create_hot_pixel_mask( avg_img, threshold = 100, center=center, center_radius= 400)
-        qp, iq, q = get_circular_average( avg_img, mask * hmask, pargs=setup_pargs  )
-        plot_circular_average( qp, iq, q,  pargs=setup_pargs, 
-                              xlim=[q.min(), q.max()], ylim = [iq.min(), iq.max()] )
+        qp_saxs, iq_saxs, q_saxs = get_circular_average( avg_img, mask * hmask, pargs=setup_pargs  )
+        plot_circular_average( qp_saxs, iq_saxs, q_saxs,  pargs=setup_pargs, 
+                      xlim=[q_saxs.min(), q_saxs.max()], ylim = [iq_saxs.min(), iq_saxs.max()] )
 
         pd = trans_data_to_pd( np.where( hmask !=1), 
                     label=[md['uid']+'_hmask'+'x', md['uid']+'_hmask'+'y' ], dtype='list')
         pd.to_csv('/XF11ID/analysis/Commissioning/eiger4M_badpixel.csv', mode='a'  )
         mask =np.array( mask * hmask, dtype=bool) 
         if run_fit_form:
-            form_res = fit_form_factor( q,iq,  guess_values={'radius': 2500, 'sigma':0.05, 
+            form_res = fit_form_factor( q_saxs,iq_saxs,  guess_values={'radius': 2500, 'sigma':0.05, 
                  'delta_rho':1E-10 },  fit_range=[0.0001, 0.015], fit_variables={'radius': T, 'sigma':T, 
                  'delta_rho':T},  res_pargs=setup_pargs, xlim=[0.0001, 0.015]) 
         ### Define a non-uniform distributed rings by giving edges
@@ -173,8 +220,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
         q_ring_center = np.round( q_ring_center, 4)
         show_ROI_on_image( avg_img, ring_mask, center, label_on = False, rwidth =700, alpha=.9,  
                      save=True, path=data_dir, uid=uid, vmin= np.min(avg_img), vmax= np.max(avg_img) )    
-        plot_qIq_with_ROI( q, iq, q_ring_center, logs=True, uid=uid, xlim=[q.min(), q.max()],
-                          ylim = [iq.min(), iq.max()],  save=True, path=data_dir) 
+        plot_qIq_with_ROI( q_saxs, iq_saxs, q_ring_center, logs=True, uid=uid, xlim=[q_saxs.min(), q_saxs.max()],
+                  ylim = [iq_saxs.min(), iq_saxs.max()],  save=True, path=data_dir)
         roi_inten = check_ROI_intensity( avg_img, ring_mask, ring_number= qth_interest, uid =uid, save=True, path=data_dir )
 
 
@@ -201,7 +248,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
         uid_ = uid + '--fra-%s-%s'%(FD.beg, FD.end) 
         lag_steps = None
         if use_sqnorm:
-            norm = get_pixelist_interp_iq( qp, iq, ring_mask, center)
+            norm = get_pixelist_interp_iq( qp_saxs, iq_saxs, ring_mask, center)
         else:
             norm=None 
             
@@ -307,7 +354,6 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
             res_pargs4 = dict(taus=taus4, q_ring_center=q_ring_center, path=data_dir, uid=uid_      )
             #save_saxs_g2(   g4,  res_pargs4, taus=taus4, filename= 'uid=%s'%uid_  + '--g4.csv' )             
             g4_pds = save_g2( g4, taus=taus4, qr= q_ring_center, qz=None, uid=uid_ +'--g4.csv', path= data_dir, return_res=True )
-
             plot_saxs_g4( g4, taus4,  vlim=[0.95, 1.05], logx=True, res_pargs=res_pargs4) 
 
 
@@ -342,6 +388,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
                 spec_bins, spec_his, spec_std, spec_kmean = get_binned_his_std(data_pixel, np.int_(ring_mask), lag_steps )
                 run_time(t0) 
             spec_pds =  save_bin_his_std( spec_bins, spec_his, spec_std, filename=uid_+'_spec_res.csv', path=data_dir ) 
+            
             #spec_his_pds = save_arrays( spec_his, label= q_ring_center, filename = 'uid=%s--spec_his.csv'%uid_, path=data_dir,return_res=True )
             #spec_std_pds = save_arrays( spec_std, label= q_ring_center, filename = 'uid=%s--spec_std.csv'%uid_, path=data_dir,return_res=True )
             #spec_bins_pds = save_lists( spec_bins, label= q_ring_center, filename = 'uid=%s--spec_bins.csv'%uid_, path=data_dir,return_res=True )
@@ -388,7 +435,6 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
             plot_g2_contrast( contrast_factorL, g2, times_xsvs, taus, q_ring_center, 
                              vlim=[0.8,1.2], qth = None, uid=uid_,path = data_dir, legend_size=4)
         
-        #update some md
         md['mask_file']= mask_path + mask_name
         md['mask'] = mask
         md['NOTEBOOK_FULL_PATH'] = None
@@ -405,18 +451,23 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
         md['metadata_file'] = data_dir + 'md.csv-&-md.pkl'
         psave_obj(  md, data_dir + 'uid=%s-md'%uid ) #save the setup parameters
         save_dict_csv( md,  data_dir + 'uid=%s-md.csv'%uid, 'w')
-        
-        ## Export Results to a h5 files
+
         Exdt = {} 
-        Exdt['md']=md
-        Exdt['roi']= ring_mask;Exdt['avg_img'] = avg_img;Exdt['mask']=mask;Exdt['pixel_mask']=pixel_mask
-        if run_one_time:Exdt['taus']= taus;Exdt['g2']=g2;Exdt['g2_fit_paras']=g2_fit_paras
-        if run_two_time:Exdt['tausb']= tausb;Exdt['g2b']=g2b;Exdt['g12b']=g12b;Exdt['g2b_fit_paras']=g2b_fit_paras    
-        if run_four_time:Exdt['taus4']= taus4;Exdt['g4']=g4
+        for k,v in zip( ['md', 'q_saxs', 'iq_saxs','iqst','qt','roi','avg_img','mask','pixel_mask', 'imgsum','bad_frame_list'], 
+                        [md, q_saxs, iq_saxs, iqst, qt,ring_mask,avg_img,mask,pixel_mask, imgsum,bad_frame_list] ):
+                         Exdt[ k ] = v
+        if run_waterfall:Exdt['wat'] =  wat
+        if run_t_ROI_Inten:Exdt['times_roi'] = times_roi;Exdt['mean_int_sets']=mean_int_sets
+        if run_one_time:
+            for k,v in zip( ['taus','g2','g2_fit_paras'], [taus,g2,g2_fit_paras] ):Exdt[ k ] = v
+        if run_two_time:
+            for k,v in zip( ['tausb','g2b','g2b_fit_paras', 'g12b'], [tausb,g2b,g2b_fit_paras,g12b] ):Exdt[ k ] = v
+        if run_four_time:
+            for k,v in zip( ['taus4','g4'], [taus4,g4] ):Exdt[ k ] = v
         if run_xsvs:
-            Exdt['spec_pds']=spec_pds;Exdt['times_xsvs']= times_xsvs;
-            Exdt['spec_km_pds']=spec_km_pds;Exdt['contrast_factorL']= contrast_factorL 
-    
+            for k,v in zip( ['spec_kmean','spec_pds','times_xsvs','spec_km_pds','contrast_factorL'], 
+                           [ spec_kmean,spec_pds,times_xsvs,spec_km_pds,contrast_factorL] ):Exdt[ k ] = v  
+                
         export_xpcs_results_to_h5( md['uid'] + '_Res.h5', data_dir, export_dict = Exdt )
         #extract_dict = extract_xpcs_results_from_h5( filename = '%s_Res.h5'% md['uid'], import_dir = data_dir )
 
@@ -441,10 +492,20 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
                 print("I can't attach this PDF: %s due to a duplicated filename. Please give a different PDF file."%pname)
 
         if show_plot:
-            plt.show()          
+            plt.show()   
+        #else:
+        #    plt.close('all')
 
         if return_res:
             res = {}
+            for k,v in zip( [ 'q_saxs', 'iq_saxs','iqst','qt','avg_img','mask', 'imgsum','bad_frame_list'], 
+                        [ q_saxs, iq_saxs, iqst, qt, avg_img,mask,imgsum,bad_frame_list] ):
+                res[ k ] = v
+            if run_waterfall:
+                res['wat'] =  wat
+            if run_t_ROI_Inten:
+                res['times_roi'] = times_roi;
+                res['mean_int_sets']=mean_int_sets            
             if run_one_time:
                 res['g2'] = g2
                 res['taus']=taus
@@ -456,6 +517,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
                 res['g4']= g4
                 res['taus4']=taus4
             if run_xsvs:
+                res['spec_kmean']=spec_kmean
+                res['spec_pds']= spec_pds
                 res['contrast_factorL'] = contrast_factorL 
                 res['times_xsvs']= times_xsvs
             return res
