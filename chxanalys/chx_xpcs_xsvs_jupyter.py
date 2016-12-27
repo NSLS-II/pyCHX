@@ -398,12 +398,9 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
 
 
             ### Do historam fit by negtive binominal function with maximum likehood method
-            qth= None
-            #max_bins = 1
-            hist_err = spec_std #None# spec_std #None
-            ML_val, KL_val,K_ = get_xsvs_fit(  spec_his, spec_kmean,  spec_std = hist_err, max_bins=2,
-                                 varyK= False, qth= qth, spec_bins= spec_bins, lag_steps=lag_steps, rois_lowthres= None)
-
+            #ML_val, KL_val,K_ = get_xsvs_fit(  spec_his, spec_kmean,  spec_std, max_bins=2,
+            #                     varyK= False, qth= None, spec_bins= spec_bins, lag_steps=lag_steps, rois_lowthres= None)
+            ML_val, KL_val,K_ = get_xsvs_fit(  spec_his, spec_kmean,  spec_std, max_bins=2,varyK= False, )
 
             #print( 'The observed average photon counts are: %s'%np.round(K_mean,4))
             #print( 'The fitted average photon counts are: %s'%np.round(K_,4)) 
@@ -468,8 +465,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
             for k,v in zip( ['spec_kmean','spec_pds','times_xsvs','spec_km_pds','contrast_factorL'], 
                            [ spec_kmean,spec_pds,times_xsvs,spec_km_pds,contrast_factorL] ):Exdt[ k ] = v  
                 
-        export_xpcs_results_to_h5( md['uid'] + '_Res.h5', data_dir, export_dict = Exdt )
-        #extract_dict = extract_xpcs_results_from_h5( filename = '%s_Res.h5'% md['uid'], import_dir = data_dir )
+        export_xpcs_results_to_h5( md['suid'] + '_Res.h5', data_dir, export_dict = Exdt )
+        #extract_dict = extract_xpcs_results_from_h5( filename = '%s_Res.h5'% md['suid'], import_dir = data_dir )
 
         # Creat PDF Report
         pdf_out_dir = os.path.join('/XF11ID/analysis/', CYCLE, username, 'Results/')     
@@ -498,8 +495,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
 
         if return_res:
             res = {}
-            for k,v in zip( [ 'q_saxs', 'iq_saxs','iqst','qt','avg_img','mask', 'imgsum','bad_frame_list'], 
-                        [ q_saxs, iq_saxs, iqst, qt, avg_img,mask,imgsum,bad_frame_list] ):
+            for k,v in zip( [ 'q_saxs', 'iq_saxs','iqst','qt','avg_img','mask', 'imgsum','bad_frame_list','roi'], 
+                        [ q_saxs, iq_saxs, iqst, qt, avg_img,mask,imgsum,bad_frame_list,ring_mask ] ):
                 res[ k ] = v
             if run_waterfall:
                 res['wat'] =  wat
