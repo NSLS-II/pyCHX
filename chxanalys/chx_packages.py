@@ -40,7 +40,7 @@ from chxanalys.chx_correlationp import (cal_g2p, auto_two_Arrayp)
 
 from chxanalys.Create_Report import (create_pdf_report, 
                             create_multi_pdf_reports_for_uids,create_one_pdf_reports_for_uids,
-                                    make_pdf_report)
+                                    make_pdf_report, export_xpcs_results_to_h5, extract_xpcs_results_from_h5 )
 
 from chxanalys.chx_olog import LogEntry,Attachment, update_olog_uid, update_olog_id
 
@@ -51,7 +51,7 @@ save_gisaxs_g2,plot_gisaxs_g2, fit_gisaxs_g2,plot_gisaxs_two_g2,plot_qr_1d_with_
                               get_t_qrc, plot_t_qrc)
 
 from chxanalys.chx_specklecp import  ( xsvsc, xsvsp, get_xsvs_fit,plot_xsvs_fit, save_KM,plot_g2_contrast,
-                                      get_binned_his_std, get_contrast )
+                                      get_binned_his_std, get_contrast, save_bin_his_std, get_his_std_from_pds )
 
 
 
