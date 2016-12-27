@@ -16,7 +16,7 @@ from skbeam.core.utils import bin_edges_to_centers, geometric_series
 import logging
 logger = logging.getLogger(__name__)
 
-import sys
+import sys,os
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -34,6 +34,7 @@ import dill
 import itertools
 
 from chxanalys.chx_compress import ( run_dill_encoded,apply_async, map_async,pass_FD, go_through_FD  ) 
+from chxanalys.chx_generic_functions import trans_data_to_pd
 
 
 def xsvsp(FD, label_array,  only_two_levels= True,
@@ -508,6 +509,41 @@ def get_his_std( data_pixel, rois, max_cts=None):
     return  bins, his, std, kmean
 
 
+def save_bin_his_std( spec_bins, spec_his, spec_std, filename, path):
+    '''YG. Dec 23, 2016
+        save spec_bin, spec_his, spec_std to a csv file        
+    '''
+    ql=spec_his.shape[1]
+    tl=spec_bins[-1].shape[0]-1
+    #print( tl, ql)
+    mhis,nhis = spec_his.shape
+    mstd,nstd = spec_std.shape
+    spec_data = np.zeros([ tl, 1+ ql* (mhis+mstd)  ])
+    spec_data[:,:] = np.nan
+    spec_data[:,0] = spec_bins[-1][:-1]
+    for i in range(mhis):
+        max_m = spec_his[i,0].shape[0]
+        for j in range(nhis): 
+            spec_data[:max_m,1+ i*ql +j ] =  spec_his[i,j]      
+    for i in range(mstd):
+        max_m = spec_std[i,0].shape[0]
+        for j in range(nstd): 
+            spec_data[:max_m,1 + mhis*ql + i*ql +j ] =  spec_std[i,j]
+    label = ['count']
+    for l  in  range(mhis):
+        for q in  range(nhis):
+            label += ['his_level_%s_q_%s'%(l,q)]
+    for l  in  range(mstd):
+        for q in  range(nstd):
+            label += ['std_level_%s_q_%s'%(l,q)]
+    spec_pds = trans_data_to_pd(spec_data, label, 'array') 
+    filename_ = os.path.join(path, filename)
+    spec_pds.to_csv(filename_)
+    print( 'The file: %s is saved in %s'%(filename, path) )
+    return spec_pds
+        
+    
+    
 
 def reshape_array( array, new_len):
     '''
@@ -743,7 +779,7 @@ def get_roi(data, threshold=1e-3):
 
 def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None, spec_bins=None, 
                  lag_steps=None, varyK=True, 
-                  qth=None, max_bins=None,  rois_lowthres=None,
+                  qth=None, max_bins= None,  rois_lowthres=None,
                            g2=None, times=None,taus=None,):
     '''
     Fit the xsvs by Negative Binomial Function using max-likelihood chi-squares
@@ -754,8 +790,7 @@ def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None, spec_bins=None,
     if max_bins is not None:  
         num_times = min( num_times, max_bins  ) 
         
-    if spec_bins is None:
-        
+    if spec_bins is None:        
         bin_edges, bin_centers, Knorm_bin_edges, Knorm_bin_centers = get_bin_edges(
       num_times, num_rings, K_mean[0], int(max_cts+2)  )
         
@@ -1009,35 +1044,56 @@ def get_K( KL_val):
     return K_
 
     
-def save_KM( K_mean, KL_val, ML_val, qs=None, uid=None, path=None ):
+def save_KM( K_mean, KL_val, ML_val, qs=None, level_time=None, uid=None, path=None ):
+    '''save Kmean, K_val, M_val as dataframe'''
+    
     from pandas import DataFrame    
     import os
     kl = get_K( KL_val )
-    ml = get_contrast( ML_val)
+    ml = 1/get_contrast( ML_val)
     L,n = kl.shape
-    m2,m1=K_mean.shape
-    if qs is  None:
-        df = DataFrame(     np.hstack( [ (K_mean).reshape( m1,m2), kl.reshape( L,n),
-                                    ml.reshape(L,n)   ] )  ) 
-        
-        l = ['K_mean_%d'%i for i in range(m2)] + ['K_fit_Bin%i'%s for s in range(1,n+1)] + ['Contrast_Fit_Bin%i'%s for s in range(1,n+1)]
-        df.columns = (x for x in l) 
+    m2,m1=K_mean.shape    
+     
+    if level_time is None:
+        l = ['K_mean_%d'%i for i in range(m2)] + ['K_fit_Bin_%i'%s for s in range(1,n+1)] + ['Contrast_Fit_Bin_%i'%s for s in range(1,n+1)]
     else:
+        l = ['K_mean_%s'%i for i in level_time] + ['K_fit_%s'%s for s in level_time] + ['Contrast_Fit_%s'%s for s in level_time]
+    data = np.hstack( [ (K_mean).T, kl.reshape( L,n), ml.reshape(L,n)  ] )         
+    if qs is  not None:
         qs = np.array( qs )
-        #print(K_mean.shape)
-        df = DataFrame(     np.hstack( [ qs.reshape( L,1), (K_mean).reshape(m1,m2), kl.reshape( L,n),
-                                    ml.reshape(L,n)   ] )  ) 
+        l =  ['q'] + l
+        #print(   (K_mean).T,  (K_mean).T.shape )
+        data =  np.hstack( [ qs.reshape( L,1), (K_mean).T, kl.reshape( L,n),ml.reshape(L,n)   ] )
         
-        l = ['q'] + ['K_mean_%d'%i for i in range(m2)] + ['K_fit_Bin%i'%s for s in range(1,n+1)] + ['Contrast_Fit_Bin%i'%s for s in range(1,n+1)]        
-        df.columns = (x for x in l) 
-        
-        
+    df = DataFrame(      data   )         
+    df.columns = (x for x in l)  
     filename = 'uid=%s--xsvs_fitted_KM.csv' %(uid)
     filename1 = os.path.join(path, filename)
     df.to_csv(filename1)
     return df
 
-    
+def get_his_std_from_pds( spec_pds, his_shapes=None):
+    '''Y.G.Dec 22, 2016
+    get spec_his, spec_std from a pandas.dataframe file
+    Parameters:
+        spec_pds: pandas.dataframe, contains columns as 'count', 
+                        spec_his (as 'his_level_0_q_0'), spec_std (as 'std_level_0_q_0')
+        his_shapes: the shape of the returned spec_his, if None, shapes = (2, (len(spec_pds.keys)-1)/4) )
+    Return:
+        spec_his: array, shape as his_shapes
+        spec_std, array, shape as his_shapes  
+    '''
+    spkeys = list( spec_pds.keys() )
+    if his_shapes is None:
+        M,N = 2, int( (len(spkeys)-1)/4 )
+    #print(M,N)
+    spec_his = np.zeros( [M,N], dtype=np.object)
+    spec_std = np.zeros( [M,N], dtype=np.object)
+    for i in range(M):
+        for j in range(N):
+            spec_his[i,j] = np.array( spec_pds[ spkeys[1+ i*N + j] ][ ~np.isnan( spec_pds[ spkeys[1+ i*N + j] ] )] )
+            spec_std[i,j] = np.array( spec_pds[ spkeys[1+ 2*N + i*N + j]][ ~np.isnan( spec_pds[ spkeys[1+ 2*N + i*N + j]]  )] )
+    return spec_his, spec_std    
     
     
 def plot_g2_contrast( contrast_factorL, g2, times, taus, q_ring_center=None, 
@@ -1100,6 +1156,15 @@ def plot_g2_contrast( contrast_factorL, g2, times, taus, q_ring_center=None,
         
 
    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
 
     
