@@ -500,10 +500,14 @@ def plot_t_iqc( q, iqs, frame_edge, pargs, save=True, *argv,**kwargs):
         Returns
         ---------
         None     
-    '''       
-    
-    Nt = len( frame_edge )    
-    fig,ax = plt.subplots(figsize=(8, 6))
+    ''' 
+    Nt = iqs.shape[0]
+    if frame_edge is None:
+        frame_edge = np.zeros( Nt, dtype=object )
+        for i in range(Nt):
+            frame_edge[i] = ['Edge_%i'%i, 'Edge_%i'%(i+1) ]        
+    #Nt = len( frame_edge )    
+    fig,ax = plt.subplots(figsize=(8, 6)) 
     for i in range(  Nt ):
         t1,t2 = frame_edge[i]
         ax.semilogy(q, iqs[i], label="frame: %s--%s"%( t1,t2) )
@@ -1646,7 +1650,7 @@ def get_flow_velocity( average_velocity, shape_factor):
 ##a good func to save g2 for all types of geogmetries
 ############################################ 
 
-def save_g2(  g2, taus, qr=None, qz=None, uid='uid', path=None ):
+def save_g2(  g2, taus, qr=None, qz=None, uid='uid', path=None, return_res= False ):
     
     '''save g2 results, 
        res_pargs should contain
@@ -1672,13 +1676,17 @@ def save_g2(  g2, taus, qr=None, qz=None, uid='uid', path=None ):
     #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)  
     
     #if filename is None:
-    filename = 'uid=%s--g2.csv' % (uid)
+      
+    filename = 'uid=%s' % (uid)
+    #filename = 'uid=%s--g2.csv' % (uid)
     #filename += '-uid=%s-%s.csv' % (uid,CurTime)   
     #filename += '-uid=%s.csv' % (uid) 
     filename1 = os.path.join(path, filename)
     df.to_csv(filename1)
     print( 'The correlation function is saved in %s with filename as %s'%( path, filename))
-
+    if return_res:
+        return df
+    
 
 
 ############################################
@@ -2795,7 +2803,7 @@ def save_g2_fit_para_tocsv( fit_res, filename, path):
         data[i] = list( fit_res[i].best_values.values() )
     df = DataFrame( data ) 
     df.columns = col    
-    filename1 = os.path.join(path, filename + '.csv')
+    filename1 = os.path.join(path, filename) # + '.csv')
     df.to_csv(filename1)
     print( "The g2 fitting parameters are saved in %s"%filename1)
     return df
