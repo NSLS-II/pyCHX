@@ -11,10 +11,12 @@ def check_bad_uids(uids, mask, img_choice_N = 10):
             mask: array, bool type numpy.array
             img_choice_N: random select number of the uid
         Return:
+            guids: list, good uids
             buids, list, bad uids    
     '''   
     import random
     buids = []
+    guids = uids
     for uid in uids:
         detector = get_detector( db[uid ] )
         imgs = load_data( uid, detector  )
@@ -23,9 +25,10 @@ def check_bad_uids(uids, mask, img_choice_N = 10):
         avg_img =  get_avg_img( imgsa, img_samp_index, plot_ = False, uid =uid)
         if avg_img.max() == 0:
             buids.append( uid ) 
+            guids.pop(uid)
             print( 'The bad uid is: %s'%uid )
-    print( 'The total and bad uids number are %s--%s, repsectively.'%( len(uids), len(buids) ) )        
-    return buids          
+    print( 'The total and bad uids number are %s and %s, repsectively.'%( len(uids), len(buids) ) )        
+    return guids, buids          
     
 
 
@@ -34,21 +37,25 @@ def find_uids(start_time, stop_time ):
         A wrap funciton to find uids by giving start and end time
         Return:
         sids: list, scan id
-        uids: list, uid
+        uids: list, uid with 8 character length
+        fuids: list, uid with full length
     
     '''
     hdrs = db(start_time= start_time, stop_time = stop_time)
-    print ('Totally %s uids are found'%(len(hdrs)))
+    print ('Totally %s uids are found.'%(len(hdrs)))
     sids=[]
     uids=[]
+    fuids=[]
     for hdr in hdrs:
         s= get_sid_filenames( hdr)
-        print (s[1][:8])
+        #print (s[1][:8])
         sids.append( s[0] )
         uids.append( s[1][:8] )
+        fuids.append( s[1] )
     sids=sids[::-1]
     uids=uids[::-1]
-    return sids, uids
+    fuids=fuids[::-1]
+    return np.array(sids), np.array(uids), np.array(fuids)
 
 
 def ployfit( y, x=None, order = 20 ):
@@ -1090,7 +1097,7 @@ def check_ROI_intensity( avg_img, ring_mask, ring_number=3 , save=False, *argv,*
         uid = kwargs['uid'] 
     pixel = roi.roi_pixel_values(avg_img, ring_mask, [ring_number] )
     fig, ax = plt.subplots()
-    ax.set_title('uid= %s--check-RIO-%s-intensity'%(uid, ring_number) )
+    ax.set_title('uid=%s--check-RIO-%s-intensity'%(uid, ring_number) )
     ax.plot( pixel[0][0] ,'bo', ls='-' )
     ax.set_ylabel('Intensity')
     ax.set_xlabel('pixel')
@@ -1100,11 +1107,11 @@ def check_ROI_intensity( avg_img, ring_mask, ring_number=3 , save=False, *argv,*
         path = kwargs['path'] 
         #fp = path + "Uid= %s--Waterfall-"%uid + CurTime + '.png'     
         #fp = path + "uid=%s--check-ROI-intensity-"%uid  + '.png'  
-        fp = path + "uid= %s--Mean-intensity-of-one-ROI"%uid  + '.png'         
+        fp = path + "uid=%s--Mean-intensity-of-one-ROI"%uid  + '.png'         
         fig.savefig( fp, dpi=fig.dpi) 
         
         save_lists( [range( len(  pixel[0][0] )), pixel[0][0]], label=['pixel_list', 'roi_intensity'],
-                filename="uid= %s--Mean-intensity-of-one-ROI"%uid  , path= path)
+                filename="uid=%s--Mean-intensity-of-one-ROI"%uid  , path= path)
     
     #plt.show()
     return pixel[0][0]
@@ -1196,7 +1203,7 @@ def trans_data_to_pd(data, label=None,dtype='array'):
     return df
 
 
-def save_lists( data, label=None,  filename=None, path=None):    
+def save_lists( data, label=None,  filename=None, path=None, return_res = False):    
     '''
     save_lists( data, label=None,  filename=None, path=None)
     
@@ -1222,8 +1229,10 @@ def save_lists( data, label=None,  filename=None, path=None):
     #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)  
     if filename is None:
         filename = 'data'
-    filename = os.path.join(path, filename +'.csv')
+    filename = os.path.join(path, filename )#+'.csv')
     df.to_csv(filename)
+    if return_res:
+        return df
 
 def get_pos_val_overlap( p1, v1, p2,v2, Nl):
     '''get the overlap of v1 and v2
@@ -1253,7 +1262,7 @@ def get_pos_val_overlap( p1, v1, p2,v2, Nl):
     
     
     
-def save_arrays( data, label=None, dtype='array', filename=None, path=None):    
+def save_arrays( data, label=None, dtype='array', filename=None, path=None, return_res = False):      
     '''
     July 10, 2016, Y.G.@CHX
     save_arrays( data, label=None, dtype='array', filename=None, path=None): 
@@ -1277,9 +1286,13 @@ def save_arrays( data, label=None, dtype='array', filename=None, path=None):
     #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)  
     if filename is None:
         filename = 'data'
-    filename = os.path.join(path, filename +'.csv')
-    df.to_csv(filename)
+    filename_ = os.path.join(path, filename)# +'.csv')
+    df.to_csv(filename_)
+    print( 'The file: %s is saved in %s'%(filename, path) )
     #print( 'The g2 of uid= %s is saved in %s with filename as g2-%s-%s.csv'%(uid, path, uid, CurTime))
+    if return_res:
+        return df
+        
 
 def get_diffusion_coefficient( visocity, radius, T=298):
     '''July 10, 2016, Y.G.@CHX
@@ -1469,14 +1482,81 @@ def trans_td_to_tf(td, dtype = 'dframe'):
 
 
 
-
-
-
-
-
-
-
-
+def get_averaged_data_from_multi_res( multi_res, keystr='g2', different_length= True  ):
+    '''Y.G. Dec 22, 2016
+        get average data from multi-run analysis result
+        Parameters:
+            multi_res: dict, generated by function run_xpcs_xsvs_single
+                       each key is a uid, inside each uid are also dict with key as 'g2','g4' et.al.
+            keystr: string, get the averaged keystr
+            different_length: if True, do careful average for different length results
+        return:
+            array, averaged results       
+    
+    '''
+    maxM = 0
+    mkeys = multi_res.keys()
+    if not different_length:
+        n=0
+        for i, key in enumerate( list( mkeys) ):
+            keystri = multi_res[key][keystr]
+            if i ==0: 
+                keystr_average = keystri
+            else:
+                keystr_average += keystri
+            n +=1
+        keystr_average /=n
+    
+    else:
+        length_dict = {}  
+        D= 1
+        
+        for i, key in enumerate( list( mkeys) ):
+            shapes = multi_res[key][keystr].shape
+            M=shapes[0]    
+            if i ==0:                         
+                if len(shapes)==2:
+                    D=2                    
+                    maxN = shapes[1] 
+                elif len(shapes)==3:
+                    D=3                   
+                    maxN = shapes[2]    #in case of two-time correlation                
+            if (M) not in length_dict:
+                length_dict[(M) ] =1
+            else:
+                length_dict[(M) ] += 1
+            maxM = max( maxM, M )   
+        #print( length_dict )
+        avg_count = {}
+        sk = np.array( sorted(length_dict) ) 
+        for i, k in enumerate( sk ):
+            avg_count[k] = np.sum(  np.array( [ length_dict[k] for k in sk[i:] ] )   )            
+        #print(length_dict, avg_count)        
+        if D==2:
+            keystr_average = np.zeros( [maxM, maxN] )
+        elif D==3:
+            keystr_average = np.zeros( [maxM, maxM, maxN ] )           
+        else:
+            keystr_average = np.zeros( [maxM] )
+        for i, key in enumerate( list( mkeys) ):
+            keystri = multi_res[key][keystr]
+            Mi = keystri.shape[0]   
+            if D!=3:
+                keystr_average[:Mi] +=   keystri
+            else:
+                keystr_average[:Mi,:Mi,:] +=   keystri
+        if D!=3:        
+            keystr_average[:sk[0]] /= avg_count[sk[0]]  
+        else:
+            keystr_average[:sk[0],:sk[0], : ] /= avg_count[sk[0]] 
+        for i in range( 0, len(sk)-1 ):
+            if D!=3:   
+                keystr_average[sk[i]:sk[i+1]] /= avg_count[sk[i+1]] 
+            else:
+                keystr_average[sk[i]:sk[i+1],sk[i]:sk[i+1],:] /= avg_count[sk[i+1]] 
+            
+    return keystr_average
+    
 
 
 
