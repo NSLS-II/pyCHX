@@ -38,6 +38,8 @@ from time import time
 from datetime import datetime
 
 import sys,os
+import pandas as pds
+import numpy as np
 
 
 def add_one_line_string( c, s,  top, left=30, fontsize = 11  ):
@@ -159,7 +161,8 @@ class create_pdf_report( object ):
             uid_ = uid + '--fra-%s-%s'%(beg, end)
         except:
             uid_ = uid
-            
+        if beg is None:
+            uid_ = uid
 
         self.avg_img_file = 'uid=%s--img-avg.png'%uid   
         
@@ -793,46 +796,54 @@ class create_pdf_report( object ):
         self.sub_title_num +=1
         c.drawString(10, top, "%s. Visibility Analysis"%self.sub_title_num )  #add title
         c.setFont("Helvetica", 14)
-        
-        top1=top
-        top = top1 - 330
-        #add xsvs fit        
-        imgf = self.xsvs_fit_file
-        image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height= 300
-        c.drawImage( image, 100, top,  width= height/ratio,height=height,mask=None)       
-        
-        
+        top = top - 330
+        #add xsvs fit 
+        imgf = self.xsvs_fit_file   
+        add_image_string( c, imgf, self.data_dir, img_left=100, img_top=top, img_height= 300,
+                         
+                     str1_left=210, str1_top = top +300,str1='XSVS_Fit_by_Negtive_Binomal Function',
+                     str2_left = 180, str2_top = top -10 )  
 
-        c.setFont("Helvetica", 16)
-        c.setFillColor( blue) 
-        c.drawString( 210, top + 300 ,  'XSVS_Fit_by_Negtive_Binomal Function'    )
-        
-        
-
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( 180, top- 10,  'filename: %s'%imgf    )
-        top = top - 340
-        #add contrast fit
+         #add contrast fit
+        top = top -340
         imgf = self.contrast_file
-        image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height= 300
-        c.drawImage( image, 100, top,  width= height/ratio,height=height,mask=None)
-
-        c.setFont("Helvetica", 16)
-        c.setFillColor( blue) 
-        c.drawString( 210, top + 310, 'contrast get from xsvs and xpcs'  )
-
-         
+        add_image_string( c, imgf, self.data_dir, img_left=100, img_top=top, img_height= 300,
+                         
+                     str1_left=210, str1_top = top + 310,str1='contrast get from xsvs and xpcs',
+                     str2_left = 180, str2_top = top -10 ) 
         
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( 180, top- 10,  'filename: %s'%imgf    )
+        if False:
+            top1=top
+            top = top1 - 330
+            #add xsvs fit        
+            imgf = self.xsvs_fit_file
+            image = self.data_dir + imgf
+            im = Image.open( image )
+            ratio = float(im.size[1])/im.size[0]
+            height= 300
+            c.drawImage( image, 100, top,  width= height/ratio,height=height,mask=None)
+            c.setFont("Helvetica", 16)
+            c.setFillColor( blue) 
+            c.drawString( 210, top + 300 ,  'XSVS_Fit_by_Negtive_Binomal Function'    ) 
+            c.setFont("Helvetica", 12)
+            c.setFillColor(red) 
+            c.drawString( 180, top- 10,  'filename: %s'%imgf    )
+            top = top - 340
+            #add contrast fit
+            imgf = self.contrast_file
+            image = self.data_dir + imgf
+            im = Image.open( image )
+            ratio = float(im.size[1])/im.size[0]
+            height= 300
+            c.drawImage( image, 100, top,  width= height/ratio,height=height,mask=None)
+
+            c.setFont("Helvetica", 16)
+            c.setFillColor( blue) 
+            c.drawString( 210, top + 310, 'contrast get from xsvs and xpcs'  )        
+            c.setFont("Helvetica", 12)
+            c.setFillColor(red) 
+            c.drawString( 180, top- 10,  'filename: %s'%imgf    )
+        
 
         if new_page:
             c.showPage()
@@ -1064,37 +1075,90 @@ def export_xpcs_results_to_h5( filename, export_dir, export_dict ):
                 data = hf.create_dataset(key, data = export_dict[key] )
     print( 'The xpcs analysis results are exported to %s with filename as %s'%(export_dir , filename))
             
-def extract_xpcs_results_from_h5( filename, import_dir ):
+def extract_xpcs_results_from_h5( filename, import_dir, onekey=None ):
     '''
        YG. Dec 22, 2016 
        extract data from a h5 file
        
        filename:  the h5 file name
        import_dir: the imported file folder
+       onekey: string, if not None, only extract that key
        return:
            extact_dict: dict, with keys as md, g2, g4 et.al.
     '''   
     
     import pandas as pds 
     import numpy as np
-    extract_dict = {}
-    extract_dict['md'] = {}
+    extract_dict = {}    
     fp = import_dir + filename
     pds_type_keys = []
-    with h5py.File( fp, 'r') as hf:  
-        #print (list( hf.keys()) )
-        for key in list( hf.keys()): 
-            if key in ['md']:
+    if onekey is None:
+        extract_dict['md'] = {}
+        with h5py.File( fp, 'r') as hf:  
+            #print (list( hf.keys()) )
+            for key in list( hf.keys()): 
+                if key in ['md']:
+                    md = hf.get('md')
+                    for key in list(md.attrs):
+                        extract_dict['md'][key] = md.attrs[key] 
+                elif key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds']:
+                    pds_type_keys.append( key )                
+                else:    
+                    extract_dict[key] = np.array( hf.get( key  ))
+        for key in pds_type_keys:
+            extract_dict[key] = pds.read_hdf(fp, key= key )     
+    else:
+        if onekey == 'md':
+            with h5py.File( fp, 'r') as hf:
                 md = hf.get('md')
                 for key in list(md.attrs):
-                    extract_dict['md'][key] = md.attrs[key] 
-            #elif key in ["avg_img", 'roi', 'mask', 'pixel_mask']:                 
-            #    extract_dict['md'][key] =  np.array( hf.get( key ) )
-            elif key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds']:
-                pds_type_keys.append( key )                
-            else:    
-                extract_dict[key] = np.array( hf.get( key  ))
-    for key in pds_type_keys:
-        extract_dict[key] = pds.read_hdf(fp, key= key )                
+                    extract_dict['md'][key] = md.attrs[key]                 
+        elif onekey in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds']:
+            extract_dict[onekey] = pds.read_hdf(fp, key= onekey ) 
+        else:
+            try:
+                with h5py.File( fp, 'r') as hf: 
+                    extract_dict[onekey] = np.array( hf.get( onekey  ))
+            except:
+                print("The %s dosen't have this %s value"%(fp, onekey) )
     return extract_dict
+
+
+
+def read_contrast_from_multi_csv( uids, path, times=None, unit=20  ):
+    '''Y.G. 2016, Dec 23, load contrast from multi csv file'''
+    
+    N = len(uids) 
+    if times is None:
+        times = np.array( [0] + [2**i for i in range(N)] )*unit
+    for i, uid in enumerate(uids):     
+        fp = path + uid + '/uid=%s--contrast_factorL.csv'%uid
+        contri = pds.read_csv( fp )
+        qs =  np.array( contri[contri.columns[0]] )
+        contri_ = np.array(  contri[contri.columns[1]]  )
+        if i ==0:
+            contr = np.zeros( [ N, len(qs)])            
+        contr[i] = contri_
+        #contr[0,:] = np.nan
+    return times, contr
+
+def read_contrast_from_multi_h5( uids, path,    ):   
+    '''Y.G. 2016, Dec 23, load contrast from multi h5 file'''
+    N = len(uids)  
+    times_xsvs = np.zeros( N )
+    for i, uid in enumerate(uids):  
+        t = extract_xpcs_results_from_h5( filename= '%s_Res.h5'%uid, 
+                                    import_dir = path + uid + '/' , onekey= 'times_xsvs')        
+        times_xsvs[i] = t['times_xsvs'][0]
+        contri = extract_xpcs_results_from_h5( filename= '%s_Res.h5'%uid, 
+                                    import_dir = path + uid + '/' , onekey= 'contrast_factorL')        
+        if i ==0:
+            contr = np.zeros( [ N, contri['contrast_factorL'].shape[0]   ])            
+        contr[i] = contri['contrast_factorL'][:,0]        
+    return times_xsvs, contr
+
+
+
+
+
     
