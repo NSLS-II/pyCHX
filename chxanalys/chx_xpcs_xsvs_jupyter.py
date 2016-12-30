@@ -114,7 +114,13 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
         exposuretime= md['cam_acquire_t']     #exposure time in sec
     except:    
         exposuretime= md['count_time']     #exposure time in sec
-    acquisition_period = md['frame_time']   #acquisition time in sec
+        
+    try:
+        acquisition_period = float( db[uid]['start']['acquire period'] )
+    except:    
+        acquisition_period = md['frame_time'] 
+    
+    #acquisition_period = md['frame_time']   #acquisition time in sec
     timeperframe = acquisition_period #for g2
     center = [  int(md['beam_center_y']),int( md['beam_center_x'] ) ]  #beam center [y,x] for python image
     setup_pargs=dict(uid=uid, dpix= dpix, Ldet=Ldet, lambda_= lambda_, exposuretime=exposuretime,
