@@ -242,13 +242,16 @@ def get_reflected_angles(inc_x0, inc_y0, refl_x0, refl_y0, thetai=0.0,
     ''' Dec 16, 2015, Y.G.@CHX
         giving: incident beam center: bcenx,bceny
                 reflected beam on detector: rcenx, rceny
-                sample to detector distance: Lsd, in meters                
+                sample to detector distance: Lsd, in mm                
                 pixelsize: 75 um for Eiger4M detector
                 detector image size: dimx = 2070,dimy=2167 for Eiger4M detector
         get  reflected angle alphaf (outplane)
              reflected angle thetaf (inplane )
     '''    
-    
+    #if Lsd>=1000:#it should be something wrong and the unit should be meter
+    #convert Lsd from mm to m
+    if Lsd>=1000:
+        Lsd = Lsd/1000.
     alphai, phi =  get_incident_angles( inc_x0, inc_y0, refl_x0, refl_y0, pixelsize, Lsd)
     print ('The incident_angle (alphai) is: %s'%(alphai* 180/np.pi))
     px,py = pixelsize
@@ -484,6 +487,97 @@ def show_alphaf(alphaf,):
 ########################
 # get one-d of I(q) as a function of qr for different qz
 ##################### 
+
+def cal_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None,  setup_pargs=None ): 
+    '''Dec 16, 2015, Y.G.@CHX
+       calculate one-d of I(q) as a function of qr for different qz
+       data: a dataframe
+       Qr: info for qr, = qr_start , qr_end, qr_width, qr_num
+       Qz: info for qz, = qz_start,   qz_end,  qz_width , qz_num
+       qr: qr-map
+       qz: qz-map
+       inc_x0: x-center of incident beam
+       mask: a mask for qr-1d integration       
+       setup_pargs: gives path, filename...
+       
+       Return: qr_1d, a dataframe, with columns as qr1, qz1 (float value), qr2, qz2,....                       
+               Plot 1D cureve as a function of Qr for each Qz  
+               
+               
+               
+               
+    Examples:
+        #to make two-qz, from 0.018 to 0.046, width as 0.008,
+        qz_width = 0.008
+        qz_start = 0.018 + qz_width/2
+        qz_end = 0.046  -  qz_width/2
+        qz_num= 2
+
+
+        #to make one-qr, from 0.02 to 0.1, and the width is 0.1-0.012
+        qr_width =  0.1-0.02
+        qr_start =    0.02 + qr_width  /2
+        qr_end =  0.01 -  qr_width  /2
+        qr_num = 1
+
+        Qr = [qr_start , qr_end, qr_width, qr_num]
+        Qz=  [qz_start,   qz_end,  qz_width , qz_num ]
+        new_mask[ :, 1020:1045] =0        
+        qx, qy, qr, qz = convert_gisaxs_pixel_to_q( inc_x0, inc_y0,refl_x0,refl_y0, lamda=lamda, Lsd=Lsd )
+        
+        qr_1d = get_1d_qr( avg_imgr, Qr, Qz, qr, qz, inc_x0,  new_mask)
+        
+    A plot example:
+        plot1D( x= qr_1d['qr1'], y = qr_1d['0.0367'], logxy=True )
+    '''          
+    qr_start , qr_end, qr_width, qr_num =Qr
+    qz_start,   qz_end,  qz_width , qz_num =Qz
+    qr_edge, qr_center = get_qedge(qr_start , qr_end, qr_width, qr_num )    
+    qz_edge, qz_center = get_qedge( qz_start,   qz_end,  qz_width , qz_num ) 
+     
+    print ('The qr_edge is:  %s\nThe qr_center is:  %s'%(qr_edge, qr_center))
+    print ('The qz_edge is:  %s\nThe qz_center is:  %s'%(qz_edge, qz_center))    
+    label_array_qr = get_qmap_label( qr, qr_edge)
+
+    qr_1d ={}
+    columns=[]
+    for i,qzc_ in enumerate(qz_center):        
+        #print (i,qzc_)
+        label_array_qz = get_qmap_label( qz, qz_edge[i*2:2*i+2])
+        #print (qzc_, qz_edge[i*2:2*i+2])
+        label_array_qzr,qzc,qrc = get_qzrmap(label_array_qz, label_array_qr,qz_center, qr_center  )
+        #print (np.unique(label_array_qzr ))    
+        if mask is not None:
+            label_array_qzr *=   mask
+        roi_pixel_num = np.sum( label_array_qzr, axis=0)
+        qr_ = qr  *label_array_qzr
+        data_ = data*label_array_qzr    
+        qr_ave = np.sum( qr_, axis=0)/roi_pixel_num
+        data_ave = np.sum( data_, axis=0)/roi_pixel_num 
+        qr_ave,data_ave =   zip(* sorted(  zip( * [ qr_ave[~np.isnan(qr_ave)] ,   data_ave[~np.isnan( data_ave)] ]) ) )          
+        if i==0:
+            N_interp = len( qr_ave  ) 
+        qr_ave_intp =  np.linspace( np.min( qr_ave ), np.max( qr_ave ), N_interp)
+        data_ave = np.interp(  qr_ave_intp, qr_ave, data_ave)        
+        qr_1d[i]= [qr_ave_intp, data_ave]
+        columns.append( ['qr%s'%i, str(round(qzc_,4))] )        
+     
+        if i==0:
+            df =  np.hstack(  [ (qr_ave_intp).reshape( N_interp,1) , 
+                               data_ave.reshape( N_interp,1) ] )
+        else:
+            df = np.hstack(  [ df, (qr_ave_intp).reshape( N_interp,1) ,
+                              data_ave.reshape( N_interp,1) ] )     
+    df = DataFrame( df  )
+    df.columns = np.concatenate( columns    )
+    path = setup_pargs['path']
+    uid = setup_pargs['uid']        
+    filename = os.path.join(path, 'uid=%s--qr_1d.csv'% (uid) )
+    df.to_csv(filename)
+    print( 'The qr_1d is saved in %s with filename as uid=%s--qr_1d.csv'%(path, uid))        
+    return df
+
+
     
 def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,
               ticks=None, alpha=0.3, loglog=False, save=True, setup_pargs=None ): 
@@ -1050,7 +1144,7 @@ def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, *argv,**kwargs):
         uid='uid'        
     if save:
         path=kwargs['path']
-        fp = path + 'uid=%s--ROI-on-Image-'%(uid) + '.png'
+        fp = path + 'uid=%s--ROI-on-Image'%(uid) + '.png'
         fig.savefig( fp, dpi=fig.dpi)         
     #plt.show() 
     
@@ -1380,7 +1474,7 @@ def plot_gisaxs_two_g2( g2, taus, g2b, tausb,res_pargs=None,one_plot=False, *arg
         
                 
        
-def save_gisaxs_g2(  g2,res_pargs, time_label=True, taus=None, filename=None, *argv,**kwargs):     
+def save_gisaxs_g2(  g2, res_pargs, time_label= False, taus=None, filename=None, *argv,**kwargs):     
     
     '''
     Aug 8, 2016, Y.G.@CHX
@@ -1394,9 +1488,13 @@ def save_gisaxs_g2(  g2,res_pargs, time_label=True, taus=None, filename=None, *a
         
     if taus is None:
         taus = res_pargs[ 'taus']
-
-    qz_center = res_pargs['qz_center']
-    qr_center = res_pargs['qr_center']
+    
+    try:        
+        qz_center = res_pargs['qz_center']
+        qr_center = res_pargs['qr_center']
+    except:
+        roi_label= res_pargs['roi_label']
+        
     path = res_pargs['path']
     uid = res_pargs['uid']
     
@@ -1404,9 +1502,12 @@ def save_gisaxs_g2(  g2,res_pargs, time_label=True, taus=None, filename=None, *a
     columns=[]
     columns.append('tau')
     
-    for qz in qz_center:
-        for qr in qr_center:
-            columns.append( [str(qz),str(qr)] )
+    try:
+        for qz in qz_center:
+            for qr in qr_center:
+                columns.append( [str(qz),str(qr)] )
+    except:
+        columns.append(  [ v for (k,v) in roi_label.items()]  ) 
             
     df.columns = columns   
     
@@ -1418,8 +1519,7 @@ def save_gisaxs_g2(  g2,res_pargs, time_label=True, taus=None, filename=None, *a
         else:
             filename = os.path.join(path, 'uid=%s--g2.csv' % (uid))
     else:  
-        filename = os.path.join(path, filename)
-    
+        filename = os.path.join(path, filename)    
     df.to_csv(filename)
     print( 'The correlation function of uid= %s is saved with filename as %s'%(uid, filename))
 
@@ -1777,6 +1877,7 @@ def power_func(x, D0, power=2):
     return D0 * x**power
 
 
+
 def fit_qr_qz_rate( qr, qz, rate, plot_=True,  *argv,**kwargs): 
     '''
     Option:
@@ -1821,8 +1922,12 @@ def fit_qr_qz_rate( qr, qz, rate, plot_=True,  *argv,**kwargs):
 
     res= []        
     for i, qz_ in enumerate(qz): 
-        
-        y = rate['rate'][ i*Nqr  : (i+1)*Nqr ]        
+        try:
+            y = np.array( rate['rate'][ i*Nqr  : (i+1)*Nqr ]    )
+        except:
+            y = np.array( rate[ i*Nqr  : (i+1)*Nqr ] )  
+            
+        #print( len(x), len(y) )    
         _result = mod.fit(y, pars, x = x )
         res.append(  _result )
         D0[i]  = _result.best_values['D0']
@@ -1833,7 +1938,7 @@ def fit_qr_qz_rate( qr, qz, rate, plot_=True,  *argv,**kwargs):
         fig,ax = plt.subplots()
         plt.title('Q%s-Rate--uid= %s_Fit'%(power,uid),fontsize=20, y =1.06)
         for i, qz_ in enumerate(qz): 
-            ax.plot(x**power,rate['rate'][ i*Nqr  : (i+1)*Nqr ], marker = 'o',
+            ax.plot(x**power,  y, marker = 'o',
                     label=r'$q_z=%.5f$'%qz_)
             ax.plot(x**power, res[i].best_fit,  '-r')  
             txts = r'$D0: %.3e$'%D0[i] + r' $A^2$' + r'$s^{-1}$'
