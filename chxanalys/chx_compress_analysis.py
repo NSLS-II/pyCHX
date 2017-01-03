@@ -92,7 +92,7 @@ def cal_waterfallc(FD, labeled_array,   qindex=1, save=False, *argv,**kwargs):
     if save:
         path = kwargs['path'] 
         uid = kwargs['uid']
-        np.save(  path + 'uid=%s--waterfall'%uid, watf) 
+        np.save(  path + '%s_waterfall'%uid, watf) 
             
     return watf
 
@@ -143,7 +143,7 @@ def plot_waterfallc(wat, qindex=1, aspect = None,vmax=None, vmin=None,save=False
         else:
             uid = 'uid'
         #fp = path + "uid= %s--Waterfall-"%uid + CurTime + '.png'     
-        fp = path + "uid=%s--waterfall"%uid  + '.png'    
+        fp = path + "%s_waterfall"%uid  + '.png'    
         plt.savefig( fp, dpi=fig.dpi)
         
     #plt.show()
@@ -223,7 +223,7 @@ def plot_each_ring_mean_intensityc( times, mean_int_sets, xlabel= 'Frame',save=F
     if 'uid' in kwargs.keys():
         uid = kwargs['uid'] 
         
-    ax.set_title("uid= %s--Mean intensity of each ROI"%uid)
+    ax.set_title("%s--Mean intensity of each ROI"%uid)
     for i in range(num_rings):
         ax.plot( times, mean_int_sets[:,i], label="ROI "+str(i+1),marker = markers[i], color=colors[i], ls='-')
         ax.set_xlabel(xlabel)
@@ -232,11 +232,11 @@ def plot_each_ring_mean_intensityc( times, mean_int_sets, xlabel= 'Frame',save=F
 
     if save:            
         path = kwargs['path'] 
-        fp = path + "uid=%s--t-ROIs"%uid  + '.png' 
+        fp = path + "%s_t_ROIs"%uid  + '.png' 
         fig.savefig( fp, dpi=fig.dpi)
         save_arrays( np.hstack( [times.reshape(len(times),1), mean_int_sets]),
                     label=  ['frame']+ ['ROI_%d'%i for i in range( num_rings ) ],
-                    filename='uid=%s--t-ROIs'%uid, path= path  ) 
+                    filename='%s_t_ROIs'%uid, path= path  ) 
     #plt.show()
 
 
@@ -260,7 +260,7 @@ def get_each_ring_mean_intensityc( FD, ring_mask, sampling=1, timeperframe=None,
         if 'uid' in kwargs.keys():
             uid = kwargs['uid'] 
         
-        ax.set_title("uid= %s--Mean intensity of each ROI"%uid)
+        ax.set_title("%s--Mean intensity of each ROI"%uid)
         for i in range(num_rings):
             ax.plot( times, mean_int_sets[:,i], label="ROI "+str(i+1),marker = 'o', ls='-')
             if timeperframe is not None:   
@@ -275,12 +275,12 @@ def get_each_ring_mean_intensityc( FD, ring_mask, sampling=1, timeperframe=None,
             #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
             path = kwargs['path']              
             #fp = path + "uid= %s--Mean intensity of each ring-"%uid + CurTime + '.png' 
-            fp = path + "uid=%s--Mean-intensity-of-each-ROI-"%uid  + '.png' 
+            fp = path + "%s_Mean_intensity_of_each_ROI"%uid  + '.png' 
             fig.savefig( fp, dpi=fig.dpi)
             
             save_arrays( np.hstack( [times.reshape(len(times),1), mean_int_sets]),
                         label=  ['frame']+ ['ROI_%d'%i for i in range( num_rings ) ],
-                        filename='uid=%s-t-ROIs'%uid, path= path  )  
+                        filename='%s_t_ROIs'%uid, path= path  )  
         
         #plt.show()
         

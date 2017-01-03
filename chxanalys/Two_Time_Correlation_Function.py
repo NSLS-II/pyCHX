@@ -973,31 +973,24 @@ def show_C12(C12,  q_ind=0, return_fig=False, *argv,**kwargs):
             extent=[0, data.shape[0]*timeperframe, 0, data.shape[0]*timeperframe ] )
     if title:
         if isinstance(q_ind, int):
-            tit = 'uid=%s-[%s-%s] frames--Qth= %s'%(uid,N1,N2,C12_num)            
+            tit = '%s-[%s-%s] frames--Qth= %s'%(uid,N1,N2,C12_num)            
         else:
-            tit =  'uid=%s-[%s-%s] frames--Qzth= %s--Qrth= %s'%(uid,N1,N2, qz_ind, qr_ind )
+            tit =  '%s-[%s-%s] frames--Qzth= %s--Qrth= %s'%(uid,N1,N2, qz_ind, qr_ind )
         ax.set_title( tit  )
     else:
-        tit=''
-        
+        tit=''        
         #ax.set_title('%s-%s frames--Qth= %s'%(N1,N2,g12_num))
     ax.set_xlabel( r'$t_1$ $(s)$', fontsize = 18)
     ax.set_ylabel( r'$t_2$ $(s)$', fontsize = 18)
     fig.colorbar(im)
     
-    save=False
-    
+    save=False    
     if 'save' in kwargs:
         save=kwargs['save']
-    
-
-        
-    if save:
-        dt =datetime.now()
-        CurTime = '-%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
+    if save:       
         path=kwargs['path']
         #fp = path + 'Two-time--uid=%s'%(uid) + tit + CurTime + '.png'
-        fp = path + 'uid=%s--Two-time'%(uid) + '.png'
+        fp = path + '%s_Two_time'%(uid) + '.png'
         plt.savefig( fp, dpi=fig.dpi)        
      
     if return_fig:
