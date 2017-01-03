@@ -4,16 +4,43 @@ yuzhang@bnl.gov
 This module is for the GiSAXS XPCS analysis 
 """
 
-
-
-
 from chxanalys.chx_generic_functions import *
-
-from chxanalys.chx_compress import ( compress_eigerdata, read_compressed_eigerdata,
-                                             init_compress_eigerdata, get_avg_imgc,
-                                             Multifile) 
-
+from chxanalys.chx_compress import ( compress_eigerdata, read_compressed_eigerdata,init_compress_eigerdata, get_avg_imgc,Multifile) 
 from chxanalys.chx_correlationc import ( cal_g2c )
+
+
+
+def get_gisaxs_roi( Qr, Qz, qr_map, qz_map, mask=None, qval_dict=None ):
+    '''Y.G. 2016 Dec 31
+    Get xpcs roi of gisaxs
+    Parameters:
+        Qr: list, = [qr_start , qr_end, qr_width, qr_num], corresponding to qr start, qr end, qr width, qr number
+        Qz: list, = [qz_start , qz_end, qz_width, qz_num], corresponding to qz start, qz end, qz width, qz number
+        qr_map: two-d array, the same shape as gisaxs frame, a qr map
+        qz_map: two-d array, the same shape as gisaxs frame, a qz map
+        mask: array, the scattering mask
+        qval_dict: a dict, each key (a integer) with value as qr or (qr,qz) or (q//, q|-)     
+                    if not None, the new returned qval_dict will include the old one
+        
+    Return:
+        roi_mask: array, the same shape as gisaxs frame, the label array of roi
+        qval_dict, a dict, each key (a integer) with value as qr or (qr,qz) or (q//, q|-)        
+    '''
+
+    qr_edge, qr_center = get_qedge( *Qr )
+    qz_edge, qz_center = get_qedge( *Qz )
+    label_array_qz = get_qmap_label(qz_map, qz_edge)
+    label_array_qr = get_qmap_label(qr_map, qr_edge)
+    label_array_qzr, qzc, qrc = get_qzrmap(label_array_qz, label_array_qr,qz_center, qr_center)
+    labels_qzr, indices_qzr = roi.extract_label_indices(label_array_qzr)
+    labels_qz, indices_qz = roi.extract_label_indices(label_array_qz)
+    labels_qr, indices_qr = roi.extract_label_indices(label_array_qr)
+    if mask is None:
+        mask=1
+    roi_mask =  label_array_qzr * mask
+    qval_dict = get_qval_dict( np.round(qr_center, 5) , np.round(qz_center,5), qval_dict = qval_dict  )
+    return roi_mask, qval_dict
+ 
 
 
 ############
@@ -572,9 +599,9 @@ def cal_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None,  setup_pargs=None ):
     df.columns = np.concatenate( columns    )
     path = setup_pargs['path']
     uid = setup_pargs['uid']        
-    filename = os.path.join(path, 'uid=%s--qr_1d.csv'% (uid) )
+    filename = os.path.join(path, '%s_qr_1d.csv'% (uid) )
     df.to_csv(filename)
-    print( 'The qr_1d is saved in %s with filename as uid=%s--qr_1d.csv'%(path, uid))        
+    print( 'The qr_1d is saved in %s with filename as %s_qr_1d.csv'%(path, uid))        
     return df
 
 
@@ -719,21 +746,16 @@ def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,
 
 
 
-def plot_qr_1d_with_ROI( qr_1d, qr_center,  loglog=False, save=True, setup_pargs=None ): 
+def plot_qr_1d_with_ROI( qr_1d, qr_center,  loglog=False, save=True, uid='uid', path='' ): 
     '''Dec 16, 2015, Y.G.@CHX
        plot one-d of I(q) as a function of qr with ROI
        qr_1d: a dataframe for qr_1d
-       qr_center: the center of qr       
-
-       loglog: if True, plot in log-log scale
-       setup_pargs: gives path, filename...
-       
+       qr_center: the center of qr 
+       loglog: if True, plot in log-log scale       
        Return:                    
-               Plot 1D cureve with ROI
-        
+               Plot 1D cureve with ROI        
     A plot example:
-        plot_1d_qr_with_ROI( df, qr_center,  loglog=False, save=True, setup_pargs=None ): 
-
+        plot_1d_qr_with_ROI( df, qr_center,  loglog=False, save=True )
 
     '''     
 
@@ -741,21 +763,16 @@ def plot_qr_1d_with_ROI( qr_1d, qr_center,  loglog=False, save=True, setup_pargs
     Ncol = len( qr_1d.columns )
     Nqr = Ncol%2
     qz_center = qr_1d.columns[1::2]
-    Nqz = len(qz_center)
-              
-    for i,qzc_ in enumerate(qz_center):
-        
+    Nqz = len(qz_center)              
+    for i,qzc_ in enumerate(qz_center):        
         x= qr_1d[  qr_1d.columns[0]   ]
-        y=   qr_1d[qzc_]          
-        
+        y=   qr_1d[qzc_] 
         if loglog:
             ax.loglog(x,y,  '--o', label= 'qz= %s'%qzc_, markersize=1)
         else:
             ax.plot( x,y,  '--o', label= 'qz= %s'%qzc_) 
-    
     for qrc in qr_center:
         ax.axvline( qrc )#, linewidth = 5  )
-        
         
     #ax.set_xlabel( r'$q_r$', fontsize=15)
     ax.set_xlabel(r'$q_r$'r'($\AA^{-1}$)', fontsize=18)
@@ -764,13 +781,9 @@ def plot_qr_1d_with_ROI( qr_1d, qr_center,  loglog=False, save=True, setup_pargs
     #ax.set_xscale('log')
     ax.set_xlim(   x.max(), x.min()  )
     ax.legend(loc='best') 
-    
-    if save:
-  
-        path = setup_pargs['path']
-        uid = setup_pargs['uid']       
-    
-        fp = path + 'uid=%s--qr_1d--ROI-'%uid  + '.png'  
+    ax.set_title( '%s_Qr_ROI'%uid)    
+    if save:     
+        fp = path + '%s_Qr_ROI'%uid  + '.png'  
         fig.savefig( fp, dpi=fig.dpi)           
     #plt.show()  
     
@@ -909,6 +922,141 @@ def get_qz_tick_label( qz, label_array_qz,interp=True):
     return  zticks,zticks_label 
 
 
+def get_qzr_map(  qr, qz, inc_x0, Nzline=10,Nrline=10,  interp = True,
+                  return_qrz_label= True, *argv,**kwargs):  
+    
+    ''' 
+    Dec 31, 2016, Y.G.@CHX
+    Calculate a qzr map of a gisaxs image (data) without plot
+    
+    Parameters:
+        qr:  2-D array, qr of a gisaxs image (data)
+        qz:  2-D array, qz of a gisaxs image (data)
+        inc_x0:  the incident beam center x 
+    Options:        
+        Nzline: int, z-line number
+        Nrline: int, r-line number        
+        
+    Return:
+    if return_qrz_label
+        zticks: list, z-tick positions in unit of pixel
+        zticks_label: list, z-tick positions in unit of real space
+        rticks: list, r-tick positions in unit of pixel
+        rticks_label: list, r-tick positions in unit of real space 
+    else: return the additional two below
+        label_array_qr: qr label array with the same shpae as gisaxs image
+        label_array_qz: qz label array with the same shpae as gisaxs image
+    
+    Examples:        
+        ticks = get_qzr_map(  qr, qz, inc_x0  )        
+    '''
+    qr_start, qr_end, qr_num = qr.min(),qr.max(), Nrline
+    qz_start, qz_end, qz_num = qz.min(),qz.max(), Nzline 
+    qr_edge, qr_center = get_qedge(qr_start , qr_end, ( qr_end- qr_start)/(qr_num+100), qr_num )
+    qz_edge, qz_center = get_qedge( qz_start,   qz_end,   (qz_end - qz_start)/(qz_num+100 ) ,  qz_num )
+
+    label_array_qz = get_qmap_label( qz, qz_edge)
+    label_array_qr = get_qmap_label( qr, qr_edge)
+ 
+    labels_qz, indices_qz = roi.extract_label_indices( label_array_qz  )
+    labels_qr, indices_qr = roi.extract_label_indices( label_array_qr  )
+    num_qz = len(np.unique( labels_qz ))
+    num_qr = len(np.unique( labels_qr ))     
+    zticks,zticks_label  = get_qz_tick_label(qz,label_array_qz)
+    #rticks,rticks_label  = get_qr_tick_label(label_array_qr,inc_x0)
+    try:
+        rticks,rticks_label = zip(*np.sort(  zip( *get_qr_tick_label( qr, label_array_qr, inc_x0,interp=interp) ))  )
+    except:
+        rticks,rticks_label = zip(* sorted(  zip( *get_qr_tick_label( qr, label_array_qr, inc_x0,interp=interp) ))  )
+    #stride = int(len(zticks)/10) 
+    ticks=[ zticks,zticks_label,rticks,rticks_label ]
+    if return_qrz_label:
+        return  zticks,zticks_label,rticks,rticks_label, label_array_qr, label_array_qz
+    else:
+        return  zticks,zticks_label,rticks,rticks_label
+    
+    
+
+def plot_qzr_map( qr, qz, inc_x0, ticks = None, data=None,
+                  uid='uid', path ='', *argv,**kwargs):  
+    
+    ''' 
+    Dec 31, 2016, Y.G.@CHX
+    plot a qzr map of a gisaxs image (data)    
+    Parameters:
+        qr:  2-D array, qr of a gisaxs image (data)
+        qz:  2-D array, qz of a gisaxs image (data)
+        inc_x0:  the incident beam center x 
+        
+        ticks = [ zticks,zticks_label,rticks,rticks_label ], use ticks = get_qzr_map(  qr, qz, inc_x0  )  to get
+        
+            zticks: list, z-tick positions in unit of pixel
+            zticks_label: list, z-tick positions in unit of real space
+            rticks: list, r-tick positions in unit of pixel
+            rticks_label: list, r-tick positions in unit of real space
+            label_array_qr: qr label array with the same shpae as gisaxs image
+            label_array_qz: qz label array with the same shpae as gisaxs image
+        
+    inc_x0:  the incident beam center x          
+    Options:
+        data: 2-D array, a gisaxs image, if None, =qr+qz
+        Nzline: int, z-line number
+        Nrline: int, r-line number       
+        
+    Return:
+        None
+    
+    Examples:
+        
+        ticks = plot_qzr_map(  ticks, inc_x0, data = None, Nzline=10, Nrline= 10   )
+        ticks = plot_qzr_map(  ticks, inc_x0, data = avg_imgmr, Nzline=10,  Nrline=10   )
+    '''
+        
+    
+    import matplotlib.pyplot as plt    
+    import copy
+    import matplotlib.cm as mcm
+    if ticks is None:
+        zticks,zticks_label,rticks,rticks_label, label_array_qr, label_array_qz = get_qzr_map( 
+            qr, qz, inc_x0, return_qrz_label=True  ) 
+    else:
+        zticks,zticks_label,rticks,rticks_label, label_array_qr, label_array_qz = ticks
+    
+    cmap='viridis'
+    _cmap = copy.copy((mcm.get_cmap(cmap)))
+    _cmap.set_under('w', 0)    
+    fig, ax = plt.subplots(    )    
+    if data is None:
+        data=qr+qz        
+        im = ax.imshow(data, cmap='viridis',origin='lower') 
+    else:
+        im = ax.imshow(data, cmap='viridis',origin='lower',  norm= LogNorm(vmin=0.001, vmax=1e1)) 
+
+    imr=ax.imshow(label_array_qr, origin='lower' ,cmap='viridis', vmin=0.5,vmax= None  )#,interpolation='nearest',) 
+    imz=ax.imshow(label_array_qz, origin='lower' ,cmap='viridis', vmin=0.5,vmax= None )#,interpolation='nearest',) 
+   
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    plt.colorbar(im, cax=cax) 
+    ax.set_xlabel(r'$q_r$', fontsize=18)
+    ax.set_ylabel(r'$q_z$',fontsize=18)
+
+    stride = 1
+    ax.set_yticks( zticks[::stride] )
+    yticks =  zticks_label[::stride] 
+    ax.set_yticklabels(yticks, fontsize=7)
+    #stride = int(len(rticks)/10)
+    stride = 1
+    ax.set_xticks( rticks[::stride] )
+    xticks =  rticks_label[::stride]
+    ax.set_xticklabels(xticks, fontsize=7) 
+    ax.set_title( '%s_Qr_Qz_Map'%uid, y=1.03,fontsize=18)         
+    fp = path + '%s_Qr_Qz_Map'%(uid) + '.png'
+    fig.savefig( fp, dpi=fig.dpi)         
+ 
+
+
+
 
 def show_qzr_map(  qr, qz, inc_x0, data=None, Nzline=10,Nrline=10 , 
                  interp=True, *argv,**kwargs):  
@@ -1014,18 +1162,20 @@ def show_qzr_map(  qr, qz, inc_x0, data=None, Nzline=10,Nrline=10 ,
     xticks =  rticks_label[::stride]
     ax.set_xticklabels(xticks, fontsize=7)    
 
-    ax.set_title( 'Q-zr_Map', y=1.03,fontsize=18)
+    if 'uid' in kwargs:
+        uid=kwargs['uid']
+    else:
+        uid='uid'
+        
+    ax.set_title( '%s_Qr_Qz_Map'%uid, y=1.03,fontsize=18)
     
     save=False    
     if 'save' in kwargs:
         save=kwargs['save']    
-    if 'uid' in kwargs:
-        uid=kwargs['uid']
-    else:
-        uid='uid'        
+        
     if save:
         path=kwargs['path']
-        fp = path + 'uid=%s--Q-zr-Map-'%(uid) + '.png'
+        fp = path + '%s_Qr_Qz_Map'%(uid) + '.png'
         fig.savefig( fp, dpi=fig.dpi)         
     #plt.show() 
     
@@ -1034,7 +1184,7 @@ def show_qzr_map(  qr, qz, inc_x0, data=None, Nzline=10,Nrline=10 ,
 
 
  
-def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, *argv,**kwargs):  
+def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, uid='uid', path = '', save=False, *argv,**kwargs):  
         
     ''' 
     Dec 16, 2015, Y.G.@CHX
@@ -1061,16 +1211,6 @@ def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, *argv,**kwargs):
         show_qzr_roi( avg_imgr, box_maskr, inc_x0, ticks)
          
     '''
-      
-        
-        
-    #import matplotlib.pyplot as plt    
-    #import copy
-    #import matplotlib.cm as mcm
-    
-    #cmap='viridis'
-    #_cmap = copy.copy((mcm.get_cmap(cmap)))
-    #_cmap.set_under('w', 0)
     zticks, zticks_label, rticks, rticks_label = ticks
     avg_imgr, box_maskr = data, rois
     num_qzr = len(np.unique( box_maskr)) -1
@@ -1078,7 +1218,7 @@ def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, *argv,**kwargs):
     #fig, ax = plt.subplots(figsize=(8,12))
     fig, ax = plt.subplots(figsize=(8,8))
     
-    ax.set_title("ROI--Labeled Array on Data")
+    ax.set_title("%s_ROI--Labeled Array on Data"%uid)
     im,im_label = show_label_array_on_image(ax, avg_imgr, box_maskr, imshow_cmap='viridis',
                             cmap='Paired', alpha=alpha,
                              vmin=0.01, vmax=30. ,  origin="lower")
@@ -1119,15 +1259,6 @@ def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, *argv,**kwargs):
     ax.set_xticks( rticks[::stride] )
     xticks =  rticks_label[::stride]
     ax.set_xticklabels(xticks, fontsize=9)
-    
-    #print (xticks, yticks)
-
-    #caxr = fig.add_axes([0.95, 0.1, 0.03, .8])  #x,y, width, heigth     
-    #cba = fig.colorbar(im_label, cax=caxr    )  
-
-    #fig.colorbar(im_label, shrink =.85)
-    #fig.colorbar(im, shrink =.82)
-    
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.05)
     plt.colorbar(im, cax=cax)
@@ -1135,18 +1266,11 @@ def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, *argv,**kwargs):
     ax.set_xlabel(r'$q_r$', fontsize=22)
     ax.set_ylabel(r'$q_z$',fontsize=22)
     
-    save=False    
-    if 'save' in kwargs:
-        save=kwargs['save']    
-    if 'uid' in kwargs:
-        uid=kwargs['uid']
-    else:
-        uid='uid'        
+
+    fp = path + '%s_ROI_on_Image'%(uid) + '.png'
     if save:
-        path=kwargs['path']
-        fp = path + 'uid=%s--ROI-on-Image'%(uid) + '.png'
         fig.savefig( fp, dpi=fig.dpi)         
-    #plt.show() 
+
     
     
     
