@@ -252,12 +252,12 @@ def plot_circular_average( qp, iq, q,  pargs, show_pixel= False,
         ax1.semilogy(qp, iq, '-o')
         ax1.set_xlabel('q (pixel)')  
         ax1.set_ylabel('I(q)')
-        title = ax1.set_title('uid= %s--Circular Average'%uid)  
+        title = ax1.set_title('%s_Circular Average'%uid)  
     else:
         ax1.semilogy(q,  iq , '-o') 
         ax1.set_xlabel('q ('r'$\AA^{-1}$)')        
         ax1.set_ylabel('I(q)')
-        title = ax1.set_title('uid= %s--Circular Average'%uid)     
+        title = ax1.set_title('%s_Circular Average'%uid)     
         ax2=None 
     if 'xlim' in kwargs.keys():
         ax1.set_xlim(    kwargs['xlim']  )    
@@ -271,7 +271,7 @@ def plot_circular_average( qp, iq, q,  pargs, show_pixel= False,
     fig.subplots_adjust(top=0.85)
     if save:
         path = pargs['path']
-        fp = path + 'uid=%s--q-Iq'%uid  + '.png'  
+        fp = path + '%s_q_Iq'%uid  + '.png'  
         fig.savefig( fp, dpi=fig.dpi)
     if return_fig:
         return fig        
@@ -521,7 +521,7 @@ def plot_t_iqc( q, iqs, frame_edge, pargs, save=True, *argv,**kwargs):
         ax.set_ylim(    kwargs['ylim']  )
     ax.legend(loc = 'best')  
     uid = pargs['uid']
-    title = ax.set_title('uid= %s--t~I(q)'%uid)        
+    title = ax.set_title('%s--t~I(q)'%uid)        
     title.set_y(1.01)
     if save:
         #dt =datetime.now()
@@ -529,12 +529,12 @@ def plot_t_iqc( q, iqs, frame_edge, pargs, save=True, *argv,**kwargs):
         path = pargs['path']
         uid = pargs['uid']
         #fp = path + 'uid= %s--Iq~t-'%uid + CurTime + '.png'  
-        fp = path + 'uid=%s--q-Iqt'%uid + '.png'  
+        fp = path + '%s_q_Iqt'%uid + '.png'  
         fig.savefig( fp, dpi=fig.dpi)
 
         save_arrays(  np.vstack( [q, np.array(iqs)]).T, 
                     label=  ['q_A-1']+ ['Fram-%s-%s'%(t[0],t[1]) for t in frame_edge],
-                    filename='uid=%s--q-Iqt'%uid, path= path  )
+                    filename='%s_q_Iqt'%uid , path= path  )
 
     #plt.show() 
 
@@ -1115,7 +1115,7 @@ def plot_qIq_with_ROI( q, iq, q_ring_center, logs=True, save=False, return_fig =
     else:        
         axes.plot(q,  iq, '-o')
         
-    axes.set_title('uid= %s--Circular Average with the Q ring values'%uid)
+    axes.set_title('%s--Circular Average with the Q ring values'%uid)
     axes.set_ylabel('I(q)')
     axes.set_xlabel('Q 'r'($\AA^{-1}$)')
     #axes.set_xlim(0, 0.02)
@@ -1143,7 +1143,7 @@ def plot_qIq_with_ROI( q, iq, q_ring_center, logs=True, save=False, return_fig =
         else:
             uid = 'uid'
         #fp = path + "uid= %s--Waterfall-"%uid + CurTime + '.png'     
-        fp = path + "uid=%s--ROI-on-Iq"%uid  + '.png'    
+        fp = path + "%s_ROI_on_Iq"%uid  + '.png'    
         fig.savefig( fp, dpi=fig.dpi) 
     #plt.show()
     if return_fig:
@@ -1166,7 +1166,7 @@ def get_each_ring_mean_intensity( data_series, ring_mask, sampling, timeperframe
         if 'uid' in kwargs.keys():
             uid = kwargs['uid'] 
         
-        ax.set_title("uid= %s--Mean intensity of each ring"%uid)
+        ax.set_title("%s--Mean intensity of each ring"%uid)
         for i in range(num_rings):
             ax.plot( mean_int_sets[:,i], label="Ring "+str(i+1),marker = 'o', ls='-')
             ax.set_xlabel("Time")
@@ -1178,7 +1178,7 @@ def get_each_ring_mean_intensity( data_series, ring_mask, sampling, timeperframe
             #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
             path = kwargs['path']              
             #fp = path + "Uid= %s--Mean intensity of each ring-"%uid + CurTime + '.png'     
-            fp = path + "uid=%s--Mean-intensity-of-each-ROI-"%uid   + '.png'   
+            fp = path + "%s_Mean_intensity_of_each_ROI"%uid   + '.png'   
             
             fig.savefig( fp, dpi=fig.dpi)
         
