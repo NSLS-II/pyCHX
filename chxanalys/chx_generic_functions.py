@@ -2,6 +2,48 @@ from chxanalys.chx_libs import *
 #from tqdm import *
 from chxanalys.chx_libs import  ( colors,  markers )
 
+
+def combine_images( filenames, outputfile, outsize=(2000, 2400)):
+    '''Y.G. Dec 31, 2016
+    Combine images together to one image using PIL.Image
+    Input:
+        filenames: list, the images names to be combined
+        outputfile: str, the filename to generate
+        outsize: the combined image size
+    Output:
+        save a combined image file
+    '''
+    N = len( filenames)
+    nx = np.int( np.ceil( np.sqrt(N)) )
+    ny = np.int( np.ceil( N / float(nx)  ) )
+    #print(nx,ny)
+    result = Image.new("RGB", outsize, color=(255,255,255,0))    
+    basewidth = int( outsize[0]/nx )     
+    hsize = int( outsize[1]/ny )         
+    for index, file in enumerate(filenames):
+        path = os.path.expanduser(file)
+        img = Image.open(path)
+        bands = img.split()
+        ratio = img.size[1]/ img.size[0]  #h/w        
+        if hsize > basewidth * ratio:
+            basewidth_ = basewidth 
+            hsize_ = int( basewidth * ratio )
+        else:
+            basewidth_ =  int( hsize/ratio )
+            hsize_ =  hsize 
+        #print( index, file, basewidth, hsize )
+        size = (basewidth_,hsize_)
+        bands = [b.resize(size, Image.LINEAR) for b in bands]
+        img = Image.merge('RGBA', bands)  
+        x = index % nx * basewidth
+        y = index // nx * hsize
+        w, h = img.size
+        #print('pos {0},{1} size {2},{3}'.format(x, y, w, h))
+        result.paste(img, (x, y, x + w, y + h  ))
+    result.save( outputfile,quality=100, optimize=True )
+    print( 'The combined image is saved as: %s'%outputfile)
+    
+
 def get_qval_dict( qr_center, qz_center=None, qval_dict = None,  multi_qr_for_one_qz= True,):
     '''Y.G. Dec 27, 2016
     Map the roi label array with qr or (qr,qz) or (q//, q|-) values
@@ -26,17 +68,45 @@ def get_qval_dict( qr_center, qz_center=None, qval_dict = None,  multi_qr_for_on
         if multi_qr_for_one_qz:
             for qzind in range( len( qz_center)):
                 for qrind in range( len( qr_center)):    
-                    qval_dict[ maxN + qzind* len( qr_center) + qrind ] =[qr_center[qrind], qz_center[qzind]  ]
+                    qval_dict[ maxN + qzind* len( qr_center) + qrind ] = np.array( [qr_center[qrind], qz_center[qzind]  ] )
         else:
             for i, [qr, qz] in enumerate(zip( qr_center, qz_center)):     
-                qval_dict[ maxN + i  ] =[ qr, qz  ]            
+                qval_dict[ maxN + i  ] = np.array( [ qr, qz  ] )            
     else:
         for qrind in range( len( qr_center)):    
-            qval_dict[ maxN +  qrind ] =[ qr_center[qrind] ]        
+            qval_dict[ maxN +  qrind ] = np.array( [ qr_center[qrind] ] )        
     return qval_dict   
 
 
+def update_qval_dict(  qval_dict1, qval_dict2 ):
+    ''' Y.G. Dec 31, 2016
+    Update qval_dict1 with qval_dict2
+    Input:
+        qval_dict1, a dict, each key (a integer) with value as qr or (qr,qz) or (q//, q|-)
+        qval_dict2, a dict, each key (a integer) with value as qr or (qr,qz) or (q//, q|-)
+    Output:
+        qval_dict, a dict,  with the same key as dict1, and all key in dict2 but which key plus max(dict1.keys())
+    '''
+    maxN = np.max( list( qval_dict1.keys() ) ) +1
+    qval_dict = {}
+    qval_dict.update( qval_dict1 )
+    for k in list( qval_dict2.keys() ):
+        qval_dict[k + maxN ] = qval_dict2[k]
+    return qval_dict
 
+def update_roi_mask(  roi_mask1, roi_mask2 ):
+    ''' Y.G. Dec 31, 2016
+    Update qval_dict1 with qval_dict2
+    Input:
+        roi_mask1, 2d-array, label array,  same shape as xpcs frame, 
+        roi_mask2, 2d-array, label array,  same shape as xpcs frame,
+    Output:
+        roi_mask, 2d-array, label array,  same shape as xpcs frame, update roi_mask1 with roi_mask2
+    '''
+    roi_mask = roi_mask1.copy()
+    w= np.where( roi_mask2 )   
+    roi_mask[w]  = roi_mask2[w] + np.max( roi_mask ) 
+    return roi_mask
 
 
 def check_bad_uids(uids, mask, img_choice_N = 10):
@@ -1041,7 +1111,7 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
         else:
             uid = 'uid'
         #fp = path + "Uid= %s--Waterfall-"%uid + CurTime + '.png'     
-        fp = path + "uid=%s--ROI-on-Image"%uid  + '.png'    
+        fp = path + "%s_ROI_on_Image"%uid  + '.png'    
         plt.savefig( fp, dpi=fig.dpi)      
     #plt.show()
     if return_fig:
@@ -1131,27 +1201,23 @@ def check_ROI_intensity( avg_img, ring_mask, ring_number=3 , save=False, *argv,*
 
      
     """   
+    #print('here')
+    
     uid = 'uid'
     if 'uid' in kwargs.keys():
         uid = kwargs['uid'] 
     pixel = roi.roi_pixel_values(avg_img, ring_mask, [ring_number] )
     fig, ax = plt.subplots()
-    ax.set_title('uid=%s--check-RIO-%s-intensity'%(uid, ring_number) )
+    ax.set_title('%s--check-RIO-%s-intensity'%(uid, ring_number) )
     ax.plot( pixel[0][0] ,'bo', ls='-' )
     ax.set_ylabel('Intensity')
     ax.set_xlabel('pixel')
-    if save:
-        #dt =datetime.now()
-        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
-        path = kwargs['path'] 
-        #fp = path + "Uid= %s--Waterfall-"%uid + CurTime + '.png'     
-        #fp = path + "uid=%s--check-ROI-intensity-"%uid  + '.png'  
-        fp = path + "uid=%s--Mean-intensity-of-one-ROI"%uid  + '.png'         
-        fig.savefig( fp, dpi=fig.dpi) 
-        
+    if save:           
+        path = kwargs['path']  
+        fp = path + "%s_Mean_intensity_of_one_ROI"%uid  + '.png'         
+        fig.savefig( fp, dpi=fig.dpi)
         save_lists( [range( len(  pixel[0][0] )), pixel[0][0]], label=['pixel_list', 'roi_intensity'],
-                filename="uid=%s--Mean-intensity-of-one-ROI"%uid  , path= path)
-    
+                filename="%s_Mean_intensity_of_one_ROI"%uid, path= path)    
     #plt.show()
     return pixel[0][0]
 
@@ -1626,7 +1692,7 @@ def save_g2_general(  g2, taus, qr=None, qz=None, uid='uid', path=None, return_r
     
     #if filename is None:
       
-    filename = 'uid=%s' % (uid)
+    filename = uid
     #filename = 'uid=%s--g2.csv' % (uid)
     #filename += '-uid=%s-%s.csv' % (uid,CurTime)   
     #filename += '-uid=%s.csv' % (uid) 
@@ -1861,7 +1927,7 @@ def get_short_long_labels_from_qval_dict(qval_dict, geometry='saxs'):
 
 def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='saxs',filename='g2', 
                     path=None, function='simple_exponential',  g2_labels=None,
-                    ylabel='g2',  return_fig=False, append_name='',*argv,**kwargs):    
+                    ylabel='g2',  return_fig=False, append_name='', outsize=(2000, 2400), *argv,**kwargs):    
     '''
     Dec 26,2016, Y.G.@CHX
     
@@ -1882,7 +1948,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
     filename: for the title of plot
     append_name: if not None, will save as filename + append_name as filename
     path: the path to save data        
-        
+    outsize: for gi/ang_saxs, will combine all the different qz images together with outsize    
     function: 
         'simple_exponential': fit by a simple exponential function, defined as  
                     beta * np.exp(-2 * relaxation_rate * lags) + baseline
@@ -1911,7 +1977,8 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
      num_long, short_label, long_label,short_ulabel,
      long_ulabel,ind_long, master_plot,
      mastp) = get_short_long_labels_from_qval_dict(qval_dict, geometry=geometry)  
-
+    fps = []
+    
     for s_ind in range( num_short  ):
         if RUN_GUI:
             fig = Figure(figsize=(10, 12))            
@@ -2045,13 +2112,18 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
         if   num_short == 1:      
             fp = path + filename      
         else:
-            fp = path + filename + '_%s_%s_'%(mastp, s_ind)       
+            fp = path + filename + '_%s_%s'%(mastp, s_ind)            
         if append_name is not '':
             fp = fp + append_name
-            
+        fps.append( fp  + '.png' )             
         fig.set_tight_layout(True)                 
         plt.savefig( fp + '.png', dpi=fig.dpi)        
-            
+    #combine each saved images together
+    if num_short !=1:
+        outputfile =  path + filename + '.png'
+        if append_name is not '':
+            outputfile =  path + filename  + append_name + '.png'
+        combine_images( fps, outputfile, outsize= outsize )    
     if return_fig:
         return fig     
 
@@ -2158,7 +2230,7 @@ def plot_q_rate_fit_general( qval_dict, rate, qrate_fit_res, geometry ='saxs',  
          
     power = 2
     fig,ax = plt.subplots()
-    plt.title(r'$Q^%s$'%(power) + '-Rate--uid= %s_Fit'%(uid),fontsize=20, y =1.06)
+    plt.title(r'$Q^%s$'%(power) + '-Rate-%s_Fit'%(uid),fontsize=20, y =1.06)
     Nqz = num_short  
     if Nqz!=1:
         ls = '--'
@@ -2183,7 +2255,7 @@ def plot_q_rate_fit_general( qval_dict, rate, qrate_fit_res, geometry ='saxs',  
 
     ax.set_ylabel('Relaxation rate 'r'$\gamma$'"($s^{-1}$)")
     ax.set_xlabel("$q^%s$"r'($\AA^{-2}$)'%power)
-    fp = path + 'uid=%s--Q-Rate'%(uid) + '--fit-.png'
+    fp = path + '%s_Q_Rate'%(uid) + '_fit.png'
     fig.savefig( fp, dpi=fig.dpi)
     fig.tight_layout() 
 
