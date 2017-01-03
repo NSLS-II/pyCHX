@@ -146,7 +146,7 @@ class create_pdf_report( object ):
         data_dir = self.data_dir
         
         #load metadata        
-        meta_file = 'uid=%s-md'%uid
+        meta_file = 'uid=%s_md'%uid
         md = pload_obj( data_dir + meta_file )         
         self.metafile = data_dir + meta_file
         
@@ -158,48 +158,49 @@ class create_pdf_report( object ):
         try:
             beg = md['beg']
             end=md['end']
-            uid_ = uid + '--fra-%s-%s'%(beg, end)
+            uid_ = uid + '_fra_%s_%s'%(beg, end)
         except:
             uid_ = uid
         if beg is None:
             uid_ = uid
 
-        self.avg_img_file = 'uid=%s--img-avg.png'%uid   
+        self.avg_img_file = 'uid=%s_img_avg.png'%uid   
         
-        self.ROI_on_img_file = 'uid=%s--ROI-on-Image.png'%uid
+        self.ROI_on_img_file = 'uid=%s_ROI_on_Image.png'%uid
         
-        self.qiq_file = 'uid=%s--q-Iq.png'%uid  
-        self.qiq_fit_file = 'uid=%s--form_factor--fit.png'%uid 
-        self.qr_1d_file = 'uid=%s--qr_1d-.png'%uid
+        self.qiq_file = 'uid=%s_q_Iq.png'%uid  
+        self.qiq_fit_file = 'uid=%s_form_factor_fit.png'%uid 
+        #self.qr_1d_file = 'uid=%s_Qr_ROI.png'%uid
 
         
         if self.report_type =='saxs':
-            self.ROI_on_Iq_file = 'uid=%s--ROI-on-Iq.png'%uid 
+            self.ROI_on_Iq_file = 'uid=%s_ROI_on_Iq.png'%uid 
         else:
-            self.ROI_on_Iq_file = 'uid=%s--qr_1d--ROI.png'%uid 
+            self.ROI_on_Iq_file = 'uid=%s_Qr_ROI.png'%uid 
         
-        self.Iq_t_file = 'uid=%s--q-Iqt.png'%uid
-        self.img_sum_t_file = 'uid=%s--img-sum-t.png'%uid
-        self.wat_file= 'uid=%s--waterfall.png'%uid
-        self.Mean_inten_t_file= 'uid=%s--t-ROIs.png'%uid       
+        self.Iq_t_file = 'uid=%s_q_Iqt.png'%uid
+        self.img_sum_t_file = 'uid=%s_img_sum_t.png'%uid
+        self.wat_file= 'uid=%s_waterfall.png'%uid
+        self.Mean_inten_t_file= 'uid=%s_t_ROIs.png'%uid       
 
 
-        self.g2_file = 'uid=%s--g2.png'%uid_
-        self.g2_fit_file = 'uid=%s--g2--fit.png'%uid_
-        self.q_rate_file = 'uid=%s--Q-Rate--fit.png'%uid_    
+        self.g2_file = 'uid=%s_g2.png'%uid_
+        self.g2_fit_file = 'uid=%s_g2_fit.png'%uid_
+            
+        self.q_rate_file = 'uid=%s_Q_Rate_fit.png'%uid_    
 
-        self.two_time_file = 'uid=%s--Two-time.png'%uid_
-        self.two_g2_file = 'uid=%s--g2--two-g2.png'%uid_
-        self.four_time_file = 'uid=%s--g4.png'%uid_
+        self.two_time_file = 'uid=%s_Two_time.png'%uid_
+        self.two_g2_file = 'uid=%s_g2_two_g2.png'%uid_
+        self.four_time_file = 'uid=%s_g4.png'%uid_
         
-        self.xsvs_fit_file = 'uid=%s--xsvs-fit.png'%uid_
-        self.contrast_file = 'uid=%s--contrast.png'%uid_
+        self.xsvs_fit_file = 'uid=%s_xsvs_fit.png'%uid_
+        self.contrast_file = 'uid=%s_contrast.png'%uid_
         
-        self.flow_g2v = 'uid=%s_1a_mqv--g2-v_fit.png'%uid_
-        self.flow_g2p = 'uid=%s_1a_mqp--g2-p_fit.png'%uid_
+        self.flow_g2v = 'uid=%s_1a_mqv_g2_v_fit.png'%uid_
+        self.flow_g2p = 'uid=%s_1a_mqp_g2_p_fit.png'%uid_
         
-        self.flow_g2v_rate_fit = 'uid=%s_v_fit_rate--Q-Rate--fit.png'%uid_
-        self.flow_g2p_rate_fit = 'uid=%s_p_fit_rate--Q-Rate--fit.png'%uid_ 
+        self.flow_g2v_rate_fit = 'uid=%s_v_fit_rate_Q_Rate_fit.png'%uid_
+        self.flow_g2p_rate_fit = 'uid=%s_p_fit_rate_Q_Rate_fit.png'%uid_ 
         
         #self.report_header(page=1, top=730, new_page=False)
         #self.report_meta(new_page=False)
@@ -289,7 +290,7 @@ class create_pdf_report( object ):
                 md['detector_distance'], md['feedback_x'], md['feedback_y'], md['shutter mode']  ) )  ####line 6 'Detector-Sample Distance..
         if self.report_type == 'saxs':
             s7= 'Beam Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y'])
-        elif self.report_type == 'gisaxs':
+        elif self.report_type == 'gi_saxs':
             s7= ('Incident Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y']) +
                 '   ||   ' + 
                 'Reflect Center: [%s, %s] (pixel)'%(md['refl_center_x'], md['refl_center_y']) ) 
@@ -330,10 +331,18 @@ class create_pdf_report( object ):
         #add average image
         c.setFont("Helvetica", 14)
         
-        imgf = self.avg_img_file         
-        add_image_string( c, imgf, self.data_dir, img_left=60, img_top=top-ds, img_height=180, 
-                     str1_left=90, str1_top = top-35,str1='Average Intensity Image',
-                     str2_left = 80, str2_top = top -230 )            
+        imgf = self.avg_img_file 
+               
+        if self.report_type == 'saxs':
+            ipos = 60
+            dshift=0
+        elif self.report_type == 'gi_saxs':
+            ipos = 200
+            dshift= 140
+            
+        add_image_string( c, imgf, self.data_dir, img_left= ipos, img_top=top-ds, img_height=180, 
+                     str1_left=90 + dshift, str1_top = top-35,str1='Average Intensity Image',
+                     str2_left = 80 + dshift, str2_top = top -230 )            
 
         #add q_Iq
         if self.report_type == 'saxs':
@@ -343,13 +352,17 @@ class create_pdf_report( object ):
             label = 'Circular Average'  
             lab_pos = 390
             fn_pos = 320
+            add_image_string( c, imgf, self.data_dir, img_left=320, img_top=top-ds, img_height=180, 
+                     str1_left=lab_pos, str1_top = top-35,str1=label,
+                     str2_left = fn_pos, str2_top = top -230 )  
         else:
-            imgf = self.qr_1d_file
-            label = 'Qr-1D'
-            lab_pos = 420
-            fn_pos = 350            
+            if False:
+                imgf = self.ROI_on_Iq_file #self.qr_1d_file
+                label = 'Qr-1D'
+                lab_pos = 420
+                fn_pos = 350            
               
-        add_image_string( c, imgf, self.data_dir, img_left=320, img_top=top-ds, img_height=180, 
+                add_image_string( c, imgf, self.data_dir, img_left=320, img_top=top-ds, img_height=180, 
                      str1_left=lab_pos, str1_top = top-35,str1=label,
                      str2_left = fn_pos, str2_top = top -230 )             
         if new_page:
@@ -419,7 +432,7 @@ class create_pdf_report( object ):
         #add img_sum_t
         if self.report_type == 'saxs':
             ipos = 80
-        elif self.report_type == 'gisaxs':
+        elif self.report_type == 'gi_saxs':
             ipos = 200
             
         imgf = self.img_sum_t_file         
@@ -495,23 +508,21 @@ class create_pdf_report( object ):
         c.setFont("Helvetica", 14)
         #add g2 plot
         top = top - 320
+        
         if g2_fit_file is None:
             imgf = self.g2_fit_file
         else:
             imgf = g2_fit_file
-        image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height= 300
-        c.drawImage( image, 1, top,  width= height/ratio,height=height, mask= 'auto')
-        #c.drawImage( image, 1, top,  width= height/ratio,height=height, mask= None )
-        c.setFont("Helvetica", 16)
-        c.setFillColor( blue) 
-        c.drawString( 150, top + height ,  'g2 fit plot'    )
+            
+        #add one_time caculation 
+        img_height= 300
+        img_left,img_top = 1, top
+        str1_left, str1_top,str1= 150, top + img_height,  'g2 fit plot'
+        str2_left, str2_top = 80, top- 0
 
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( 80, top- 0,  'filename: %s'%imgf    )
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top ) 
 
         #add g2 plot fit
         top = top + 70 #
@@ -519,20 +530,15 @@ class create_pdf_report( object ):
             imgf = self.q_rate_file
         else:
             imgf =  q_rate_file
-        image = self.data_dir + imgf
-        if os.path.exists(image):
-            im = Image.open( image )
-        
-            ratio = float(im.size[1])/im.size[0]
-            height= 180
-            c.drawImage( image, 350, top,  width= height/ratio,height=height,mask= 'auto')
+            
+        img_height= 180
+        img_left,img_top = 350, top
+        str1_left, str1_top,str1= 450, top + 230,  'q-rate fit  plot' 
+        str2_left, str2_top = 380, top - 5
 
-            c.setFont("Helvetica", 16)
-            c.setFillColor( blue) 
-            c.drawString( 450, top + 230,  'q-rate fit  plot'    )
-            c.setFont("Helvetica", 12)
-            c.setFillColor(red) 
-            c.drawString( 380, top- 5,  'filename: %s'%imgf    )
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top )  
         
         if new_page:
             c.showPage()
@@ -618,40 +624,32 @@ class create_pdf_report( object ):
         top = top1 - 330
         #add q_Iq_t
         imgf = self.two_time_file
-        image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height= 300
-        c.drawImage( image, 80, top,  width= height/ratio,height=height,mask=None)
+        
+        img_height= 300
+        img_left,img_top = 80, top
+        str1_left, str1_top,str1= 180, top + 300,  'two time correlation fucntion'  
+        str2_left, str2_top = 180, top - 10
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top ) 
 
-        c.setFont("Helvetica", 16)
-        c.setFillColor( blue) 
-        c.drawString( 180, top + 300 ,  'two time correlation fucntion'    )
-
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( 180, top- 10,  'filename: %s'%imgf    )
+        
+        
         top = top - 340
         #add q_Iq_t
         imgf = self.two_g2_file
-        image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height= 300
-        c.drawImage( image, 100, top,  width= height/ratio,height=height,mask=None)
-
-        c.setFont("Helvetica", 16)
-        c.setFillColor( blue) 
-        c.drawString( 210, top + 310,  'compared g2'    )
-
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( 180, top- 10,  'filename: %s'%imgf    )
+        
+        img_height= 300
+        img_left,img_top = 100, top
+        str1_left, str1_top,str1= 210, top + 310,  'compared g2'  
+        str2_left, str2_top = 180, top - 10
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top ) 
 
         if new_page:
             c.showPage()
-            c.save()
-            
+            c.save()            
 
     def report_four_time( self, top= 720, new_page=False):
         '''create the one time correlation function report
@@ -674,20 +672,15 @@ class create_pdf_report( object ):
         top = top1 - 330
         #add q_Iq_t
         imgf = self.four_time_file
-        image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height= 300
-        c.drawImage( image, 80, top,  width= height/ratio,height=height,mask=None)
-
-        c.setFont("Helvetica", 16)
-        c.setFillColor( blue) 
-        c.drawString( 180, top + 300 ,  'four time correlation fucntion'    )
-
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( 180, top- 10,  'filename: %s'%imgf    )      
- 
+        
+        img_height= 300
+        img_left,img_top = 80, top
+        str1_left, str1_top,str1= 180, top + 300,  'four time correlation fucntion'
+        str2_left, str2_top = 180, top - 10
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top )
+         
 
         if new_page:
             c.showPage()
@@ -716,69 +709,50 @@ class create_pdf_report( object ):
         
         imgf = self.flow_g2v
         image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height= 300
-        c.drawImage( image, 80, top,  width= height/ratio,height=height,mask=None)     
-
-        c.setFont("Helvetica", 16)
-        c.setFillColor( blue) 
-        c.drawString( 210, top + 300 ,  'XPCS Vertical Flow'    )
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( 180, top- 10,  'filename: %s'%imgf    )
         
+        img_height= 300
+        img_left,img_top = 80, top
+        str1_left, str1_top,str1= 210, top + 300,   'XPCS Vertical Flow'
+        str2_left, str2_top = 180, top - 10
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top )  
         
-        
-        imgf = self.flow_g2v_rate_fit
-        image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height= 200
-        c.drawImage( image, 350, top+50,  width= height/ratio,height=height,mask=None)     
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( 350, top- 10 +50,  'filename: %s'%imgf    )
-        
-        
+        imgf = self.flow_g2v_rate_fit        
+        img_height= 200
+        img_left,img_top = 350, top +50
+        str1_left, str1_top,str1= 210, top + 300,   ''
+        str2_left, str2_top = 350, top - 10 + 50
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top )       
         
         
         
         top = top - 340
         #add contrast fit
         imgf = self.flow_g2p
-        image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height= 300
-        c.drawImage( image, 80, top,  width= height/ratio,height=height,mask=None)
-
-        c.setFont("Helvetica", 16)
-        c.setFillColor( blue) 
-        c.drawString( 210, top + 310, 'XPCS Parallel Flow'  )        
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( 180, top- 10,  'filename: %s'%imgf    )
         
-        
-
+        img_height= 300
+        img_left,img_top = 80, top
+        str1_left, str1_top,str1= 210, top + 300,   'XPCS Parallel Flow'
+        str2_left, str2_top = 180, top - 10
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top ) 
         
         imgf = self.flow_g2p_rate_fit
-        image = self.data_dir + imgf
-        im = Image.open( image )
-        ratio = float(im.size[1])/im.size[0]
-        height= 200
-        c.drawImage( image, 350, top+50,  width= height/ratio,height=height,mask=None)     
-        c.setFont("Helvetica", 12)
-        c.setFillColor(red) 
-        c.drawString( 350, top- 10+50,  'filename: %s'%imgf    )
-        
+        img_height= 200
+        img_left,img_top = 350, top +50
+        str1_left, str1_top,str1= 210, top + 300,   ''
+        str2_left, str2_top = 350, top - 10 + 50
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top )         
 
         if new_page:
             c.showPage()
-            c.save()   
-
-        
+            c.save() 
         
         
     def report_xsvs( self, top= 720, new_page=False):
@@ -1000,12 +974,17 @@ def load_res_h5( full_uid, data_dir   ):
     else:    
         return meta_data, avg_h5, mask_h5,roi_h5, g2_h5, taus_h5, g2b_h5, taus2_h5    
 
+    
 
+    
 def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username, 
-                    run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs
+                    run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs, report_type='saxs'
                    ):
 
-    c= create_pdf_report(  data_dir, uid, pdf_out_dir, filename= pdf_filename, user= username)    
+    if uid.startswith("uid=") or uid.startswith("Uid="):
+        uid = uid[4:]
+    c= create_pdf_report(  data_dir, uid, pdf_out_dir, filename= pdf_filename, user= username, report_type=report_type )  
+    
     #Page one: Meta-data/Iq-Q/ROI
     c.report_header(page=1)
     c.report_meta( top=730)
@@ -1019,8 +998,6 @@ def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username,
         c.report_one_time( top= 350)
         #Page Three: two-time/two g2   
     page = 2
-
-
     if run_two_time:
         c.new_page()
         page +=1
@@ -1041,6 +1018,7 @@ def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username,
 
     c.save_page()
     c.done() 
+    
  
 def export_xpcs_results_to_h5( filename, export_dir, export_dict ):
     '''
@@ -1053,23 +1031,18 @@ def export_xpcs_results_to_h5( filename, export_dir, export_dict ):
     '''   
     import h5py     
     fout = export_dir + filename
+    dicts = ['md', 'qval_dict']
     with h5py.File(fout, 'w') as hf: 
-        for key in list(export_dict.keys()):
-            #print(key)
-            if key=='md':
-                md= export_dict['md']
-                meta_data = hf.create_dataset("md", (1,), dtype='i')
+        for key in list(export_dict.keys()):            
+            if key in dicts: #=='md' or key == 'qval_dict':                
+                md= export_dict[key]
+                meta_data = hf.create_dataset( key, (1,), dtype='i')
                 for key_ in md.keys(): 
                     try:
-                        meta_data.attrs[key_] = md[key_]
+                        meta_data.attrs[str(key_)] = md[key_]                        
                     except:
-                        pass     
-                    #if key_ in ['pixel_mask', "avg_img","mask" ,"roi"  ]:
-                    #    try:                            
-                    #        data = hf.create_dataset( key_, data = md[key_]  )
-                    #    except:
-                    #        pass
-            elif key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds']:
+                        pass 
+            elif key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds', 'qr_1d_pds']:
                 export_dict[key].to_hdf( fout, key=key,  mode='a',   )                
             else:
                 data = hf.create_dataset(key, data = export_dict[key] )
@@ -1092,16 +1065,23 @@ def extract_xpcs_results_from_h5( filename, import_dir, onekey=None ):
     extract_dict = {}    
     fp = import_dir + filename
     pds_type_keys = []
+    dicts = ['md', 'qval_dict']
     if onekey is None:
-        extract_dict['md'] = {}
+        for k in dicts:
+            extract_dict[k] = {}
         with h5py.File( fp, 'r') as hf:  
             #print (list( hf.keys()) )
             for key in list( hf.keys()): 
-                if key in ['md']:
-                    md = hf.get('md')
-                    for key in list(md.attrs):
-                        extract_dict['md'][key] = md.attrs[key] 
-                elif key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds']:
+                if key in dicts:
+                    md = hf.get(key)
+                    for key_ in list(md.attrs):
+                        #print(key, key_)
+                        if key == 'qval_dict':
+                            extract_dict[key][int(key_)] = md.attrs[key_] 
+                        else:
+                            extract_dict[key][key_] = md.attrs[key_] 
+                        
+                elif key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds', 'qr_1d_pds']:
                     pds_type_keys.append( key )                
                 else:    
                     extract_dict[key] = np.array( hf.get( key  ))
@@ -1113,7 +1093,7 @@ def extract_xpcs_results_from_h5( filename, import_dir, onekey=None ):
                 md = hf.get('md')
                 for key in list(md.attrs):
                     extract_dict['md'][key] = md.attrs[key]                 
-        elif onekey in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds']:
+        elif onekey in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds', 'qr_1d_pds']:
             extract_dict[onekey] = pds.read_hdf(fp, key= onekey ) 
         else:
             try:
@@ -1122,6 +1102,8 @@ def extract_xpcs_results_from_h5( filename, import_dir, onekey=None ):
             except:
                 print("The %s dosen't have this %s value"%(fp, onekey) )
     return extract_dict
+
+
 
 
 
