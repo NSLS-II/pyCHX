@@ -928,7 +928,7 @@ def plot_xsvs_fit(  spe_cts_all, ML_val, KL_val, K_mean, spec_std  =None,
         fontsize =14
         
     fig = plt.figure()      
-    title = 'uid= %s'%uid+ "-NB-Fit"
+    title = '%s'%uid+ "-NB-Fit"
     plt.title(title, fontsize= 16, y=1.08)  
     #plt.axes(frameon=False)
     flag=True
@@ -1013,9 +1013,9 @@ def plot_xsvs_fit(  spe_cts_all, ML_val, KL_val, K_mean, spec_std  =None,
 
     
     if qth is None:
-        file_name =   'uid=%s--xsvs-fit'%(uid)
+        file_name =   '%s_xsvs_fit'%(uid)
     else:
-        file_name =   'uid=%s--xsvs-fit-q=%s'%(uid,qth)
+        file_name =   '%s_xsvs_fit_q=%s'%(uid,qth)
     fp = path + file_name  + '.png'
     fig.tight_layout() 
     plt.savefig( fp, dpi=fig.dpi)
@@ -1067,8 +1067,9 @@ def save_KM( K_mean, KL_val, ML_val, qs=None, level_time=None, uid=None, path=No
         
     df = DataFrame(      data   )         
     df.columns = (x for x in l)  
-    filename = 'uid=%s--xsvs_fitted_KM.csv' %(uid)
+    filename = '%s_xsvs_fitted_KM.csv' %(uid)
     filename1 = os.path.join(path, filename)
+    print('The K-M values are saved as %s in %s.'%(filename, path ))
     df.to_csv(filename1)
     return df
 
@@ -1114,7 +1115,7 @@ def plot_g2_contrast( contrast_factorL, g2, times, taus, q_ring_center=None,
     #fig = plt.figure(figsize=(14, 10))   
     
     fig = plt.figure()
-    title = 'uid= %s_'%uid + "Contrast"
+    title = '%s_'%uid + "Contrast"
     plt.title(title, fontsize=14, y =1.08)  
     if qth is None:
         plt.axis('off')
@@ -1142,9 +1143,9 @@ def plot_g2_contrast( contrast_factorL, g2, times, taus, q_ring_center=None,
             ax.legend(loc = 'best', fontsize=legend_size )
     
     if qth is None:        
-        file_name =   'uid=%s--contrast'%(uid)
+        file_name =   '%s_contrast'%(uid)
     else:
-        file_name =   'uid=%s--contrast-q=%s'%(uid,qth)
+        file_name =   '%s_contrast_q=%s'%(uid,qth)
     
     fig.tight_layout()     
     fp = path + file_name  + '.png'
