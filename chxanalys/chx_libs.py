@@ -56,6 +56,8 @@ import collections
 import itertools 
 import random
 
+from PIL import Image
+
 mcolors = itertools.cycle(['b', 'g', 'r', 'c', 'm', 'y', 'k','darkgoldenrod','oldlace', 'brown','dodgerblue'   ])
 
 
