@@ -119,7 +119,113 @@ def get_qr( data, Qr, Qz, qr, qz,  mask = None   ):
     return df
 
 
-def get_t_qrc( FD, frame_edge, Qr, Qz, qr, qz, mask=None,  *argv,**kwargs):   
+
+    
+########################
+# get one-d of I(q) as a function of qr for different qz
+##################### 
+
+def cal_1d_qr(  data, Qr,Qz, qr, qz, inc_x0=None,  mask=None, path=None, uid=None, setup_pargs=None, save = True,
+             print_save_message=True): 
+    '''Dec 16, 2016, Y.G.@CHX
+       calculate one-d of I(q) as a function of qr for different qz
+       data: a dataframe
+       Qr: info for qr, = qr_start , qr_end, qr_width, qr_num, the purpose of Qr is only for the defination of qr range (qr number does not matter)
+       Qz: info for qz, = qz_start,   qz_end,  qz_width , qz_num
+       qr: qr-map
+       qz: qz-map
+       inc_x0: x-center of incident beam
+       mask: a mask for qr-1d integration       
+       setup_pargs: gives path, filename...
+       
+       Return: qr_1d, a dataframe, with columns as qr1, qz1 (float value), qz2,....                       
+               Plot 1D cureve as a function of Qr for each Qz  
+               
+               
+               
+               
+    Examples:
+        #to make two-qz, from 0.018 to 0.046, width as 0.008,
+        qz_width = 0.008
+        qz_start = 0.018 + qz_width/2
+        qz_end = 0.046  -  qz_width/2
+        qz_num= 2
+
+
+        #to make one-qr, from 0.02 to 0.1, and the width is 0.1-0.012
+        qr_width =  0.1-0.02
+        qr_start =    0.02 + qr_width  /2
+        qr_end =  0.01 -  qr_width  /2
+        qr_num = 1
+
+        Qr = [qr_start , qr_end, qr_width, qr_num]
+        Qz=  [qz_start,   qz_end,  qz_width , qz_num ]
+        new_mask[ :, 1020:1045] =0        
+        qx, qy, qr, qz = convert_gisaxs_pixel_to_q( inc_x0, inc_y0,refl_x0,refl_y0, lamda=lamda, Lsd=Lsd )
+        
+        qr_1d = get_1d_qr( avg_imgr, Qr, Qz, qr, qz, inc_x0,  new_mask)
+        
+    A plot example:
+        plot1D( x= qr_1d['qr1'], y = qr_1d['0.0367'], logxy=True )
+    '''          
+    qr_start , qr_end, qr_width, qr_num =Qr
+    qz_start,   qz_end,  qz_width , qz_num =Qz
+    qr_edge, qr_center = get_qedge(qr_start , qr_end, qr_width, qr_num )    
+    qz_edge, qz_center = get_qedge( qz_start,   qz_end,  qz_width , qz_num ) 
+     
+    #print ('The qr_edge is:  %s\nThe qr_center is:  %s'%(qr_edge, qr_center))
+    #print ('The qz_edge is:  %s\nThe qz_center is:  %s'%(qz_edge, qz_center))    
+    
+    label_array_qr = get_qmap_label( qr, qr_edge)
+
+    #qr_1d ={}
+    columns=[]
+    for i,qzc_ in enumerate(qz_center):        
+        #print (i,qzc_)
+        label_array_qz = get_qmap_label( qz, qz_edge[i*2:2*i+2])
+        #print (qzc_, qz_edge[i*2:2*i+2])
+        label_array_qzr,qzc,qrc = get_qzrmap(label_array_qz, label_array_qr,qz_center, qr_center  )
+        #print (np.unique(label_array_qzr ))    
+        if mask is not None:
+            label_array_qzr *=   mask
+        roi_pixel_num = np.sum( label_array_qzr, axis=0)
+        qr_ = qr  *label_array_qzr
+        data_ = data*label_array_qzr    
+        qr_ave = np.sum( qr_, axis=0)/roi_pixel_num
+        data_ave = np.sum( data_, axis=0)/roi_pixel_num 
+        qr_ave, data_ave =   zip(* sorted(  zip( * [ qr_ave[~np.isnan(qr_ave)] ,   data_ave[~np.isnan( data_ave)] ]) ) )          
+        if i==0:
+            N_interp = len( qr_ave  ) 
+            columns.append( ['qr'] )
+            #qr_1d[i]= qr_ave_intp
+        qr_ave_intp =  np.linspace( np.min( qr_ave ), np.max( qr_ave ), N_interp)
+        data_ave = np.interp(  qr_ave_intp, qr_ave, data_ave)        
+        #qr_1d[i]= [qr_ave_intp, data_ave]
+        columns.append( ['qz%s=%s'%( i, str(round(qzc_,4)) )] )
+        if i==0:
+            df =  np.hstack(  [ (qr_ave_intp).reshape( N_interp,1) , 
+                               data_ave.reshape( N_interp,1) ] )
+        else:
+            df = np.hstack(  [ df, 
+                              data_ave.reshape( N_interp,1) ] )     
+    df = DataFrame( df  )
+    df.columns = np.concatenate( columns    )
+    
+    if save:
+        if path is None:
+            path = setup_pargs['path']
+        if uid is None:    
+            uid = setup_pargs['uid']        
+        filename = os.path.join(path, '%s_qr_1d.csv'% (uid) )
+        df.to_csv(filename)
+        if print_save_message:
+            print( 'The qr_1d is saved in %s with filename as %s_qr_1d.csv'%(path, uid))        
+    return df
+
+
+
+
+def get_t_qrc( FD, frame_edge, Qr, Qz, qr, qz, mask=None, path=None, uid=None, save=True, *argv,**kwargs):   
     '''Get t-dependent qr 
     
         Parameters        
@@ -128,38 +234,103 @@ def get_t_qrc( FD, frame_edge, Qr, Qz, qr, qz, mask=None,  *argv,**kwargs):
         frame_edge: list, the ROI frame regions, e.g., [  [0,100], [200,400] ]
         mask:  a image mask 
         
-        nx : int, optional
-            number of bins in x
-            defaults is 1500 bins
-        plot_: a boolen type, if True, plot the time~one-D curve with qp as x-axis
         Returns
         ---------
-        qr_1d: array, with shape as time length, frame_edge
-     
+        qrt_pds: dataframe, with columns as [qr, qz0_fra_from_beg1_to_end1,  qz0_fra_from_beg2_to_end2, ...
+                                                 qz1_fra_from_beg1_to_end1,  qz1_fra_from_beg2_to_end2, ...     
+                                            ...
+                                            ]
+           
     '''          
     
     Nt = len( frame_edge )
     iqs = list( np.zeros( Nt ) )
     qz_start,   qz_end,  qz_width , qz_num =Qz
-    if qz_num !=1:
-        print('The current code only support one qz! Please make qz number =1, and use this function several times for different qz')
-        
+    qz_edge, qz_center = get_qedge( qz_start,   qz_end,  qz_width , qz_num ) 
+    #qr_1d = np.zeros(   )
+    
+    if uid is None:
+        uid = 'uid'
     for i in range(Nt):
-        t1,t2 = frame_edge[i]
-        #print (t1,t2)        
-        avg_imgx = get_avg_imgc( FD, beg=t1,end=t2, sampling = 1, plot_ = False )        
-        #print('finish avg')
-        qr_1dx = np.array(  get_qr( avg_imgx, Qr, Qz, qr, qz, mask = mask  )    )  
-        #print('get qr')
-        if i==0:        
-            qr_1d = np.zeros(  [qr_1dx.shape[0], Nt+1] )
-            qr_1d[:,0] = qr_1dx[:,0]
-            qr_1d[:,1] = qr_1dx[:,1]
-        else:        
-            qr_1d[:,i+1] = qr_1dx[:,1]            
-    return qr_1d
-
+        #str(round(qz_center[j], 4 )
+        t1,t2 = frame_edge[i]       
+        avg_imgx = get_avg_imgc( FD, beg=t1,end=t2, sampling = 1, plot_ = False ) 
         
+        qrti = cal_1d_qr( avg_imgx, Qr, Qz, qr, qz, mask = mask, save=False)  
+        if i == 0:
+            qrt_pds = np.zeros(  [len(qrti), 1 + Nt * qz_num ] )
+            columns = np.zeros(    1 + Nt * qz_num, dtype=object   )
+            columns[0] = 'qr' 
+            qrt_pds[:,0] = qrti['qr']
+        for j in range(qz_num):
+            coli = qrti.columns[1+j]
+            qrt_pds[:, 1 + i + Nt*j] =  qrti[ coli ]
+            columns[   1 + i + Nt*j  ] =   coli +  '_fra_%s_to_%s'%( t1, t2 ) 
+            
+    qrt_pds = DataFrame( qrt_pds  )
+    qrt_pds.columns =   columns       
+    if save:
+        if path is None:
+            path = setup_pargs['path']
+        if uid is None:    
+            uid = setup_pargs['uid']        
+        filename = os.path.join(path, '%s_qrt_pds.csv'% (uid) )
+        qrt_pds.to_csv(filename)        
+        print( 'The qr~time is saved in %s with filename as %s_qrt_pds.csv'%(path, uid))            
+    return qrt_pds
+  
+
+
+
+
+def plot_qrt_pds( qrt_pds, frame_edge, qz_index = 0, uid = 'uid', path = '',fontsize=8, *argv,**kwargs): 
+    '''Y.G. Jan 04, 2017
+    plot t-dependent qr 
+    
+        Parameters        
+        ----------
+        qrt_pds: dataframe, with columns as [qr, qz0_fra_from_beg1_to_end1,  qz0_fra_from_beg2_to_end2, ...
+                                                 qz1_fra_from_beg1_to_end1,  qz1_fra_from_beg2_to_end2, ...     
+                                            ...
+                                            ]
+        frame_edge: list, the ROI frame regions, e.g., [  [0,100], [200,400] ]
+                                            
+        qz_index, if = integer, e.g. =0, only plot the qr~t for qz0    
+                  if None, plot all qzs
+
+    Returns
+     
+    '''  
+    
+    fig,ax = plt.subplots(figsize=(8, 6))
+    cols = np.array( qrt_pds.columns )
+    Nt = len( frame_edge )
+    #num_qz = int(  (len( cols ) -1  ) /Nt )
+    qr = qrt_pds['qr']    
+    if qz_index is None:
+        r = range( 1, len(cols ) )
+    else:
+        r = range( 1 + qz_index*Nt, 1 + (1+qz_index) * Nt   )
+    for i in r:
+        y = qrt_pds[  cols[i]  ]  
+        ax.semilogy(qr, y, 'o-', label= cols[i] )
+        #ax.set_xlabel("q in pixel")
+        ax.set_xlabel(r'$Q_r$' + r'($\AA^{-1}$)')
+        ax.set_ylabel("I(q)")
+
+    if 'xlim' in kwargs.keys():
+        ax.set_xlim(    kwargs['xlim']  )    
+    if 'ylim' in kwargs.keys():
+        ax.set_ylim(    kwargs['ylim']  )
+        
+    ax.legend(loc = 'best', fontsize=fontsize) 
+  
+    title = ax.set_title('%s_Iq_t'%uid)        
+    title.set_y(1.01)
+
+    fp = path + '%s_Iq_t'%uid + '.png'  
+    fig.savefig( fp, dpi=fig.dpi)
+
     
     
 def plot_t_qrc( qr_1d, frame_edge, save=False, pargs=None,fontsize=8, *argv,**kwargs): 
@@ -210,11 +381,6 @@ def plot_t_qrc( qr_1d, frame_edge, save=False, pargs=None,fontsize=8, *argv,**kw
         save_arrays(  np.vstack( [q, np.array(iqs)]).T, 
                     label=  ['q_A-1']+ ['Fram-%s-%s'%(t[0],t[1]) for t in frame_edge],
                     filename='uid=%s-q-Iqt'%uid, path= path  )
-    #plt.show()        
-    
-    #return qp, np.array( iqs ),q
-
-
 
         
         
@@ -255,6 +421,9 @@ def get_incident_angles( inc_x0, inc_y0, refl_x0, refl_y0, pixelsize=[75,75], Ls
                 pixelsize: 75 um for Eiger4M detector
         get incident_angle (alphai), the title angle (phi)
     '''
+    if Lsd>=1000:
+        Lsd = Lsd/1000.
+        
     px,py = pixelsize
     phi = np.arctan2( (-refl_x0 + inc_x0)*px *10**(-6), (refl_y0 - inc_y0)*py *10**(-6) )    
     alphai = np.arctan2( (refl_y0 -inc_y0)*py *10**(-6),  Lsd ) /2.     
@@ -510,99 +679,6 @@ def show_alphaf(alphaf,):
     #plt.show()    
     
 
-    
-########################
-# get one-d of I(q) as a function of qr for different qz
-##################### 
-
-def cal_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None,  setup_pargs=None ): 
-    '''Dec 16, 2015, Y.G.@CHX
-       calculate one-d of I(q) as a function of qr for different qz
-       data: a dataframe
-       Qr: info for qr, = qr_start , qr_end, qr_width, qr_num
-       Qz: info for qz, = qz_start,   qz_end,  qz_width , qz_num
-       qr: qr-map
-       qz: qz-map
-       inc_x0: x-center of incident beam
-       mask: a mask for qr-1d integration       
-       setup_pargs: gives path, filename...
-       
-       Return: qr_1d, a dataframe, with columns as qr1, qz1 (float value), qr2, qz2,....                       
-               Plot 1D cureve as a function of Qr for each Qz  
-               
-               
-               
-               
-    Examples:
-        #to make two-qz, from 0.018 to 0.046, width as 0.008,
-        qz_width = 0.008
-        qz_start = 0.018 + qz_width/2
-        qz_end = 0.046  -  qz_width/2
-        qz_num= 2
-
-
-        #to make one-qr, from 0.02 to 0.1, and the width is 0.1-0.012
-        qr_width =  0.1-0.02
-        qr_start =    0.02 + qr_width  /2
-        qr_end =  0.01 -  qr_width  /2
-        qr_num = 1
-
-        Qr = [qr_start , qr_end, qr_width, qr_num]
-        Qz=  [qz_start,   qz_end,  qz_width , qz_num ]
-        new_mask[ :, 1020:1045] =0        
-        qx, qy, qr, qz = convert_gisaxs_pixel_to_q( inc_x0, inc_y0,refl_x0,refl_y0, lamda=lamda, Lsd=Lsd )
-        
-        qr_1d = get_1d_qr( avg_imgr, Qr, Qz, qr, qz, inc_x0,  new_mask)
-        
-    A plot example:
-        plot1D( x= qr_1d['qr1'], y = qr_1d['0.0367'], logxy=True )
-    '''          
-    qr_start , qr_end, qr_width, qr_num =Qr
-    qz_start,   qz_end,  qz_width , qz_num =Qz
-    qr_edge, qr_center = get_qedge(qr_start , qr_end, qr_width, qr_num )    
-    qz_edge, qz_center = get_qedge( qz_start,   qz_end,  qz_width , qz_num ) 
-     
-    print ('The qr_edge is:  %s\nThe qr_center is:  %s'%(qr_edge, qr_center))
-    print ('The qz_edge is:  %s\nThe qz_center is:  %s'%(qz_edge, qz_center))    
-    label_array_qr = get_qmap_label( qr, qr_edge)
-
-    qr_1d ={}
-    columns=[]
-    for i,qzc_ in enumerate(qz_center):        
-        #print (i,qzc_)
-        label_array_qz = get_qmap_label( qz, qz_edge[i*2:2*i+2])
-        #print (qzc_, qz_edge[i*2:2*i+2])
-        label_array_qzr,qzc,qrc = get_qzrmap(label_array_qz, label_array_qr,qz_center, qr_center  )
-        #print (np.unique(label_array_qzr ))    
-        if mask is not None:
-            label_array_qzr *=   mask
-        roi_pixel_num = np.sum( label_array_qzr, axis=0)
-        qr_ = qr  *label_array_qzr
-        data_ = data*label_array_qzr    
-        qr_ave = np.sum( qr_, axis=0)/roi_pixel_num
-        data_ave = np.sum( data_, axis=0)/roi_pixel_num 
-        qr_ave,data_ave =   zip(* sorted(  zip( * [ qr_ave[~np.isnan(qr_ave)] ,   data_ave[~np.isnan( data_ave)] ]) ) )          
-        if i==0:
-            N_interp = len( qr_ave  ) 
-        qr_ave_intp =  np.linspace( np.min( qr_ave ), np.max( qr_ave ), N_interp)
-        data_ave = np.interp(  qr_ave_intp, qr_ave, data_ave)        
-        qr_1d[i]= [qr_ave_intp, data_ave]
-        columns.append( ['qr%s'%i, str(round(qzc_,4))] )        
-     
-        if i==0:
-            df =  np.hstack(  [ (qr_ave_intp).reshape( N_interp,1) , 
-                               data_ave.reshape( N_interp,1) ] )
-        else:
-            df = np.hstack(  [ df, (qr_ave_intp).reshape( N_interp,1) ,
-                              data_ave.reshape( N_interp,1) ] )     
-    df = DataFrame( df  )
-    df.columns = np.concatenate( columns    )
-    path = setup_pargs['path']
-    uid = setup_pargs['uid']        
-    filename = os.path.join(path, '%s_qr_1d.csv'% (uid) )
-    df.to_csv(filename)
-    print( 'The qr_1d is saved in %s with filename as %s_qr_1d.csv'%(path, uid))        
-    return df
 
 
     
