@@ -1,6 +1,51 @@
 from chxanalys.chx_libs import *
 #from tqdm import *
 from chxanalys.chx_libs import  ( colors,  markers )
+from scipy.special import erf
+
+
+def check_lost_metadata(md, Nimg=None, inc_x0 =None, inc_y0= None, pixelsize=7.5*10*(-5) ):
+    '''Y.G. Dec 31, 2016, check lost metadata
+    
+    Parameter:
+        md: dict, meta data dictionay
+        Nimg: number of frames for this uid metadata
+        inc_x0/y0: incident beam center x0/y0, if None, will over-write the md['beam_center_x/y']
+        pixelsize: if md don't have ['x_pixel_size'], the pixelsize will add it
+    Return:
+        dpix: pixelsize, in mm
+        lambda_: wavelegth of the X-rays in Angstroms
+        exposuretime:  exposure time in sec
+        timeperframe:  acquisition time is sec 
+        center:  list, [x,y], incident beam center in pixel
+     Will also update md    
+    '''
+    
+    if 'number of images'  not in list(md.keys()):
+        md['number of images']  = Nimg
+    if 'x_pixel_size' not in list(md.keys()):
+        md['x_pixel_size'] = 7.5000004e-05
+    dpix = md['x_pixel_size'] * 1000.  #in mm, eiger 4m is 0.075 mm
+    lambda_ =md['incident_wavelength']    # wavelegth of the X-rays in Angstroms
+    if md['det_distanc']<=1000: #should be in meter unit
+        md['det_distanc'] *=1000
+    Ldet = md['det_distanc']    
+    try:
+        exposuretime= md['cam_acquire_t']     #exposure time in sec
+    except:    
+        exposuretime= md['count_time']     #exposure time in sec
+    try:
+        acquisition_period = float( db[uid]['start']['acquire period'] )
+    except:    
+        acquisition_period = md['frame_time']  
+    timeperframe = acquisition_period 
+    if inc_x0 is not None:
+        md['beam_center_x']= inc_y0
+    if inc_y0 is not None:
+        md['beam_center_y']= inc_x0         
+    center = [  int(md['beam_center_x']),int( md['beam_center_y'] ) ]  #beam center [y,x] for python image
+    
+    return dpix, lambda_, exposuretime, timeperframe, center
 
 
 def combine_images( filenames, outputfile, outsize=(2000, 2400)):
@@ -356,7 +401,50 @@ def get_max_countc(FD, labeled_array ):
     return max_inten
 
 
-
+def create_polygon_mask(  image, xcorners, ycorners   ):
+    '''
+    Give image and x/y coners to create a polygon mask    
+    image: 2d array
+    xcorners, list, points of x coners
+    ycorners, list, points of y coners
+    Return:
+    the polygon mask: 2d array, the polygon pixels with values 1 and others with 0
+    
+    Example:
+    
+    
+    '''
+    from skimage.draw import line_aa, line, polygon, circle    
+    imy, imx = image.shape 
+    bst_mask = np.zeros_like( image , dtype = bool)   
+    rr, cc = polygon( ycorners,xcorners)
+    bst_mask[rr,cc] =1    
+    #full_mask= ~bst_mask    
+    return bst_mask
+    
+    
+def create_rectangle_mask(  image, xcorners, ycorners   ):
+    '''
+    Give image and x/y coners to create a rectangle mask    
+    image: 2d array
+    xcorners, list, points of x coners
+    ycorners, list, points of y coners
+    Return:
+    the polygon mask: 2d array, the polygon pixels with values 1 and others with 0
+    
+    Example:
+    
+    
+    '''
+    from skimage.draw import line_aa, line, polygon, circle    
+    imy, imx = image.shape 
+    bst_mask = np.zeros_like( image , dtype = bool)   
+    rr, cc = polygon( ycorners,xcorners)
+    bst_mask[rr,cc] =1    
+    #full_mask= ~bst_mask    
+    return bst_mask
+       
+    
 
 def create_cross_mask(  image, center, wy_left=4, wy_right=4, wx_up=4, wx_down=4,
                      center_circle = True, center_radius=10
@@ -1049,7 +1137,7 @@ def show_label_array_on_image(ax, image, label_array, cmap=None,norm=None, log_i
     
 def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on = True,
                        save=False, return_fig = False, rect_reqion=None, log_img = True, vmin=0.01, vmax=5,  
-                       *argv,**kwargs):
+                      uid='uid', path='',  *argv,**kwargs):
     
     '''show ROI on an image
         image: the data frame
@@ -1069,7 +1157,7 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
     #print( vmin, vmax)
     #norm=LogNorm(vmin,  vmax)
     
-    axes.set_title("ROI on Image")
+    axes.set_title(  "%s_ROI_on_Image"%uid  )
     if log_img:
         if vmin==0:
             vmin += 1e-10
@@ -1102,15 +1190,7 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
             axes.text(x_val, y_val, c, va='center', ha='center')         
     #fig.colorbar(im_label)
     fig.colorbar(im)
-    if save:
-        #dt =datetime.now()
-        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
-        path = kwargs['path'] 
-        if 'uid' in kwargs:
-            uid = kwargs['uid']
-        else:
-            uid = 'uid'
-        #fp = path + "Uid= %s--Waterfall-"%uid + CurTime + '.png'     
+    if save:   
         fp = path + "%s_ROI_on_Image"%uid  + '.png'    
         plt.savefig( fp, dpi=fig.dpi)      
     #plt.show()
