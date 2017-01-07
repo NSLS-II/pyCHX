@@ -173,8 +173,9 @@ class create_pdf_report( object ):
         #self.qr_1d_file = 'uid=%s_Qr_ROI.png'%uid
 
         
-        if self.report_type =='saxs':
+        if self.report_type =='saxs' or 'ang_saxs':
             self.ROI_on_Iq_file = 'uid=%s_ROI_on_Iq.png'%uid 
+            
         else:
             self.ROI_on_Iq_file = 'uid=%s_Qr_ROI.png'%uid 
         
@@ -196,11 +197,18 @@ class create_pdf_report( object ):
         self.xsvs_fit_file = 'uid=%s_xsvs_fit.png'%uid_
         self.contrast_file = 'uid=%s_contrast.png'%uid_
         
-        self.flow_g2v = 'uid=%s_1a_mqv_g2_v_fit.png'%uid_
-        self.flow_g2p = 'uid=%s_1a_mqp_g2_p_fit.png'%uid_
+        if False:
+            self.flow_g2v = 'uid=%s_1a_mqv_g2_v_fit.png'%uid_
+            self.flow_g2p = 'uid=%s_1a_mqp_g2_p_fit.png'%uid_        
+            self.flow_g2v_rate_fit = 'uid=%s_v_fit_rate_Q_Rate_fit.png'%uid_
+            self.flow_g2p_rate_fit = 'uid=%s_p_fit_rate_Q_Rate_fit.png'%uid_ 
         
-        self.flow_g2v_rate_fit = 'uid=%s_v_fit_rate_Q_Rate_fit.png'%uid_
-        self.flow_g2p_rate_fit = 'uid=%s_p_fit_rate_Q_Rate_fit.png'%uid_ 
+        if True:
+
+            self.flow_g2v = 'uid=%s_g2_v_fit.png'%uid_
+            self.flow_g2p = 'uid=%s_g2_p_fit.png'%uid_        
+            self.flow_g2v_rate_fit = 'uid=%s_vert_Q_Rate_fit.png'%uid_
+            self.flow_g2p_rate_fit = 'uid=%s_para_Q_Rate_fit.png'%uid_             
         
         #self.report_header(page=1, top=730, new_page=False)
         #self.report_meta(new_page=False)
@@ -293,7 +301,10 @@ class create_pdf_report( object ):
         elif self.report_type == 'gi_saxs':
             s7= ('Incident Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y']) +
                 '   ||   ' + 
-                'Reflect Center: [%s, %s] (pixel)'%(md['refl_center_x'], md['refl_center_y']) ) 
+                'Reflect Center: [%s, %s] (pixel)'%(md['refl_center_x'], md['refl_center_y']) )             
+        elif  self.report_type == 'ang_saxs':
+            s7= 'Beam Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y'])
+            
         s7 += ' || ' + 'BadLen: %s'%len(md['bad_frame_list'])
             
         s.append( s7  ) ####line 7 'Beam center...      
@@ -339,6 +350,9 @@ class create_pdf_report( object ):
         elif self.report_type == 'gi_saxs':
             ipos = 200
             dshift= 140
+        elif self.report_type == 'ang_saxs':
+            ipos = 200
+            dshift= 140            
             
         add_image_string( c, imgf, self.data_dir, img_left= ipos, img_top=top-ds, img_height=180, 
                      str1_left=90 + dshift, str1_top = top-35,str1='Average Intensity Image',
@@ -434,6 +448,9 @@ class create_pdf_report( object ):
             ipos = 80
         elif self.report_type == 'gi_saxs':
             ipos = 200
+        elif self.report_type == 'ang_saxs':
+            ipos = 200            
+        
             
         imgf = self.img_sum_t_file         
         img_height=140
@@ -471,9 +488,12 @@ class create_pdf_report( object ):
         str1_left, str1_top,str1= 140, top + img_height,  'waterfall plot'
         str2_left, str2_top = 80, top- 5
 
-        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+        if self.report_type != 'ang_saxs':
+            add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
                      str2_left, str2_top ) 
+        else:
+            pass
 
         #add mean-intensity of each roi
         imgf = self.Mean_inten_t_file
@@ -482,10 +502,12 @@ class create_pdf_report( object ):
         img_left,img_top = 360, top
         str1_left, str1_top,str1= 330, top + img_height,  'Mean-intensity-of-each-ROI'
         str2_left, str2_top = 310, top- 5
-
-        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+        if self.report_type != 'ang_saxs':
+            add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
                      str2_left, str2_top ) 
+        else:
+            pass
         
         if new_page:
             c.showPage()
@@ -506,19 +528,27 @@ class create_pdf_report( object ):
         self.sub_title_num +=1
         c.drawString(10, top, "%s. One Time Correlation Function"%self.sub_title_num  )  #add title
         c.setFont("Helvetica", 14)
-        #add g2 plot
-        top = top - 320
+        #add g2 plot        
         
+                     
         if g2_fit_file is None:
             imgf = self.g2_fit_file
         else:
-            imgf = g2_fit_file
-            
+            imgf = g2_fit_file            
+        
+        if self.report_type != 'ang_saxs':
+            img_height= 300
+            top = top - 320 
+            str2_left, str2_top = 80, top- 0
+        else:
+            img_height= 550
+            top = top - 600
+            str2_left, str2_top = 80, top  - 400
         #add one_time caculation 
-        img_height= 300
+         
         img_left,img_top = 1, top
         str1_left, str1_top,str1= 150, top + img_height,  'g2 fit plot'
-        str2_left, str2_top = 80, top- 0
+        
 
         add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
@@ -531,10 +561,21 @@ class create_pdf_report( object ):
         else:
             imgf =  q_rate_file
             
-        img_height= 180
-        img_left,img_top = 350, top
-        str1_left, str1_top,str1= 450, top + 230,  'q-rate fit  plot' 
-        str2_left, str2_top = 380, top - 5
+        
+        if self.report_type != 'ang_saxs':
+            img_height= 180     
+            img_left,img_top = 350, top
+            str2_left, str2_top = 380, top - 5
+            str1_left, str1_top,str1= 450, top + 230,  'q-rate fit  plot' 
+        else:
+            img_height= 300
+            img_left,img_top = 350, top - 150
+            str2_left, str2_top = 380, top - 5 
+            str1_left, str1_top,str1= 450, top + 180,  'q-rate fit  plot' 
+        
+         
+       
+         
 
         add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
@@ -987,37 +1028,50 @@ def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username,
     
     #Page one: Meta-data/Iq-Q/ROI
     c.report_header(page=1)
-    c.report_meta( top=730)
+    c.report_meta( top=730)    
     c.report_static( top=550, iq_fit = run_fit_form )
     c.report_ROI( top= 300)
+    
     #Page Two: img~t/iq~t/waterfall/mean~t/g2/rate~q
     c.new_page()
     c.report_header(page=2)
-    c.report_time_analysis( top= 720)
-    if run_one_time: 
-        c.report_one_time( top= 350)
-        #Page Three: two-time/two g2   
-    page = 2
-    if run_two_time:
-        c.new_page()
-        page +=1
-        c.report_header(page= page)
-        c.report_two_time(  top= 720 )      
+    
+    if c.report_type != 'ang_saxs':
+        c.report_time_analysis( top= 720)    
+        if run_one_time: 
+            if c.report_type != 'ang_saxs':
+                top = 350
+            else: 
+                top = 500
+            c.report_one_time( top= top )
+            #Page Three: two-time/two g2   
+        page = 2
+        if run_two_time:
+            c.new_page()
+            page +=1
+            c.report_header(page= page)
+            c.report_two_time(  top= 720 )      
 
-    if run_four_time:
-        c.new_page()
-        page +=1
-        c.report_header(page= page)
-        c.report_four_time(  top= 720 ) 
+        if run_four_time:
+            c.new_page()
+            page +=1
+            c.report_header(page= page)
+            c.report_four_time(  top= 720 ) 
 
-    if run_xsvs:
-        c.new_page()
-        page +=1
-        c.report_header(page= page)
-        c.report_xsvs(  top= 720 )          
+        if run_xsvs:
+            c.new_page()
+            page +=1
+            c.report_header(page= page)
+            c.report_xsvs(  top= 720 )    
+    else:
+        c.report_flow_pv_g2( top= 720) 
 
     c.save_page()
     c.done() 
+    
+    
+ 
+    
     
  
 def export_xpcs_results_to_h5( filename, export_dir, export_dict ):
@@ -1031,7 +1085,7 @@ def export_xpcs_results_to_h5( filename, export_dir, export_dict ):
     '''   
     import h5py     
     fout = export_dir + filename
-    dicts = ['md', 'qval_dict']
+    dicts = ['md', 'qval_dict', 'qval_dict_v', 'qval_dict_p']
     with h5py.File(fout, 'w') as hf: 
         for key in list(export_dict.keys()):            
             if key in dicts: #=='md' or key == 'qval_dict':                
@@ -1065,7 +1119,7 @@ def extract_xpcs_results_from_h5( filename, import_dir, onekey=None ):
     extract_dict = {}    
     fp = import_dir + filename
     pds_type_keys = []
-    dicts = ['md', 'qval_dict']
+    dicts = ['md', 'qval_dict', 'qval_dict_v', 'qval_dict_p']
     if onekey is None:
         for k in dicts:
             extract_dict[k] = {}
