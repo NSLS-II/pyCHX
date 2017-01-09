@@ -7,7 +7,7 @@ This module is for the GiSAXS XPCS analysis
 from chxanalys.chx_generic_functions import *
 from chxanalys.chx_compress import ( compress_eigerdata, read_compressed_eigerdata,init_compress_eigerdata, get_avg_imgc,Multifile) 
 from chxanalys.chx_correlationc import ( cal_g2c )
-
+from chxanalys.chx_libs import  ( colors, markers, colors_,  markers_)
 
 
 def get_gisaxs_roi( Qr, Qz, qr_map, qz_map, mask=None, qval_dict=None ):
@@ -313,7 +313,7 @@ def plot_qrt_pds( qrt_pds, frame_edge, qz_index = 0, uid = 'uid', path = '',font
         r = range( 1 + qz_index*Nt, 1 + (1+qz_index) * Nt   )
     for i in r:
         y = qrt_pds[  cols[i]  ]  
-        ax.semilogy(qr, y, 'o-', label= cols[i] )
+        ax.semilogy(qr, y,  label= cols[i],  marker = markers[i], color=colors[i], ls='-') 
         #ax.set_xlabel("q in pixel")
         ax.set_xlabel(r'$Q_r$' + r'($\AA^{-1}$)')
         ax.set_ylabel("I(q)")
