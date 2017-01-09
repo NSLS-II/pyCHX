@@ -24,9 +24,53 @@ from pandas import DataFrame
 import os
 
     
- 
+def combine_ring_anglar_mask(ring_mask, ang_mask   ):
+    '''combine ring and anglar mask  '''
     
+    ring_max = ring_mask.max()    
+    ang_mask_ = np.zeros( ang_mask.shape  )
+    ind = np.where(ang_mask!=0)
+    ang_mask_[ind ] =  ang_mask[ ind ] + 1E9  #add some large number to qr    
+    dumy_ring_mask = np.zeros( ring_mask.shape  )
+    dumy_ring_mask[ring_mask==1] =1
+    dumy_ring_ang = dumy_ring_mask * ang_mask
+    real_ang_lab =   np.int_( np.unique( dumy_ring_ang )[1:] ) -1    
+    ring_ang = ring_mask * ang_mask_      
+    #convert label_array_qzr to [1,2,3,...]
+    ura = np.unique( ring_ang )[1:]    
+    ur = np.unique( ring_mask )[1:]
+    ua = np.unique( ang_mask )[real_ang_lab] 
+    ring_ang_ = np.zeros_like( ring_ang )
+    newl = np.arange( 1, len(ura)+1)
+    #newl = np.int_( real_ang_lab )  
+    for i, label in enumerate(ura):
+        #print (i, label)
+        ring_ang_.ravel()[ np.where(  ring_ang.ravel() == label)[0] ] = newl[i]
+    return   np.int_(ring_ang_)
+
+
+
     
+def get_seg_from_ring_mask( inner_angle, outer_angle, num_angles, width_angle, center, ring_mask, qr_center ):
+    '''YG. Jan 6, 2017
+       A simple wrap function to get angle cut mask from ring_mask
+       Parameter:
+           inner_angle, outer_angle, num_angles, width_angle: to define the angle
+           center: beam center
+           ring_mask: two-d array
+       Return:
+           seg_mask: two-d array      
+       
+    '''
+    widtha = (outer_angle - inner_angle )/(num_angles+ 0.01)
+    ang_mask, ang_center, ang_edges = get_angular_mask( ring_mask,  inner_angle= inner_angle, 
+                outer_angle = outer_angle, width = widtha, 
+            num_angles = num_angles, center = center, flow_geometry=True )    
+    seg_mask = combine_ring_anglar_mask( ring_mask, ang_mask)   
+    qval_dict = get_qval_dict(  qr_center = qr_center, qz_center = ang_center)
+    return seg_mask,qval_dict
+
+
     
 def bin_1D(x, y, nx=None, min_x=None, max_x=None):
     """
@@ -260,13 +304,17 @@ def plot_circular_average( qp, iq, q,  pargs, show_pixel= False,
         title = ax1.set_title('%s_Circular Average'%uid)     
         ax2=None 
     if 'xlim' in kwargs.keys():
-        ax1.set_xlim(    kwargs['xlim']  )    
-        x1,x2 =  kwargs['xlim']
-        w = np.where( (q >=x1 )&( q<=x2) )[0]                        
-        #if ax2 is not None:
-        #    ax2.set_xlim(  [ qp[w[0]], qp[w[-1]]]     )             
+        xlim =  kwargs['xlim']
+    else:
+        xlim=[q.min(), q.max()]
     if 'ylim' in kwargs.keys():
-        ax1.set_ylim(    kwargs['ylim']  ) 
+        ylim =  kwargs['ylim']
+    else:
+        ylim=[iq.min(), iq.max()]        
+        
+    ax1.set_xlim(   xlim  )  
+    ax1.set_ylim(   ylim  ) 
+
     title.set_y(1.1)
     fig.subplots_adjust(top=0.85)
     if save:
@@ -1123,10 +1171,18 @@ def plot_qIq_with_ROI( q, iq, q_ring_center, logs=True, save=False, return_fig =
     #axes.set_ylim(-0.0001, 10000)
     #axes.set_ylim(0, 100)
     
+
     if 'xlim' in kwargs.keys():
-         axes.set_xlim(    kwargs['xlim']  )    
+        xlim =  kwargs['xlim']
+    else:
+        xlim=[q.min(), q.max()]
     if 'ylim' in kwargs.keys():
-         axes.set_ylim(    kwargs['ylim']  )
+        ylim =  kwargs['ylim']
+    else:
+        ylim=[iq.min(), iq.max()]        
+        
+    axes.set_xlim(   xlim  )  
+    axes.set_ylim(   ylim  ) 
  
         
         
