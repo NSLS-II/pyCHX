@@ -44,8 +44,9 @@ def check_lost_metadata(md, Nimg=None, inc_x0 =None, inc_y0= None, pixelsize=7.5
     if inc_y0 is not None:
         md['beam_center_y']= inc_x0         
     center = [  int(md['beam_center_x']),int( md['beam_center_y'] ) ]  #beam center [y,x] for python image
+    center=[center[1], center[0]]
     
-    return dpix, lambda_, exposuretime, timeperframe, center
+    return dpix, lambda_, Ldet, exposuretime, timeperframe, center
 
 
 def combine_images( filenames, outputfile, outsize=(2000, 2400)):
@@ -222,41 +223,47 @@ def ployfit( y, x=None, order = 20 ):
 
 
 def get_bad_frame_list( imgsum, fit=True, polyfit_order = 30,legend_size = 12,
-                       plot=True, scale=1.0, good_start=None, uid='uid',path=None ):
+                       plot=True, scale=1.0, good_start=None, good_end=None, uid='uid',path=None ):
     '''
     imgsum: the sum intensity of a time series
     scale: the scale of deviation
     '''
     if good_start is  None:
         good_start=0
-    imgsum = imgsum[good_start:]
-    bd1 = [i for i in range(good_start)]
+    if good_end is None:
+        good_end = len( imgsum )
+    bd1 = [i for i in range(0, good_start)]
+    bd3 = [i for i in range(good_end,len( imgsum ) )]
+    
+    imgsum_ = imgsum[good_start:good_end]
     if fit:
-        pfit = ployfit( imgsum, order = polyfit_order)
-        data = imgsum - pfit
+        pfit = ployfit( imgsum_, order = polyfit_order)
+        data = imgsum_ - pfit
+        
         if plot:
             fig = plt.figure( )            
             ax = fig.add_subplot(2,1,1 )             
-            plot1D( imgsum, ax = ax,legend='data',legend_size=legend_size  )
+            plot1D( imgsum_, ax = ax,legend='data',legend_size=legend_size  )
             plot1D( pfit,ax=ax, legend='ploy-fit', title=uid + '_imgsum',legend_size=legend_size  )
             
             ax2 = fig.add_subplot(2,1,2 )      
             plot1D( data, ax = ax2,legend='difference',marker='s', color='b', )
+            
             ymin = data.mean()-scale *data.std()
             ymax =  data.mean()+scale *data.std()
-            print('here')
-            plot1D(x=[0,len(imgsum)], y=[ymin,ymin], ax = ax2, ls='--',lw= 3, marker='o', color='r', legend='low_thresh', legend_size=legend_size  )
+            #print('here')
+            plot1D(x=[0,len(imgsum_)], y=[ymin,ymin], ax = ax2, ls='--',lw= 3, marker='o', color='r', legend='low_thresh', legend_size=legend_size  )
             
-            plot1D(x=[0,len(imgsum)], y=[ymax,ymax], ax = ax2 , ls='--', lw= 3,marker='o', color='r',legend='high_thresh',title='imgsum_to_find_bad_frame',legend_size=legend_size  )
+            plot1D(x=[0,len(imgsum_)], y=[ymax,ymax], ax = ax2 , ls='--', lw= 3,marker='o', color='r',legend='high_thresh',title='imgsum_to_find_bad_frame',legend_size=legend_size  )
             
             if path is not None:
                 fp = path + '%s'%( uid ) + '_imgsum_analysis'  + '.png' 
                 plt.savefig( fp, dpi=fig.dpi)            
         
     else:
-        data = imgsum       
+        data = imgsum_       
     bd2=  list(   np.where( np.abs(data -data.mean()) > scale *data.std() )[0] + good_start )
-    return np.array( bd1 + bd2 )
+    return np.array( bd1 + bd2 + bd3 )
  
 
 def save_dict_csv( mydict, filename, mode='w'):
