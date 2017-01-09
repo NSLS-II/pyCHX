@@ -173,10 +173,10 @@ class create_pdf_report( object ):
         #self.qr_1d_file = 'uid=%s_Qr_ROI.png'%uid
 
         
-        if self.report_type =='saxs' or 'ang_saxs':
+        if self.report_type =='saxs' or self.report_type =='ang_saxs':
             self.ROI_on_Iq_file = 'uid=%s_ROI_on_Iq.png'%uid 
             
-        else:
+        elif self.report_type =='gi_saxs':
             self.ROI_on_Iq_file = 'uid=%s_Qr_ROI.png'%uid 
         
         self.Iq_t_file = 'uid=%s_q_Iqt.png'%uid
@@ -275,10 +275,10 @@ class create_pdf_report( object ):
         top = top - 5        
         fontsize = 11
         c.setFont("Helvetica",  fontsize)
-        
+                
         nec_keys = [   'sample', 'start_time', 'stop_time','Measurement' ,'exposure time' ,'incident_wavelength', 'cam_acquire_t',
                        'frame_time','detector_distance', 'feedback_x', 'feedback_y', 'shutter mode',
-                    'beam_center_x', 'beam_center_y', 'refl_center_x', 'refl_center_y','mask_file','bad_frame_list']
+                    'beam_center_x', 'beam_center_y', 'beam_refl_center_x', 'beam_refl_center_y','mask_file','bad_frame_list']
         for key in nec_keys:
             check_dict_keys(md, key) 
         
@@ -301,7 +301,7 @@ class create_pdf_report( object ):
         elif self.report_type == 'gi_saxs':
             s7= ('Incident Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y']) +
                 '   ||   ' + 
-                'Reflect Center: [%s, %s] (pixel)'%(md['refl_center_x'], md['refl_center_y']) )             
+                'Reflect Center: [%s, %s] (pixel)'%(md['beam_refl_center_x'], md['beam_refl_center_y']) )             
         elif  self.report_type == 'ang_saxs':
             s7= 'Beam Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y'])
             
@@ -411,6 +411,8 @@ class create_pdf_report( object ):
         img_left,img_top =320, top - ds        
         str1_left, str1_top,str1= 420, top- 35,  'ROI on Iq'
         str2_left, str2_top = 350, top- 260
+        
+        print ( imgf )
                 
         add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
