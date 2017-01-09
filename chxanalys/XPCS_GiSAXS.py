@@ -4,12 +4,386 @@ yuzhang@bnl.gov
 This module is for the GiSAXS XPCS analysis 
 """
 
+from chxanalys.chx_generic_functions import *
+from chxanalys.chx_compress import ( compress_eigerdata, read_compressed_eigerdata,init_compress_eigerdata, get_avg_imgc,Multifile) 
+from chxanalys.chx_correlationc import ( cal_g2c )
+from chxanalys.chx_libs import  ( colors, markers, colors_,  markers_)
+
+
+def get_gisaxs_roi( Qr, Qz, qr_map, qz_map, mask=None, qval_dict=None ):
+    '''Y.G. 2016 Dec 31
+    Get xpcs roi of gisaxs
+    Parameters:
+        Qr: list, = [qr_start , qr_end, qr_width, qr_num], corresponding to qr start, qr end, qr width, qr number
+        Qz: list, = [qz_start , qz_end, qz_width, qz_num], corresponding to qz start, qz end, qz width, qz number
+        qr_map: two-d array, the same shape as gisaxs frame, a qr map
+        qz_map: two-d array, the same shape as gisaxs frame, a qz map
+        mask: array, the scattering mask
+        qval_dict: a dict, each key (a integer) with value as qr or (qr,qz) or (q//, q|-)     
+                    if not None, the new returned qval_dict will include the old one
+        
+    Return:
+        roi_mask: array, the same shape as gisaxs frame, the label array of roi
+        qval_dict, a dict, each key (a integer) with value as qr or (qr,qz) or (q//, q|-)        
+    '''
+
+    qr_edge, qr_center = get_qedge( *Qr )
+    qz_edge, qz_center = get_qedge( *Qz )
+    label_array_qz = get_qmap_label(qz_map, qz_edge)
+    label_array_qr = get_qmap_label(qr_map, qr_edge)
+    label_array_qzr, qzc, qrc = get_qzrmap(label_array_qz, label_array_qr,qz_center, qr_center)
+    labels_qzr, indices_qzr = roi.extract_label_indices(label_array_qzr)
+    labels_qz, indices_qz = roi.extract_label_indices(label_array_qz)
+    labels_qr, indices_qr = roi.extract_label_indices(label_array_qr)
+    if mask is None:
+        mask=1
+    roi_mask =  label_array_qzr * mask
+    qval_dict = get_qval_dict( np.round(qr_center, 5) , np.round(qz_center,5), qval_dict = qval_dict  )
+    return roi_mask, qval_dict
+ 
+
+
+############
+##developed at Octo 11, 2016
+def get_qr( data, Qr, Qz, qr, qz,  mask = None   ):
+    
+    '''Octo 12, 2016, Y.G.@CHX
+       plot one-d of I(q) as a function of qr for different qz
+       
+       data: a image/Eiger frame
+       Qr: info for qr, = qr_start , qr_end, qr_width, qr_num
+       Qz: info for qz, = qz_start,   qz_end,  qz_width , qz_num
+       qr: qr-map
+       qz: qz-map
+       mask: a mask for qr-1d integration, default is None
+       Return: qr_1d, a dataframe, with columns as qr1, qz1 (float value), qr2, qz2,....                    
+               
+    Examples:
+        #to make two-qz, from 0.018 to 0.046, width as 0.008,
+        qz_width = 0.008
+        qz_start = 0.018 + qz_width/2
+        qz_end = 0.046  -  qz_width/2
+        qz_num= 2
+        #to make one-qr, from 0.02 to 0.1, and the width is 0.1-0.012
+        qr_width =  0.1-0.02
+        qr_start =    0.02 + qr_width  /2
+        qr_end =  0.01 -  qr_width  /2
+        qr_num = 1
+        Qr = [qr_start , qr_end, qr_width, qr_num]
+        Qz=  [qz_start,   qz_end,  qz_width , qz_num ]
+        new_mask[ :, 1020:1045] =0
+        ticks = show_qzr_map(  qr,qz, inc_x0, data = avg_imgmr, Nzline=10,  Nrline=10   )
+        qx, qy, qr, qz = convert_gisaxs_pixel_to_q( inc_x0, inc_y0,refl_x0,refl_y0, lamda=lamda, Lsd=Lsd )        
+        qr_1d = get_qr( avg_imgr, Qr, Qz, qr, qz, new_mask)
+ 
+    '''  
+        
+        
+    
+    qr_start , qr_end, qr_width, qr_num =Qr
+    qz_start,   qz_end,  qz_width , qz_num =Qz
+    qr_edge, qr_center = get_qedge(qr_start , qr_end, qr_width, qr_num )    
+    qz_edge, qz_center = get_qedge( qz_start,   qz_end,  qz_width , qz_num )  
+    label_array_qr = get_qmap_label( qr, qr_edge)    
+    #qr_1d ={}
+    #columns=[]   
+    
+    for i,qzc_ in enumerate(qz_center):        
+        #print (i,qzc_)
+        label_array_qz = get_qmap_label( qz, qz_edge[i*2:2*i+2])
+        #print (qzc_, qz_edge[i*2:2*i+2])
+        label_array_qzr,qzc,qrc = get_qzrmap(label_array_qz, label_array_qr,qz_center, qr_center  )
+        #print (np.unique(label_array_qzr ))            
+        if mask is not None:label_array_qzr *=   mask
+        roi_pixel_num = np.sum( label_array_qzr, axis=0)
+        qr_ = qr  *label_array_qzr
+        data_ = data*label_array_qzr    
+        qr_ave = np.sum( qr_, axis=0)/roi_pixel_num
+        data_ave = np.sum( data_, axis=0)/roi_pixel_num 
+        qr_ave,data_ave =   zip(* sorted(  zip( * [ qr_ave[~np.isnan(qr_ave)] ,   data_ave[~np.isnan( data_ave)] ]) ) )       
+        if i==0:
+            N_interp = len( qr_ave  )            
+            
+        qr_ave_intp =  np.linspace( np.min( qr_ave ), np.max( qr_ave ), N_interp)
+        data_ave = np.interp(  qr_ave_intp, qr_ave, data_ave)     
+        #columns.append( ['qr%s'%i, str(round(qzc_,4))] )
+        if i==0:
+            df =  np.hstack(  [ (qr_ave_intp).reshape( N_interp,1) , 
+                               data_ave.reshape( N_interp,1) ] )
+        else:
+            df = np.hstack(  [ df, (qr_ave_intp).reshape( N_interp,1) ,
+                              data_ave.reshape( N_interp,1) ] )             
+    #df = DataFrame( df  )
+    #df.columns = np.concatenate( columns    )  
+    
+    return df
 
 
 
-from .chx_generic_functions import *
+    
+########################
+# get one-d of I(q) as a function of qr for different qz
+##################### 
+
+def cal_1d_qr(  data, Qr,Qz, qr, qz, inc_x0=None,  mask=None, path=None, uid=None, setup_pargs=None, save = True,
+             print_save_message=True): 
+    '''Dec 16, 2016, Y.G.@CHX
+       calculate one-d of I(q) as a function of qr for different qz
+       data: a dataframe
+       Qr: info for qr, = qr_start , qr_end, qr_width, qr_num, the purpose of Qr is only for the defination of qr range (qr number does not matter)
+       Qz: info for qz, = qz_start,   qz_end,  qz_width , qz_num
+       qr: qr-map
+       qz: qz-map
+       inc_x0: x-center of incident beam
+       mask: a mask for qr-1d integration       
+       setup_pargs: gives path, filename...
+       
+       Return: qr_1d, a dataframe, with columns as qr1, qz1 (float value), qz2,....                       
+               Plot 1D cureve as a function of Qr for each Qz  
+               
+               
+               
+               
+    Examples:
+        #to make two-qz, from 0.018 to 0.046, width as 0.008,
+        qz_width = 0.008
+        qz_start = 0.018 + qz_width/2
+        qz_end = 0.046  -  qz_width/2
+        qz_num= 2
 
 
+        #to make one-qr, from 0.02 to 0.1, and the width is 0.1-0.012
+        qr_width =  0.1-0.02
+        qr_start =    0.02 + qr_width  /2
+        qr_end =  0.01 -  qr_width  /2
+        qr_num = 1
+
+        Qr = [qr_start , qr_end, qr_width, qr_num]
+        Qz=  [qz_start,   qz_end,  qz_width , qz_num ]
+        new_mask[ :, 1020:1045] =0        
+        qx, qy, qr, qz = convert_gisaxs_pixel_to_q( inc_x0, inc_y0,refl_x0,refl_y0, lamda=lamda, Lsd=Lsd )
+        
+        qr_1d = get_1d_qr( avg_imgr, Qr, Qz, qr, qz, inc_x0,  new_mask)
+        
+    A plot example:
+        plot1D( x= qr_1d['qr1'], y = qr_1d['0.0367'], logxy=True )
+    '''          
+    qr_start , qr_end, qr_width, qr_num =Qr
+    qz_start,   qz_end,  qz_width , qz_num =Qz
+    qr_edge, qr_center = get_qedge(qr_start , qr_end, qr_width, qr_num )    
+    qz_edge, qz_center = get_qedge( qz_start,   qz_end,  qz_width , qz_num ) 
+     
+    #print ('The qr_edge is:  %s\nThe qr_center is:  %s'%(qr_edge, qr_center))
+    #print ('The qz_edge is:  %s\nThe qz_center is:  %s'%(qz_edge, qz_center))    
+    
+    label_array_qr = get_qmap_label( qr, qr_edge)
+
+    #qr_1d ={}
+    columns=[]
+    for i,qzc_ in enumerate(qz_center):        
+        #print (i,qzc_)
+        label_array_qz = get_qmap_label( qz, qz_edge[i*2:2*i+2])
+        #print (qzc_, qz_edge[i*2:2*i+2])
+        label_array_qzr,qzc,qrc = get_qzrmap(label_array_qz, label_array_qr,qz_center, qr_center  )
+        #print (np.unique(label_array_qzr ))    
+        if mask is not None:
+            label_array_qzr *=   mask
+        roi_pixel_num = np.sum( label_array_qzr, axis=0)
+        qr_ = qr  *label_array_qzr
+        data_ = data*label_array_qzr    
+        qr_ave = np.sum( qr_, axis=0)/roi_pixel_num
+        data_ave = np.sum( data_, axis=0)/roi_pixel_num 
+        qr_ave, data_ave =   zip(* sorted(  zip( * [ qr_ave[~np.isnan(qr_ave)] ,   data_ave[~np.isnan( data_ave)] ]) ) )          
+        if i==0:
+            N_interp = len( qr_ave  ) 
+            columns.append( ['qr'] )
+            #qr_1d[i]= qr_ave_intp
+        qr_ave_intp =  np.linspace( np.min( qr_ave ), np.max( qr_ave ), N_interp)
+        data_ave = np.interp(  qr_ave_intp, qr_ave, data_ave)        
+        #qr_1d[i]= [qr_ave_intp, data_ave]
+        columns.append( ['qz%s=%s'%( i, str(round(qzc_,4)) )] )
+        if i==0:
+            df =  np.hstack(  [ (qr_ave_intp).reshape( N_interp,1) , 
+                               data_ave.reshape( N_interp,1) ] )
+        else:
+            df = np.hstack(  [ df, 
+                              data_ave.reshape( N_interp,1) ] )     
+    df = DataFrame( df  )
+    df.columns = np.concatenate( columns    )
+    
+    if save:
+        if path is None:
+            path = setup_pargs['path']
+        if uid is None:    
+            uid = setup_pargs['uid']        
+        filename = os.path.join(path, '%s_qr_1d.csv'% (uid) )
+        df.to_csv(filename)
+        if print_save_message:
+            print( 'The qr_1d is saved in %s with filename as %s_qr_1d.csv'%(path, uid))        
+    return df
+
+
+
+
+def get_t_qrc( FD, frame_edge, Qr, Qz, qr, qz, mask=None, path=None, uid=None, save=True, *argv,**kwargs):   
+    '''Get t-dependent qr 
+    
+        Parameters        
+        ----------
+        FD: a compressed imgs series handler
+        frame_edge: list, the ROI frame regions, e.g., [  [0,100], [200,400] ]
+        mask:  a image mask 
+        
+        Returns
+        ---------
+        qrt_pds: dataframe, with columns as [qr, qz0_fra_from_beg1_to_end1,  qz0_fra_from_beg2_to_end2, ...
+                                                 qz1_fra_from_beg1_to_end1,  qz1_fra_from_beg2_to_end2, ...     
+                                            ...
+                                            ]
+           
+    '''          
+    
+    Nt = len( frame_edge )
+    iqs = list( np.zeros( Nt ) )
+    qz_start,   qz_end,  qz_width , qz_num =Qz
+    qz_edge, qz_center = get_qedge( qz_start,   qz_end,  qz_width , qz_num ) 
+    #qr_1d = np.zeros(   )
+    
+    if uid is None:
+        uid = 'uid'
+    for i in range(Nt):
+        #str(round(qz_center[j], 4 )
+        t1,t2 = frame_edge[i]       
+        avg_imgx = get_avg_imgc( FD, beg=t1,end=t2, sampling = 1, plot_ = False ) 
+        
+        qrti = cal_1d_qr( avg_imgx, Qr, Qz, qr, qz, mask = mask, save=False)  
+        if i == 0:
+            qrt_pds = np.zeros(  [len(qrti), 1 + Nt * qz_num ] )
+            columns = np.zeros(    1 + Nt * qz_num, dtype=object   )
+            columns[0] = 'qr' 
+            qrt_pds[:,0] = qrti['qr']
+        for j in range(qz_num):
+            coli = qrti.columns[1+j]
+            qrt_pds[:, 1 + i + Nt*j] =  qrti[ coli ]
+            columns[   1 + i + Nt*j  ] =   coli +  '_fra_%s_to_%s'%( t1, t2 ) 
+            
+    qrt_pds = DataFrame( qrt_pds  )
+    qrt_pds.columns =   columns       
+    if save:
+        if path is None:
+            path = setup_pargs['path']
+        if uid is None:    
+            uid = setup_pargs['uid']        
+        filename = os.path.join(path, '%s_qrt_pds.csv'% (uid) )
+        qrt_pds.to_csv(filename)        
+        print( 'The qr~time is saved in %s with filename as %s_qrt_pds.csv'%(path, uid))            
+    return qrt_pds
+  
+
+
+
+
+def plot_qrt_pds( qrt_pds, frame_edge, qz_index = 0, uid = 'uid', path = '',fontsize=8, *argv,**kwargs): 
+    '''Y.G. Jan 04, 2017
+    plot t-dependent qr 
+    
+        Parameters        
+        ----------
+        qrt_pds: dataframe, with columns as [qr, qz0_fra_from_beg1_to_end1,  qz0_fra_from_beg2_to_end2, ...
+                                                 qz1_fra_from_beg1_to_end1,  qz1_fra_from_beg2_to_end2, ...     
+                                            ...
+                                            ]
+        frame_edge: list, the ROI frame regions, e.g., [  [0,100], [200,400] ]
+                                            
+        qz_index, if = integer, e.g. =0, only plot the qr~t for qz0    
+                  if None, plot all qzs
+
+    Returns
+     
+    '''  
+    
+    fig,ax = plt.subplots(figsize=(8, 6))
+    cols = np.array( qrt_pds.columns )
+    Nt = len( frame_edge )
+    #num_qz = int(  (len( cols ) -1  ) /Nt )
+    qr = qrt_pds['qr']    
+    if qz_index is None:
+        r = range( 1, len(cols ) )
+    else:
+        r = range( 1 + qz_index*Nt, 1 + (1+qz_index) * Nt   )
+    for i in r:
+        y = qrt_pds[  cols[i]  ]  
+        ax.semilogy(qr, y,  label= cols[i],  marker = markers[i], color=colors[i], ls='-') 
+        #ax.set_xlabel("q in pixel")
+        ax.set_xlabel(r'$Q_r$' + r'($\AA^{-1}$)')
+        ax.set_ylabel("I(q)")
+
+    if 'xlim' in kwargs.keys():
+        ax.set_xlim(    kwargs['xlim']  )    
+    if 'ylim' in kwargs.keys():
+        ax.set_ylim(    kwargs['ylim']  )
+        
+    ax.legend(loc = 'best', fontsize=fontsize) 
+  
+    title = ax.set_title('%s_Iq_t'%uid)        
+    title.set_y(1.01)
+
+    fp = path + '%s_Iq_t'%uid + '.png'  
+    fig.savefig( fp, dpi=fig.dpi)
+
+    
+    
+def plot_t_qrc( qr_1d, frame_edge, save=False, pargs=None,fontsize=8, *argv,**kwargs): 
+    '''plot t-dependent qr 
+    
+        Parameters        
+        ----------
+        qr_1d: array, with shape as time length, frame_edge        
+        frame_edge: list, the ROI frame regions, e.g., [  [0,100], [200,400] ]
+        save: save the plot
+        if save,  all the following paramters are given in argv        
+            { 
+            'path':             
+             'uid':  }
+
+    Returns
+     
+    '''  
+    
+    fig,ax = plt.subplots(figsize=(8, 6))
+    Nt = qr_1d.shape[1]
+    q=qr_1d[:,0]
+    for i in range(  Nt-1 ):
+        t1,t2 = frame_edge[i]
+        ax.semilogy(q, qr_1d[:,i+1], 'o-', label="frame: %s--%s"%( t1,t2) )
+        #ax.set_xlabel("q in pixel")
+        ax.set_xlabel(r'$Q_r$' + r'($\AA^{-1}$)')
+        ax.set_ylabel("I(q)")
+
+    if 'xlim' in kwargs.keys():
+        ax.set_xlim(    kwargs['xlim']  )    
+    if 'ylim' in kwargs.keys():
+        ax.set_ylim(    kwargs['ylim']  )
+        
+    ax.legend(loc = 'best', fontsize=fontsize)  
+    uid = pargs['uid']
+    title = ax.set_title('uid= %s--t~I(q)'%uid)        
+    title.set_y(1.01)
+    if save:
+        #dt =datetime.now()
+        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
+        path = pargs['path']
+        uid = pargs['uid']
+        #fp = path + 'uid= %s--Iq~t-'%uid + CurTime + '.png'  
+        fp = path + 'uid=%s--Iq-t-'%uid + '.png'  
+        fig.savefig( fp, dpi=fig.dpi)
+
+        save_arrays(  np.vstack( [q, np.array(iqs)]).T, 
+                    label=  ['q_A-1']+ ['Fram-%s-%s'%(t[0],t[1]) for t in frame_edge],
+                    filename='uid=%s-q-Iqt'%uid, path= path  )
+
+        
+        
 
 ##########################################
 ###Functions for GiSAXS
@@ -47,8 +421,11 @@ def get_incident_angles( inc_x0, inc_y0, refl_x0, refl_y0, pixelsize=[75,75], Ls
                 pixelsize: 75 um for Eiger4M detector
         get incident_angle (alphai), the title angle (phi)
     '''
+    if Lsd>=1000:
+        Lsd = Lsd/1000.
+        
     px,py = pixelsize
-    phi = np.arctan2( (refl_x0 - inc_x0)*px *10**(-6), (refl_y0 - inc_y0)*py *10**(-6) )    
+    phi = np.arctan2( (-refl_x0 + inc_x0)*px *10**(-6), (refl_y0 - inc_y0)*py *10**(-6) )    
     alphai = np.arctan2( (refl_y0 -inc_y0)*py *10**(-6),  Lsd ) /2.     
     #thetai = np.arctan2(  (rcenx - bcenx)*px *10**(-6), Lsd   ) /2.  #??   
     
@@ -61,17 +438,20 @@ def get_reflected_angles(inc_x0, inc_y0, refl_x0, refl_y0, thetai=0.0,
     ''' Dec 16, 2015, Y.G.@CHX
         giving: incident beam center: bcenx,bceny
                 reflected beam on detector: rcenx, rceny
-                sample to detector distance: Lsd, in meters                
+                sample to detector distance: Lsd, in mm                
                 pixelsize: 75 um for Eiger4M detector
                 detector image size: dimx = 2070,dimy=2167 for Eiger4M detector
         get  reflected angle alphaf (outplane)
              reflected angle thetaf (inplane )
     '''    
-    
+    #if Lsd>=1000:#it should be something wrong and the unit should be meter
+    #convert Lsd from mm to m
+    if Lsd>=1000:
+        Lsd = Lsd/1000.
     alphai, phi =  get_incident_angles( inc_x0, inc_y0, refl_x0, refl_y0, pixelsize, Lsd)
     print ('The incident_angle (alphai) is: %s'%(alphai* 180/np.pi))
     px,py = pixelsize
-    y, x = np.indices( [dimy,dimx] )    
+    y, x = np.indices( [int(dimy),int(dimx)] )    
     #alphaf = np.arctan2( (y-inc_y0)*py*10**(-6), Lsd )/2 - alphai 
     alphaf = np.arctan2( (y-inc_y0)*py*10**(-6), Lsd )  - alphai 
     thetaf = np.arctan2( (x-inc_x0)*px*10**(-6), Lsd )/2 - thetai   
@@ -117,12 +497,6 @@ def convert_gisaxs_pixel_to_q( inc_x0, inc_y0, refl_x0, refl_y0,
         
     
 
-    if edges is None:
-        if num_angles!=1:
-            spacing =  (outer_angle - inner_angle - num_angles* width )/(num_angles-1)      # spacing between rings
-        else:
-            spacing = 0
-        edges = roi.ring_edges(inner_angle, width, spacing, num_angles)
     
     
 
@@ -169,7 +543,15 @@ def get_qedge2( qstart,qend,qwidth,noqs,  ):
 ###########################################
 #for plot Q-map 
 ###########################################     
-    
+
+
+
+
+
+
+
+
+
 def get_qmap_label( qmap, qedge ):
     
     import numpy as np
@@ -270,7 +652,7 @@ def show_qz(qz):
     im=ax.imshow(qz, origin='lower' ,cmap='viridis',vmin=qz.min(),vmax= qz.max() )
     fig.colorbar(im)
     ax.set_title( 'Q-z')
-    plt.show()
+    #plt.show()
     
 def show_qr(qr):
     '''Dec 16, 2015, Y.G.@CHX
@@ -281,7 +663,7 @@ def show_qr(qr):
     im=ax.imshow(qr, origin='lower' ,cmap='viridis',vmin=qr.min(),vmax= qr.max() )
     fig.colorbar(im)
     ax.set_title( 'Q-r')
-    plt.show()    
+    #plt.show()    
 
 def show_alphaf(alphaf,):
     '''Dec 16, 2015, Y.G.@CHX
@@ -294,13 +676,11 @@ def show_alphaf(alphaf,):
     #im=ax.imshow(alphaf, origin='lower' ,cmap='viridis',norm= LogNorm(vmin=0.0001,vmax=2.00))    
     fig.colorbar(im)
     ax.set_title( 'alphaf')
-    plt.show()    
+    #plt.show()    
     
 
-    
-########################
-# get one-d of I(q) as a function of qr for different qz
-##################### 
+
+
     
 def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,
               ticks=None, alpha=0.3, loglog=False, save=True, setup_pargs=None ): 
@@ -414,7 +794,7 @@ def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,
     
         
     #ax.set_xlabel( r'$q_r$', fontsize=15)
-    ax.set_xlabel('$qr $'r'($\AA^{-1}$)', fontsize=18)
+    ax.set_xlabel(r'$q_r$'r'($\AA^{-1}$)', fontsize=18)
     ax.set_ylabel('$Intensity (a.u.)$', fontsize=18)
     ax.set_yscale('log')
     #ax.set_xscale('log')
@@ -430,12 +810,59 @@ def get_1d_qr(  data, Qr,Qz, qr, qz, inc_x0,  mask=None, show_roi=True,
         path = setup_pargs['path']
         uid = setup_pargs['uid']
         #filename = os.path.join(path, 'qr_1d-%s-%s.csv' % (uid,CurTime))
-        filename = os.path.join(path, 'uid=--%sqr_1d.csv'% (uid) )
+        filename = os.path.join(path, 'uid=%s--qr_1d.csv'% (uid) )
         df.to_csv(filename)
-        print( 'The qr_1d of uid= %s is saved in %s with filename as qr_1d-%s-%s.csv'%(uid, path, uid, CurTime))
-        
+        print( 'The qr_1d is saved in %s with filename as uid=%s--qr_1d.csv'%(path, uid))
+
+        #fp = path + 'Uid= %s--Circular Average'%uid + CurTime + '.png'     
+        fp = path + 'uid=%s--qr_1d-'%uid  + '.png'  
+        fig.savefig( fp, dpi=fig.dpi)           
+    #plt.show()  
     return df
 
+
+
+def plot_qr_1d_with_ROI( qr_1d, qr_center,  loglog=False, save=True, uid='uid', path='' ): 
+    '''Dec 16, 2015, Y.G.@CHX
+       plot one-d of I(q) as a function of qr with ROI
+       qr_1d: a dataframe for qr_1d
+       qr_center: the center of qr 
+       loglog: if True, plot in log-log scale       
+       Return:                    
+               Plot 1D cureve with ROI        
+    A plot example:
+        plot_1d_qr_with_ROI( df, qr_center,  loglog=False, save=True )
+
+    '''     
+
+    fig, ax = plt.subplots()
+    Ncol = len( qr_1d.columns )
+    Nqr = Ncol%2
+    qz_center = qr_1d.columns[1::2]
+    Nqz = len(qz_center)              
+    for i,qzc_ in enumerate(qz_center):        
+        x= qr_1d[  qr_1d.columns[0]   ]
+        y=   qr_1d[qzc_] 
+        if loglog:
+            ax.loglog(x,y,  '--o', label= 'qz= %s'%qzc_, markersize=1)
+        else:
+            ax.plot( x,y,  '--o', label= 'qz= %s'%qzc_) 
+    for qrc in qr_center:
+        ax.axvline( qrc )#, linewidth = 5  )
+        
+    #ax.set_xlabel( r'$q_r$', fontsize=15)
+    ax.set_xlabel(r'$q_r$'r'($\AA^{-1}$)', fontsize=18)
+    ax.set_ylabel('$Intensity (a.u.)$', fontsize=18)
+    ax.set_yscale('log')
+    #ax.set_xscale('log')
+    ax.set_xlim(   x.max(), x.min()  )
+    ax.legend(loc='best') 
+    ax.set_title( '%s_Qr_ROI'%uid)    
+    if save:     
+        fp = path + '%s_Qr_ROI'%uid  + '.png'  
+        fig.savefig( fp, dpi=fig.dpi)           
+    #plt.show()  
+    
 
 
 
@@ -571,6 +998,141 @@ def get_qz_tick_label( qz, label_array_qz,interp=True):
     return  zticks,zticks_label 
 
 
+def get_qzr_map(  qr, qz, inc_x0, Nzline=10,Nrline=10,  interp = True,
+                  return_qrz_label= True, *argv,**kwargs):  
+    
+    ''' 
+    Dec 31, 2016, Y.G.@CHX
+    Calculate a qzr map of a gisaxs image (data) without plot
+    
+    Parameters:
+        qr:  2-D array, qr of a gisaxs image (data)
+        qz:  2-D array, qz of a gisaxs image (data)
+        inc_x0:  the incident beam center x 
+    Options:        
+        Nzline: int, z-line number
+        Nrline: int, r-line number        
+        
+    Return:
+    if return_qrz_label
+        zticks: list, z-tick positions in unit of pixel
+        zticks_label: list, z-tick positions in unit of real space
+        rticks: list, r-tick positions in unit of pixel
+        rticks_label: list, r-tick positions in unit of real space 
+    else: return the additional two below
+        label_array_qr: qr label array with the same shpae as gisaxs image
+        label_array_qz: qz label array with the same shpae as gisaxs image
+    
+    Examples:        
+        ticks = get_qzr_map(  qr, qz, inc_x0  )        
+    '''
+    qr_start, qr_end, qr_num = qr.min(),qr.max(), Nrline
+    qz_start, qz_end, qz_num = qz.min(),qz.max(), Nzline 
+    qr_edge, qr_center = get_qedge(qr_start , qr_end, ( qr_end- qr_start)/(qr_num+100), qr_num )
+    qz_edge, qz_center = get_qedge( qz_start,   qz_end,   (qz_end - qz_start)/(qz_num+100 ) ,  qz_num )
+
+    label_array_qz = get_qmap_label( qz, qz_edge)
+    label_array_qr = get_qmap_label( qr, qr_edge)
+ 
+    labels_qz, indices_qz = roi.extract_label_indices( label_array_qz  )
+    labels_qr, indices_qr = roi.extract_label_indices( label_array_qr  )
+    num_qz = len(np.unique( labels_qz ))
+    num_qr = len(np.unique( labels_qr ))     
+    zticks,zticks_label  = get_qz_tick_label(qz,label_array_qz)
+    #rticks,rticks_label  = get_qr_tick_label(label_array_qr,inc_x0)
+    try:
+        rticks,rticks_label = zip(*np.sort(  zip( *get_qr_tick_label( qr, label_array_qr, inc_x0,interp=interp) ))  )
+    except:
+        rticks,rticks_label = zip(* sorted(  zip( *get_qr_tick_label( qr, label_array_qr, inc_x0,interp=interp) ))  )
+    #stride = int(len(zticks)/10) 
+    ticks=[ zticks,zticks_label,rticks,rticks_label ]
+    if return_qrz_label:
+        return  zticks,zticks_label,rticks,rticks_label, label_array_qr, label_array_qz
+    else:
+        return  zticks,zticks_label,rticks,rticks_label
+    
+    
+
+def plot_qzr_map( qr, qz, inc_x0, ticks = None, data=None,
+                  uid='uid', path ='', *argv,**kwargs):  
+    
+    ''' 
+    Dec 31, 2016, Y.G.@CHX
+    plot a qzr map of a gisaxs image (data)    
+    Parameters:
+        qr:  2-D array, qr of a gisaxs image (data)
+        qz:  2-D array, qz of a gisaxs image (data)
+        inc_x0:  the incident beam center x 
+        
+        ticks = [ zticks,zticks_label,rticks,rticks_label ], use ticks = get_qzr_map(  qr, qz, inc_x0  )  to get
+        
+            zticks: list, z-tick positions in unit of pixel
+            zticks_label: list, z-tick positions in unit of real space
+            rticks: list, r-tick positions in unit of pixel
+            rticks_label: list, r-tick positions in unit of real space
+            label_array_qr: qr label array with the same shpae as gisaxs image
+            label_array_qz: qz label array with the same shpae as gisaxs image
+        
+    inc_x0:  the incident beam center x          
+    Options:
+        data: 2-D array, a gisaxs image, if None, =qr+qz
+        Nzline: int, z-line number
+        Nrline: int, r-line number       
+        
+    Return:
+        None
+    
+    Examples:
+        
+        ticks = plot_qzr_map(  ticks, inc_x0, data = None, Nzline=10, Nrline= 10   )
+        ticks = plot_qzr_map(  ticks, inc_x0, data = avg_imgmr, Nzline=10,  Nrline=10   )
+    '''
+        
+    
+    import matplotlib.pyplot as plt    
+    import copy
+    import matplotlib.cm as mcm
+    if ticks is None:
+        zticks,zticks_label,rticks,rticks_label, label_array_qr, label_array_qz = get_qzr_map( 
+            qr, qz, inc_x0, return_qrz_label=True  ) 
+    else:
+        zticks,zticks_label,rticks,rticks_label, label_array_qr, label_array_qz = ticks
+    
+    cmap='viridis'
+    _cmap = copy.copy((mcm.get_cmap(cmap)))
+    _cmap.set_under('w', 0)    
+    fig, ax = plt.subplots(    )    
+    if data is None:
+        data=qr+qz        
+        im = ax.imshow(data, cmap='viridis',origin='lower') 
+    else:
+        im = ax.imshow(data, cmap='viridis',origin='lower',  norm= LogNorm(vmin=0.001, vmax=1e1)) 
+
+    imr=ax.imshow(label_array_qr, origin='lower' ,cmap='viridis', vmin=0.5,vmax= None  )#,interpolation='nearest',) 
+    imz=ax.imshow(label_array_qz, origin='lower' ,cmap='viridis', vmin=0.5,vmax= None )#,interpolation='nearest',) 
+   
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    plt.colorbar(im, cax=cax) 
+    ax.set_xlabel(r'$q_r$', fontsize=18)
+    ax.set_ylabel(r'$q_z$',fontsize=18)
+
+    stride = 1
+    ax.set_yticks( zticks[::stride] )
+    yticks =  zticks_label[::stride] 
+    ax.set_yticklabels(yticks, fontsize=7)
+    #stride = int(len(rticks)/10)
+    stride = 1
+    ax.set_xticks( rticks[::stride] )
+    xticks =  rticks_label[::stride]
+    ax.set_xticklabels(xticks, fontsize=7) 
+    ax.set_title( '%s_Qr_Qz_Map'%uid, y=1.03,fontsize=18)         
+    fp = path + '%s_Qr_Qz_Map'%(uid) + '.png'
+    fig.savefig( fp, dpi=fig.dpi)         
+ 
+
+
+
 
 def show_qzr_map(  qr, qz, inc_x0, data=None, Nzline=10,Nrline=10 , 
                  interp=True, *argv,**kwargs):  
@@ -676,27 +1238,29 @@ def show_qzr_map(  qr, qz, inc_x0, data=None, Nzline=10,Nrline=10 ,
     xticks =  rticks_label[::stride]
     ax.set_xticklabels(xticks, fontsize=7)    
 
-    ax.set_title( 'Q-zr_Map', y=1.03,fontsize=18)
+    if 'uid' in kwargs:
+        uid=kwargs['uid']
+    else:
+        uid='uid'
+        
+    ax.set_title( '%s_Qr_Qz_Map'%uid, y=1.03,fontsize=18)
     
     save=False    
     if 'save' in kwargs:
         save=kwargs['save']    
-    if 'uid' in kwargs:
-        uid=kwargs['uid']
-    else:
-        uid='uid'        
+        
     if save:
         path=kwargs['path']
-        fp = path + 'uid=%s--Q-zr-Map-'%(uid) + '.png'
+        fp = path + '%s_Qr_Qz_Map'%(uid) + '.png'
         fig.savefig( fp, dpi=fig.dpi)         
-    plt.show() 
+    #plt.show() 
     
     
     return  zticks,zticks_label,rticks,rticks_label
 
 
  
-def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, *argv,**kwargs):  
+def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, uid='uid', path = '', save=False, *argv,**kwargs):  
         
     ''' 
     Dec 16, 2015, Y.G.@CHX
@@ -723,21 +1287,14 @@ def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, *argv,**kwargs):
         show_qzr_roi( avg_imgr, box_maskr, inc_x0, ticks)
          
     '''
-      
-        
-        
-    #import matplotlib.pyplot as plt    
-    #import copy
-    #import matplotlib.cm as mcm
-    
-    #cmap='viridis'
-    #_cmap = copy.copy((mcm.get_cmap(cmap)))
-    #_cmap.set_under('w', 0)
     zticks, zticks_label, rticks, rticks_label = ticks
     avg_imgr, box_maskr = data, rois
     num_qzr = len(np.unique( box_maskr)) -1
-    fig, ax = plt.subplots(figsize=(8,12))
-    ax.set_title("ROI--Labeled Array on Data")
+    
+    #fig, ax = plt.subplots(figsize=(8,12))
+    fig, ax = plt.subplots(figsize=(8,8))
+    
+    ax.set_title("%s_ROI--Labeled Array on Data"%uid)
     im,im_label = show_label_array_on_image(ax, avg_imgr, box_maskr, imshow_cmap='viridis',
                             cmap='Paired', alpha=alpha,
                              vmin=0.01, vmax=30. ,  origin="lower")
@@ -749,8 +1306,12 @@ def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, *argv,**kwargs):
         c = '%i'%i
         y_val = int( indz.mean() )
 
-        #print (ind[0], ind[1])
-        if ind[0] < inc_x0 and ind[-1]>inc_x0:             
+        #print (ind[0], ind[-1], inc_x0 )
+        M,m = max( ind ), min( ind )
+        
+        #if ind[0] < inc_x0 and ind[-1]>inc_x0:      
+        if m < inc_x0 and M > inc_x0:            
+ 
             x_val1 = int( (ind[np.where(ind < inc_x0)[0]]).mean() )
             x_val2 = int( (ind[np.where(ind > inc_x0)[0]]).mean() )
             ax.text(x_val1, y_val, c, va='center', ha='center')
@@ -774,15 +1335,6 @@ def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, *argv,**kwargs):
     ax.set_xticks( rticks[::stride] )
     xticks =  rticks_label[::stride]
     ax.set_xticklabels(xticks, fontsize=9)
-    
-    #print (xticks, yticks)
-
-    #caxr = fig.add_axes([0.95, 0.1, 0.03, .8])  #x,y, width, heigth     
-    #cba = fig.colorbar(im_label, cax=caxr    )  
-
-    #fig.colorbar(im_label, shrink =.85)
-    #fig.colorbar(im, shrink =.82)
-    
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.05)
     plt.colorbar(im, cax=cax)
@@ -790,39 +1342,31 @@ def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, *argv,**kwargs):
     ax.set_xlabel(r'$q_r$', fontsize=22)
     ax.set_ylabel(r'$q_z$',fontsize=22)
     
-    save=False    
-    if 'save' in kwargs:
-        save=kwargs['save']    
-    if 'uid' in kwargs:
-        uid=kwargs['uid']
-    else:
-        uid='uid'        
+
+    fp = path + '%s_ROI_on_Image'%(uid) + '.png'
     if save:
-        path=kwargs['path']
-        fp = path + 'uid=%s--ROI-on-image-'%(uid) + '.png'
         fig.savefig( fp, dpi=fig.dpi)         
-    plt.show() 
+
     
     
     
 #plot g2 results
 
-def plot_gisaxs_g2( g2, taus, res_pargs=None, *argv,**kwargs):     
+def plot_gisaxs_g2( g2, taus, res_pargs=None, one_plot = False, *argv,**kwargs):     
     '''Dec 16, 2015, Y.G.@CHX
         plot g2 results, 
        g2: one-time correlation function
        taus: the time delays  
        res_pargs, a dict, can contains
            uid/path/qr_center/qz_center/
+       one_plot: if True, show all qz in one plot
        kwargs: can contains
            vlim: [vmin,vmax]: for the plot limit of y, the y-limit will be [vmin * min(y), vmx*max(y)]
            ylim/xlim: the limit of y and x
        
        e.g.
-       plot_gisaxs_g2( g2b, taus= np.arange( g2b.shape[0]) *timeperframe, q_ring_center = q_ring_center, vlim=[.99, 1.01] )
-           
+       plot_gisaxs_g2( g2b, taus= np.arange( g2b.shape[0]) *timeperframe, q_ring_center = q_ring_center, vlim=[.99, 1.01] )           
       ''' 
-
     
     if res_pargs is not None:
         uid = res_pargs['uid'] 
@@ -852,40 +1396,94 @@ def plot_gisaxs_g2( g2, taus, res_pargs=None, *argv,**kwargs):
             num_qr = len( qr_center)
         else:
             print( 'Please give qr_center') 
-
-
         
+    if not one_plot: 
+        for qz_ind in range(num_qz):
+            fig = plt.figure(figsize=(10, 12))
+            #fig = plt.figure()
+            title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$' 
+            plt.title('uid= %s:--->'%uid + title_qz,fontsize=20, y =1.1) 
+            #print (qz_ind,title_qz)
+            if num_qz!=1:
+                if num_qr!=1:
+                    plt.axis('off')
+            sx = int(round(np.sqrt(num_qr)) )
+            if num_qr%sx == 0: 
+                sy = int(num_qr/sx)
+            else: 
+                sy=int(num_qr/sx+1) 
+            for sn in range(num_qr):
+                ax = fig.add_subplot(sx,sy,sn+1 )
+                ax.set_ylabel("g2") 
+                ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
 
-    for qz_ind in range(num_qz):
-        fig = plt.figure(figsize=(10, 12))
-        #fig = plt.figure()
-        title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$' 
-        plt.title('uid= %s:--->'%uid + title_qz,fontsize=20, y =1.1) 
-        #print (qz_ind,title_qz)
+                title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
+                if num_qz==1:
+
+                    title = 'uid= %s:--->'%uid + title_qz + '__' +  title_qr
+                else:
+                    title = title_qr
+                ax.set_title( title  )
+
+                y=g2[:, sn + qz_ind * num_qr]
+                ax.semilogx(taus, y, '-o', markersize=6)             
+
+                if 'ylim' in kwargs:
+                    ax.set_ylim( kwargs['ylim'])
+                elif 'vlim' in kwargs:
+                    vmin, vmax =kwargs['vlim']
+                    ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])
+                else:
+                    pass
+                if 'xlim' in kwargs:
+                    ax.set_xlim( kwargs['xlim'])
+                    
+            fp = path + 'uid=%s--g2-qz=%s'%(uid,qz_center[qz_ind])  + '.png'        
+            fig.savefig( fp, dpi=fig.dpi)        
+            fig.tight_layout()  
+            #plt.show() 
+                        
+    else:  
+        
+        if num_qz==1:
+            if num_qr==1:
+                fig = plt.figure(figsize=(8,8)) 
+            else:
+                fig = plt.figure(figsize=(10, 12))
+        else:
+            fig = plt.figure(figsize=(10, 12))
+            
+        plt.title('uid= %s'%uid,fontsize=20, y =1.05)  
         if num_qz!=1:
             if num_qr!=1:
                 plt.axis('off')
+        if num_qz==1:
+            if num_qr!=1:
+                plt.axis('off')            
+        
         sx = int(round(np.sqrt(num_qr)) )
         if num_qr%sx == 0: 
             sy = int(num_qr/sx)
         else: 
             sy=int(num_qr/sx+1) 
+            
         for sn in range(num_qr):
             ax = fig.add_subplot(sx,sy,sn+1 )
             ax.set_ylabel("g2") 
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
 
-            title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
-            if num_qz==1:
-
-                title = 'uid= %s:--->'%uid + title_qz + '__' +  title_qr
-            else:
-                title = title_qr
+            #title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
+            title_qr = " Qr= " + '%.5s  '%( qr_center[sn]) + r'$\AA^{-1}$'
+            title = title_qr
             ax.set_title( title  )
-
-
-            y=g2[:, sn + qz_ind * num_qr]
-            ax.semilogx(taus, y, '-o', markersize=6)             
+            
+            for qz_ind in range(num_qz):
+                y=g2[:, sn + qz_ind * num_qr]                
+                if sn ==0:
+                    title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$'
+                    ax.semilogx(taus, y, '-o', markersize=6, label = title_qz )   
+                else:
+                    ax.semilogx(taus, y, '-o', markersize=6, label='' )   
             
             if 'ylim' in kwargs:
                 ax.set_ylim( kwargs['ylim'])
@@ -895,18 +1493,13 @@ def plot_gisaxs_g2( g2, taus, res_pargs=None, *argv,**kwargs):
             else:
                 pass
             if 'xlim' in kwargs:
-                ax.set_xlim( kwargs['xlim'])
-
-        #dt =datetime.now()
-        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
-                
-        #fp = path + 'g2--uid=%s-qz=%s'%(uid,qz_center[qz_ind]) + CurTime + '.png'
-        #fp = path + 'uid=%s--g2-'%(uid)  + '.png'        
-        fp = path + 'uid=%s--g2-qz=%s'%(uid,qz_center[qz_ind])  + '.png'
-        
+                ax.set_xlim( kwargs['xlim'])                
+            if sn ==0:
+                ax.legend(loc='best', fontsize = 6)
+        fp = path + 'uid=%s--g2'%(uid)  + '.png'        
         fig.savefig( fp, dpi=fig.dpi)        
         fig.tight_layout()  
-        plt.show()
+        #plt.show()
 
         
         
@@ -915,7 +1508,7 @@ def plot_gisaxs_g2( g2, taus, res_pargs=None, *argv,**kwargs):
     
 #plot g2 results
 
-def plot_gisaxs_two_g2( g2, taus, g2b, tausb,res_pargs=None, *argv,**kwargs):        
+def plot_gisaxs_two_g2( g2, taus, g2b, tausb,res_pargs=None,one_plot=False, *argv,**kwargs):        
     '''Dec 16, 2015, Y.G.@CHX
         plot g2 results, 
        g2: one-time correlation function from a multi-tau method
@@ -958,47 +1551,104 @@ def plot_gisaxs_two_g2( g2, taus, g2b, tausb,res_pargs=None, *argv,**kwargs):
             qr_center = kwargs[ 'qr_center']
             num_qr = len( qr_center)
         else:
-            print( 'Please give qr_center') 
+            print( 'Please give qr_center')   
+        
+    if not one_plot:        
+        for qz_ind in range(num_qz):            
+            fig = plt.figure(figsize=(12, 10))
+            #fig = plt.figure()
+            title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$' 
+            plt.title('uid= %s:--->'%uid + title_qz,fontsize=20, y =1.1) 
+            #print (qz_ind,title_qz)
+            if num_qz!=1:plt.axis('off')
+            sx = int(round(np.sqrt(num_qr)) )
+            if num_qr%sx == 0: 
+                sy = int(num_qr/sx)
+            else: 
+                sy=int(num_qr/sx+1) 
+            for sn in range(num_qr):
+                ax = fig.add_subplot(sx,sy,sn+1 )
+                ax.set_ylabel("g2") 
+                ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
 
+                title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
+                if num_qz==1:
 
+                    title = 'uid= %s:--->'%uid + title_qz + '__' +  title_qr
+                else:
+                    title = title_qr
+                ax.set_title( title  )
+
+                y=g2b[:, sn + qz_ind * num_qr]
+                ax.semilogx( tausb, y, '--r', markersize=6,label= 'by-two-time')  
+
+                #y2=g2[:, sn]
+                y2=g2[:, sn + qz_ind * num_qr]
+                ax.semilogx(taus, y2, 'o', markersize=6,  label= 'by-multi-tau') 
+
+                if sn + qz_ind * num_qr==0:
+                    ax.legend(loc='best')
+                if 'ylim' in kwargs:
+                    ax.set_ylim( kwargs['ylim'])
+                elif 'vlim' in kwargs:
+                    vmin, vmax =kwargs['vlim']
+                    ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])
+                else:
+                    pass
+                if 'xlim' in kwargs:
+                    ax.set_xlim( kwargs['xlim'])                
+
+            fp = path + 'uid=%s--two-g2-qz=%s'%(uid,qz_center[qz_ind])  + '.png'        
+            fig.savefig( fp, dpi=fig.dpi)         
+            fig.tight_layout()  
+            #plt.show()
         
 
-    for qz_ind in range(num_qz):
-        fig = plt.figure(figsize=(10, 12))
-        #fig = plt.figure()
-        title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$' 
-        plt.title('uid= %s:--->'%uid + title_qz,fontsize=20, y =1.1) 
-        #print (qz_ind,title_qz)
-        if num_qz!=1:plt.axis('off')
+    else: 
+        fig = plt.figure(figsize=(12, 10))
+        plt.title('uid= %s'%uid,fontsize=20, y =1.05)  
+        if num_qz!=1:
+            if num_qr!=1:
+                plt.axis('off')
+        if num_qz==1:
+            if num_qr!=1:
+                plt.axis('off')
+                
         sx = int(round(np.sqrt(num_qr)) )
         if num_qr%sx == 0: 
             sy = int(num_qr/sx)
         else: 
             sy=int(num_qr/sx+1) 
+            
         for sn in range(num_qr):
             ax = fig.add_subplot(sx,sy,sn+1 )
             ax.set_ylabel("g2") 
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
 
-            title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
-            if num_qz==1:
-
-                title = 'uid= %s:--->'%uid + title_qz + '__' +  title_qr
-            else:
-                title = title_qr
+            title_qr = " Qr= " + '%.5s  '%( qr_center[sn]) + r'$\AA^{-1}$'
+            #title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
+            title = title_qr
             ax.set_title( title  )
             
-            y=g2b[:, sn + qz_ind * num_qr]
-            ax.semilogx( tausb, y, '--r', markersize=6,label= 'by-two-time')  
-
-            y2=g2[:, sn]
-            ax.semilogx(taus, y2, 'o', markersize=6,  label= 'by-multi-tau') 
-        
+            for qz_ind in range(num_qz):                
+                
+                y=g2b[:, sn + qz_ind * num_qr]
+                y2=g2[:,  sn + qz_ind * num_qr]  
+                title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$' 
+                label1 = ''
+                label2 =''  
+                
+                if sn ==0:   
+                    label2 = title_qz 
+                    
+                elif sn==1:    
+                    if qz_ind ==0:
+                        label1= 'by-two-time'
+                        label2= 'by-multi-tau'
+                    
+                ax.semilogx(tausb, y, '-r', markersize=6, linewidth=4, label=label1) 
+                ax.semilogx(taus, y2, 'o', markersize=6, label=label2) 
             
-            if sn + qz_ind * num_qr==0:
-                ax.legend()
-        
-        
             if 'ylim' in kwargs:
                 ax.set_ylim( kwargs['ylim'])
             elif 'vlim' in kwargs:
@@ -1007,22 +1657,24 @@ def plot_gisaxs_two_g2( g2, taus, g2b, tausb,res_pargs=None, *argv,**kwargs):
             else:
                 pass
             if 'xlim' in kwargs:
-                ax.set_xlim( kwargs['xlim'])
-
-        #dt =datetime.now()
-        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)        
+                ax.set_xlim( kwargs['xlim'])                
+            if (sn ==0) or (sn==1):
+                ax.legend(loc='best', fontsize = 6)
                 
-        #fp = path + 'g2--uid=%s-qz=%s'%(uid,qz_center[qz_ind]) + CurTime + '.png'
-        #fig.savefig( fp, dpi=fig.dpi)  
-        #fp = path + 'uid=%s--two-g2-'%(uid)  + '.png'
-        fp = path + 'uid=%s--two-g2-qz=%s'%(uid,qz_center[qz_ind])  + '.png'
+        fp = path + 'uid=%s--g2--two-g2-'%uid  + '.png'  
+
         
-        fig.savefig( fp, dpi=fig.dpi) 
-        
+        fig.savefig( fp, dpi=fig.dpi)        
         fig.tight_layout()  
-        plt.show()
+        #plt.show()
+
+        
+        
+        
+        
+                
        
-def save_gisaxs_g2(  g2,res_pargs, time_label=True, *argv,**kwargs):     
+def save_gisaxs_g2(  g2, res_pargs, time_label= False, taus=None, filename=None, *argv,**kwargs):     
     
     '''
     Aug 8, 2016, Y.G.@CHX
@@ -1031,12 +1683,18 @@ def save_gisaxs_g2(  g2,res_pargs, time_label=True, *argv,**kwargs):
            g2: one-time correlation function
            res_pargs: contions taus, q_ring_center values
            path:
-           uid:
-      
+           uid:      
       '''
-    taus = res_pargs[ 'taus']
-    qz_center = res_pargs['qz_center']
-    qr_center = res_pargs['qr_center']
+        
+    if taus is None:
+        taus = res_pargs[ 'taus']
+    
+    try:        
+        qz_center = res_pargs['qz_center']
+        qr_center = res_pargs['qr_center']
+    except:
+        roi_label= res_pargs['roi_label']
+        
     path = res_pargs['path']
     uid = res_pargs['uid']
     
@@ -1044,20 +1702,26 @@ def save_gisaxs_g2(  g2,res_pargs, time_label=True, *argv,**kwargs):
     columns=[]
     columns.append('tau')
     
-    for qz in qz_center:
-        for qr in qr_center:
-            columns.append( [str(qz),str(qr)] )
+    try:
+        for qz in qz_center:
+            for qr in qr_center:
+                columns.append( [str(qz),str(qr)] )
+    except:
+        columns.append(  [ v for (k,v) in roi_label.items()]  ) 
             
     df.columns = columns   
     
-    if time_label:
-        dt =datetime.now()
-        CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)  
-        filename = os.path.join(path, 'g2-%s-%s.csv' %(uid,CurTime))
-    else:
-        filename = os.path.join(path, 'uid=%s--g2.csv' % (uid))
+    if filename is None: 
+        if time_label:
+            dt =datetime.now()
+            CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)  
+            filename = os.path.join(path, 'g2-%s-%s.csv' %(uid,CurTime))
+        else:
+            filename = os.path.join(path, 'uid=%s--g2.csv' % (uid))
+    else:  
+        filename = os.path.join(path, filename)    
     df.to_csv(filename)
-    print( 'The g2 of uid= %s is saved with filename as %s'%(uid, filename))
+    print( 'The correlation function of uid= %s is saved with filename as %s'%(uid, filename))
 
     
     
@@ -1069,7 +1733,7 @@ def simple_exponential(x, beta, relaxation_rate,  baseline=1):
     return beta * np.exp(-2 * relaxation_rate * x) + baseline
 
 
-def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs):     
+def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', one_plot=False, *argv,**kwargs):     
     '''
     July 20,2016, Y.G.@CHX
     Fit one-time correlation function
@@ -1185,54 +1849,146 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
         pars['%s'%v].vary = False        
         #print ( pars['%s'%v], pars['%s'%v].vary )
     result = {}
-    for qz_ind in range(num_qz):
-        fig = plt.figure(figsize=(10, 12))
-        #fig = plt.figure()
-        title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$' 
-        plt.title('uid= %s:--->'%uid + title_qz,fontsize=20, y =1.1) 
-        #print (qz_ind,title_qz)
-        if num_qz!=1:plt.axis('off')
+    
+    
+    if not one_plot: 
+        for qz_ind in range(num_qz):
+            #fig = plt.figure(figsize=(10, 12))
+            fig = plt.figure(figsize=(12, 10))
+            #fig = plt.figure()
+            title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$' 
+            plt.title('uid= %s:--->'%uid + title_qz,fontsize=20, y =1.1) 
+            #print (qz_ind,title_qz)
+            if num_qz!=1:plt.axis('off')
+            sx = int(round(np.sqrt(num_qr)) )
+            if num_qr%sx == 0: 
+                sy = int(num_qr/sx)
+            else: 
+                sy=int(num_qr/sx+1) 
+            for sn in range(num_qr):
+
+                ax = fig.add_subplot(sx,sy,sn+1 )
+                ax.set_ylabel("g2") 
+                ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
+
+                title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
+                if num_qz==1:
+                    title = 'uid= %s:--->'%uid + title_qz + '__' +  title_qr
+                else:
+                    title = title_qr
+                ax.set_title( title  )
+
+                i = sn + qz_ind * num_qr            
+                y=g2[1:, i]
+
+                result1 = mod.fit(y, pars, x = taus[1:] )
+
+                #print ( result1.best_values)
+                rate[i] = result1.best_values['relaxation_rate']
+                #rate[i] = 1e-16
+                beta[i] = result1.best_values['beta'] 
+
+                #baseline[i] = 1.0
+                baseline[i] =  result1.best_values['baseline'] 
+
+                if function=='simple_exponential' or function=='simple':
+                    alpha[i] =1.0 
+                elif function=='stretched_exponential' or function=='stretched':
+                    alpha[i] = result1.best_values['alpha']
+
+                ax.semilogx(taus[1:], y, 'bo')
+                ax.semilogx(taus[1:], result1.best_fit, '-r')
+
+
+                if 'ylim' in kwargs:
+                    ax.set_ylim( kwargs['ylim'])
+                elif 'vlim' in kwargs:
+                    vmin, vmax =kwargs['vlim']
+                    ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])
+                else:
+                    pass
+                if 'xlim' in kwargs:
+                    ax.set_xlim( kwargs['xlim'])                
+
+                txts = r'$\tau$' + r'$ = %.3f$'%(1/rate[i]) +  r'$ s$'
+                ax.text(x =0.02, y=.55 +.3, s=txts, fontsize=14, transform=ax.transAxes)     
+                txts = r'$\alpha$' + r'$ = %.3f$'%(alpha[i])  
+                #txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
+                ax.text(x =0.02, y=.45+.3, s=txts, fontsize=14, transform=ax.transAxes)  
+                txts = r'$baseline$' + r'$ = %.3f$'%( baseline[i]) 
+                ax.text(x =0.02, y=.35 + .3, s=txts, fontsize=14, transform=ax.transAxes)   
+                
+
+            result = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )
+            fp = path + 'uid=%s--g2-qz=%s--fit'%(uid,qz_center[qz_ind])  + '.png'
+            fig.savefig( fp, dpi=fig.dpi)
+            fig.tight_layout()  
+            #plt.show()
+            
+            
+    else:
+        #fig = plt.figure(figsize=(10, 12))
+        #fig = plt.figure(figsize=(12, 10))
+        if num_qz==1:
+            if num_qr==1:
+                fig = plt.figure(figsize=(8,8)) 
+            else:
+                fig = plt.figure(figsize=(10, 12))
+        else:
+            fig = plt.figure(figsize=(10, 12))
+            
+        plt.title('uid= %s'%uid,fontsize=20, y =1.05)  
+        if num_qz!=1:
+            if num_qr!=1:
+                plt.axis('off')
+
         sx = int(round(np.sqrt(num_qr)) )
         if num_qr%sx == 0: 
             sy = int(num_qr/sx)
         else: 
             sy=int(num_qr/sx+1) 
+
         for sn in range(num_qr):
-            
             ax = fig.add_subplot(sx,sy,sn+1 )
             ax.set_ylabel("g2") 
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
 
-            title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
-            if num_qz==1:
-
-                title = 'uid= %s:--->'%uid + title_qz + '__' +  title_qr
-            else:
-                title = title_qr
+            #title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
+            title_qr = " Qr= " + '%.5s  '%( qr_center[sn]) + r'$\AA^{-1}$'
+            title = title_qr
             ax.set_title( title  )
 
-            i = sn + qz_ind * num_qr            
-            y=g2[1:, i]
+            for qz_ind in range(num_qz):
+                i = sn + qz_ind * num_qr        
+                y=g2[1:, i]    
+                result1 = mod.fit(y, pars, x = taus[1:] )
+                #print ( result1.best_values)
+                rate[i] = result1.best_values['relaxation_rate']
+                #rate[i] = 1e-16
+                beta[i] = result1.best_values['beta'] 
+                #baseline[i] = 1.0
+                baseline[i] =  result1.best_values['baseline'] 
 
-            result1 = mod.fit(y, pars, x = taus[1:] )
+                if function=='simple_exponential' or function=='simple':
+                    alpha[i] =1.0 
+                elif function=='stretched_exponential' or function=='stretched':
+                    alpha[i] = result1.best_values['alpha']
 
-            #print ( result1.best_values)
-            rate[i] = result1.best_values['relaxation_rate']
-            #rate[i] = 1e-16
-            beta[i] = result1.best_values['beta'] 
-        
-            #baseline[i] = 1.0
-            baseline[i] =  result1.best_values['baseline'] 
+                if sn ==0:
+                    title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$'
+                    ax.semilogx(taus[1:], y, 'o', markersize=6, label = title_qz )                     
+                else:
+                    ax.semilogx(taus[1:], y, 'o', markersize=6, label='' )  
+                    
+                ax.semilogx(taus[1:], result1.best_fit, '-r')
+                
+                #print(  result1.best_values['relaxation_rate'],  result1.best_values['beta'] )
+                
+                txts = r'$q_z$' + r'$_%s$'%qz_ind + r'$\tau$' + r'$ = %.3f$'%(1/rate[i]) +  r'$ s$'
+                ax.text(x =0.02, y=.55 +.3 - 0.1*qz_ind, s=txts, fontsize=14, transform=ax.transAxes)  
 
-            if function=='simple_exponential' or function=='simple':
-                alpha[i] =1.0 
-            elif function=='stretched_exponential' or function=='stretched':
-                alpha[i] = result1.best_values['alpha']
-
-            ax.semilogx(taus[1:], y, 'ro')
-            ax.semilogx(taus[1:], result1.best_fit, '-b')
-             
-            
+                
+                
             if 'ylim' in kwargs:
                 ax.set_ylim( kwargs['ylim'])
             elif 'vlim' in kwargs:
@@ -1242,22 +1998,16 @@ def fit_gisaxs_g2( g2, res_pargs, function='simple_exponential', *argv,**kwargs)
                 pass
             if 'xlim' in kwargs:
                 ax.set_xlim( kwargs['xlim'])                
-
-            txts = r'$\tau$' + r'$ = %.3f$'%(1/rate[i]) +  r'$ s$'
-            
-            ax.text(x =0.02, y=.55 +.3, s=txts, fontsize=14, transform=ax.transAxes)     
-            txts = r'$\alpha$' + r'$ = %.3f$'%(alpha[i])  
-            #txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
-            ax.text(x =0.02, y=.45+.3, s=txts, fontsize=14, transform=ax.transAxes)  
-
-            txts = r'$baseline$' + r'$ = %.3f$'%( baseline[i]) 
-            ax.text(x =0.02, y=.35 + .3, s=txts, fontsize=14, transform=ax.transAxes)        
-     
-        result[qz_ind] = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )
-        fp = path + 'uid=%s--g2-qz=%s--fit'%(uid,qz_center[qz_ind])  + '.png'
-        fig.savefig( fp, dpi=fig.dpi)
+            if sn ==0:
+                ax.legend(loc='best', fontsize = 6)
+                
+        result = dict( beta=beta, rate=rate, alpha=alpha, baseline=baseline )        
+        fp = path + 'uid=%s--g2--fit-'%(uid)  + '.png'        
+        fig.savefig( fp, dpi=fig.dpi)        
         fig.tight_layout()  
-        plt.show()
+        #plt.show()
+
+        
     
         #dt =datetime.now()
         #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute) 
@@ -1318,15 +2068,406 @@ def get_each_box_mean_intensity( data_series, box_mask, sampling, timeperframe, 
         fp = path + 'uid=%s--Mean-intensity-of-each-ROI-'%(uid)  + '.png'
         fig.savefig( fp, dpi=fig.dpi) 
         
-        plt.show()
+        #plt.show()
     return times, mean_int_sets
 
 
 
+def power_func(x, D0, power=2):
+    return D0 * x**power
+
+
+
+def fit_qr_qz_rate( qr, qz, rate, plot_=True,  *argv,**kwargs): 
+    '''
+    Option:
+        if power_variable = False, power =2 to fit q^2~rate, 
+                Otherwise, power is variable.
+    '''
+    power_variable=False
+    x=qr            
+    if 'fit_range' in kwargs.keys():
+        fit_range = kwargs['fit_range']         
+    else:    
+        fit_range= None
+
+    if 'uid' in kwargs.keys():
+        uid = kwargs['uid'] 
+    else:
+        uid = 'uid' 
+
+    if 'path' in kwargs.keys():
+        path = kwargs['path'] 
+    else:
+        path = ''    
+
+    if fit_range is not None:
+        y=rate[fit_range[0]:fit_range[1]]
+        x=q[fit_range[0]:fit_range[1]] 
+        
+    mod = Model( power_func )
+    #mod.set_param_hint( 'power',   min=0.5, max= 10 )
+    #mod.set_param_hint( 'D0',   min=0 )
+    pars  = mod.make_params( power = 2, D0=1*10^(-5) )
+    if power_variable:
+        pars['power'].vary = True
+    else:
+        pars['power'].vary = False
+        
+
+    Nqr = len( qr)
+    Nqz = len( qz)
+    D0= np.zeros( Nqz )
+    power= 2 #np.zeros( Nqz )
+
+    res= []        
+    for i, qz_ in enumerate(qz): 
+        try:
+            y = np.array( rate['rate'][ i*Nqr  : (i+1)*Nqr ]    )
+        except:
+            y = np.array( rate[ i*Nqr  : (i+1)*Nqr ] )  
+            
+        #print( len(x), len(y) )    
+        _result = mod.fit(y, pars, x = x )
+        res.append(  _result )
+        D0[i]  = _result.best_values['D0']
+        #power[i] = _result.best_values['power']  
+        print ('The fitted diffusion coefficient D0 is:  %.3e   A^2S-1'%D0[i])
+        
+    if plot_: 
+        fig,ax = plt.subplots()
+        plt.title('Q%s-Rate--uid= %s_Fit'%(power,uid),fontsize=20, y =1.06)
+        for i, qz_ in enumerate(qz): 
+            ax.plot(x**power,  y, marker = 'o',
+                    label=r'$q_z=%.5f$'%qz_)
+            ax.plot(x**power, res[i].best_fit,  '-r')  
+            txts = r'$D0: %.3e$'%D0[i] + r' $A^2$' + r'$s^{-1}$'
+            dy=0.1
+            ax.text(x =0.15, y=.65 -dy *i, s=txts, fontsize=14, transform=ax.transAxes) 
+            legend = ax.legend(loc='best')
+            
+            
+        ax.set_ylabel('Relaxation rate 'r'$\gamma$'"($s^{-1}$)")
+        ax.set_xlabel("$q^%s$"r'($\AA^{-2}$)'%power)
+
+        dt =datetime.now()
+        CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)     
+        #fp = path + 'Q%s-Rate--uid=%s'%(power,uid) + CurTime + '--Fit.png'
+        fp = path + 'uid=%s--Q-Rate'%(uid) + '--fit-.png'
+        fig.savefig( fp, dpi=fig.dpi)    
+
+        fig.tight_layout() 
+        #plt.show()
+
+    return D0
 
 
 
 
+#plot g4 results
+
+def plot_gisaxs_g4( g4, taus, res_pargs=None, one_plot=False, *argv,**kwargs):     
+    '''Dec 16, 2015, Y.G.@CHX
+        plot g4 results, 
+       g4: four-time correlation function
+       taus: the time delays  
+       res_pargs, a dict, can contains
+           uid/path/qr_center/qz_center/
+       kwargs: can contains
+           vlim: [vmin,vmax]: for the plot limit of y, the y-limit will be [vmin * min(y), vmx*max(y)]
+           ylim/xlim: the limit of y and x
+       
+       e.g.
+       plot_gisaxs_g4( g4, taus= np.arange( g2b.shape[0]) *timeperframe, q_ring_center = q_ring_center, vlim=[.99, 1.01] )
+           
+      ''' 
+
+    
+    if res_pargs is not None:
+        uid = res_pargs['uid'] 
+        path = res_pargs['path'] 
+        qz_center = res_pargs[ 'qz_center']
+        num_qz = len( qz_center)
+        qr_center = res_pargs[ 'qr_center']
+        num_qr = len( qr_center)
+    
+    else:
+    
+        if 'uid' in kwargs.keys():
+            uid = kwargs['uid'] 
+        else:
+            uid = 'uid'
+        if 'path' in kwargs.keys():
+            path = kwargs['path'] 
+        else:
+            path = ''
+        if 'qz_center' in kwargs.keys():
+            qz_center = kwargs[ 'qz_center']
+            num_qz = len( qz_center)
+        else:
+            print( 'Please give qz_center')
+        if 'qr_center' in kwargs.keys():
+            qr_center = kwargs[ 'qr_center']
+            num_qr = len( qr_center)
+        else:
+            print( 'Please give qr_center') 
+            
+    if not one_plot: 
+        for qz_ind in range(num_qz):
+            fig = plt.figure(figsize=(12, 10))
+            #fig = plt.figure()
+            title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$' 
+            plt.title('uid= %s:--->'%uid + title_qz,fontsize=20, y =1.1) 
+            #print (qz_ind,title_qz)
+            if num_qz!=1:
+                if num_qr!=1:
+                    plt.axis('off')
+            sx = int(round(np.sqrt(num_qr)) )
+            if num_qr%sx == 0: 
+                sy = int(num_qr/sx)
+            else: 
+                sy=int(num_qr/sx+1) 
+            for sn in range(num_qr):
+                ax = fig.add_subplot(sx,sy,sn+1 )
+                ax.set_ylabel("g4") 
+                ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
+
+                title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
+                if num_qz==1:
+
+                    title = 'uid= %s:--->'%uid + title_qz + '__' +  title_qr
+                else:
+                    title = title_qr
+                ax.set_title( title  )
+
+                y=g4[:, sn + qz_ind * num_qr]
+                ax.semilogx(taus, y, '-o', markersize=6)             
+
+                if 'ylim' in kwargs:
+                    ax.set_ylim( kwargs['ylim'])
+                elif 'vlim' in kwargs:
+                    vmin, vmax =kwargs['vlim']
+                    ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])
+                else:
+                    pass
+                if 'xlim' in kwargs:
+                    ax.set_xlim( kwargs['xlim'])
+                    
+            fp = path + 'uid=%s--g4-qz=%s'%(uid,qz_center[qz_ind])  + '.png'        
+            fig.savefig( fp, dpi=fig.dpi)        
+            fig.tight_layout()  
+            #plt.show() 
+                        
+    else:  
+        fig = plt.figure(figsize=(12, 10))
+        plt.title('uid= %s'%uid,fontsize=20, y =1.05)  
+        if num_qz!=1:
+            if num_qr!=1:
+                plt.axis('off')
+        
+        sx = int(round(np.sqrt(num_qr)) )
+        if num_qr%sx == 0: 
+            sy = int(num_qr/sx)
+        else: 
+            sy=int(num_qr/sx+1) 
+            
+        for sn in range(num_qr):
+            ax = fig.add_subplot(sx,sy,sn+1 )
+            ax.set_ylabel("g4") 
+            ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
+
+            title_qr = " Qr= " + '%.5f  '%( qr_center[sn]) + r'$\AA^{-1}$'
+            title = title_qr
+            ax.set_title( title  )
+            
+            for qz_ind in range(num_qz):
+                y=g4[:, sn + qz_ind * num_qr]                
+                if sn ==0:
+                    title_qz = ' Qz= %.5f  '%( qz_center[qz_ind]) + r'$\AA^{-1}$'
+                    ax.semilogx(taus, y, '-o', markersize=6, label = title_qz )   
+                else:
+                    ax.semilogx(taus, y, '-o', markersize=6, label='' )   
+            
+            if 'ylim' in kwargs:
+                ax.set_ylim( kwargs['ylim'])
+            elif 'vlim' in kwargs:
+                vmin, vmax =kwargs['vlim']
+                ax.set_ylim([min(y)*vmin, max(y[1:])*vmax ])
+            else:
+                pass
+            if 'xlim' in kwargs:
+                ax.set_xlim( kwargs['xlim'])                
+            if sn ==0:
+                ax.legend(loc='best', fontsize = 6)
+        fp = path + 'uid=%s--g4-'%(uid)  + '.png'        
+        fig.savefig( fp, dpi=fig.dpi)        
+        fig.tight_layout()  
+        #plt.show()
 
 
 
+
+def multi_uids_gisaxs_xpcs_analysis(   uids, md, run_num=1, sub_num=None,good_start=10, good_end= None, 
+                                    force_compress=False,
+                                    fit = True, compress=True, para_run=False  ):  
+    ''''Sep 16, 2016, YG@CHX-NSLS2
+    Do SAXS-XPCS analysis for multi uid data
+    uids: a list of uids to be analyzed    
+    md: metadata, should at least include
+        mask: array, mask data
+        data_dir: the path to save data, the result will be saved in data_dir/uid/...
+        dpix:
+        Ldet:
+        lambda:
+        timeperframe:
+        center
+    run_num: the run number
+    sub_num: the number in each sub-run
+    fit: if fit, do fit for g2 and show/save all fit plots
+    compress: apply a compress algorithm
+    
+    Save g2/metadata/g2-fit plot/g2 q-rate plot/ of each uid in data_dir/uid/...
+    return:
+    g2s: a dictionary, {run_num: sub_num: g2_of_each_uid}   
+    taus,
+    use_uids: return the valid uids
+    '''
+    
+    
+    g2s = {} # g2s[run_number][sub_seq]  =  g2 of each uid
+    lag_steps = [0]    
+    useful_uids = {}
+    if sub_num is None:
+        sub_num = len( uids )//run_num    
+
+    mask = md['mask']  
+    maskr = mask[::-1,:]
+    data_dir = md['data_dir']
+    box_maskr = md['ring_mask']
+    qz_center= md['qz_center']
+    qr_center= md['qr_center']
+    
+    
+    for run_seq in range(run_num):
+        g2s[ run_seq + 1] = {}    
+        useful_uids[ run_seq + 1] = {}  
+        i=0    
+        for sub_seq in range(  0, sub_num   ):        
+            uid = uids[ sub_seq + run_seq * sub_num  ]        
+            print( 'The %i--th uid to be analyzed is : %s'%(i, uid) )
+            try:
+                detector = get_detector( db[uid ] )
+                imgs = load_data( uid, detector  )  
+            except:
+                print( 'The %i--th uid: %s can not load data'%(i, uid) )
+                imgs=0
+
+            data_dir_ = os.path.join( data_dir, '%s/'%uid)
+            os.makedirs(data_dir_, exist_ok=True)            
+            i +=1            
+            if imgs !=0:            
+                
+                Nimg = len(imgs)
+                md_ = imgs.md  
+                useful_uids[ run_seq + 1][i] = uid
+                
+                imgsr = reverse_updown( imgs )
+                imgsra = apply_mask( imgsr, maskr )
+                
+                if compress:
+                    filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%uid 
+                    maskr, avg_imgr, imgsum, bad_frame_list = compress_eigerdata(imgsr, maskr, md_, filename, 
+                                force_compress= force_compress, bad_pixel_threshold= 5e9,nobytes=4,
+                                            para_compress=True, num_sub= 100)                   
+                                        
+                    try:
+                        md['Measurement']= db[uid]['start']['Measurement']
+                        #md['sample']=db[uid]['start']['sample'] 
+                        #print( md['Measurement'] )
+                    except:
+                        md['Measurement']= 'Measurement'
+                        md['sample']='sample'                    
+
+                    dpix = md['x_pixel_size'] * 1000.  #in mm, eiger 4m is 0.075 mm
+                    lambda_ =md['incident_wavelength']    # wavelegth of the X-rays in Angstroms
+                    Ldet =  md['detector_distance']
+                    # detector to sample distance (mm), currently, *1000 for saxs, *1 for gisaxs
+                    exposuretime= md['count_time']
+                    acquisition_period = md['frame_time']
+                    timeperframe = acquisition_period#for g2
+                    #timeperframe = exposuretime#for visiblitly
+                    #timeperframe = 2  ## manual overwrite!!!! we apparently writing the wrong metadata....
+                    setup_pargs=dict(uid=uid, dpix= dpix, Ldet=Ldet, lambda_= lambda_, 
+                            timeperframe=timeperframe,  path= data_dir)
+                    md['avg_img'] = avg_imgr                  
+
+                    min_inten = 0
+                    #good_start = np.where( np.array(imgsum) > min_inten )[0][0]
+                    #good_start = 0
+                    #good_start = max(good_start, np.where( np.array(imgsum) > min_inten )[0][0] )   
+                    
+                    good_start = good_start
+                    if good_end is None:
+                        good_end_ = len(imgs)
+                    else:
+                        good_end_= good_end
+                    FD = Multifile(filename, good_start, good_end_ ) 
+                    good_start = max(good_start, np.where( np.array(imgsum) > min_inten )[0][0] ) 
+                    print ('With compression, the good_start frame number is: %s '%good_start)
+                    print ('The good_end frame number is: %s '%good_end_)                   
+                    
+                    if not para_run:
+                        g2, lag_steps_  =cal_g2c( FD,  box_maskr, bad_frame_list,good_start, num_buf = 8, 
+                                imgsum= None, norm= None )   
+                    else:
+                        g2, lag_steps_  =cal_g2p( FD,  box_maskr, bad_frame_list,good_start, num_buf = 8, 
+                                imgsum= None, norm= None ) 
+
+                    if len( lag_steps) < len(lag_steps_):
+                        lag_steps = lag_steps_
+
+                else:
+                    sampling = 1000  #sampling should be one  
+
+                    #good_start = check_shutter_open( imgsra,  min_inten=5, time_edge = [0,10], plot_ = False )
+                    good_start = 0
+                    good_series = apply_mask( imgsar[good_start:  ], maskr )
+                    imgsum, bad_frame_list = get_each_frame_intensity(good_series ,sampling = sampling, 
+                                        bad_pixel_threshold=1.2e8,  plot_ = False, uid=uid)
+                    bad_image_process = False
+
+                    if  len(bad_frame_list):
+                        bad_image_process = True
+                    print( bad_image_process  )
+
+                    g2, lag_steps_  =cal_g2( good_series,  box_maskr, bad_image_process,
+                                       bad_frame_list, good_start, num_buf = 8 )
+                    if len( lag_steps) < len(lag_steps_):
+                        lag_steps = lag_step_
+
+                taus_ = lag_steps_ * timeperframe
+                taus = lag_steps * timeperframe
+                res_pargs = dict(taus=taus_, qz_center=qz_center, qr_center=qr_center,  path=data_dir_, uid=uid )
+                save_gisaxs_g2(  g2, res_pargs )
+                #plot_gisaxs_g2( g2, taus,  vlim=[0.95, 1.1], res_pargs=res_pargs, one_plot=True)  
+                
+                if fit:
+                    fit_result = fit_gisaxs_g2( g2, res_pargs, function = 'stretched',  vlim=[0.95, 1.1], 
+                fit_variables={'baseline':True, 'beta':True, 'alpha':False,'relaxation_rate':True},
+                guess_values={'baseline':1.229,'beta':0.05,'alpha':1.0,'relaxation_rate':0.01},
+                              one_plot= True)
+                    
+                    fit_qr_qz_rate(  qr_center, qz_center, fit_result, power_variable= False,
+           uid=uid, path= data_dir_ )
+                        
+                psave_obj(  md, data_dir_ + 'uid=%s-md'%uid ) #save the setup parameters
+
+                g2s[run_seq + 1][i] = g2
+                
+                print ('*'*40)
+                print()
+
+        
+    return g2s, taus, useful_uids
+    
+    

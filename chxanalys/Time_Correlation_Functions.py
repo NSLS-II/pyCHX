@@ -753,7 +753,7 @@ def show_g12q_aged_g2( g12q, g2_aged,slice_width=10, timeperframe=1,vmin= 1, vma
         ax1.set_ylabel("g2")
         ax1.set_xscale('log')
     ax1.legend(fontsize='small', loc='best' ) 
-    plt.show()
+    #plt.show()
     
 
 
@@ -888,7 +888,7 @@ def show_g12q_taus( g12q, taus,  slice_width=10, timeperframe=1,vmin= 1, vmax= 1
         ax1.set_ylabel("g2")
         ax1.set_xscale('log')
     ax1.legend(fontsize='small', loc='best' ) 
-    plt.show()
+    #plt.show()
     
  
 
@@ -940,7 +940,7 @@ def histogram_taus(taus, hisbin=20, plot=True,timeperframe=1):
             ax1.set_ylabel(r"histgram of g2 @ tau",fontsize=15)
             #ax1.set_xscale('log')
         ax1.legend(fontsize='large', loc='best' ) 
-        plt.show()
+        #plt.show()
         
     return his
         
@@ -1239,7 +1239,7 @@ def show_C12(C12, qz_ind=0, qr_ind=0, N1=None,N2=None, vmin=None, vmax=None, tit
     ax.set_ylabel( r'$t_2$ $(s)$', fontsize = 18)
     fig.colorbar(im)
     
-    plt.show()    
+    #plt.show()    
 
 
 def show_C12(C12, q_ind=0,  *argv,**kwargs):  
@@ -1313,7 +1313,7 @@ def show_C12(C12, q_ind=0,  *argv,**kwargs):
     ax.set_xlabel( r'$t_1$ $(s)$', fontsize = 18)
     ax.set_ylabel( r'$t_2$ $(s)$', fontsize = 18)
     fig.colorbar(im)
-    plt.show()   
+    #plt.show()   
 
 
 
@@ -1378,7 +1378,7 @@ def plot_saxs_g2( g2, taus,  *argv,**kwargs):
         if 'xlim' in kwargs:
             ax.set_xlim( kwargs['xlim'])
  
-    plt.show()
+    #plt.show()
     fig.tight_layout() 
     
     

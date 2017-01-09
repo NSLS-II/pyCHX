@@ -9,7 +9,10 @@ from skbeam.core.utils import multi_tau_lags
 from skbeam.core.roi import extract_label_indices
 
 from chxanalys.chx_libs import tqdm
-from chxanalys.chx_correlationc import (  get_pixelist_interp_iq)
+from chxanalys.chx_correlationc import (  get_pixelist_interp_iq, _validate_and_transform_inputs,
+                 _one_time_process as _one_time_processp,                       )
+from chxanalys.chx_compress import ( run_dill_encoded,apply_async, map_async,pass_FD, go_through_FD  ) 
+
 
 from multiprocessing import Pool
 import dill
@@ -17,104 +20,13 @@ from collections import namedtuple
 
 import numpy as np
 import skbeam.core.roi as roi
-
+import sys
 
 import logging
 logger = logging.getLogger(__name__)
 
 
 
-
-def pass_FD(FD,n):
-    #FD.rdframe(n)
-    FD.seekimg(n)
-    
-def run_dill_encoded(what):
-    fun, args = dill.loads(what)
-    return fun(*args)
-
-def apply_async(pool, fun, args):
-    return pool.apply_async(run_dill_encoded, (dill.dumps((fun, args)),))
-
-
-def _validate_and_transform_inputs(num_bufs, num_levels, labels):
-    """
-    This is a helper function to validate inputs and create initial state
-    inputs for both one time and two time correlation
-    Parameters
-    ----------
-    num_bufs : int
-    num_levels : int
-    labels : array
-        labeled array of the same shape as the image stack;
-        each ROI is represented by a distinct label (i.e., integer)
-    Returns
-    -------
-    label_array : array
-        labels of the required region of interests(ROI's)
-    pixel_list : array
-        1D array of indices into the raveled image for all
-        foreground pixels (labeled nonzero)
-        e.g., [5, 6, 7, 8, 14, 15, 21, 22]
-    num_rois : int
-        number of region of interests (ROI)
-    num_pixels : array
-        number of pixels in each ROI
-    lag_steps : array
-        the times at which the correlation was computed
-    buf : array
-        image data for correlation
-    img_per_level : array
-        to track how many images processed in each level
-    track_level : array
-        to track processing each level
-    cur : array
-        to increment the buffer
-    norm : dict
-        to track bad images
-    lev_len : array
-        length of each levels
-    """
-    if num_bufs % 2 != 0:
-        raise ValueError("There must be an even number of `num_bufs`. You "
-                         "provided %s" % num_bufs)
-    label_array, pixel_list = extract_label_indices(labels)
-
-    # map the indices onto a sequential list of integers starting at 1
-    label_mapping = {label: n+1
-                     for n, label in enumerate(np.unique(label_array))}
-    # remap the label array to go from 1 -> max(_labels)
-    for label, n in label_mapping.items():
-        label_array[label_array == label] = n
-
-    # number of ROI's
-    num_rois = len(label_mapping)
-
-    # stash the number of pixels in the mask
-    num_pixels = np.bincount(label_array)[1:]
-
-    # Convert from num_levels, num_bufs to lag frames.
-    tot_channels, lag_steps, dict_lag = multi_tau_lags(num_levels, num_bufs)
-
-    # these norm and lev_len will help to find the one time correlation
-    # normalization norm will updated when there is a bad image
-    norm = {key: [0] * len(dict_lag[key]) for key in (dict_lag.keys())}
-    lev_len = np.array([len(dict_lag[i]) for i in (dict_lag.keys())])
-
-    # Ring buffer, a buffer with periodic boundary conditions.
-    # Images must be keep for up to maximum delay in buf.
-    buf = np.zeros((num_levels, num_bufs, len(pixel_list)),
-                   dtype=np.float64)
-    # to track how many images processed in each level
-    img_per_level = np.zeros(num_levels, dtype=np.int64)
-    # to track which levels have already been processed
-    track_level = np.zeros(num_levels, dtype=bool)
-    # to increment buffer
-    cur = np.ones(num_levels, dtype=np.int64)
-
-    return (label_array, pixel_list, num_rois, num_pixels,
-            lag_steps, buf, img_per_level, track_level, cur,
-            norm, lev_len)
 
 
 class _internal_statep():
@@ -169,85 +81,6 @@ class _internal_statep():
         
 
 
-def _one_time_processp(buf, G, past_intensity_norm, future_intensity_norm,
-                      label_array, num_bufs, num_pixels, img_per_level,
-                      level, buf_no, norm, lev_len):
-    """Reference implementation of the inner loop of multi-tau one time
-    correlation
-    This helper function calculates G, past_intensity_norm and
-    future_intensity_norm at each level, symmetric normalization is used.
-    .. warning :: This modifies inputs in place.
-    Parameters
-    ----------
-    buf : array
-        image data array to use for correlation
-    G : array
-        matrix of auto-correlation function without normalizations
-    past_intensity_norm : array
-        matrix of past intensity normalizations
-    future_intensity_norm : array
-        matrix of future intensity normalizations
-    label_array : array
-        labeled array where all nonzero values are ROIs
-    num_bufs : int, even
-        number of buffers(channels)
-    num_pixels : array
-        number of pixels in certain ROI's
-        ROI's, dimensions are : [number of ROI's]X1
-    img_per_level : array
-        to track how many images processed in each level
-    level : int
-        the current multi-tau level
-    buf_no : int
-        the current buffer number
-    norm : dict
-        to track bad images
-    lev_len : array
-        length of each level
-    Notes
-    -----
-    .. math::
-        G = <I(\tau)I(\tau + delay)>
-    .. math::
-        past_intensity_norm = <I(\tau)>
-    .. math::
-        future_intensity_norm = <I(\tau + delay)>
-    """
-    img_per_level[level] += 1
-    # in multi-tau correlation, the subsequent levels have half as many
-    # buffers as the first
-    i_min = num_bufs // 2 if level else 0
-    #maxqind=G.shape[1]
-    for i in range(i_min, min(img_per_level[level], num_bufs)):
-        # compute the index into the autocorrelation matrix
-        t_index = int(level * num_bufs / 2) + i
-        delay_no = (buf_no - i) % num_bufs
-
-        # get the images for correlating
-        past_img = buf[level, delay_no]
-        future_img = buf[level, buf_no]
-
-        # find the normalization that can work both for bad_images
-        #  and good_images
-        ind = int(t_index - lev_len[:level].sum())
-        normalize = img_per_level[level] - i - norm[level+1][ind]
-
-        # take out the past_ing and future_img created using bad images
-        # (bad images are converted to np.nan array)
-        if np.isnan(past_img).any() or np.isnan(future_img).any():
-            norm[level + 1][ind] += 1
-        else:
-            for w, arr in zip([past_img*future_img, past_img, future_img],
-                              [G, past_intensity_norm, future_intensity_norm]):
-                binned = np.bincount(label_array, weights=w)[1:]
-                #nonz = np.where(w)[0]
-                #binned = np.bincount(label_array[nonz], weights=w[nonz], minlength=maxqind+1 )[1:] 
-                
-                arr[t_index] += ((binned / num_pixels -
-                                  arr[t_index]) / normalize)
-    return None  # modifies arguments in place!
-
-
 def lazy_one_timep(FD, num_levels, num_bufs, labels,
             internal_state=None, bad_frame_list=None, imgsum=None, 
                   norm = None ):
@@ -279,7 +112,9 @@ def lazy_one_timep(FD, num_levels, num_bufs, labels,
             
             if imgsum is None:
                 if norm is None:
+                    #print ('here')
                     fra_pix[ pxlist] = v[w] 
+                    
                 else:                     
                     fra_pix[ pxlist] = v[w]/ norm[pxlist]   #-1.0    
                     
@@ -357,71 +192,168 @@ def lazy_one_timep(FD, num_levels, num_bufs, labels,
 
     g2 = (s.G[:g_max] / (s.past_intensity[:g_max] *
                          s.future_intensity[:g_max]))
+    
+    #print (FD)
 
+    #sys.stdout.write('#')
+    #del FD
+    #sys.stdout.flush()
     #print (g2)
     #return results(g2, s.lag_steps[:g_max], s)
     return g2, s.lag_steps[:g_max] #, s
    
-
-    
 
 def cal_g2p( FD, ring_mask, bad_frame_list=None, 
             good_start=0, num_buf = 8, num_lev = None, imgsum=None, norm=None ):
     '''calculation g2 by using a multi-tau algorithm
        for a compressed file with parallel calculation
     '''
-    noframes = FD.end - good_start   # number of frames, not "no frames"
-    #noframes = FD.end - FD.beg   # number of frames
-
+    FD.beg = max(FD.beg, good_start)
+    noframes = FD.end - FD.beg +1   # number of frames, not "no frames"
     for i in range(FD.beg, FD.end):
-        pass_FD(FD,i)
-    
+        pass_FD(FD,i)    
     if num_lev is None:
         num_lev = int(np.log( noframes/(num_buf-1))/np.log(2) +1) +1
     print ('In this g2 calculation, the buf and lev number are: %s--%s--'%(num_buf,num_lev))
     if  bad_frame_list is not None:
         if len(bad_frame_list)!=0:
-            print ('Bad frame involved and will be precessed!')
-            
+            print ('Bad frame involved and will be precessed!')            
             noframes -=  len(np.where(np.in1d( bad_frame_list, 
                                               range(good_start, FD.end)))[0])   
-    print ('%s frames will be processed...'%(noframes))    
-    
-    
+    print ('%s frames will be processed...'%(noframes))      
     ring_masks = [   np.array(ring_mask==i, dtype = np.int64) 
-              for i in np.unique( ring_mask )[1:] ]
-    
-    qind, pixelist = roi.extract_label_indices(  ring_mask  )
-    norms = [ norm[ np.in1d(  pixelist, 
+              for i in np.unique( ring_mask )[1:] ]    
+    qind, pixelist = roi.extract_label_indices(  ring_mask  )    
+    if norm is not None:
+        norms = [ norm[ np.in1d(  pixelist, 
             extract_label_indices( np.array(ring_mask==i, dtype = np.int64))[1])]
                 for i in np.unique( ring_mask )[1:] ] 
-    
-    inputs = range( len(ring_masks) )
-    
+
+    inputs = range( len(ring_masks) )    
     
     pool =  Pool(processes= len(inputs) )
-    internal_state = None        
-
-                
-    results = [ apply_async( pool, lazy_one_timep, ( FD, num_lev, num_buf,
-                    ring_masks[i], internal_state, 
-        bad_frame_list, imgsum, norms[i], ) ) for i in tqdm( inputs )  ]
-
-    res = [r.get() for r in results]    
-    #print( res )
-    
-    lag_steps  = res[0][1]  
+    internal_state = None       
+    print( 'Starting assign the tasks...')    
+    results = {}    
+    if norm is not None: 
+        for i in  tqdm( inputs ): 
+            results[i] =  apply_async( pool, lazy_one_timep, ( FD, num_lev, num_buf, ring_masks[i],
+                        internal_state,  bad_frame_list, imgsum,
+                                    norms[i], ) ) 
+    else:
+        #print ('for norm is None')    
+        for i in tqdm ( inputs ): 
+            results[i] = apply_async( pool, lazy_one_timep, ( FD, num_lev, num_buf, ring_masks[i], 
+                        internal_state,   bad_frame_list,imgsum, None,
+                                     ) )             
+    pool.close()    
+    print( 'Starting running the tasks...')    
+    res =   [ results[k].get() for k in   tqdm( list(sorted(results.keys())) )   ] 
+    len_lag = 10**10
+    for i in inputs:  #to get the smallest length of lag_step
+        if len_lag > len(  res[i][1]  ):
+            lag_steps  = res[i][1]  
+            len_lag  =   len(  lag_steps   )            
+    #lag_steps  = res[0][1]  
     g2 = np.zeros( [len( lag_steps),len(ring_masks)] )
+    
     for i in inputs:
-        g2[:,i] = res[i][0][:,0]        
-    print( 'G2 calculation DONE!')
-
-    return  g2, lag_steps    
-         
-    
-    
- 
+        #print( res[i][0][:,0].shape, g2.shape )
+        g2[:,i] = res[i][0][:,0][:len_lag]  
         
+    print( 'G2 calculation DONE!')
+    del results
+    del res
+    return  g2, lag_steps  
+
+
+
+    
+    
+    
+def auto_two_Arrayp(  data_pixel, rois, index=None):
+    
+    ''' 
+    TODO list
+    will try to use dask
+    
+    Dec 16, 2015, Y.G.@CHX
+    a numpy operation method to get two-time correlation function using parallel computation
+    
+    Parameters:
+        data:  images sequence, shape as [img[0], img[1], imgs_length]
+        rois: 2-D array, the interested roi, has the same shape as image, can be rings for saxs, boxes for gisaxs
+    
+    Options:
+        
+        data_pixel: if not None,    
+                    2-D array, shape as (len(images), len(qind)),
+                    use function Get_Pixel_Array( ).get_data(  ) to get 
+         
+   
+    Return:
+        g12: a 3-D array, shape as ( imgs_length, imgs_length, q)
+     
+    One example:        
+        g12 = auto_two_Array( imgsr, ring_mask, data_pixel = data_pixel ) 
+    '''            
+    qind, pixelist = roi.extract_label_indices(   rois  )
+    noqs = len( np.unique(qind) )
+    nopr = np.bincount(qind, minlength=(noqs+1))[1:] 
+    noframes = data_pixel.shape[0]    
+    g12b = np.zeros(  [noframes, noframes, noqs] )
+    
+    if index is None:
+        index =  np.arange( 1, noqs + 1 )        
+    else:
+        try:
+            len(index)
+            index = np.array(  index  )
+        except TypeError:
+            index = np.array(  [index]  )
+    qlist = np.arange( 1, noqs + 1 )[ index -1  ]    
     
 
+    inputs = range( len(qlist) ) 
+    
+    
+    data_pixel_qis = [0]* len(qlist)
+    for i in inputs:         
+        pixelist_qi =  np.where( qind ==  qlist[i] )[0] 
+        data_pixel_qis[i] =    data_pixel[:,pixelist_qi]    
+    
+    #pool =  Pool(processes= len(inputs) )  
+    #results = [ apply_async( pool, _get_two_time_for_one_q, ( qlist[i], 
+    #                                    data_pixel_qis[i], nopr, noframes ) ) for i in tqdm( inputs )  ]        
+    #res = [r.get() for r in results]    
+    
+    
+    
+    pool =  Pool(processes= len(inputs) )  
+    results = {}        
+    for i in  inputs:        
+        results[i] =   pool.apply_async(  _get_two_time_for_one_q, [
+                            qlist[i], data_pixel_qis[i], nopr, noframes
+                               ]  )  
+    pool.close()
+    pool.join()     
+    res = np.array( [ results[k].get() for k in   list(sorted(results.keys()))   ]     )   
+    
+    #print('here')
+    
+    for i in inputs:
+        qi=qlist[i]
+        g12b[:,:,qi -1 ] = res[i]        
+    print( 'G12 calculation DONE!')        
+    return g12b #g12b
+
+
+def _get_two_time_for_one_q( qi, data_pixel_qi, nopr, noframes   ):
+    
+    #print( data_pixel_qi.shape)
+    
+    sum1 = (np.average( data_pixel_qi, axis=1)).reshape( 1, noframes   )  
+    sum2 = sum1.T 
+    two_time_qi = np.dot(   data_pixel_qi, data_pixel_qi.T)  /sum1  / sum2  / nopr[qi -1]
+    return  two_time_qi
     

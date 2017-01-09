@@ -834,7 +834,10 @@ def cal_g2c( FD, ring_mask,
            bad_frame_list=None,good_start=0, num_buf = 8, num_lev = None, imgsum=None, norm=None ):
     '''calculation g2 by using a multi-tau algorithm'''
     
-    noframes = FD.end - good_start   # number of frames, not "no frames"
+    #noframes = FD.end - good_start   # number of frames, not "no frames"    
+    
+    FD.beg = max(FD.beg, good_start)
+    noframes = FD.end - FD.beg   # number of frames, not "no frames"
     #num_buf = 8  # number of buffers
 
     if num_lev is None:
@@ -890,13 +893,17 @@ class Get_Pixel_Arrayc(object):
             self.beg = FD.beg
         if end is None:
             self.end = FD.end
-        if beg ==0:
-            self.length = self.end - self.beg
-        else:
-            self.length = self.end - self.beg + 1
+        #if self.beg ==0:
+        #    self.length = self.end - self.beg
+        #else:
+        #    self.length = self.end - self.beg + 1
+            
+        self.length = self.end - self.beg    
+            
         self.FD = FD
         self.pixelist = pixelist        
         self.norm = norm    
+        
     def get_data(self ): 
         '''
         To get intested pixels array
