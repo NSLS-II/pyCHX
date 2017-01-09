@@ -31,7 +31,8 @@ from chxanalys.chx_compress import   (compress_eigerdata, read_compressed_eigerd
 
 
 
-def cal_waterfallc(FD, labeled_array,   qindex=1, save=False, *argv,**kwargs):   
+def cal_waterfallc(FD, labeled_array,   qindex=1, 
+                   bin_waterfall = False, waterfall_roi_size = None, save=False, *argv,**kwargs):   
     """Compute the mean intensity for each ROI in the compressed file (FD)
 
     Parameters
@@ -44,6 +45,9 @@ def cal_waterfallc(FD, labeled_array,   qindex=1, save=False, *argv,**kwargs):
         the ROI labels are contiguous
     qindex : int 
         The ROI's to use.  
+        
+    bin_waterfall: if True, will bin the waterfall along y-axis
+    waterfall_roi_size: the size of waterfall roi,  (x-size, y-size), if bin, will bin along y
     save: save the waterfall
 
     Returns
@@ -89,6 +93,15 @@ def cal_waterfallc(FD, labeled_array,   qindex=1, save=False, *argv,**kwargs):
        
         watf[n][pxlist] =  v[w]
         n +=1   
+        
+    if bin_waterfall:     
+        watf_ = watf.copy()
+        watf = np.zeros(   [ watf_.shape[0], waterfall_roi_size[0]  ])
+        for i in range(waterfall_roi_size[1] ):
+            watf += watf_[:,  waterfall_roi_size[0]*i: waterfall_roi_size[0]*(i+1) ]
+        watf  /=   waterfall_roi_size[0]   
+    
+        
     if save:
         path = kwargs['path'] 
         uid = kwargs['uid']

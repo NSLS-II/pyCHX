@@ -125,32 +125,26 @@ def read_compressed_eigerdata( mask, filename, beg, end,
     FD.FID.close()
     return   mask, avg_img, imgsum, bad_frame_list_
 
-
-
-
-
 def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
                             bad_pixel_low_threshold=0, nobytes=4, bins=1, dtypes='uid',reverse =True,
                            num_max_para_process=500, cpu_core_number=72 ):
+    
     if dtypes=='uid':
         uid= md['uid'] #images
         detector = get_detector( db[uid ] )
         images_ = load_data( uid, detector, reverse= reverse    )
         N= len(images_)
     else:
-        N = len(images)
-        
-    Nf  =  int( np.ceil( N/ num_sub  ) )
-  
+        N = len(images)    
+    N = int( np.ceil( N/ bins  ) )        
+    Nf  =  int( np.ceil( N/ num_sub  ) )  
     if Nf >   cpu_core_number:
         print("The process number is larger than %s (XF11ID server core number)"%cpu_core_number)
         num_sub_old = num_sub
         num_sub = int( np.ceil(N/cpu_core_number))
         Nf  =  int( np.ceil( N/ num_sub  ) )
-        print ("The sub compressed file number was changed from %s to %s"%( num_sub_old, num_sub ))
-              
-        
+        print ("The sub compressed file number was changed from %s to %s"%( num_sub_old, num_sub ))        
     create_compress_header( md, filename +'-header', nobytes, bins  )    
     #print( 'done for header here')    
     results = para_segment_compress_eigerdata( images=images, mask=mask, md=md,filename=filename, 
@@ -215,8 +209,9 @@ def para_segment_compress_eigerdata( images, mask,  md, filename, num_sub=100,
         images_ = load_data( uid, detector, reverse= reverse    )
         N = len(images_)
     else:
-        N = len(images)        
-
+        N = len(images)     
+    #N = int( np.ceil( N/ bins  ) )
+    num_sub *= bins    
     if N%num_sub:
         Nf = N// num_sub +1
         print('The average image intensity would be slightly not correct, about 1% error.')
@@ -265,7 +260,8 @@ def segment_compress_eigerdata( images,  mask, md, filename,
         uid= md['uid'] #images
         detector = get_detector( db[uid ] )
         images = load_data( uid, detector, reverse= reverse    )[N1:N2] 
-    Nimg_ = len( images)    
+    Nimg_ = len( images) 
+    
     M,N = images[0].shape
     avg_img = np.zeros( [M,N], dtype= np.float )    
     Nopix =  float( avg_img.size )
@@ -281,9 +277,11 @@ def segment_compress_eigerdata( images,  mask, md, filename,
     else:
         print ( "Wrong type of nobytes, only support 2 [np.int16] or 4 [np.int32]")
         dtype= np.int32         
-    Nimg =   Nimg_//bins 
+    #Nimg =   Nimg_//bins 
+    Nimg = int( np.ceil( Nimg_ / bins  ) )
     time_edge = np.array(create_time_slice( N= Nimg_, 
-                                    slice_num= Nimg, slice_width= bins ))  
+                                    slice_num= Nimg, slice_width= bins ))
+    #print( time_edge, Nimg_, Nimg, bins, N1, N2 )
     imgsum  =  np.zeros(    Nimg   )         
     if bins!=1:
         print('The frames will be binned by %s'%bins) 
@@ -685,7 +683,7 @@ def get_avg_imgc( FD,  beg=None,end=None,sampling = 100, plot_ = False, bad_fram
         #print(  sampling-1 + beg , end, sampling )    
         if bad_frame_list is None:
             bad_frame_list =[]
-        fra_num = int( (end - sampling-1 + beg )/sampling ) - len( bad_frame_list )            
+        fra_num = int( (end -  beg )/sampling ) - len( bad_frame_list )            
         for  i in tqdm(range( sampling-1 + beg , end, sampling  ), desc= 'Averaging %s images'% fra_num):  
             if bad_frame_list is not None:
                 if i in bad_frame_list:
