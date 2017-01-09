@@ -248,11 +248,19 @@ def cal_g2p( FD, ring_mask, bad_frame_list=None,
                                      ) )             
     pool.close()    
     print( 'Starting running the tasks...')    
-    res =   [ results[k].get() for k in   tqdm( list(sorted(results.keys())) )   ]       
-    lag_steps  = res[0][1]  
+    res =   [ results[k].get() for k in   tqdm( list(sorted(results.keys())) )   ] 
+    len_lag = 10**10
+    for i in inputs:  #to get the smallest length of lag_step
+        if len_lag > len(  res[i][1]  ):
+            lag_steps  = res[i][1]  
+            len_lag  =   len(  lag_steps   )            
+    #lag_steps  = res[0][1]  
     g2 = np.zeros( [len( lag_steps),len(ring_masks)] )
+    
     for i in inputs:
-        g2[:,i] = res[i][0][:,0]        
+        #print( res[i][0][:,0].shape, g2.shape )
+        g2[:,i] = res[i][0][:,0][:len_lag]  
+        
     print( 'G2 calculation DONE!')
     del results
     del res
