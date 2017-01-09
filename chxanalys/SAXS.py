@@ -395,7 +395,7 @@ def show_saxs_qmap( img, pargs, width=200,vmin=.1, vmax=300, logs=True,image_nam
             lambda_     # wavelegth of the X-rays in Angstroms
             Ldet     # detector to sample distance (mm)
             path  where to save data
-            center: beam center in pixel
+            center: beam center in pixel, center[0] (x), should be image-y, and should be python-x
         width: the showed area centered at center
     Return:
         None 
@@ -405,13 +405,12 @@ def show_saxs_qmap( img, pargs, width=200,vmin=.1, vmax=300, logs=True,image_nam
     dpix = pargs['dpix']
     lambda_ =  pargs['lambda_']    
     center = pargs['center']
-    path= pargs['path']
+    path= pargs['path']    
     
-    
-    w= width
-  
+    #center = [ center[1], center[0] ] #due to python conventions
+    w= width  
     if not show_pixel:
-        two_theta = utils.radius_to_twotheta(Ldet, [w * dpix])
+        two_theta = utils.radius_to_twotheta(Ldet ,np.array( [w * dpix] ))        
         qext  = utils.twotheta_to_q(two_theta, lambda_)[0] 
         show_img( 1e-15+ img[center[0]-w:center[0]+w, center[1]-w:center[1]+w], 
         xlabel=r"$q_x$" +  '('+r'$\AA^{-1}$'+')', 
