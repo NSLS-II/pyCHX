@@ -63,7 +63,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
     run_xsvs=run_pargs['run_xsvs']
     ###############################################################
     if scat_geometry =='gi_saxs': #to be done for other types
-        run_xsvs = False
+        run_xsvs = False;
     ############################################################### 
     
     ###############################################################
@@ -91,8 +91,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
     except:
         inc_x0 = None
         inc_y0=  None 
-        
-    if scat_geometry =='saxs' or 'ang_saxs':
+    #print( scat_geometry )
+    if scat_geometry =='saxs' or scat_geometry =='ang_saxs':
         uniformq =      run_pargs['uniformq']
         use_sqnorm = run_pargs['use_sqnorm']
               
@@ -267,7 +267,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
         plot1D( y = imgsum_y, title = uidstr + '_img_sum_t', xlabel='Frame',
                ylabel='Total_Intensity', legend='imgsum', save=True, path=data_dir)
  
-        if scat_geometry =='saxs' or 'ang_saxs':
+        if scat_geometry =='saxs' or scat_geometry =='ang_saxs':
         
             show_saxs_qmap( avg_img, setup_pargs, width=600,vmin=.1, vmax=np.max(avg_img*.1), logs=True,
                image_name= uidstr + '_img_avg',  save=True)  
@@ -379,7 +379,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
         ##the below works for all the geometries     
         if scat_geometry !='ang_saxs':    
             roi_inten = check_ROI_intensity( avg_img, roi_mask, ring_number= qth_interest, uid =uidstr, save=True, path=data_dir ) 
-        if scat_geometry =='saxs':
+        if scat_geometry =='saxs' or scat_geometry =='gi_saxs':
             if run_waterfall:
                 qindex = qth_interest
                 wat = cal_waterfallc( FD, roi_mask, qindex= qindex, save =True, path=data_dir,uid=uidstr)
