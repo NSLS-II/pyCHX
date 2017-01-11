@@ -1260,7 +1260,7 @@ def show_qzr_map(  qr, qz, inc_x0, data=None, Nzline=10,Nrline=10 ,
 
 
  
-def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, uid='uid', path = '', save=False, *argv,**kwargs):  
+def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, uid='uid', path = '', save=False, return_fig=False, *argv,**kwargs):  
         
     ''' 
     Dec 16, 2015, Y.G.@CHX
@@ -1346,7 +1346,8 @@ def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, uid='uid', path = '', sa
     fp = path + '%s_ROI_on_Image'%(uid) + '.png'
     if save:
         fig.savefig( fp, dpi=fig.dpi)         
-
+    if return_fig:
+        return fig, ax
     
     
     
