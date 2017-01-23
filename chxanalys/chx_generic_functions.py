@@ -605,7 +605,10 @@ def get_sid_filenames(header, fill=True):
     keys = [k for k, v in header.descriptors[0]['data_keys'].items()     if 'external' in v]
     events = get_events( header, keys, handler_overrides={key: RawHandler for key in keys}, fill=fill)
     key, = keys   
-    filenames =  [  str( ev['data'][key][0]) + '_'+ str(ev['data'][key][2]['seq_id']) for ev in events]     
+    try:
+        filenames =  [  str( ev['data'][key][0]) + '_'+ str(ev['data'][key][2]['seq_id']) for ev in events]     
+    except:
+        filenames='unknown'
     sid = header['start']['scan_id']
     uid= header['start']['uid']
     
@@ -1794,7 +1797,7 @@ def save_g2_general(  g2, taus, qr=None, qz=None, uid='uid', path=None, return_r
 #*for g2 fit and plot
 
 def stretched_auto_corr_scat_factor(x, beta, relaxation_rate, alpha=1.0, baseline=1):
-    return beta * (np.exp(-2 * relaxation_rate * x))**alpha + baseline
+    return beta * np.exp(-2 * (relaxation_rate * x)**alpha ) + baseline
 
 def simple_exponential(x, beta, relaxation_rate,  baseline=1):
     return beta * np.exp(-2 * relaxation_rate * x) + baseline
@@ -1804,7 +1807,7 @@ def simple_exponential_with_vibration(x, beta, relaxation_rate, freq, amp,  base
     return beta * (1 + amp*np.cos(  2*np.pi*freq* x) )* np.exp(-2 * relaxation_rate * x) + baseline
 
 def stretched_auto_corr_scat_factor_with_vibration(x, beta, relaxation_rate, alpha, freq, amp,  baseline=1):
-    return beta * (1 + amp*np.cos(  2*np.pi*freq* x) )* np.exp(-2 * relaxation_rate * x)**alpha + baseline
+    return beta * (1 + amp*np.cos(  2*np.pi*freq* x) )* np.exp(-2 *  (relaxation_rate * x)**alpha ) + baseline
 
 
 def flow_para_function_with_vibration( x, beta, relaxation_rate, flow_velocity, freq, amp, baseline=1):     
@@ -1821,6 +1824,11 @@ def flow_para_function( x, beta, relaxation_rate, flow_velocity, baseline=1):
 def get_flow_velocity( average_velocity, shape_factor):    
     return average_velocity * (1- shape_factor)/(1+  shape_factor)
 
+def stretched_flow_para_function( x, beta, relaxation_rate, alpha, flow_velocity, baseline=1):    
+    Diff_part=    np.exp(-2 *  (relaxation_rate * x)**alpha   )
+    Flow_part =  np.pi**2/(16*x*flow_velocity) *  abs(  erf(  np.sqrt(   4/np.pi * 1j* x * flow_velocity ) ) )**2    
+    return  beta*Diff_part * Flow_part + baseline
+
 
 def get_g2_fit_general( g2, taus,  function='simple_exponential', *argv,**kwargs):
     '''
@@ -1831,17 +1839,18 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential', *argv,**kwargs
     The support functions include simple exponential and stretched/compressed exponential
     Parameters
     ---------- 
-    g2: one-time correlation function for fit, with shape as [taus, qs]
+        g2: one-time correlation function for fit, with shape as [taus, qs]
+        taus: the time delay
         
-    function: 
-        'simple_exponential': fit by a simple exponential function, defined as  
-                    beta * np.exp(-2 * relaxation_rate * lags) + baseline
-        'streched_exponential': fit by a streched exponential function, defined as  
-                    beta * (np.exp(-2 * relaxation_rate * lags))**alpha + baseline
-                    
-         'stretched_vibration': fit by a streched exponential function with vibration, defined as            
-                 beta * (1 + amp*np.cos(  2*np.pi*60* x) )* np.exp(-2 * relaxation_rate * x)**alpha + baseline
-         'flow_para_function': fit by a flow function
+        function: 
+            supported function include:
+                'simple_exponential' (or 'simple'): fit by a simple exponential function, defined as  
+                        beta * np.exp(-2 * relaxation_rate * lags) + baseline
+                'streched_exponential'(or 'streched'): fit by a streched exponential function, defined as  
+                        beta * (np.exp(-2 * relaxation_rate * lags))**alpha + baseline
+                 'stretched_vibration':   fit by a streched exponential function with vibration, defined as            
+                     beta * (1 + amp*np.cos(  2*np.pi*60* x) )* np.exp(-2 * relaxation_rate * x)**alpha + baseline
+                 'flow_para_function' (or flow): fit by a flow function
          
                     
     kwargs:
@@ -1853,15 +1862,27 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential', *argv,**kwargs
             'guess_values': a dict, for initial value of the fitting para,
                             the defalut values are 
                                 dict( beta=.1, alpha=1.0, relaxation_rate =0.005, baseline=1.0)
-                    
+                                
+            'guess_limits': a dict, for the limits of the fittting para, for example:
+                                dict( beta=[0, 10],, alpha=[0,100] )
+                            the default is:
+                                dict( baseline =[0.5, 2.5], alpha=[0, inf] ,beta = [0, 1], relaxation_rate= [0.0,1000]  )
     Returns
     -------        
     fit resutls: a instance in limfit
+    tau_fit
     fit_data by the model, it has the q number of g2
          
     an example:
-        result,fd = fit_g2( g2, res_pargs, function = 'simple')
-        result,fd = fit_g2( g2, res_pargs, function = 'stretched')
+        fit_g2_func = 'stretched'
+        g2_fit_result, taus_fit, g2_fit = get_g2_fit_general( g2,  taus, 
+                        function = fit_g2_func,  vlim=[0.95, 1.05], fit_range= None,  
+                        fit_variables={'baseline':True, 'beta':True, 'alpha':True,'relaxation_rate':True},
+                        guess_values={'baseline':1.0,'beta':0.05,'alpha':1.0,'relaxation_rate':0.01,}) 
+            
+        g2_fit_paras = save_g2_fit_para_tocsv(g2_fit_result,  filename= uid_  +'_g2_fit_paras.csv', path=data_dir )        
+        
+        
     '''      
     
     if 'fit_range' in kwargs.keys():
@@ -1889,12 +1910,17 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential', *argv,**kwargs
         mod = Model( flow_para_function_with_vibration )
         
     else:
-        print ("The %s is not supported.The supported functions include simple_exponential and stretched_exponential"%function)
+        print ("The %s is not supported.The supported functions include simple_exponential and stretched_exponential"%function)    
         
     mod.set_param_hint( 'baseline',   min=0.5, max= 2.5 )
     mod.set_param_hint( 'beta',   min=0.0,  max=1.0 )
     mod.set_param_hint( 'alpha',   min=0.0 )
     mod.set_param_hint( 'relaxation_rate',   min=0.0,  max= 1000  )  
+    
+    if 'guess_limits' in kwargs:         
+        guess_limits  = kwargs['guess_limits']         
+        for k in list(  guess_limits.keys() ):
+            mod.set_param_hint( k,   min=   guess_limits[k][0], max= guess_limits[k][1] )           
     
     if function=='flow_para_function' or  function=='flow_para' or function=='flow_vibration': 
         mod.set_param_hint( 'flow_velocity', min=0)        
