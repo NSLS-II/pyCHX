@@ -16,8 +16,8 @@ from tqdm import tqdm
 import itertools
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-from chxanalys.chx_libs import  ( mcolors,  markers, markers_copy, lstyles, Figure, RUN_GUI)
-
+from chxanalys.chx_libs import  ( colors as colors_array,  markers as markers_array, markers_copy, lstyles, Figure, RUN_GUI)
+from chxanalys.chx_libs import  colors_ as mcolors,  markers_ as markers
 
 
 
@@ -284,7 +284,7 @@ def auto_two_Array( data, rois, data_pixel=None  ):
 #get one-time @different age
 #####################################
  
-def get_qedge( qstart,qend,qwidth,noqs,  ):
+def get_qedge( qstart,qend,qwidth,noqs, return_int = False ):
     ''' DOCUMENT make_qlist( )
     give qstart,qend,qwidth,noqs
     return a qedge by giving the noqs, qstart,qend,qwidth.
@@ -296,7 +296,14 @@ def get_qedge( qstart,qend,qwidth,noqs,  ):
     qedge=np.zeros(2*noqs) 
     qedge[::2]= (  qcenter- (qwidth/2)  ) #+1  #render  even value
     qedge[1::2]= ( qcenter+ qwidth/2) #render odd value
-    return qedge, qcenter  
+    if not return_int:
+        return qedge, qcenter  
+    else:
+        return np.int(qedge), np.int(qcenter  )
+
+ 
+ 
+
 
 
 def rotate_g12q_to_rectangle( g12q ):
@@ -417,7 +424,8 @@ def get_aged_g2_from_g12q2( g12q, slice_num = 6, slice_width=5, slice_start=0, s
         
     return g2_aged 
 
-def show_g12q_aged_g2( g12q, g2_aged,slice_width=10, timeperframe=1,vmin= 1, vmax= 1.25, save=False,*argv,**kwargs): 
+def show_g12q_aged_g2( g12q, g2_aged,slice_width=10, timeperframe=1,vmin= 1, vmax= 1.25, 
+                      save=True, uid='uid', path='', *argv,**kwargs): 
     
     ''' 
     Dec 16, 2015, Y.G.@CHX
@@ -446,62 +454,94 @@ def show_g12q_aged_g2( g12q, g2_aged,slice_width=10, timeperframe=1,vmin= 1, vma
         show_g12q_aged_g2( g12q, g2_aged,timeperframe=1,vmin= 1, vmax= 1.22 )
     '''
     
-    age_center = list( sorted( g2_aged.keys() ) )
+    age_center = np.array( list( sorted( g2_aged.keys() ) ) )
     print ('the cut age centers are: ' +str(age_center)     )
     M,N = g12q.shape
 
     #fig, ax = plt.subplots( figsize = (8,8) )
     
     figw =10
-    figh = 10
+    figh = 8
     fig = plt.figure(figsize=(figw,figh)) 
+    
     gs = gridspec.GridSpec(1, 2, width_ratios=[10, 8],height_ratios=[8,8]   ) 
-    ax = plt.subplot(gs[0])     
-    ax1 = plt.subplot(gs[1])     
+    ax = plt.subplot(gs[0])
     
     im=ax.imshow( g12q, origin='lower' , cmap='viridis', 
-             norm= LogNorm( vmin, vmax ) , extent=[0, N, 0, N ] )
-
-    linS = []
-    linE=[]
-    linS.append( zip( [0]*len(age_center), np.int_(age_center) ))
-    linE.append( zip(  np.int_(age_center), [0]*len(age_center) ))
-    for i, [ps,pe] in enumerate(zip(linS[0],linE[0])):     
-        if ps[1]>=N:s0=ps[1] - N;s1=N
-        else:s0=0;s1=ps[1]        
-        if pe[0]>=N:e0=N;e1=pe[0] - N
-        else:e0=pe[0];e1=0     
-        lined= slice_width/2.  #in data width
-        linewidth=    (lined * (figh*72./N)) * 0.8
-        ax.plot( [s0,e0],[s1,e1], linewidth=linewidth ,alpha=0.3 )  #, color=   )  
+             norm= LogNorm( vmin, vmax ), extent=[0, N,0,N])
     
-    ax.set_title(  '%s_frames'%(N)    )
+    #plt.gca().set_xticks(ticks)
+    ticks  = np.round( plt.gca().get_xticks() * timeperframe, 2) 
+    print( ticks )
+    ax.set_xticklabels(ticks )
+    ax.set_yticklabels(ticks )
+    #plt.xticks(ticks, fontsize=9)
+    
+    #), extent=[0, g12q.shape[0]*timeperframe, 0, g12q.shape[0]*timeperframe ] ) 
+    
+    ax1 = plt.subplot(gs[1])     
+    linS1 = [ [0]*len(age_center ), np.int_(age_center - slice_width//2 )  ]
+    linS2 = [ [0]*len(age_center ), np.int_(age_center + slice_width//2 )  ] 
+    linE1 = [  np.int_(age_center - slice_width//2  ), [0]*len(age_center) ]
+    linE2 = [  np.int_(age_center + slice_width//2  ), [0]*len(age_center) ]     
+    linC = [ [0]*len(age_center ), np.int_(age_center ) ] 
+    
+    for i in range( len(age_center ) ):
+        ps = linS1[1][i]
+        pe = linE1[0][i]
+        if ps>=N:s0=ps - N;s1=N
+        else:s0=0;s1=ps   
+        e0 = s1;e1=s0    
+        #if pe>=N:e0=N;e1=pe - N
+        #else:e0=pe;e1=0 
+        
+        ps = linS2[1][i]
+        pe = linE2[0][i]
+        if ps>=N:S0=ps - N;S1=N
+        else:S0=0;S1=ps        
+        #if pe>=N:e0=N;E1=pe - N
+        #else:E0=pe;E1=0 
+        E0=S1;E1=S0
+        
+        ps = linC[1][i]
+        if ps>=N:C0=ps - N;C1=N
+        else:C0=0;C1=ps        
+        #if pe>=N:e0=N;E1=pe - N
+        #else:E0=pe;E1=0 
+        D0=C1;D1=C0
+        
+        lined= slice_width/2.  #in data width
+        linewidthc=    (lined * (figh*72./N)) * 0.5  
+        #print( s0,e0, s1,e1, S0,E0, S1, E1)
+        
+        #lined= slice_width/2.  #in data width
+        #linewidth=    (lined * (figh*72./N)) * 0.8        
+        linewidth = 1        
+        ax.plot( [s0,e0],[s1,e1], linewidth=linewidth , ls = '--', alpha=1 , color= colors_array[i]   )  
+        ax.plot( [S0,E0],[S1,E1], linewidth=linewidth , ls = '--', alpha=1 , color= colors_array[i]   )  
+        ax.plot( [C0,D0],[C1,D1], linewidth=linewidthc , ls = '-', alpha=.0 , color= colors_array[i]   )  
+    
+    #ax.set_title(  '%s_frames'%(N)    )
+    ax.set_title(  "%s_two_time"%uid )
     ax.set_xlabel( r'$t_1$ $(s)$', fontsize = 18)
     ax.set_ylabel( r'$t_2$ $(s)$', fontsize = 18)
-    fig.colorbar(im) 
-    
-    ax1.set_title("Aged_G2")
+    fig.colorbar(im)     
+    ax1.set_title("%s_aged_g2"%uid)
     for i in sorted(g2_aged.keys()):
         #ax = fig.add_subplot(sx,sy,sn+1 )
         gx= np.arange(len(g2_aged[i])) * timeperframe
-        marker = next(markers)        
-        ax1.plot( gx,g2_aged[i], '-%s'%marker, label=r"$age= %.1f s$"%(i*timeperframe))
+        #marker = next(markers)     
+        #print( g2_aged[i], marker )
+        ax1.plot( gx,g2_aged[i], marker = '%s'%markers_array[i], ls='-', color= colors_array[i],  label=r"$t_a= %.1f s$"%(i*timeperframe/2))
         ax1.set_ylim( vmin, vmax )
         ax1.set_xlabel(r"$\tau $ $(s)$", fontsize=18) 
         ax1.set_ylabel("g2")
         ax1.set_xscale('log')
-    ax1.legend(fontsize='small', loc='best' ) 
-            
+    ax1.legend(fontsize='small', loc='best' )             
     if save:
-        #dt =datetime.now()
-        #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
-        path = kwargs['path'] 
-        if 'uid' in kwargs:
-            uid = kwargs['uid']
-        else:
-            uid = 'uid'        
         #fp = path + "uid= %s--Waterfall-"%uid + CurTime + '.png'     
-        fp = path + "uid=%s--Aged_G2-"%uid  + '.png'    
+        fp = path + "%s_aged_g2"%uid  + '.png' 
+        #print( fp )
         fig.savefig( fp, dpi=fig.dpi)  
             
     #plt.show()
@@ -626,6 +666,7 @@ def show_g12q_taus( g12q, taus,  slice_width=10, timeperframe=1,vmin= 1, vmax= 1
     figw =10
     figh = 10
     fig = plt.figure(figsize=(figw,figh)) 
+    
     gs = gridspec.GridSpec(1, 2, width_ratios=[10, 8],height_ratios=[8,8]   ) 
     ax = plt.subplot(gs[0])     
     ax1 = plt.subplot(gs[1])     
