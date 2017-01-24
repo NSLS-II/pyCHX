@@ -334,11 +334,56 @@ def rotate_g12q_to_rectangle( g12q ):
 
 
 
-def get_aged_g2_from_g12q( g12q, age_edge, age_center  ):
+def get_aged_g2_from_g12( g12, age_edge, age_center  ):
     
     ''' 
     Dec 16, 2015, Y.G.@CHX
     Get one-time correlation function of different age from two correlation function
+    namely, calculate the different aged mean of each diag line of g12 to get one-time correlation fucntion
+    
+    Parameters:
+        g12: a 3-D array, a  two correlation function, shape as ( imgs_length, imgs_length, noqs ) 
+    
+    Options:
+        slice_num: int, the slice number of the diagonal of g12
+        slice_width: int,  each slice width in unit of pixel
+        slice start: int, can start from 0
+        slice end: int, can end at 2*imgs_length -1 
+   
+   
+    Return:
+        g2_aged: a dict, one time correlation function at different age
+                 the keys of dict is ages in unit of pixel
+                 dict[key]:    
+                           a two-D array, shape as ( imgs_length ), 
+                           a multi-q one-time correlation function
+    One example:     
+        g2_aged = get_aged_g2_from_g12( g12, slice_num =3, slice_width= 500, 
+                slice_start=4000, slice_end= 20000-4000  )
+    '''
+ 
+    m,n,noqs = g12.shape
+    g2_aged = {}
+    for q in range(noqs):
+        g12q = g12[:,:,q]
+        g2q_aged = get_aged_g2_from_g12q( g12q, age_edge, age_center  )
+        if q==0:
+            keys= list( g2q_aged.keys() )
+        for key in keys:
+            if q==0:
+                g2_aged[key] = np.zeros(  [  len( g2q_aged[key] ) ,noqs] )
+            g2_aged[key][:,q] = g2q_aged[key]
+            #print( q, key )
+        
+    return g2_aged 
+
+
+
+def get_aged_g2_from_g12q( g12q, age_edge, age_center  ):
+    
+    ''' 
+    Dec 16, 2015, Y.G.@CHX
+    Get one-time correlation function of different age from 1q-two correlation function
     namely, calculate the different aged mean of each diag line of g12 to get one-time correlation fucntion
     
     Parameters:
@@ -472,7 +517,7 @@ def show_g12q_aged_g2( g12q, g2_aged,slice_width=10, timeperframe=1,vmin= 1, vma
     
     #plt.gca().set_xticks(ticks)
     ticks  = np.round( plt.gca().get_xticks() * timeperframe, 2) 
-    print( ticks )
+    #print( ticks )
     ax.set_xticklabels(ticks )
     ax.set_yticklabels(ticks )
     #plt.xticks(ticks, fontsize=9)
