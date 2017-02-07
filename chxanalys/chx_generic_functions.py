@@ -2145,27 +2145,63 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                     title_long = ''    
 
             ax.set_title(title_long, y =1.1, fontsize=12) 
-            for ki, k in enumerate( list(g2_dict.keys()) ):
-                y=g2_dict[k][:, l_ind ] 
+            for ki, k in enumerate( list(g2_dict.keys()) ):                
                 if ki==0:
-                    ymin,ymax = min(y), max(y[1:])
-                if ki==0:
+                    c='b'
                     if fit_res is None:
-                        m='-bo'
+                        m='-o'                        
                     else:
-                        m='bo'
-                if ki==1:
+                        m='o'                        
+                elif ki==1:
+                    c='r'
                     if fit_res is None:
-                        m='-rs'
+                        m='s'                        
                     else:
-                        m='-r'                
-                if ki==2:m='-D'
-                if g2_labels is None:    
-                    ax.semilogx(taus_dict[k], y, m, markersize=6) 
+                        m='-'                
+                elif ki==2:
+                    c='g'
+                    m='-D'
                 else:
-                    ax.semilogx(taus_dict[k], y, m, markersize=6, label=g2_labels[ki]) 
-                    if l_ind==0:
-                        ax.legend(loc='best', fontsize = 8)                    
+                    c = colors[ki+2]
+                    m= '-%s'%markers[ki+2] 
+                try:
+                    dumy = g2_dict[k].shape
+                    #print( 'here is the shape' )
+                    islist = False   
+                    
+                except:
+                    islist_n = len( g2_dict[k] )
+                    islist = True
+                    #print( 'here is the list' )
+                    
+                if islist:
+                    for nlst in range( islist_n ):
+                        y=g2_dict[k][nlst][:, l_ind ]
+                        x = taus_dict[k][nlst]
+                        if ki==0:
+                            ymin,ymax = min(y), max(y[1:])
+                        if g2_labels is None:    
+                            ax.semilogx(x, y, m, color=c,  markersize=6) 
+                        else:
+                            if nlst==0:
+                                ax.semilogx(x, y, m,  color=c,markersize=6, label=g2_labels[ki]) 
+                            else:
+                                ax.semilogx(x, y, m,  color=c,markersize=6)
+                        if nlst==0:
+                            if l_ind==0:
+                                ax.legend(loc='best', fontsize = 8)               
+                
+                else:    
+                    y=g2_dict[k][:, l_ind ]    
+                    x = taus_dict[k]
+                    if ki==0:
+                        ymin,ymax = min(y), max(y[1:])
+                    if g2_labels is None:    
+                        ax.semilogx(x, y, m, color=c,  markersize=6) 
+                    else:
+                        ax.semilogx(x, y, m,  color=c,markersize=6, label=g2_labels[ki]) 
+                        if l_ind==0:
+                            ax.legend(loc='best', fontsize = 8)                    
 
             if fit_res is not None:
                 result1 = fit_res[l_ind]    
