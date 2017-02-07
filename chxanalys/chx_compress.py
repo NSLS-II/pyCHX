@@ -16,7 +16,7 @@ from multiprocessing import Pool
 import dill
 import sys
 import gc
-
+import pickle as pkl
 
 
 
@@ -45,7 +45,7 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
                         bad_pixel_threshold=1e15, bad_pixel_low_threshold=0, 
                        hot_pixel_threshold=2**30, nobytes=4,bins=1, bad_frame_list=None,
                        para_compress= False, num_sub=100, dtypes='uid',reverse =True,
-                      num_max_para_process=500):   
+                      num_max_para_process=500, with_pickle=False):   
     
     end= len(images)//bins
     
@@ -69,12 +69,12 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
                         bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
                                     bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes= nobytes, bins=bins,
                                      num_sub=num_sub, dtypes=dtypes, reverse=reverse,
-                                          num_max_para_process=num_max_para_process) 
+                                          num_max_para_process=num_max_para_process, with_pickle= with_pickle) 
                     
         else:
             return init_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
-                                    bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes= nobytes, bins=bins  )        
+                                    bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes= nobytes, bins=bins,with_pickle= with_pickle )        
     else:
         if not os.path.exists( filename ):
             print ("Create a new compress file with filename as :%s."%filename)
@@ -84,23 +84,23 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
                         bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
                                     bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes= nobytes, bins=bins,
                                      num_sub=num_sub, dtypes=dtypes, reverse=reverse,
-                                              num_max_para_process=num_max_para_process)
+                                              num_max_para_process=num_max_para_process,with_pickle= with_pickle)
             else:
                 return init_compress_eigerdata( images, mask, md, filename, 
                        bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
-                      bad_pixel_low_threshold=bad_pixel_low_threshold,    nobytes= nobytes, bins=bins  )  
+                      bad_pixel_low_threshold=bad_pixel_low_threshold,    nobytes= nobytes, bins=bins,with_pickle= with_pickle  )  
         else:      
             print ("Using already created compressed file with filename as :%s."%filename)
             beg=0            
             return read_compressed_eigerdata( mask, filename, beg, end, 
                             bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
-                       bad_pixel_low_threshold=bad_pixel_low_threshold ,bad_frame_list=bad_frame_list    )  
+                       bad_pixel_low_threshold=bad_pixel_low_threshold ,bad_frame_list=bad_frame_list,with_pickle= with_pickle    )  
 
 
         
 def read_compressed_eigerdata( mask, filename, beg, end,
                               bad_pixel_threshold=1e15, hot_pixel_threshold=2**30,
-                             bad_pixel_low_threshold=0,bad_frame_list=None):   
+                             bad_pixel_low_threshold=0,bad_frame_list=None,with_pickle= False):   
     '''
         Read already compress eiger data           
         Return 
@@ -110,25 +110,24 @@ def read_compressed_eigerdata( mask, filename, beg, end,
             bad_frame_list
             
     ''' 
-    FD = Multifile( filename, beg, end)    
-    imgsum  =  np.zeros(   FD.end- FD.beg, dtype= np.float  )     
-    avg_img = np.zeros(  [FD.md['ncols'], FD.md['nrows'] ] , dtype= np.float )    
-    
-    
-    imgsum, bad_frame_list_ = get_each_frame_intensityc( FD, sampling = 1, 
-            bad_pixel_threshold=bad_pixel_threshold, bad_pixel_low_threshold=bad_pixel_low_threshold,
-                                    hot_pixel_threshold=hot_pixel_threshold, plot_ = False,
-                                            bad_frame_list=bad_frame_list)     
-    
-    avg_img = get_avg_imgc( FD,  beg=None,end=None,sampling = 1, plot_ = False,bad_frame_list=bad_frame_list_ ) 
-
-    FD.FID.close()
+    if not with_pickle:
+        FD = Multifile( filename, beg, end)    
+        imgsum  =  np.zeros(   FD.end- FD.beg, dtype= np.float  )     
+        avg_img = np.zeros(  [FD.md['ncols'], FD.md['nrows'] ] , dtype= np.float )     
+        imgsum, bad_frame_list_ = get_each_frame_intensityc( FD, sampling = 1, 
+                bad_pixel_threshold=bad_pixel_threshold, bad_pixel_low_threshold=bad_pixel_low_threshold,
+                                        hot_pixel_threshold=hot_pixel_threshold, plot_ = False,
+                                                bad_frame_list=bad_frame_list) 
+        avg_img = get_avg_imgc( FD,  beg=None,end=None,sampling = 1, plot_ = False,bad_frame_list=bad_frame_list_ )
+        FD.FID.close()
+    else:
+        mask, avg_img, imgsum, bad_frame_list_ =  pkl.load( open(filename + '.pkl', 'rb' ) )    
     return   mask, avg_img, imgsum, bad_frame_list_
 
 def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
                             bad_pixel_low_threshold=0, nobytes=4, bins=1, dtypes='uid',reverse =True,
-                           num_max_para_process=500, cpu_core_number=72 ):
+                           num_max_para_process=500, cpu_core_number=72, with_pickle=True ):
     
     if dtypes=='uid':
         uid= md['uid'] #images
@@ -178,7 +177,8 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
     
     del results
     del res_
-    
+    if  with_pickle:
+        pkl.dump( [mask, avg_img, imgsum, bad_frame_list], open(filename + '.pkl', 'wb' ) )
     return   mask, avg_img, imgsum, bad_frame_list
 
 def combine_compressed( filename,  Nf, del_old=True):
@@ -348,7 +348,7 @@ def create_compress_header( md, filename, nobytes=4, bins=1  ):
 
 def init_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
-                            bad_pixel_low_threshold=0,nobytes=4, bins=1  ):    
+                            bad_pixel_low_threshold=0,nobytes=4, bins=1, with_pickle=True  ):    
     '''
         Compress the eiger data 
         
@@ -453,7 +453,8 @@ def init_compress_eigerdata( images, mask, md, filename,
         print ('Bad frame list are: %s' %bad_frame_list)
     else:
         print ('No bad frames are involved.')
-        
+    if  with_pickle:
+        pkl.dump( [mask, avg_img, imgsum, bad_frame_list], open(filename + '.pkl', 'wb' ) )    
     return   mask, avg_img, imgsum, bad_frame_list
         
 
@@ -655,15 +656,6 @@ class Multifile_Bins( object  ):
         p=  np.where( x_ ) [0]
         v =  np.array( x_[ p ])
         return ( np.array(p, dtype=np.int32), v)
-            
-            
-
-            
-                
-    
-    
-    
-
 
 def get_avg_imgc( FD,  beg=None,end=None,sampling = 100, plot_ = False, bad_frame_list=None,
                  show_progress=True, *argv,**kwargs):   
@@ -805,15 +797,9 @@ def mean_intensityc(FD, labeled_array,  sampling=1, index=None):
         w = np.where( timg[p] )[0]
         pxlist = timg[  p[w]   ] -1 
         mean_intensity[n] = np.bincount( qind[pxlist], weights = v[w], minlength = len(index)+1 )[1:]
-        n +=1
-        
-    mean_intensity /= norm
-        
+        n +=1        
+    mean_intensity /= norm        
     return mean_intensity, index
-
-
-
-
 
 def get_each_frame_intensityc( FD, sampling = 1, 
                              bad_pixel_threshold=1e10, bad_pixel_low_threshold=0, 
@@ -873,17 +859,6 @@ def get_each_frame_intensityc( FD, sampling = 1,
     else:
         print ('No bad frames are involved.')
     return imgsum,bad_frame_list
-
-
-
-
-
-
-
-
-
-
-
 
 
 
