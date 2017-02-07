@@ -58,6 +58,17 @@ import random
 
 from PIL import Image
 
+
+from eiger_io.fs_handler2 import EigerHandler2
+from eiger_io.fs_handler import LazyEigerHandler
+
+db.fs.deregister_handler('AD_EIGER')
+db.fs.register_handler('AD_EIGER', LazyEigerHandler)
+db.fs.deregister_handler('AD_EIGER2')
+db.fs.register_handler('AD_EIGER2', EigerHandler2)
+
+
+
 mcolors = itertools.cycle(['b', 'g', 'r', 'c', 'm', 'y', 'k','darkgoldenrod','oldlace', 'brown','dodgerblue'   ])
 
 
