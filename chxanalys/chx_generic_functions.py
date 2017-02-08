@@ -4,6 +4,91 @@ from chxanalys.chx_libs import  ( colors,  markers )
 from scipy.special import erf
 
 
+
+        
+##################################
+#########For dose analysis #######
+##################################
+def get_fra_num_by_dose( exp_dose, exp_time, dead_time =2 ):
+    '''
+    Calculate the frame number to be correlated by giving a X-ray exposure dose
+    
+    Paramters:
+        exp_dose: a list, the exposed dose, e.g., [ 3.34* 20, 3.34*50, 3.34*100 ]
+        exp_time: float, the exposure time for a xpcs time sereies
+        dead_time: dead time for the fast shutter reponse time, CHX = 2ms
+    Return:
+        noframes: the frame number to be correlated, exp_dose/( exp_time + dead_time )  
+    e.g.,
+    
+    no_dose_fra = get_fra_num_by_dose(  exp_dose = [ 3.34* 20, 3.34*50, 3.34*100, 3.34*502, 3.34*505 ],
+                                   exp_time = 1.34, dead_time = 2)
+                                   
+    --> no_dose_fra  will be array([ 20,  50, 100, 502, 504])     
+    '''
+    return np.int_(np.array( exp_dose )/( exp_time + dead_time))
+
+
+def get_multi_tau_lag_steps( fra_max, num_bufs = 8 ):
+    '''
+    Get taus in log steps ( a multi-taus defined taus ) for a time series with max frame number as fra_max
+    Parameters:
+        fra_max: integer, the maximun frame number          
+        buf_num (default=8),               
+    Return:
+        taus_in_log, a list 
+        
+    e.g., 
+    get_multi_tau_lag_steps(  20, 8   )  -->  array([ 0,  1,  2,  3,  4,  5,  6,  7,  8, 10, 12, 14, 16])
+    
+    '''        
+    num_levels = int(np.log( fra_max/(num_bufs-1))/np.log(2) +1) +1
+    tot_channels, lag_steps, dict_lag = multi_tau_lags(num_levels, num_bufs)    
+    return lag_steps[lag_steps < fra_max]
+    
+
+
+def get_series_g2_taus( fra_max_list, acq_time=1, max_fra_num=None, log_taus = True, 
+                        num_bufs = 8):
+    '''
+    Get taus for dose dependent analysis
+    Parameters:
+        fra_max_list: a list, a lsit of largest available frame number        
+        acq_time: acquistion time for each frame
+        log_taus: if true, will use the multi-tau defined taus bu using buf_num (default=8),
+               otherwise, use deltau =1        
+    Return:
+        tausd, a dict, with keys as taus_max_list items  
+    e.g., 
+    get_series_g2_taus( fra_max_list=[20,30,40], acq_time=1, max_fra_num=None, log_taus = True,  num_bufs = 8)
+    --> 
+    {20: array([ 0,  1,  2,  3,  4,  5,  6,  7,  8, 10, 12, 14, 16]),
+     30: array([ 0,  1,  2,  3,  4,  5,  6,  7,  8, 10, 12, 14, 16, 20, 24, 28]),
+     40: array([ 0,  1,  2,  3,  4,  5,  6,  7,  8, 10, 12, 14, 16, 20, 24, 28, 32])
+    }
+     
+    '''
+    tausd = {}
+    for n in fra_max_list:
+        if max_fra_num is not None:
+            L = max_fra_num
+        else:
+            L = np.infty            
+        if n>L:
+            warnings.warn("Warning: the dose value is too large, and please" 
+                          "check the maxium dose in this data set and give a smaller dose value."
+                          "We will use the maxium dose of the data.") 
+            n = L 
+        if log_taus:
+            lag_steps = get_multi_tau_lag_steps(n,  num_bufs)
+        else:
+            lag_steps = np.arange( n )
+        tausd[n] = lag_steps * acq_time
+    return tausd
+
+
+
+
 def check_lost_metadata(md, Nimg=None, inc_x0 =None, inc_y0= None, pixelsize=7.5*10*(-5) ):
     '''Y.G. Dec 31, 2016, check lost metadata
     
@@ -2167,8 +2252,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                 try:
                     dumy = g2_dict[k].shape
                     #print( 'here is the shape' )
-                    islist = False   
-                    
+                    islist = False 
                 except:
                     islist_n = len( g2_dict[k] )
                     islist = True
@@ -2183,10 +2267,12 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                         if g2_labels is None:    
                             ax.semilogx(x, y, m, color=c,  markersize=6) 
                         else:
+                            #print('here ki ={} nlst = {}'.format( ki, nlst ))
                             if nlst==0:
                                 ax.semilogx(x, y, m,  color=c,markersize=6, label=g2_labels[ki]) 
                             else:
                                 ax.semilogx(x, y, m,  color=c,markersize=6)
+                                
                         if nlst==0:
                             if l_ind==0:
                                 ax.legend(loc='best', fontsize = 8)               
