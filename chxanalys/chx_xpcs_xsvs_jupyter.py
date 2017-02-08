@@ -1,130 +1,6 @@
 from chxanalys.chx_packages import *
 
 
-
-
-##################################
-#########For dose analysis #######
-##################################
-
-
-def get_fra_num_by_dose( exp_dose, exp_time, dead_time =2 ):
-    '''
-    Calculate the frame number to be correlated by giving a X-ray exposure dose
-    
-    Paramters:
-        exp_dose: a list, the exposed dose, e.g., [ 3.34* 20, 3.34*50, 3.34*100 ]
-        exp_time: float, the exposure time for a xpcs time sereies
-        dead_time: dead time for the fast shutter reponse time, CHX = 2ms
-    Return:
-        noframes: the frame number to be correlated, exp_dose/( exp_time + dead_time )  
-    e.g.,
-    
-    no_dose_fra = get_fra_num_by_dose(  exp_dose = [ 3.34* 20, 3.34*50, 3.34*100, 3.34*502, 3.34*505 ],
-                                   exp_time = 1.34, dead_time = 2)
-                                   
-    --> no_dose_fra  will be array([ 20,  50, 100, 502, 504])     
-    '''
-    return np.int_(np.array( exp_dose )/( exp_time + dead_time))
-
-
-def get_multi_tau_lag_steps( fra_max, num_bufs = 8 ):
-    '''
-    Get taus in log steps ( a multi-taus defined taus ) for a time series with max frame number as fra_max
-    Parameters:
-        fra_max: integer, the maximun frame number          
-        buf_num (default=8),               
-    Return:
-        taus_in_log, a list 
-        
-    e.g., 
-    get_multi_tau_lag_steps(  20, 8   )  -->  array([ 0,  1,  2,  3,  4,  5,  6,  7,  8, 10, 12, 14, 16])
-    
-    '''        
-    num_levels = int(np.log( fra_max/(num_bufs-1))/np.log(2) +1) +1
-    tot_channels, lag_steps, dict_lag = multi_tau_lags(num_levels, num_bufs)    
-    return lag_steps[lag_steps < fra_max]
-    
-
-
-def get_series_g2_taus( fra_max_list, acq_time=1, max_fra_num=None, log_taus = True,  num_bufs = 8):
-    '''
-    Get taus for dose dependent analysis
-    Parameters:
-        fra_max_list: a list, a lsit of largest available frame number        
-        acq_time: acquistion time for each frame
-        log_taus: if true, will use the multi-tau defined taus bu using buf_num (default=8),
-               otherwise, use deltau =1
-    Return:
-        tausd, a dict, with keys as taus_max_list items  
-    e.g., 
-    get_series_g2_taus( fra_max_list=[20,30,40], acq_time=1, max_fra_num=None, log_taus = True,  num_bufs = 8)
-    --> 
-    {20: array([ 0,  1,  2,  3,  4,  5,  6,  7,  8, 10, 12, 14, 16]),
-     30: array([ 0,  1,  2,  3,  4,  5,  6,  7,  8, 10, 12, 14, 16, 20, 24, 28]),
-     40: array([ 0,  1,  2,  3,  4,  5,  6,  7,  8, 10, 12, 14, 16, 20, 24, 28, 32])
-    }
-     
-    '''
-    tausd = {}
-    for n in fra_max_list:
-        if max_fra_num is not None:
-            L = max_fra_num
-        else:
-            L = np.infty            
-        if n>L:
-            warnings.warn("Warning: the dose value is too large, and please" 
-                          "check the maxium dose in this data set and give a smaller dose value."
-                          "We will use the maxium dose of the data.") 
-            n = L 
-            
-        if log_taus:
-            lag_steps = get_multi_tau_lag_steps(n,  num_bufs)
-        else:
-            lag_steps = np.arange( n )
-        tausd[n] = lag_steps * acq_time
-    return tausd
-
-
-#def get_
-        
-
-def get_series_g2_from_g12( g12b, fra_max_list = None, good_start=0, log_taus = True, num_bufs=8  ):
-    '''
-    Get a series of one-time function from two-time by giving noframes
-    Parameters:
-        g12b: a two time function
-        good_start: the start frame number
-        fra_max_list: a list, correlation number starting from index 0,
-                if this number is larger than g12b length, will give a warning message, and
-                will use g12b length to replace this number
-                by default is None, will = [ g12b.shape[0] ] 
-        log_taus: if true, will only return a g2 with the correponding tau values 
-                    as calculated by multi-tau defined taus
-    Return:
-        g2_series, a dict, with keys as fra_max_list (corrected on if warning message is given)
-        
-    '''
-    g2={}
-    L,L,qs= g12b.shape
-    if fra_max_list is None:
-        fra_max_list  = [L]
-    for good_end in fra_max_list:
-        if good_end>L:
-            warnings.warn("Warning: the dose value is too large, and please" 
-                          "check the maxium dose in this data set and give a smaller dose value."
-                          "We will use the maxium dose of the data.") 
-            good_end = L            
-        if not log_taus:
-            g2[good_end] = get_one_time_from_two_time(g12b[good_start:good_end,good_start:good_end,:] )
-        else:            
-            lag_steps = get_log_taus(good_end,  num_bufs)           
-            g2[good_end] = get_one_time_from_two_time(g12b[good_start:good_end,good_start:good_end,:] )[lag_steps]
-            
-    return g2
-                                           
-
-    
 ####################################################################################################
 ##compress multi uids, sequential compress for uids, but for each uid, can apply parallel compress##
 #################################################################################################
@@ -160,19 +36,28 @@ def compress_multi_uids( uids, mask, force_compress=False,  para_compress= True,
     print('Done!')
     
 
+####################################################################################################
+##get_two_time_mulit_uids, sequential cal for uids, but apply parallel for each uid ##
+#################################################################################################
+
+def get_two_time_mulit_uids( uids, roi_mask,  norm= None, bin_frame_number=1, path=None, force_generate=False ): 
     
-def get_two_time_mulit_uids( uids, roi_mask,  norm= None,
-                            good_start = 0, good_end= None,  bin_frame_number=1, path=None ): 
-    
-    ''' Calculate two time correlation by using auto_two_Arrayc func for a set of uids
+    ''' Calculate two time correlation by using auto_two_Arrayc func for a set of uids, 
+        if the two-time resutls are already created, by default (force_generate=False), just pass
     Parameters:
         uids: list, a list of uid
         roi_mask: bool array, roi mask array
-        norm: the normalization array 
-        good_start/end: integer
-        path: string, where to save the two time         
+        norm: the normalization array         
+        path: string, where to save the two time   
+        force_generate: default, False, if the two-time resutls are already created, just pass
+                        if True, will force to calculate two-time no matter exist or not
+        
     Return:
-        None, save the two-time in as  path + uid + + 'uid=%s_g12b'%uid 
+        None, save the two-time in as  path + uid + 'uid=%s_g12b'%uid 
+        
+    e.g.,
+        get_two_time_mulit_uids( guids, roi_mask,  norm= norm,bin_frame_number=1, 
+                        path= data_dir,force_generate=False )
     
     '''
         
@@ -184,26 +69,79 @@ def get_two_time_mulit_uids( uids, roi_mask,  norm= None,
             filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%md['uid']
         else:
             filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s_bined--%s.cmp'%(md['uid'],bin_frame_number)
-        if good_end is None:            
-            try:
-                N = md['cam_num_ima']            
-            except:
-                N = md['number of images']
-        FD = Multifile(filename, good_start, N//bin_frame_number)
-        data_pixel =   Get_Pixel_Arrayc( FD, pixelist,  norm= norm ).get_data()
-        g12b = auto_two_Arrayc(  data_pixel,  roi_mask, index = None   )
+        try:
+            N = md['cam_num_ima']            
+        except:
+            N = md['number of images']
+        FD = Multifile(filename, 0, N//bin_frame_number)
         os.makedirs(path + uid + '/', exist_ok=True)
-        res_path =  path + uid + '/'
-        np.save(  res_path + 'uid=%s_g12b'%uid, g12b)
-        del g12b
-        print( 'The two time correlation function for uid={} is saved in {}.'.format(uid, res_path ) )
+        filename =  path + uid + '/' + 'uid=%s_g12b'%uid
+        doit = True
+        if not force_generate:
+            if os.path.exists( filename + '.npy'):
+                doit=False
+                print('The two time correlation function for uid=%s is already calculated. Just pass...'%uid)
+        if doit:        
+            data_pixel =   Get_Pixel_Arrayc( FD, pixelist,  norm= norm ).get_data()
+            g12b = auto_two_Arrayc(  data_pixel,  roi_mask, index = None   )
+            np.save(  filename, g12b)
+            del g12b
+            print( 'The two time correlation function for uid={} is saved as {}.'.format(uid, filename ))
+                  
         
+
+
         
-def get_series_one_time_mulit_uids( uids, path, qval_dict, no_dose_fra=None,    ):
+
+def get_series_g2_from_g12( g12b, fra_num_by_dose = None, good_start=0, log_taus = True, num_bufs=8, time_step=1  ):
+    '''
+    Get a series of one-time function from two-time by giving noframes
+    Parameters:
+        g12b: a two time function
+        good_start: the start frame number
+        fra_num_by_dose: a list, correlation number starting from index 0,
+                if this number is larger than g12b length, will give a warning message, and
+                will use g12b length to replace this number
+                by default is None, will = [ g12b.shape[0] ] 
+        log_taus: if true, will only return a g2 with the correponding tau values 
+                    as calculated by multi-tau defined taus
+    Return:
+        
+        g2_series, a dict, with keys as fra_max_list (corrected on if warning message is given)
+        lag_steps, the corresponding lags
+        
+    '''
+    g2={}
+    lag_steps = {}
+    L,L,qs= g12b.shape
+    if fra_num_by_dose is None:
+        fra_num_by_dose  = [L]
+    for good_end in fra_num_by_dose:
+        #print( good_end )
+        if good_end>L:
+            warnings.warn("Warning: the dose value is too large, and please" 
+                          "check the maxium dose in this data set and give a smaller dose value."
+                          "We will use the maxium dose of the data.") 
+            good_end = L            
+        if not log_taus:
+            g2[good_end] = get_one_time_from_two_time(g12b[good_start:good_end,good_start:good_end,:] )
+        else:            
+            lag_step = get_multi_tau_lag_steps(good_end,  num_bufs)
+            lag_step = lag_step[ lag_step < good_end - good_start]            
+            #print( len(lag_steps ) )
+            lag_steps[good_end] = lag_step * time_step
+            g2[good_end] = get_one_time_from_two_time(g12b[good_start:good_end,good_start:good_end,:] )[lag_step]
+            
+    return lag_steps, g2
+                                           
+
+    
+    
+def get_series_one_time_mulit_uids( uids,  qval_dict,  good_start=0,  path=None, fra_num_by_dose=None, num_bufs =8, save_g2=True,   ):
     ''' Calculate a dose depedent series of one time correlations from two time 
     Parameters:
         uids: list, a list of uid
-        no_dose_fra: list, a list frame number defined by a list dose;
+        fra_num_by_dose: list, a list frame number defined by a list dose;
                 by default is None, namely, no_dose_fra = [ max_frame_number ]
         path: string, where to load the two time, if None, ask for it
                     the real g12 path is two_time_path + uid + '/'
@@ -216,49 +154,73 @@ def get_series_one_time_mulit_uids( uids, path, qval_dict, no_dose_fra=None,    
         will also save g2 results to the 'path'
     '''
     
-    if two_time_path is None:
+    if path is None:
         print( 'Please calculate two time function first by using get_two_time_mulit_uids function.')
     else:
         taus_uids = {}
         g2_uids = {}
-        for uid in uids:
+        for i, uid in enumerate(uids):
             print('UID: %s is in processing...'%uid)
             md = get_meta_data( uid )
             try:
                 N = md['cam_num_ima']            
             except:
                 N = md['number of images']
-            if no_dose_fra is None:
-                no_dose_fra = [N]
-            taus_uid = get_series_g2_taus( noframes, md['cam_acquire_period'], 
-                                                 max_noframes= N, num_bufs = 8)
-            taus_uids[uid] =  taus_uid
+            if fra_num_by_dose is None:
+                fra_num_by_dose = [N]
             g2_path =  path + uid + '/'
             g12b = np.load( g2_path + 'uid=%s_g12b.npy'%uid)
-            g2_uid = get_series_g2_from_g12( g12b, noframes ) 
-            g2_uids[uid] = g2_uid
-            
-            save_g2_general( g2_uid, taus=taus_uid,qr=np.array( list( qval_dict.values() ) )[:,0],
+            taus_uid, g2_uid = get_series_g2_from_g12( g12b, fra_num_by_dose, good_start=good_start,  num_bufs=num_bufs,
+                                                     time_step = md['cam_acquire_period'] )
+            g2_uids['uid_%03d=%s'%(i,uid)] = g2_uid             
+            taus_uids['uid_%03d=%s'%(i,uid)] =  taus_uid  
+            if save_g2:
+                for k in list( g2_uid.keys()):
+                    #print(k)
+                    uid_ = uid + '_fra_%s_%s'%(good_start, k )
+                    save_g2_general( g2_uid[k], taus=taus_uid[k],qr=np.array( list( qval_dict.values() ) )[:,0],
                              uid=uid_+'_g2.csv', path= g2_path, return_res=False )
         return taus_uids, g2_uids
+     
+
+def plot_dose_g2( taus_uids, g2_uids, qval_dict, ylim=[0.95, 1.05], vshift=0.1,
+                   fit_res= None,  geometry= 'saxs',filename= 'dose'+'_g2', 
+            path= None, function= None,  g2_labels=None, ylabel= 'g2_dose', append_name=  '_dose' ):
+    '''Plot a does-dependent g2 
+    taus_uids, dict, with format as {uid1: { dose1: tau_1, dose2: tau_2...}, uid2: ...}
+    g2_uids, dict, with format as {uid1: { dose1: g2_1, dose2: g2_2...}, uid2: ...}
+    qval_dict: a dict of qvals
+    vshift: float, vertical shift value of different dose of g2
     
+    '''
     
+    uids = sorted( list( taus_uids.keys() ) )
+    #print( uids )
+    dose = sorted( list( taus_uids[ uids[0] ].keys() ) )
+    g2_dict= {}
+    taus_dict = {}
+    if g2_labels is None:
+        g2_labels = []        
+    for i in range(   len( dose )):
+        g2_dict[i + 1] = []
+        taus_dict[i +1 ] = []
+        #print ( i )
+        for j in range( len( uids )):
+            #print( uids[i] , dose[j])
+            g2_dict[i +1 ].append(   g2_uids[ uids[j] ][  dose[i] ]  +  vshift*i  )
+            taus_dict[i +1 ].append(   taus_uids[ uids[j] ][ dose[i]  ]   )
+            if j ==0:
+                g2_labels.append( 'Dose_%s'%dose[i] )
+    #print( g2_labels)
+    if True: #False:
+        plot_g2_general( g2_dict, taus_dict,
+                ylim=[ylim[0], ylim[1] + vshift * len(dose)],
+                qval_dict = qval_dict, fit_res= None,  geometry=  geometry,filename= filename, 
+        path= path, function= function,  ylabel= ylabel, g2_labels=g2_labels, append_name=  append_name )
     
+    #return taus_dict, g2_dict
     
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
+ 
 
 
 def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
