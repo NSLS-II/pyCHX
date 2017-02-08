@@ -59,6 +59,9 @@ import random
 from PIL import Image
 
 
+import warnings
+
+
 from eiger_io.fs_handler2 import EigerHandler2
 from eiger_io.fs_handler import LazyEigerHandler
 
