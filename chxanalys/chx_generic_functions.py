@@ -240,30 +240,40 @@ def update_roi_mask(  roi_mask1, roi_mask2 ):
     return roi_mask
 
 
-def check_bad_uids(uids, mask, img_choice_N = 10):
+def check_bad_uids(uids, mask, img_choice_N = 10, bad_uids_index = None ):
     '''Y.G. Dec 22, 2016
         Find bad uids by checking the average intensity by a selection of the number img_choice_N of frames for the uid. If the average intensity is zeros, the uid will be considered as bad uid.
         Parameters:
             uids: list, a list of uid
             mask: array, bool type numpy.array
             img_choice_N: random select number of the uid
+            bad_uids_index: a list of known bad uid list, default is None
         Return:
             guids: list, good uids
             buids, list, bad uids    
     '''   
     import random
     buids = []
-    guids = uids
-    for uid in uids:
-        detector = get_detector( db[uid ] )
-        imgs = load_data( uid, detector  )
-        img_samp_index = random.sample( range(len(imgs)), img_choice_N)
-        imgsa = apply_mask( imgs, mask )
-        avg_img =  get_avg_img( imgsa, img_samp_index, plot_ = False, uid =uid)
-        if avg_img.max() == 0:
-            buids.append( uid ) 
-            guids.pop(uid)
-            print( 'The bad uid is: %s'%uid )
+    guids = list( uids )
+    #print( guids )
+    if bad_uids_index is None:
+        bad_uids_index = []
+    for i, uid in enumerate(uids):
+        #print( i, uid )
+        if i not in bad_uids_index:
+            detector = get_detector( db[uid ] )
+            imgs = load_data( uid, detector  )
+            img_samp_index = random.sample( range(len(imgs)), img_choice_N)
+            imgsa = apply_mask( imgs, mask )
+            avg_img =  get_avg_img( imgsa, img_samp_index, plot_ = False, uid =uid)
+            if avg_img.max() == 0:
+                buids.append( uid ) 
+                guids.pop(  list( np.where( np.array(guids) == uid)[0] )[0]  )
+                print( 'The bad uid is: %s'%uid )
+        else:
+            guids.pop(  list( np.where( np.array(guids) == uid)[0] )[0]  )
+            buids.append( uid )
+            print( 'The bad uid is: %s'%uid )            
     print( 'The total and bad uids number are %s and %s, repsectively.'%( len(uids), len(buids) ) )        
     return guids, buids          
     
