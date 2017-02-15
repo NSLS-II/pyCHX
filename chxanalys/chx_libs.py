@@ -88,11 +88,11 @@ markers_copy = itertools.cycle( ["o", "2", "p", "1", "s", "*", "4",  "+", "8", "
 
 RUN_GUI = False  #if True for gui setup; else for notebook; the main code difference is the Figure() or plt.figure(figsize=(8, 6))
 
-markers =  ['o',   'H', 'D', 'v',  '^', '<',  '>', 'p',
-                's',  'h',   '*', 'd', 
+markers =  ['o', 'D', 'v',   '^', '<',  '>', 'p', 's', 'H',
+                  'h',   '*', 'd', 
             '$I$','$L$', '$O$','$V$','$E$', 
             '$c$', '$h$','$x$','$b$','$e$','$a$','$m$','$l$','$i$','$n$', '$e$',
-            '8', '1', '3', '2', '4',     '+',   'x',  '_',   '|', ',',  '1',]
+            '8', '1', '3', '2', '4',     '+',   'x',  '_',   '|', ',',  '1',] 
 
 markers = np.array(   markers *100 )
 colors = np.array( ['darkorange', 'mediumturquoise', 'seashell', 'mediumaquamarine', 'darkblue', 
@@ -130,5 +130,30 @@ colors_ = itertools.cycle(   colors  )
 markers_ = itertools.cycle( markers )    
     
     
+
+import matplotlib as mpl
+
+# Simliar to Dectris ALBULA default color-scale
+color_list_hdr_albula = [
+     [ 255.0/255.0, 255.0/255.0, 255.0/255.0],
+     [ 0.0/255.0, 0.0/255.0, 0.0/255.0],
+     [ 255.0/255.0, 0.0/255.0, 0.0/255.0],
+     [ 255.0/255.0, 255.0/255.0, 0.0/255.0],
+]
+
+cmap_albula = mpl.colors.LinearSegmentedColormap.from_list('cmap_albula', color_list_hdr_albula)
+
+
+# High-dynamic-range (HDR) version of X9 VGE scale
+color_list_vge_hdr = [
+     [ 255.0/255.0, 255.0/255.0, 255.0/255.0],
+     [ 0.0/255.0, 0.0/255.0, 0.0/255.0],
+     [ 0.0/255.0, 0.0/255.0, 255.0/255.0],
+     [ 188.0/255.0, 0.0/255.0, 107.0/255.0],
+     [ 254.0/255.0, 55.0/255.0, 0.0/255.0],
+     [ 254.0/255.0, 254.0/255.0, 0.0/255.0],
+     [ 254.0/255.0, 254.0/255.0, 254.0/255.0]
+]
+cmap_vge = mpl.colors.LinearSegmentedColormap.from_list('cmap_vge', color_list_vge_hdr)
 
 
