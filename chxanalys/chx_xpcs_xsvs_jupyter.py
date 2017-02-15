@@ -1,5 +1,8 @@
 from chxanalys.chx_packages import *
 
+#from chxanalys.chx_generic_functions import get_short_long_labels_from_qval_dict
+#RUN_GUI = False
+#from chxanalys.chx_libs import markers
 
 ####################################################################################################
 ##compress multi uids, sequential compress for uids, but for each uid, can apply parallel compress##
@@ -64,16 +67,18 @@ def get_two_time_mulit_uids( uids, roi_mask,  norm= None, bin_frame_number=1, pa
     qind, pixelist = roi.extract_label_indices(roi_mask)
     for uid in uids:
         print('UID: %s is in processing...'%uid)
-        md = get_meta_data( uid )
+        md = get_meta_data( uid )        
+        imgs = load_data( uid, md['detector'], reverse= True  )
+        N = len(imgs)
+        #print( N )
         if bin_frame_number==1:
             filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%md['uid']
         else:
             filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s_bined--%s.cmp'%(md['uid'],bin_frame_number)
-        try:
-            N = md['cam_num_ima']            
-        except:
-            N = md['number of images']
+        
         FD = Multifile(filename, 0, N//bin_frame_number)
+        #print( FD.beg, FD.end)
+        
         os.makedirs(path + uid + '/', exist_ok=True)
         filename =  path + uid + '/' + 'uid=%s_g12b'%uid
         doit = True
@@ -93,7 +98,8 @@ def get_two_time_mulit_uids( uids, roi_mask,  norm= None, bin_frame_number=1, pa
 
         
 
-def get_series_g2_from_g12( g12b, fra_num_by_dose = None, good_start=0, log_taus = True, num_bufs=8, time_step=1  ):
+def get_series_g2_from_g12( g12b, fra_num_by_dose = None, dose_label = None,
+                           good_start=0, log_taus = True, num_bufs=8, time_step=1  ):
     '''
     Get a series of one-time function from two-time by giving noframes
     Parameters:
@@ -103,11 +109,12 @@ def get_series_g2_from_g12( g12b, fra_num_by_dose = None, good_start=0, log_taus
                 if this number is larger than g12b length, will give a warning message, and
                 will use g12b length to replace this number
                 by default is None, will = [ g12b.shape[0] ] 
+        dose_label: the label of each dose, also is the keys of returned g2, lag
         log_taus: if true, will only return a g2 with the correponding tau values 
                     as calculated by multi-tau defined taus
     Return:
         
-        g2_series, a dict, with keys as fra_max_list (corrected on if warning message is given)
+        g2_series, a dict, with keys as dose_label (corrected on if warning message is given)
         lag_steps, the corresponding lags
         
     '''
@@ -116,33 +123,41 @@ def get_series_g2_from_g12( g12b, fra_num_by_dose = None, good_start=0, log_taus
     L,L,qs= g12b.shape
     if fra_num_by_dose is None:
         fra_num_by_dose  = [L]
-    for good_end in fra_num_by_dose:
+    if dose_label is None:
+        dose_label = fra_num_by_dose    
+    fra_num_by_dose = sorted( fra_num_by_dose )
+    dose_label = sorted( dose_label )
+    for i, good_end in enumerate(fra_num_by_dose):
+        key = round(dose_label[i] ,3) 
         #print( good_end )
         if good_end>L:
             warnings.warn("Warning: the dose value is too large, and please" 
                           "check the maxium dose in this data set and give a smaller dose value."
                           "We will use the maxium dose of the data.") 
             good_end = L            
-        if not log_taus:
-            g2[good_end] = get_one_time_from_two_time(g12b[good_start:good_end,good_start:good_end,:] )
+        if not log_taus:            
+            g2[ key ] = get_one_time_from_two_time(g12b[good_start:good_end,good_start:good_end,:] )
         else:            
             lag_step = get_multi_tau_lag_steps(good_end,  num_bufs)
             lag_step = lag_step[ lag_step < good_end - good_start]            
             #print( len(lag_steps ) )
-            lag_steps[good_end] = lag_step * time_step
-            g2[good_end] = get_one_time_from_two_time(g12b[good_start:good_end,good_start:good_end,:] )[lag_step]
+            lag_steps[key] = lag_step * time_step
+            g2[key] = get_one_time_from_two_time(g12b[good_start:good_end,good_start:good_end,:] )[lag_step]
             
     return lag_steps, g2
                                            
 
     
     
-def get_series_one_time_mulit_uids( uids,  qval_dict,  good_start=0,  path=None, fra_num_by_dose=None, num_bufs =8, save_g2=True,   ):
+def get_series_one_time_mulit_uids( uids,  qval_dict,  good_start=0,  path=None, 
+                                exposure_dose = None, dead_time = 2, 
+                                   num_bufs =8, save_g2=True,   ):
     ''' Calculate a dose depedent series of one time correlations from two time 
     Parameters:
         uids: list, a list of uid
-        fra_num_by_dose: list, a list frame number defined by a list dose;
-                by default is None, namely, no_dose_fra = [ max_frame_number ]
+        exposure_dose: list, a list x-ray exposure dose;
+                by default is None, namely,  = [ max_frame_number ], 
+                can be [3.34  334, 3340] in unit of ms, 
         path: string, where to load the two time, if None, ask for it
                     the real g12 path is two_time_path + uid + '/'
         qval_dict: the dictionary for q values
@@ -162,15 +177,25 @@ def get_series_one_time_mulit_uids( uids,  qval_dict,  good_start=0,  path=None,
         for i, uid in enumerate(uids):
             print('UID: %s is in processing...'%uid)
             md = get_meta_data( uid )
-            try:
-                N = md['cam_num_ima']            
-            except:
-                N = md['number of images']
-            if fra_num_by_dose is None:
-                fra_num_by_dose = [N]
+            imgs = load_data( uid, md['detector'], reverse= True  )
+            N = len(imgs)
+            if exposure_dose is None:
+                exposure_dose = [N]
             g2_path =  path + uid + '/'
             g12b = np.load( g2_path + 'uid=%s_g12b.npy'%uid)
-            taus_uid, g2_uid = get_series_g2_from_g12( g12b, fra_num_by_dose, good_start=good_start,  num_bufs=num_bufs,
+            try:
+                exp_time = float( md['cam_acquire_t']) *1000 #from second to ms
+            except:                
+                exp_time = float( md['exposure time']) * 1000  #from second to ms
+                
+            fra_num_by_dose = get_fra_num_by_dose(  exp_dose = exposure_dose,
+                                   exp_time =exp_time, dead_time = dead_time)
+            
+            #print( fra_num_by_dose,exposure_dose,  exp_time ) 
+            
+            taus_uid, g2_uid = get_series_g2_from_g12( g12b, fra_num_by_dose=fra_num_by_dose, 
+                                    dose_label = exposure_dose,
+                                            good_start=good_start,  num_bufs=num_bufs,
                                                      time_step = md['cam_acquire_period'] )
             g2_uids['uid_%03d=%s'%(i,uid)] = g2_uid             
             taus_uids['uid_%03d=%s'%(i,uid)] =  taus_uid  
@@ -182,7 +207,9 @@ def get_series_one_time_mulit_uids( uids,  qval_dict,  good_start=0,  path=None,
                              uid=uid_+'_g2.csv', path= g2_path, return_res=False )
         return taus_uids, g2_uids
      
-
+ 
+    
+    
 def plot_dose_g2( taus_uids, g2_uids, qval_dict, ylim=[0.95, 1.05], vshift=0.1,
                    fit_res= None,  geometry= 'saxs',filename= 'dose'+'_g2', 
             path= None, function= None,  g2_labels=None, ylabel= 'g2_dose', append_name=  '_dose' ):
@@ -322,7 +349,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
         inner_radius= run_pargs['inner_radius']
         outer_radius =   run_pargs['outer_radius']
         gap_ring_number =run_pargs['gap_ring_number']
-        num_rings =   run_pargs['num_rings']  
+        num_rings =   run_pargs['num_rings']
         
         number_rings= run_pargs['number_rings'] 
         qcenters = run_pargs['qcenters']
