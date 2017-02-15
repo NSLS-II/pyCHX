@@ -302,8 +302,10 @@ class create_pdf_report( object ):
             s7= ('Incident Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y']) +
                 '   ||   ' + 
                 'Reflect Center: [%s, %s] (pixel)'%(md['beam_refl_center_x'], md['beam_refl_center_y']) )             
-        elif  self.report_type == 'ang_saxs':
+        elif  self.report_type == 'ang_saxs' or self.report_type == 'gi_waxs' :
             s7= 'Beam Center: [%s, %s] (pixel)'%(md['beam_center_x'], md['beam_center_y'])
+        else:
+            s7 = ''
             
         s7 += ' || ' + 'BadLen: %s'%len(md['bad_frame_list'])
             
@@ -352,7 +354,11 @@ class create_pdf_report( object ):
             dshift= 140
         elif self.report_type == 'ang_saxs':
             ipos = 200
-            dshift= 140            
+            dshift= 140    
+        else:
+            ipos = 200
+            dshift= 140
+            
             
         add_image_string( c, imgf, self.data_dir, img_left= ipos, img_top=top-ds, img_height=180, 
                      str1_left=90 + dshift, str1_top = top-35,str1='Average Intensity Image',
@@ -406,17 +412,18 @@ class create_pdf_report( object ):
                      str2_left = 60, str2_top = top -260 )       
         
         #add q_Iq
-        imgf = self.ROI_on_Iq_file        
-        img_height=180
-        img_left,img_top =320, top - ds        
-        str1_left, str1_top,str1= 420, top- 35,  'ROI on Iq'
-        str2_left, str2_top = 350, top- 260
-        
-        print ( imgf )
-                
-        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
-                     str1_left, str1_top,str1,
-                     str2_left, str2_top )
+        if self.report_type == 'saxs' or  self.report_type == 'gi_saxs' or self.report_type == 'ang_saxs':
+            imgf = self.ROI_on_Iq_file        
+            img_height=180
+            img_left,img_top =320, top - ds        
+            str1_left, str1_top,str1= 420, top- 35,  'ROI on Iq'
+            str2_left, str2_top = 350, top- 260
+
+            #print ( imgf )
+
+            add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                         str1_left, str1_top,str1,
+                         str2_left, str2_top )
 
         
         if new_page:
@@ -451,8 +458,9 @@ class create_pdf_report( object ):
         elif self.report_type == 'gi_saxs':
             ipos = 200
         elif self.report_type == 'ang_saxs':
-            ipos = 200            
-        
+            ipos = 200    
+        else:
+            ipos = 200         
             
         imgf = self.img_sum_t_file         
         img_height=140
@@ -478,7 +486,7 @@ class create_pdf_report( object ):
             add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                          str1_left, str1_top,str1,
                          str2_left, str2_top ) 
-        elif self.report_type == 'gisaxs':
+        elif self.report_type == 'gi_saxs':
             pass
             
         top = top1 - 340
@@ -660,7 +668,7 @@ class create_pdf_report( object ):
         
         ds = 20
         self.sub_title_num +=1
-        c.drawString(10, top, "%s. Two Time Correlation Fucntion"%self.sub_title_num )  #add title
+        c.drawString(10, top, "%s. Two Time Correlation Function"%self.sub_title_num )  #add title
         c.setFont("Helvetica", 14)
         
         top1=top
@@ -670,7 +678,7 @@ class create_pdf_report( object ):
         
         img_height= 300
         img_left,img_top = 80, top
-        str1_left, str1_top,str1= 180, top + 300,  'two time correlation fucntion'  
+        str1_left, str1_top,str1= 180, top + 300,  'two time correlation function'  
         str2_left, str2_top = 180, top - 10
         add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
@@ -708,7 +716,7 @@ class create_pdf_report( object ):
         
         ds = 20
         self.sub_title_num +=1
-        c.drawString(10, top, "%s. Four Time Correlation Fucntion"%self.sub_title_num )  #add title
+        c.drawString(10, top, "%s. Four Time Correlation Function"%self.sub_title_num )  #add title
         c.setFont("Helvetica", 14)
         
         top1=top
@@ -718,7 +726,7 @@ class create_pdf_report( object ):
         
         img_height= 300
         img_left,img_top = 80, top
-        str1_left, str1_top,str1= 180, top + 300,  'four time correlation fucntion'
+        str1_left, str1_top,str1= 180, top + 300,  'four time correlation function'
         str2_left, str2_top = 180, top - 10
         add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
