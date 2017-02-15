@@ -456,7 +456,7 @@ def get_meta_data( uid,*argv,**kwargs ):
     md['stop_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime( ev['time']   ))  
     md['img_shape'] = ev['descriptor']['data_keys'][md['detector']]['shape'][:2][::-1]
     for k,v in kwargs.items():
-        md[k] =v        
+        md[k] =v  
     return md
 
 
@@ -925,7 +925,7 @@ def RemoveHot( img,threshold= 1E7, plot_=True ):
 def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,path=None, 
              aspect=None, logs=False,vmin=None,vmax=None,return_fig=False,cmap='viridis', 
              show_time= False, file_name =None, ylabel=None, xlabel=None, extent=None,
-             show_colorbar=True, tight=True, show_ticks=True,
+             show_colorbar=True, tight=True, show_ticks=True, save_format = 'png', dpi= None,
              *argv,**kwargs ):    
     """a simple function to show image by using matplotlib.plt imshow
     pass *argv,**kwargs to imshow
@@ -981,18 +981,18 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
         if show_time:
             dt =datetime.now()
             CurTime = '_%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)         
-            fp = path + '%s'%( file_name ) + CurTime + '.png'       
+            fp = path + '%s'%( file_name ) + CurTime + '.' + save_format
         else:
-            fp = path + '%s'%( image_name ) + '.png'
-            
-        plt.savefig( fp, dpi=fig.dpi) 
-        
+            fp = path + '%s'%( image_name ) + '.' + save_format
+        if dpi is None:
+            dpi = fig.dpi
+        plt.savefig( fp, dpi= dpi)          
     fig.set_tight_layout(tight) 
     
     if return_fig:
         return fig
+    
 
- 
     
     
 def plot1D( y,x=None, yerr=None, ax=None,return_fig=False, ls='-', 
@@ -2089,7 +2089,7 @@ def get_short_long_labels_from_qval_dict(qval_dict, geometry='saxs'):
     Nqs = len( qval_dict.keys())
     len_qrz = len( list( qval_dict.values() )[0] )
     qr_label = np.array( list( qval_dict.values() ) )[:,0]
-    if geometry=='gi_saxs' or geometry=='ang_saxs':
+    if geometry=='gi_saxs' or geometry=='ang_saxs':# or geometry=='gi_waxs':
         if len_qrz < 2:
             print( "please give qz or qang for the q-label")
         else:
@@ -2119,7 +2119,7 @@ def get_short_long_labels_from_qval_dict(qval_dict, geometry='saxs'):
     short_ulabel = [uqz_label,uqr_label][ np.argmin( [num_qz, num_qr]    ) ]
     long_ulabel  = [uqz_label,uqr_label][ np.argmax( [num_qz, num_qr]    ) ]
     #print( long_ulabel )
-    if geometry == 'saxs':
+    if geometry == 'saxs' or geometry == 'gi_waxs':
         ind_long = [ range( num_long )  ] 
     else:
         ind_long = [ np.where( short_label == i)[0] for i in short_ulabel ] 
@@ -2185,7 +2185,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
      num_long, short_label, long_label,short_ulabel,
      long_ulabel,ind_long, master_plot,
      mastp) = get_short_long_labels_from_qval_dict(qval_dict, geometry=geometry)  
-    fps = []
+    fps = [] 
     
     for s_ind in range( num_short  ):
         if RUN_GUI:
@@ -2224,12 +2224,13 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
         
         sy= 4
         sx = int( np.ceil( num_long_i/float(sy) ) )
-        #print( num_long_i, sx, sy )        
+        #print( num_long_i, sx, sy )  
+         
         for i, l_ind in enumerate( ind_long_i ):            
             ax = fig.add_subplot(sx,sy, i + 1 )        
             ax.set_ylabel( r"$%s$"%ylabel + '(' + r'$\tau$' + ')' ) 
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16)         
-            if master_plot == 'qz' or master_plot == 'angle': 
+            if master_plot == 'qz' or master_plot == 'angle':                 
                 title_long =  r'$Q_r= $'+'%.5f  '%( long_label[l_ind]  ) + r'$\AA^{-1}$'                    
             else:             
                 if geometry=='ang_saxs':
@@ -2266,15 +2267,16 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                 except:
                     islist_n = len( g2_dict[k] )
                     islist = True
-                    #print( 'here is the list' )
-                    
+                    #print( 'here is the list' )                    
                 if islist:
                     for nlst in range( islist_n ):
+                        m = '-%s'%markers[ nlst ]  
+                        #print(m)
                         y=g2_dict[k][nlst][:, l_ind ]
                         x = taus_dict[k][nlst]
                         if ki==0:
                             ymin,ymax = min(y), max(y[1:])
-                        if g2_labels is None:    
+                        if g2_labels is None:                             
                             ax.semilogx(x, y, m, color=c,  markersize=6) 
                         else:
                             #print('here ki ={} nlst = {}'.format( ki, nlst ))
@@ -2331,10 +2333,12 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                     txts = r'$\alpha$' + r'$ = %.3f$'%(alpha)  
                     dt +=0.1
                     #txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
-                    ax.text(x =x, y= y0-dt, s=txts, fontsize=fontsize, transform=ax.transAxes) 
+                    ax.text(x =x, y= y0-dt, s=txts, fontsize=fontsize, transform=ax.transAxes)
+                    
                 txts = r'$baseline$' + r'$ = %.3f$'%( baseline) 
                 dt +=0.1
-                ax.text(x =x, y= y0- dt, s=txts, fontsize=fontsize, transform=ax.transAxes) 
+                ax.text(x =x, y= y0- dt, s=txts, fontsize=fontsize, transform=ax.transAxes)
+                
                 if function=='flow_para_function' or  function=='flow_para' or  function=='flow_vibration': 
                     txts = r'$flow_v$' + r'$ = %.3f$'%( flow) 
                     dt += 0.1
@@ -2342,7 +2346,12 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                 if function=='stretched_vibration'  or  function=='flow_vibration': 
                     txts = r'$vibration$' + r'$ = %.1f Hz$'%( freq) 
                     dt += 0.1
-                    ax.text(x =x, y= y0-dt, s=txts, fontsize=fontsize, transform=ax.transAxes)               
+                    ax.text(x =x, y= y0-dt, s=txts, fontsize=fontsize, transform=ax.transAxes)  
+                
+                txts = r'$\beta$' + r'$ = %.3f$'%( beta ) 
+                dt +=0.1
+                ax.text(x =x, y= y0- dt, s=txts, fontsize=fontsize, transform=ax.transAxes)
+                
 
             if 'ylim' in kwargs:
                 ax.set_ylim( kwargs['ylim'])
@@ -2370,7 +2379,8 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
             outputfile =  path + filename  + append_name + '.png'
         combine_images( fps, outputfile, outsize= outsize )    
     if return_fig:
-        return fig     
+        return fig   
+    
 
 def power_func(x, D0, power=2):
     return D0 * x**power
