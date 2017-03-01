@@ -1,6 +1,7 @@
 from chxanalys.chx_libs import (np, roi, time, datetime, os, get_events, 
                             getpass, db, get_images,LogNorm, plt,tqdm, utils, Model,
                            multi_tau_lags,  random,  warnings)
+from chxanalys.chx_libs import cmap_vge, cmap_albula
 
 from chxanalys.chx_generic_functions import (get_detector, get_fields, get_sid_filenames,  
  load_data, load_mask,get_fields, reverse_updown, ring_edges,get_avg_img,check_shutter_open,
