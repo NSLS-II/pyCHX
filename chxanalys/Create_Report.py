@@ -110,10 +110,12 @@ class create_pdf_report( object ):
           A PDF file with name as "XPCS Analysis Report for uid=%s"%uid in out_dir folder
     '''       
     
-    def __init__( self, data_dir, uid, out_dir=None, filename=None, load=True, user=None,
-                 report_type='saxs' ):
+    def __init__( self, data_dir, uid,  out_dir=None, filename=None, load=True, user=None,
+                 report_type='saxs',md=None, ):
         self.data_dir = data_dir
         self.uid = uid
+        self.md = md
+        #print(md)
         if user is None:
             user = 'chx'
         self.user = user
@@ -144,28 +146,28 @@ class create_pdf_report( object ):
     def load_metadata(self):
         uid=self.uid
         data_dir = self.data_dir
-        
         #load metadata        
-        meta_file = 'uid=%s_md'%uid
-        md = pload_obj( data_dir + meta_file )         
-        self.metafile = data_dir + meta_file
-        
-        self.md = md        
-        self.sub_title_num = 0
-        
-        '''global definition'''
-        
+        meta_file = 'uid=%s_md'%uid           
+        self.metafile = data_dir + meta_file        
+        if self.md is  None:
+            md = pload_obj( data_dir + meta_file ) 
+            self.md = md
+        else:            
+            md = self.md
+            #print('Get md from giving md')
+            #print(md)
+        self.sub_title_num = 0        
+        '''global definition'''        
         try:
             beg = md['beg']
-            end=md['end']
+            end=  md['end']
             uid_ = uid + '_fra_%s_%s'%(beg, end)
         except:
             uid_ = uid
         if beg is None:
             uid_ = uid
 
-        self.avg_img_file = 'uid=%s_img_avg.png'%uid   
-        
+        self.avg_img_file = 'uid=%s_img_avg.png'%uid
         self.ROI_on_img_file = 'uid=%s_ROI_on_Image.png'%uid
         
         self.qiq_file = 'uid=%s_q_Iq.png'%uid  
@@ -187,8 +189,11 @@ class create_pdf_report( object ):
 
         self.g2_file = 'uid=%s_g2.png'%uid_
         self.g2_fit_file = 'uid=%s_g2_fit.png'%uid_
-            
-        self.q_rate_file = 'uid=%s_Q_Rate_fit.png'%uid_    
+        
+        #print( self.g2_fit_file )
+        
+        self.q_rate_file = 'uid=%s_Q_Rate_fit.png'%uid_ 
+        self.q_rate_two_time_fit_file = 'uid=%s_two_time_Q_Rate_fit.png'%uid_         
 
         self.two_time_file = 'uid=%s_Two_time.png'%uid_
         self.two_g2_file = 'uid=%s_g2_two_g2.png'%uid_
@@ -282,18 +287,19 @@ class create_pdf_report( object ):
         for key in nec_keys:
             check_dict_keys(md, key) 
         
-        try:
+        try:            
             exposuretime= md['cam_acquire_t']     #exposure time in sec
         except:    
             exposuretime= md['count_time']     #exposure time in sec
-    
+        if exposuretime == 'unknown':
+            exposuretime= md['count_time']     #exposure time in sec  
                     
         s = []
         s.append( 'UID: %s'%uid ) ###line 1, for uid
         s.append('Sample: %s'%md['sample'] )   ####line 2 sample   
         s.append('Data Acquisition From: %s To: %s'%(md['start_time'], md['stop_time']))####line 3 Data Acquisition time
         s.append(    'Measurement: %s'%md['Measurement']  ) ####line 4 'Measurement
-        s.append( 'Wavelength: %s A | Num of Image: %d | Exposure time: %s ms | Acquire period: %s ms'%( md['incident_wavelength'],  int(md['number of images']),round(float(exposuretime)*1000,4), round(float(md['frame_time'])*1000,4) ) )   ####line 5 'lamda...
+        s.append( 'Wavelength: %s A | Num of Image: %d | Exposure time: %s ms | Acquire period: %s ms'%( md['incident_wavelength'],  int(md['number of images']),round(float(exposuretime)*1000,4), round(float(md['frame_time'])*1000,4) ) )   ####line 5 'lamda...        
         s.append( 'Detector-Sample Distance: %s m| FeedBack Mode: x -> %s & y -> %s| Shutter Mode: %s'%(
                 md['detector_distance'], md['feedback_x'], md['feedback_y'], md['shutter mode']  ) )  ####line 6 'Detector-Sample Distance..
         if self.report_type == 'saxs':
@@ -582,11 +588,6 @@ class create_pdf_report( object ):
             img_left,img_top = 350, top - 150
             str2_left, str2_top = 380, top - 5 
             str1_left, str1_top,str1= 450, top + 180,  'q-rate fit  plot' 
-        
-         
-       
-         
-
         add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
                      str2_left, str2_top )  
@@ -691,13 +692,29 @@ class create_pdf_report( object ):
         imgf = self.two_g2_file
         
         img_height= 300
-        img_left,img_top = 100, top
-        str1_left, str1_top,str1= 210, top + 310,  'compared g2'  
-        str2_left, str2_top = 180, top - 10
+        img_left,img_top = 100 -70, top
+        str1_left, str1_top,str1= 210-70, top + 310,  'compared g2'  
+        str2_left, str2_top = 180-70, top - 10
         add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
                      str2_left, str2_top ) 
-
+        
+        
+          
+        top = top + 50   
+        imgf = self.q_rate_two_time_fit_file
+        img_height= 140
+        img_left,img_top = 350, top + 30
+        str2_left, str2_top = 380 - 80, top - 5
+        str1_left, str1_top,str1= 450 -80 , top + 230,  'q-rate fit from two-time' 
+        
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top ) 
+        
+  
+        
+        
         if new_page:
             c.showPage()
             c.save()            
@@ -1029,13 +1046,13 @@ def load_res_h5( full_uid, data_dir   ):
 
     
 def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username, 
-                    run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs, report_type='saxs'
+                    run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs, report_type='saxs', md=None
                    ):
-
+    
     if uid.startswith("uid=") or uid.startswith("Uid="):
         uid = uid[4:]
-    c= create_pdf_report(  data_dir, uid, pdf_out_dir, filename= pdf_filename, user= username, report_type=report_type )  
-    
+    c= create_pdf_report(  data_dir, uid, pdf_out_dir, filename= pdf_filename, user= username, report_type=report_type, md = md )  
+    #print( c.md)
     #Page one: Meta-data/Iq-Q/ROI
     c.report_header(page=1)
     c.report_meta( top=730)    
@@ -1097,7 +1114,8 @@ def export_xpcs_results_to_h5( filename, export_dir, export_dict ):
     fout = export_dir + filename
     dicts = ['md', 'qval_dict', 'qval_dict_v', 'qval_dict_p']
     with h5py.File(fout, 'w') as hf: 
-        for key in list(export_dict.keys()):            
+        for key in list(export_dict.keys()):   
+            #print( key )
             if key in dicts: #=='md' or key == 'qval_dict':                
                 md= export_dict[key]
                 meta_data = hf.create_dataset( key, (1,), dtype='i')
@@ -1106,6 +1124,7 @@ def export_xpcs_results_to_h5( filename, export_dir, export_dict ):
                         meta_data.attrs[str(key_)] = md[key_]                        
                     except:
                         pass 
+            
             elif key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds', 'qr_1d_pds']:
                 export_dict[key].to_hdf( fout, key=key,  mode='a',   )                
             else:
