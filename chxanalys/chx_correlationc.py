@@ -72,16 +72,13 @@ def _one_time_process(buf, G, past_intensity_norm, future_intensity_norm,
         # compute the index into the autocorrelation matrix
         t_index = int( level * num_bufs / 2 + i )
         delay_no = (buf_no - i) % num_bufs
-
         # get the images for correlating
         past_img = buf[level, delay_no]
         future_img = buf[level, buf_no]
-
         # find the normalization that can work both for bad_images
         #  and good_images
         ind = int(t_index - lev_len[:level].sum())
         normalize = img_per_level[level] - i - norm[level+1][ind]
-
         # take out the past_ing and future_img created using bad images
         # (bad images are converted to np.nan array)
         if np.isnan(past_img).any() or np.isnan(future_img).any():
@@ -277,6 +274,7 @@ def fill_pixel( p, v, pixelist):
     
 def lazy_one_time(FD, num_levels, num_bufs, labels,
                   internal_state=None, bad_frame_list=None, imgsum=None, norm = None ):
+    
     """Generator implementation of 1-time multi-tau correlation
     If you do not want multi-tau correlation, set num_levels to 1 and
     num_bufs to the number of images you wish to correlate
@@ -400,7 +398,7 @@ Returns
         # and img_per_level in place!
         _one_time_process(s.buf, s.G, s.past_intensity, s.future_intensity,
                           s.label_array, num_bufs, s.num_pixels,
-                          s.img_per_level, level, buf_no, s.norm, s.lev_len)
+                          s.img_per_level, level, buf_no, s.norm, s.lev_len) 
 
         # check whether the number of levels is one, otherwise
         # continue processing the next level
@@ -511,7 +509,6 @@ def auto_corr_scat_factor(lags, beta, relaxation_rate, baseline=1):
     """
     return beta * np.exp(-2 * relaxation_rate * lags) + baseline
 
-
 def two_time_corr(labels, images, num_frames, num_bufs, num_levels=1):
     """Wraps generator implementation of multi-tau two time correlation
     This function computes two-time correlation
@@ -526,10 +523,12 @@ def two_time_corr(labels, images, num_frames, num_bufs, num_levels=1):
     for result in gen:
         pass
     return two_time_state_to_results(result)
+    
+def lazy_two_time(FD, num_levels, num_bufs, labels,
+                  two_time_internal_state=None, bad_frame_list=None, imgsum=None, norm = None ):
 
-
-def lazy_two_time(labels, images, num_frames, num_bufs, num_levels=1,
-                  two_time_internal_state=None):
+#def lazy_two_time(labels, images, num_frames, num_bufs, num_levels=1,
+#                  two_time_internal_state=None):
     """ Generator implementation of two-time correlation
     If you do not want multi-tau correlation, set num_levels to 1 and
     num_bufs to the number of images you wish to correlate
@@ -540,21 +539,20 @@ def lazy_two_time(labels, images, num_frames, num_bufs, num_levels=1,
     ** see comments on multi_tau_auto_corr
     Parameters
     ----------
-    labels : array
-        labeled array of the same shape as the image stack;
-        each ROI is represented by a distinct label (i.e., integer)
-    images : iterable of 2D arrays
-        dimensions are: (rr, cc), iterable of 2D arrays
-    num_frames : int
-        number of images to use
-        default is number of images
-    num_bufs : int, must be even
-        maximum lag step to compute in each generation of
-        downsampling
+    FD: the handler of compressed data 
     num_levels : int, optional
         how many generations of downsampling to perform, i.e.,
         the depth of the binomial tree of averaged frames
         default is one
+    num_bufs : int, must be even
+        maximum lag step to compute in each generation of
+        downsampling        
+    labels : array
+        labeled array of the same shape as the image stack;
+        each ROI is represented by a distinct label (i.e., integer)
+    two_time_internal_state: None
+
+
     Yields
     ------
     namedtuple
@@ -585,11 +583,23 @@ def lazy_two_time(labels, images, num_frames, num_bufs, num_levels=1,
         and aging in collodial gels studied by x-ray photon correlation
         spectroscopy," Phys. Rev. E., vol 76, p 010401(1-4), 2007.
     """
+    
     if two_time_internal_state is None:
         two_time_internal_state = _init_state_two_time(num_levels, num_bufs,
                                                        labels, num_frames)
     # create a shorthand reference to the results and state named tuple
     s = two_time_internal_state
+    
+    qind, pixelist = roi.extract_label_indices(  labels  )    
+    # iterate over the images to compute multi-tau correlation
+    fra_pix = np.zeros_like( pixelist, dtype=np.float64)    
+    timg = np.zeros(    FD.md['ncols'] * FD.md['nrows']   , dtype=np.int32   ) 
+    timg[pixelist] =   np.arange( 1, len(pixelist) + 1  )     
+    if bad_frame_list is None:
+        bad_frame_list=[]
+    #for  i in tqdm(range( FD.beg , FD.end )): 
+        
+        
 
     for img in images:
         s.cur[0] = (1 + s.cur[0]) % num_bufs  # increment buffer
@@ -801,10 +811,6 @@ def _init_state_two_time(num_levels, num_bufs, labels, num_frames):
         lev_len,
     )
 
-
-
-
-
 def one_time_from_two_time(two_time_corr):
     """
     This will provide the one-time correlation data from two-time
@@ -957,8 +963,7 @@ def auto_two_Arrayc(  data_pixel, rois, index=None):
     noqs = len( np.unique(qind) )
     nopr = np.bincount(qind, minlength=(noqs+1))[1:] 
     noframes = data_pixel.shape[0]    
-    g12b = np.zeros(  [noframes, noframes, noqs] )
-    
+
     if index is None:
         index =  np.arange( 1, noqs + 1 )        
     else:
@@ -967,18 +972,32 @@ def auto_two_Arrayc(  data_pixel, rois, index=None):
             index = np.array(  index  )
         except TypeError:
             index = np.array(  [index]  )
+        #print( index )
     qlist = np.arange( 1, noqs + 1 )[ index -1  ]    
-    g12b = np.zeros(  [noframes, noframes, noqs] )  
-    #print (qlist)
-    for qi in tqdm( qlist ):
-        #print (qi-1)
-        pixelist_qi =  np.where( qind == qi)[0] 
-        #print (pixelist_qi.shape,  data_pixel[qi].shape)
-        data_pixel_qi =    data_pixel[:,pixelist_qi] 
-        sum1 = (np.average( data_pixel_qi, axis=1)).reshape( 1, noframes   )  
-        sum2 = sum1.T 
-        g12b[:,:,qi -1 ] = np.dot(   data_pixel_qi, data_pixel_qi.T)  /sum1  / sum2  / nopr[qi -1]
-    return g12b
+    #print( qlist )    
+    try:
+        g12b = np.zeros(  [noframes, noframes, len(qlist) ] )
+        DO = True
+    except:
+        print("The array is too large. The Sever can't handle such big array. Will calulate different Q sequencely")  
+        '''TO be done here  '''
+        DO = False 
+        
+    if DO:
+        i = 0
+        for  qi in tqdm(qlist ):
+            #print (qi-1)
+            pixelist_qi =  np.where( qind == qi)[0] 
+            #print (pixelist_qi.shape,  data_pixel[qi].shape)
+            data_pixel_qi =    data_pixel[:,pixelist_qi] 
+            sum1 = (np.average( data_pixel_qi, axis=1)).reshape( 1, noframes   )  
+            sum2 = sum1.T 
+            #print( qi, qlist, )
+            #print( g12b[:,:,qi -1 ] )
+            g12b[:,:, i  ] = np.dot(   data_pixel_qi, data_pixel_qi.T)  /sum1  / sum2  / nopr[qi -1]
+            i +=1
+        return g12b
 
+        
 
 
