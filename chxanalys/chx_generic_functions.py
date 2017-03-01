@@ -112,11 +112,11 @@ def check_lost_metadata(md, Nimg=None, inc_x0 =None, inc_y0= None, pixelsize=7.5
         md['x_pixel_size'] = 7.5000004e-05
     dpix = md['x_pixel_size'] * 1000.  #in mm, eiger 4m is 0.075 mm
     lambda_ =md['incident_wavelength']    # wavelegth of the X-rays in Angstroms
-    if md['det_distanc']<=1000: #should be in meter unit
-        md['det_distanc'] *=1000
-    Ldet = md['det_distanc']    
+    if md['det_distance']<=1000: #should be in meter unit
+        md['det_distance'] *=1000  
+    Ldet = md['det_distance']
     try:
-        exposuretime= md['cam_acquire_t']     #exposure time in sec
+        exposuretime= md['cam_acquire_time']     #exposure time in sec
     except:    
         exposuretime= md['count_time']     #exposure time in sec
     try:
@@ -448,7 +448,7 @@ def get_meta_data( uid,*argv,**kwargs ):
     ev, = get_events(db[uid], [md['detector']], fill= False) 
     dec =  list( ev['descriptor']['configuration'].keys() )[0]
     for k,v in ev['descriptor']['configuration'][dec]['data'].items():
-        md[k.strip(dec + '_')]= v
+        md[ k[len(dec)+1:] ]= v
     for k,v in ev['descriptor']['run_start'].items():
         if k!= 'plan_args':
             md[k]= v 
@@ -599,7 +599,7 @@ def create_cross_mask(  image, center, wy_left=4, wy_right=4, wx_up=4, wx_down=4
     rr, cc = polygon( y,x)
     bst_mask[rr,cc] =1   
     
-    rr, cc = circle( cy, cx, center_radius)
+    rr, cc = circle( cy, cx, center_radius, shape = bst_mask.shape)
     bst_mask[rr,cc] =1   
     
     
@@ -1242,7 +1242,7 @@ def show_label_array_on_image(ax, image, label_array, cmap=None,norm=None, log_i
     
 def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on = True,
                        save=False, return_fig = False, rect_reqion=None, log_img = True, vmin=0.01, vmax=5,  
-                      uid='uid', path='',  *argv,**kwargs):
+                      uid='uid', path='',  aspect = 1, *argv,**kwargs):
     
     '''show ROI on an image
         image: the data frame
@@ -1292,7 +1292,9 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
             y_val = int( indz.mean() )
             x_val = int( ind.mean() )
             #print (xval, y)
-            axes.text(x_val, y_val, c, va='center', ha='center')         
+            axes.text(x_val, y_val, c, va='center', ha='center')    
+
+    axes.set_aspect(aspect)
     #fig.colorbar(im_label)
     fig.colorbar(im)
     if save:   
@@ -2123,8 +2125,12 @@ def get_short_long_labels_from_qval_dict(qval_dict, geometry='saxs'):
         ind_long = [ range( num_long )  ] 
     else:
         ind_long = [ np.where( short_label == i)[0] for i in short_ulabel ] 
-    
-    return qr_label, qz_label, num_qz, num_qr, num_short,num_long, short_label, long_label,short_ulabel,long_ulabel,ind_long, master_plot,mastp
+        
+        
+    if Nqs  == 1:
+        long_ulabel = list( qval_dict.values() )[0]
+        long_label = list( qval_dict.values() )[0]
+    return qr_label, qz_label, num_qz, num_qr, num_short,num_long, short_label, long_label,short_ulabel,long_ulabel, ind_long, master_plot, mastp
         
         
 ############################################
@@ -2191,13 +2197,13 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
         if RUN_GUI:
             fig = Figure(figsize=(10, 12))            
         else:
-            fig = plt.figure(figsize=(10, 12))
+            fig = plt.figure()
             
         if master_plot == 'qz':
             if geometry=='ang_saxs':
                 title_short = 'Angle= %.2f'%( short_ulabel[s_ind] )  + r'$^\circ$'                               
             elif geometry=='gi_saxs':
-                title_short = r'$Q_z= $' + '%.4f'%( short_ulabel[s_ind] ) + r'$\AA^{-1}$'                               
+                title_short = r'$Q_z= $' + '%.4f'%( short_ulabel[s_ind] ) + r'$\AA^{-1}$'
             else:
                 title_short = ''            
         else: #qr
@@ -2212,26 +2218,27 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
 
         ind_long_i = ind_long[ s_ind ]
         num_long_i = len( ind_long_i )
+        
+        #print( num_long )
         if num_long!=1:            
             plt.axis('off') 
-            
-        #sx = int(round(np.sqrt( num_long  )) )
-        #if num_long%sx == 0: 
-        #    sy = int(num_long/sx)
-        #else: 
-        #    sy=int(num_long/sx+1) 
-        #print( ind_long_i)    
-        
-        sy= 4
+            sy = 4
+            fig.set_size_inches(10, 12)
+        else: 
+            sy =1
+            fig.set_size_inches(8,6)
+            #plt.axis('off') 
         sx = int( np.ceil( num_long_i/float(sy) ) )
         #print( num_long_i, sx, sy )  
-         
+        
+        #print( master_plot )
         for i, l_ind in enumerate( ind_long_i ):            
             ax = fig.add_subplot(sx,sy, i + 1 )        
             ax.set_ylabel( r"$%s$"%ylabel + '(' + r'$\tau$' + ')' ) 
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16)         
             if master_plot == 'qz' or master_plot == 'angle':                 
-                title_long =  r'$Q_r= $'+'%.5f  '%( long_label[l_ind]  ) + r'$\AA^{-1}$'                    
+                title_long =  r'$Q_r= $'+'%.5f  '%( long_label[l_ind]  ) + r'$\AA^{-1}$'  
+                #print(  long_label   )
             else:             
                 if geometry=='ang_saxs':
                     title_long = 'Ang= ' + '%.2f'%(  long_label[l_ind] ) + r'$^\circ$' + '( %d )'%(l_ind)
@@ -2450,7 +2457,8 @@ def get_q_rate_fit_general( qval_dict, rate, geometry ='saxs',  *argv,**kwargs):
         print ('The fitted diffusion coefficient D0 is:  %.3e   A^2S-1'%D0[i])
     return D0, qrate_fit_res
 
-def plot_q_rate_fit_general( qval_dict, rate, qrate_fit_res, geometry ='saxs',  *argv,**kwargs): 
+def plot_q_rate_fit_general( qval_dict, rate, qrate_fit_res, geometry ='saxs', 
+                            plot_all_range=True, *argv,**kwargs): 
     '''
     Dec 26,2016, Y.G.@CHX
     
@@ -2495,14 +2503,18 @@ def plot_q_rate_fit_general( qval_dict, rate, qrate_fit_res, geometry ='saxs',  
         ind_long_i = ind_long[ i ]
         y = np.array( rate  )[ind_long_i]        
         x =   long_label[ind_long_i]
-        D0  = qrate_fit_res[i].best_values['D0']
+        D0  = qrate_fit_res[i].best_values['D0']         
         #print(i,  x, y, D0 )        
         if Nqz!=1:
             label=r'$q_z=%.5f$'%short_ulabel[i]
         else:
             label=''
         ax.plot(x**power,  y, marker = 'o', ls =ls, label=label)
-        ax.plot(x**power, qrate_fit_res[i].best_fit,  '-r')  
+        yfit = qrate_fit_res[i].best_fit
+        if plot_all_range:
+            ax.plot(x**power, x**power*D0,  '-r') 
+        else:        
+            ax.plot( (x**power)[:len(yfit) ], yfit,  '-r')  
         txts = r'$D0: %.3e$'%D0 + r' $A^2$' + r'$s^{-1}$'
         dy=0.1
         ax.text(x =0.15, y=.65 -dy *i, s=txts, fontsize=14, transform=ax.transAxes) 
@@ -2512,8 +2524,8 @@ def plot_q_rate_fit_general( qval_dict, rate, qrate_fit_res, geometry ='saxs',  
     ax.set_xlabel("$q^%s$"r'($\AA^{-2}$)'%power)
     fp = path + '%s_Q_Rate'%(uid) + '_fit.png'
     fig.savefig( fp, dpi=fig.dpi)
-    fig.tight_layout() 
-
+    fig.tight_layout()
+  
 
 def save_g2_fit_para_tocsv( fit_res, filename, path):
     '''Y.G. Dec 29, 2016, 
