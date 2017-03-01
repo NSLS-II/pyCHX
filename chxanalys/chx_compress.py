@@ -110,6 +110,8 @@ def read_compressed_eigerdata( mask, filename, beg, end,
             bad_frame_list
             
     ''' 
+    #should use try and except instead of with_pickle in the future!
+    
     if not with_pickle:
         FD = Multifile( filename, beg, end)    
         imgsum  =  np.zeros(   FD.end- FD.beg, dtype= np.float  )     
