@@ -127,15 +127,19 @@ def plot_waterfallc(wat, qindex=1, aspect = None,vmax=None, vmin=None,save=False
         ax = fig.add_subplot(111)
     else:
         fig, ax = plt.subplots(figsize=(8,6))   
+        
+    if 'uid' in kwargs:
+        uid = kwargs['uid']
+    else:
+        uid = 'uid'            
     #fig, ax = plt.subplots(figsize=(8,6))
     ax.set_ylabel('Pixel')
     ax.set_xlabel('Frame')
-    ax.set_title('Waterfall_Plot_@qind=%s'%qindex)
+    ax.set_title('%s_Waterfall_Plot_@qind=%s'%(uid, qindex) )
     if 'beg' in kwargs:
         beg = kwargs['beg']
     else:
-        beg=0
-    
+        beg=0    
     extent = [  beg, len(wat)+beg, 0, len( wat.T) ]
     if vmax is None:
         vmax=wat.max()
@@ -151,10 +155,7 @@ def plot_waterfallc(wat, qindex=1, aspect = None,vmax=None, vmin=None,save=False
         #dt =datetime.now()
         #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
         path = kwargs['path'] 
-        if 'uid' in kwargs:
-            uid = kwargs['uid']
-        else:
-            uid = 'uid'
+
         #fp = path + "uid= %s--Waterfall-"%uid + CurTime + '.png'     
         fp = path + "%s_waterfall"%uid  + '.png'    
         plt.savefig( fp, dpi=fig.dpi)
