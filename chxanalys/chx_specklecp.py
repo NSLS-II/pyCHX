@@ -130,8 +130,14 @@ def xsvsp_single(FD, label_array,  only_two_levels= True, only_first_level= Fals
     num_times = len(time_bin)        
     prob_k = np.zeros([num_times, num_roi], dtype=np.object)
     prob_k_std_dev = np.zeros_like( prob_k )      
+    
+    #print( len(res) )
+    #print( prob_k.shape )
+          
     for i in inputs:
-         bin_edges, prob_k[:,i], prob_k_std_dev[:,i] = res[i][0], res[i][1][:,0], res[i][2][:,0] 
+        #print( i) 
+        bin_edges, prob_k[:,i], prob_k_std_dev[:,i] = res[i][0], res[i][1][:,0], res[i][2][:,0] 
+            
     print( 'Histogram calculation DONE!')
     del results
     del res
@@ -364,10 +370,25 @@ def xsvsc_single(FD, label_array,  only_two_levels= True,
             #print( level )
         prob_k_std_dev = np.power((prob_k_pow -
                                np.power(prob_k, 2)), .5) 
-   
+        
+    #print( prob_k.shape,   num_times )   
+    
+    #return bin_edges, prob_k, prob_k_std_dev
+
+    #if False:
     for i in range(num_times):
+        #print( i )
+        #print( prob_k.shape )
+        #if i ==3:
+            #print( 'here' )
+            #print( prob_k.shape )
+        #print( prob_k[i,0].shape )
+        
         if  isinstance(prob_k[i,0], float ) or isinstance(prob_k[i,0], int ):
-            prob_k, prob_k_std_dev = prob_k[:i], prob_k_std_dev[:i]
+            pass
+            #print( 'here' * 100 )
+            #print( prob_k[i,0] )
+            #prob_k[i], prob_k_std_dev[i] = prob_k[:i], prob_k_std_dev[:i]
             #for j in range( len(u_labels)):                
             #    prob_k[i,j] = np.array(  [0] * (len(bin_edges[i]) -1 ) )
             #    prob_k_std_dev[i,j] = np.array(  [0] * (len(bin_edges[i]) -1 ) )
@@ -780,7 +801,7 @@ def get_roi(data, threshold=1e-3):
 def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None, spec_bins=None, 
                  lag_steps=None, varyK=True, 
                   qth=None, max_bins= None,  rois_lowthres=None,
-                           g2=None, times=None,taus=None,):
+                           g2=None, times=None,taus=None, max_cutoff_photon =None ):
     '''
     Fit the xsvs by Negative Binomial Function using max-likelihood chi-squares
     '''
@@ -824,12 +845,16 @@ def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None, spec_bins=None,
             m_=np.interp( times, taus,  mi_g2  )            
         for j in range(   num_times  ): 
             kmean_guess =  K_mean[j,i]
+            
             if spec_bins is None:                
                 x_, x, y = bin_edges[j, i][:-1], Knorm_bin_edges[j, i][:-1], spe_cts_all[j, i] 
             else:                
                 #if j==0:
                 #    print(i,j, kmean_guess)
                 x_,x,y =  bin_edges[j],  bin_edges[j]/kmean_guess, spe_cts_all[j, i]
+            
+            #if max_cutoff_photon is not None:
+                
             if spec_std is not None:
                 yerr = spec_std[j, i]
             else:
