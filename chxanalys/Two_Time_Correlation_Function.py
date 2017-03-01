@@ -983,7 +983,98 @@ def masked_g12( g12, badframes_list):
         g12m[:,:,i] = g12[:,:,i] * g12_mask
     return g12m
 
+def show_one_C12( C12,   return_fig=False, *argv,**kwargs):  
+ 
+    '''
+    plot one-q of two-time correlation function
+    C12: two-time correlation function, with shape as [ time, time, qs]
+    q_ind: if integer, for a SAXS q, the nth of q to be plotted
+            if a list: for a GiSAXS [qz_ind, qr_ind]  
+    kwargs: support        
+        timeperframe: the time interval
+        N1: the start frame(time)
+        N2: the end frame(time)
+        vmin/vmax: for plot
+        title: if True, show the tile
+    
+    e.g.,
+        show_C12(g12b, q_ind=1, N1=0, N2=500, vmin=1.05, vmax=1.07,  )
+    
+    '''
+  
+    #strs =  [ 'timeperframe', 'N1', 'N2', 'vmin', 'vmax', 'title'] 
+    
+    if 'uid' in kwargs:
+        uid=kwargs['uid']
+    else:
+        uid='uid'
+        
+        
+    shape = C12.shape 
+    
+    if 'timeperframe' in kwargs.keys():
+        timeperframe =  kwargs['timeperframe']
+    else:
+        timeperframe=1
+        
+    if 'vmin' in kwargs.keys():
+        vmin =  kwargs['vmin']
+    else:
+        vmin=1
+    if 'vmax' in kwargs.keys():
+        vmax =  kwargs['vmax']
+    else:
+        vmax=1.05        
+        
+    if 'N1' in kwargs.keys():
+        N1 =  kwargs['N1']
+    else:
+        N1=0
+        
+    if 'N2' in kwargs.keys():
+        N2 =  kwargs['N2']
+    else:
+        N2= shape[0]
+    if 'title' in kwargs.keys():
+        title =  kwargs['title']
+    else:
+        title=True        
 
+    data = C12[N1:N2,N1:N2]
+    if RUN_GUI:
+        fig = Figure()
+        ax = fig.add_subplot(111)
+    else:
+        fig, ax = plt.subplots()
+
+    im=ax.imshow( data, origin='lower' , cmap='viridis', 
+                 norm= LogNorm( vmin, vmax ), 
+            extent=[0, data.shape[0]*timeperframe, 0, data.shape[0]*timeperframe ] )
+    if title:
+
+        tit = '%s-[%s-%s] frames'%(uid,N1,N2)            
+
+        ax.set_title( tit  )
+    else:
+        tit=''        
+        #ax.set_title('%s-%s frames--Qth= %s'%(N1,N2,g12_num))
+    ax.set_xlabel( r'$t_1$ $(s)$', fontsize = 18)
+    ax.set_ylabel( r'$t_2$ $(s)$', fontsize = 18)
+    fig.colorbar(im)
+    
+    save=False    
+    if 'save' in kwargs:
+        save=kwargs['save']
+    if save:       
+        path=kwargs['path']
+        #fp = path + 'Two-time--uid=%s'%(uid) + tit + CurTime + '.png'
+        fp = path + '%s_Two_time'%(uid) + '.png'
+        plt.savefig( fp, dpi=fig.dpi)        
+     
+    if return_fig:
+        return fig, ax, im
+
+    
 
 def show_C12(C12,  q_ind=0, return_fig=False, *argv,**kwargs):  
  
