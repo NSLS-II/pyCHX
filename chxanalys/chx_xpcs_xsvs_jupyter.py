@@ -368,6 +368,9 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
         width_angle_p =  run_pargs['width_angle_p']#2
         angle_p =  run_pargs['angle_p']#42
         num_angles_p =   run_pargs['num_angles_p']#1
+    if scat_geometry =='gi_waxs':    
+        roi_mask = run_pargs['roi_mask']
+        qval_dict = run_pargs['qval_dict']
         
     elif scat_geometry =='gi_saxs':
         refl_x0 = run_pargs['refl_x0']
@@ -585,6 +588,12 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
                 outer_angle_p =  angle_p + width_angle_p      
                 roi_mask_p, qval_dict_p =  get_seg_from_ring_mask( inner_angle_p, outer_angle_p,
                                                         num_angles_p, width_angle_p, center, roi_mask, qr )
+                
+        elif scat_geometry == 'gi_waxs':  
+            #roi_mask[badpixel] = 0
+            
+            show_ROI_on_image( avg_img, roi_mask, label_on = True,  alpha=.5,
+                 save=True, path= data_dir, uid=uidstr)#, vmin=1, vmax=15)
 
         elif scat_geometry == 'gi_saxs':
             

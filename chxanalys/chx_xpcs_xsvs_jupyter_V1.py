@@ -485,11 +485,11 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
         ############for SAXS and ANG_SAXS (Flow_SAXS)
         if scat_geometry =='saxs' or scat_geometry =='ang_saxs':
         
-            show_saxs_qmap( avg_img, setup_pargs, width=600,vmin=.1, vmax=np.max(avg_img*.1), logs=True,
+            show_saxs_qmap( avg_img, setup_pargs, width=600, vmin=.1, vmax=np.max(avg_img*.1), logs=True,
                image_name= uidstr + '_img_avg',  save=True)  
             #np.save(  data_dir + 'uid=%s--img-avg'%uid, avg_img)
 
-            hmask = create_hot_pixel_mask( avg_img, threshold = 100, center=center, center_radius= 400)
+            hmask = create_hot_pixel_mask( avg_img, threshold = 100, center=center, center_radius= 60)
             qp_saxs, iq_saxs, q_saxs = get_circular_average( avg_img, mask * hmask, pargs=setup_pargs  )
         
             plot_circular_average( qp_saxs, iq_saxs, q_saxs,  pargs= setup_pargs, 
@@ -688,17 +688,18 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
                      path= data_dir, uid = uid_ ) 
             
             max_taus = Nimg    
-            t0=time.time()
-            g2b = get_one_time_from_two_time(g12b)[:max_taus]
-            run_time(t0)
-            tausb = np.arange( g2b.shape[0])[:max_taus] *timeperframe     
+            t0=time.time()            
+            #g2b = get_one_time_from_two_time(g12b)[:max_taus]
+            g2b = get_one_time_from_two_time(g12b)[lag_steps]
+            tausb = lag_steps *timeperframe
+            run_time(t0)            
+            #tausb = np.arange( g2b.shape[0])[:max_taus] *timeperframe            
             g2b_pds = save_g2_general( g2b, taus=tausb, qr= np.array( list( qval_dict.values() ) )[:,0],
-                                      qz=None, uid=uid_ +'_g2b.csv', path= data_dir, return_res=True )
- 
+                                      qz=None, uid=uid_ +'_g2b.csv', path= data_dir, return_res=True ) 
             
             g2_fit_resultb, taus_fitb, g2_fitb = get_g2_fit_general( g2b,  tausb, 
                 function = fit_g2_func,  vlim=[0.95, 1.05], fit_range= None,  
-                fit_variables={'baseline':True, 'beta':True, 'alpha':False,'relaxation_rate':True},                                  
+                fit_variables={'baseline':True, 'beta':True, 'alpha':False,'relaxation_rate':True},
                 guess_values={'baseline':1.0,'beta':0.05,'alpha':1.0,'relaxation_rate':0.01,}) 
     
             g2b_fit_paras = save_g2_fit_para_tocsv(g2_fit_resultb, 
