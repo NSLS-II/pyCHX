@@ -385,7 +385,7 @@ def fit_form_factor( q, iq,  guess_values, fit_range=None, fit_variables = None,
     
     
 def show_saxs_qmap( img, pargs, width=200,vmin=.1, vmax=300, logs=True,image_name='', 
-                   save=False, show_pixel=False):
+                   save=False, show_pixel=False, aspect= 1):
     '''
     Show a SAXS q-map by giving 
     Parameter:
@@ -405,22 +405,39 @@ def show_saxs_qmap( img, pargs, width=200,vmin=.1, vmax=300, logs=True,image_nam
     dpix = pargs['dpix']
     lambda_ =  pargs['lambda_']    
     center = pargs['center']
+    cx,cy = center
     path= pargs['path']    
-    
+    lx,ly = img.shape
     #center = [ center[1], center[0] ] #due to python conventions
     w= width  
+    
+    img_ = np.zeros( [w,w] )
+    minW, maxW = min( center[0]-w, center[1]-w ), max( center[0]-w, center[1]-w  )
+    if w < minW:
+        img_ = img[cx-w//2:cx+w//2, cy+w//2:cy+w//2]
+    #elif w > maxW:
+    #    img_[ cx-w//2:cx+w//2, cy+w//2:cy+w//2 ] = 
+    
+    
+    ROI = [ max(0, center[0]-w), min( center[0]+w, lx), max(0,  center[1]-w), min( ly, center[1]+w )  ]
+    #print( ROI )
     if not show_pixel:
-        two_theta = utils.radius_to_twotheta(Ldet ,np.array( [w * dpix] ))        
-        qext  = utils.twotheta_to_q(two_theta, lambda_)[0] 
-        show_img( 1e-15+ img[center[0]-w:center[0]+w, center[1]-w:center[1]+w], 
+        #print( 'here' )
+        two_theta = utils.radius_to_twotheta(Ldet ,np.array( [ ( ROI[0] - cx )   * dpix,( ROI[1] - cx )   * dpix,
+                                                               ( ROI[2] - cy )   * dpix,( ROI[3] - cy )   * dpix, 
+                                                             ] ))        
+        qext  = utils.twotheta_to_q(two_theta, lambda_) 
+        #print( two_theta, qext )
+        
+        show_img( 1e-15+ img[  ROI[0]:ROI[1], ROI[2]:ROI[3]  ], 
         xlabel=r"$q_x$" +  '('+r'$\AA^{-1}$'+')', 
-         ylabel= r"$q_y$" +  '('+r'$\AA^{-1}$'+')', extent=[-qext,qext,-qext,qext],
-            vmin=vmin, vmax=vmax, logs= logs, image_name= image_name, save= save, path=path) 
+         ylabel= r"$q_y$" +  '('+r'$\AA^{-1}$'+')', extent=[qext[0],qext[1],qext[2],qext[3]],
+            vmin=vmin, vmax=vmax, logs= logs, image_name= image_name, save= save, path=path,aspect= aspect) 
     else:        
         #qext = w
-        show_img( 1e-15+ img[center[0]-w:center[0]+w, center[1]-w:center[1]+w], 
-        xlabel= 'pixel',  ylabel= 'pixel', 
-            vmin=vmin, vmax=vmax, logs= logs, image_name= image_name, save= save, path=path)     
+        show_img( 1e-15+ img[ ROI[0]:ROI[1], ROI[2]:ROI[3] ], 
+        xlabel= 'pixel',  ylabel= 'pixel', extent=[ROI[0],ROI[1],ROI[2],ROI[3]],
+            vmin=vmin, vmax=vmax, logs= logs, image_name= image_name, save= save, path=path,aspect= aspect)     
     
 
 
