@@ -444,7 +444,8 @@ def get_meta_data( uid,*argv,**kwargs ):
     md ={}
     md['detector'] = get_detector( db[uid ] )    
     md['suid'] = uid  #short uid
-    md['filename'] = get_sid_filenames(db[uid])[2][0]    
+    md['filename'] = get_sid_filenames(db[uid])[2][0]
+    #print( md )        
     ev, = get_events(db[uid], [md['detector']], fill= False) 
     dec =  list( ev['descriptor']['configuration'].keys() )[0]
     for k,v in ev['descriptor']['configuration'][dec]['data'].items():
@@ -739,11 +740,10 @@ def load_data( uid , detector = 'eiger4m_single_image', fill=True, reverse=False
         except:
             flag += 1        
             print ('Trying again ...!')
-
-         
     if flag:
         try:
             imgs = get_images( hdr, detector)
+            #print( 'here')
             if len(imgs[0])==1:
                 md = imgs[0].md
                 imgs = pims.pipeline(lambda img:  img[0])(imgs)
@@ -1462,7 +1462,10 @@ def run_time(t0):
     '''    
     
     elapsed_time = time.time() - t0
-    print ('Total time: %.2f min' %(elapsed_time/60.)) 
+    if elapsed_time<60:
+        print ('Total time: %.3f sec' %(elapsed_time ))
+    else:
+        print ('Total time: %.3f min' %(elapsed_time/60.)) 
     
     
 def trans_data_to_pd(data, label=None,dtype='array'):
@@ -2197,7 +2200,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
         if RUN_GUI:
             fig = Figure(figsize=(10, 12))            
         else:
-            fig = plt.figure()
+            fig = plt.figure(figsize=(10, 12))
             
         if master_plot == 'qz':
             if geometry=='ang_saxs':
@@ -2457,8 +2460,8 @@ def get_q_rate_fit_general( qval_dict, rate, geometry ='saxs',  *argv,**kwargs):
         print ('The fitted diffusion coefficient D0 is:  %.3e   A^2S-1'%D0[i])
     return D0, qrate_fit_res
 
-def plot_q_rate_fit_general( qval_dict, rate, qrate_fit_res, geometry ='saxs', 
-                            plot_all_range=True, *argv,**kwargs): 
+def plot_q_rate_fit_general( qval_dict, rate, qrate_fit_res, geometry ='saxs',  ylim = None,
+                            plot_all_range=True, plot_index_range = None, *argv,**kwargs): 
     '''
     Dec 26,2016, Y.G.@CHX
     
@@ -2471,7 +2474,7 @@ def plot_q_rate_fit_general( qval_dict, rate, qrate_fit_res, geometry ='saxs',
                     format as {1: [qr1], 2: [qr2] ...} for saxs
                     format as {1: [qr1, qa1], 2: [qr2,qa2], ...] for ang-saxs
     rate: relaxation_rate
-
+    plot_index_range:  
     Option:
     if power_variable = False, power =2 to fit q^2~rate, 
                 Otherwise, power is variable.
@@ -2520,6 +2523,14 @@ def plot_q_rate_fit_general( qval_dict, rate, qrate_fit_res, geometry ='saxs',
         ax.text(x =0.15, y=.65 -dy *i, s=txts, fontsize=14, transform=ax.transAxes) 
         if Nqz!=1:legend = ax.legend(loc='best')
 
+    if plot_index_range is not None:
+        d1,d2 = plot_index_range
+        d2 = min( len(x)-1, d2 )             
+        ax.set_xlim(  (x**power)[d1], (x**power)[d2]  )
+        ax.set_ylim( y[d1],y[d2])
+    if ylim is not None:
+        ax.set_ylim( ylim )
+        
     ax.set_ylabel('Relaxation rate 'r'$\gamma$'"($s^{-1}$)")
     ax.set_xlabel("$q^%s$"r'($\AA^{-2}$)'%power)
     fp = path + '%s_Q_Rate'%(uid) + '_fit.png'
