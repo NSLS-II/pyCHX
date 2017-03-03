@@ -153,22 +153,25 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
                     bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes=nobytes, bins=bins, dtypes=dtypes,
                                              num_max_para_process=num_max_para_process)
     
-    res_ = np.array( [ results[k].get() for k in   list(sorted(results.keys()))   ]     )     
-    print()
+    res_ = np.array( [ results[k].get() for k in   list(sorted(results.keys()))   ]     ) 
     imgsum = np.zeros( N )
     bad_frame_list = np.zeros( N, dtype=bool )
+    good_count = 1
     for i in range( Nf ):    
         mask_, avg_img_, imgsum_, bad_frame_list_ = res_[i]
         imgsum[i*num_sub: (i+1)*num_sub] = imgsum_
         bad_frame_list[i*num_sub: (i+1)*num_sub] = bad_frame_list_
         if i==0:
             mask = mask_
-            avg_img = avg_img_                    
+            avg_img = np.zeros_like( avg_img_ )                  
         else:
             mask *= mask_        
-            avg_img += avg_img_             
+        if not np.sum( np.isnan( avg_img_)):        
+            avg_img += avg_img_  
+            good_count += 1
+            
     bad_frame_list = np.where(  bad_frame_list )[0]    
-    avg_img /= Nf   
+    avg_img /= good_count   
     
     if len(bad_frame_list):
         print ('Bad frame list are: %s' %bad_frame_list)
@@ -299,11 +302,11 @@ def segment_compress_eigerdata( images,  mask, md, filename,
         v = np.ravel( np.array( img, dtype= dtype )) [p] 
         dlen = len(p)         
         imgsum[n] = v.sum()  
-        if (imgsum[n] > bad_pixel_threshold) or (imgsum[n] <=bad_pixel_low_threshold):
+        if (dlen==0) or (imgsum[n] > bad_pixel_threshold) or (imgsum[n] <=bad_pixel_low_threshold):
             dlen = 0
             fp.write(  struct.pack( '@I', dlen  ))    
-        else:      
-            np.ravel( avg_img )[p] +=   v
+        else:              
+            np.ravel( avg_img )[p] +=   v            
             good_count +=1             
             fp.write(  struct.pack( '@I', dlen   ))
             fp.write(  struct.pack( '@{}i'.format( dlen), *p))
@@ -312,10 +315,9 @@ def segment_compress_eigerdata( images,  mask, md, filename,
             else:
                 fp.write(  struct.pack( '@{}{}'.format( dlen,'dd'[nobytes==2]  ), *v))        #n +=1
         del  p,v, img 
-        fp.flush() 
-        
-    fp.close()  
-    avg_img /= good_count    
+        fp.flush()         
+    fp.close()      
+    avg_img /= good_count 
     bad_frame_list =  (np.array(imgsum) > bad_pixel_threshold) | (np.array(imgsum) <= bad_pixel_low_threshold)
     sys.stdout.write('#')    
     sys.stdout.flush()    
