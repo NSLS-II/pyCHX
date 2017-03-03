@@ -109,7 +109,8 @@ def cal_waterfallc(FD, labeled_array,   qindex=1,
             
     return watf
 
-def plot_waterfallc(wat, qindex=1, aspect = None,vmax=None, vmin=None,save=False, return_fig=False,*argv,**kwargs):   
+def plot_waterfallc(wat, qindex=1, aspect = None,vmax=None, vmin=None, interpolation = 'none',
+                    save=False, return_fig=False,*argv,**kwargs):   
     '''plot waterfall for a giving compressed file
     
        FD: class object, the compressed file handler
@@ -147,7 +148,7 @@ def plot_waterfallc(wat, qindex=1, aspect = None,vmax=None, vmin=None,save=False
         vmin = wat.min()
     if aspect is None:
         aspect = wat.shape[0]/wat.shape[1]
-    im = ax.imshow(wat.T, cmap='viridis', vmax=vmax,extent= extent)
+    im = ax.imshow(wat.T, cmap='viridis', vmax=vmax,extent= extent,interpolation = interpolation )
     fig.colorbar( im   )
     ax.set_aspect( aspect)
     
