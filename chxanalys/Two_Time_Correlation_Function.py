@@ -1076,7 +1076,7 @@ def show_one_C12( C12,   return_fig=False, *argv,**kwargs):
 
     
 
-def show_C12(C12,  q_ind=0, return_fig=False, *argv,**kwargs):  
+def show_C12(C12,  q_ind=0, return_fig=False, interpolation = 'none', logs=True, *argv,**kwargs):  
  
     '''
     plot one-q of two-time correlation function
@@ -1145,9 +1145,15 @@ def show_C12(C12,  q_ind=0, return_fig=False, *argv,**kwargs):
     else:
         fig, ax = plt.subplots()
 
-    im=ax.imshow( data, origin='lower' , cmap='viridis', 
-                 norm= LogNorm( vmin, vmax ), 
+    if logs:    
+        im=ax.imshow( data, origin='lower' , cmap='viridis', 
+                 norm= LogNorm( vmin, vmax ), interpolation = interpolation, 
             extent=[0, data.shape[0]*timeperframe, 0, data.shape[0]*timeperframe ] )
+    else:
+        im=ax.imshow( data, origin='lower' , cmap='viridis', 
+                 vmin=vmin, vmax=vmax, interpolation = interpolation, 
+            extent=[0, data.shape[0]*timeperframe, 0, data.shape[0]*timeperframe ] )    
+    
     if title:
         if isinstance(q_ind, int):
             tit = '%s-[%s-%s] frames--Qth= %s'%(uid,N1,N2,C12_num)            
