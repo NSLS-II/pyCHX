@@ -557,8 +557,9 @@ def plot_t_iqc( q, iqs, frame_edge, pargs, save=True, *argv,**kwargs):
     #Nt = len( frame_edge )    
     fig,ax = plt.subplots(figsize=(8, 6)) 
     for i in range(  Nt ):
-        t1,t2 = frame_edge[i]
-        ax.semilogy(q, iqs[i], label="frame: %s--%s"%( t1,t2) )
+        t1,t2 = frame_edge[i] 
+        if not np.any( iqs[i]    ):         
+            ax.semilogy(q, iqs[i], label="frame: %s--%s"%( t1,t2) )
         #ax.set_xlabel("q in pixel")
         ax.set_xlabel('Q 'r'($\AA^{-1}$)')
         ax.set_ylabel("I(q)")
