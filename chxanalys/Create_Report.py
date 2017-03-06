@@ -193,7 +193,8 @@ class create_pdf_report( object ):
         #print( self.g2_fit_file )
         
         self.q_rate_file = 'uid=%s_Q_Rate_fit.png'%uid_ 
-        self.q_rate_two_time_fit_file = 'uid=%s_two_time_Q_Rate_fit.png'%uid_         
+        self.q_rate_two_time_fit_file = 'uid=%s_two_time_Q_Rate_fit.png'%uid_ 
+        #print(  self.q_rate_two_time_fit_file )
 
         self.two_time_file = 'uid=%s_Two_time.png'%uid_
         self.two_g2_file = 'uid=%s_g2_two_g2.png'%uid_
