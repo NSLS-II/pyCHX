@@ -7,7 +7,7 @@ from chxanalys.chx_packages import *
 ####################################################################################################
 ##compress multi uids, sequential compress for uids, but for each uid, can apply parallel compress##
 #################################################################################################
-def compress_multi_uids( uids, mask, force_compress=False,  para_compress= True, bin_frame_number=1 ):
+def compress_multi_uids( uids, mask, mask_dict = None, force_compress=False,  para_compress= True, bin_frame_number=1 ):
     ''' Compress time series data for a set of uids
     Parameters:
         uids: list, a list of uid
@@ -31,7 +31,12 @@ def compress_multi_uids( uids, mask, force_compress=False,  para_compress= True,
         else:
             filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s_bined--%s.cmp'%(md['uid'],bin_frame_number)
         
-        imgs = load_data( uid, md['detector'], reverse= True  ) 
+        imgs = load_data( uid, md['detector'], reverse= True  )
+        print( imgs )
+        if mask_dict is not None:
+            mask = mask_dict[md['detector']]
+            print('The detecotr is: %s'% md['detector'])
+            
         md.update( imgs.md )
         mask, avg_img, imgsum, bad_frame_list = compress_eigerdata(imgs, mask, md, filename, 
              force_compress= force_compress,  para_compress= para_compress,  bad_pixel_threshold= 1e14,
@@ -137,7 +142,8 @@ def get_series_g2_from_g12( g12b, fra_num_by_dose = None, dose_label = None,
             good_end = L            
         if not log_taus:            
             g2[ key ] = get_one_time_from_two_time(g12b[good_start:good_end,good_start:good_end,:] )
-        else:            
+        else:      
+            #print(  good_end,  num_bufs )
             lag_step = get_multi_tau_lag_steps(good_end,  num_bufs)
             lag_step = lag_step[ lag_step < good_end - good_start]            
             #print( len(lag_steps ) )
@@ -184,9 +190,9 @@ def get_series_one_time_mulit_uids( uids,  qval_dict,  good_start=0,  path=None,
             g2_path =  path + uid + '/'
             g12b = np.load( g2_path + 'uid=%s_g12b.npy'%uid)
             try:
-                exp_time = float( md['cam_acquire_t']) *1000 #from second to ms
+                exp_time = float( md['cam_acquire_time']) #*1000 #from second to ms
             except:                
-                exp_time = float( md['exposure time']) * 1000  #from second to ms
+                exp_time = float( md['exposure time']) #* 1000  #from second to ms
                 
             fra_num_by_dose = get_fra_num_by_dose(  exp_dose = exposure_dose,
                                    exp_time =exp_time, dead_time = dead_time)
