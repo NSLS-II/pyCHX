@@ -493,6 +493,8 @@ def lazy_two_time(labels, images, num_frames, num_bufs, num_levels=1,
 
         # Put the image into the ring buffer.
         s.buf[0, s.cur[0] - 1] = (np.ravel(img))[s.pixel_list]
+        
+        #print( np.sum( s.buf[0, s.cur[0] - 1] ) )
 
         # Compute the two time correlations between the first level
         # (undownsampled) frames. two_time and img_per_level in place!
@@ -611,9 +613,7 @@ def _two_time_process(buf, g2, label_array, num_bufs, num_pixels,
 
     for i in range(i_min, min(img_per_level[level], num_bufs)):
         t_index = level*num_bufs/2 + i
-
         delay_no = (buf_no - i) % num_bufs
-
         past_img = buf[level, delay_no]
         future_img = buf[level, buf_no]
 
@@ -627,10 +627,10 @@ def _two_time_process(buf, g2, label_array, num_bufs, num_pixels,
         # get the matrix of future intensity normalizations
         fi_binned = (np.bincount(label_array,
                                  weights=future_img)[1:])
-
         tind1 = (current_img_time - 1)
-
         tind2 = (current_img_time - lag_steps[t_index] - 1)
+        
+        #print( current_img_time )
 
         if not isinstance(current_img_time, int):
             nshift = 2**(level-1)
