@@ -372,7 +372,7 @@ def fit_form_factor( q, iq,  guess_values, fit_range=None, fit_variables = None,
     if 'xlim' in kwargs:
         ax.set_xlim( kwargs['xlim'])
 
-    fp = path + 'uid=%s--form_factor--fit-'%(uid )  + '.png'
+    fp = path + '%s_form_factor_fit'%(uid )  + '.png'
     fig.savefig( fp, dpi=fig.dpi)        
     fig.tight_layout()  
     #plt.show()
