@@ -23,7 +23,7 @@ from chxanalys.XPCS_SAXS import (get_circular_average,save_lists,get_ring_mask, 
                               plot_t_iqc,  plot_circular_average, get_seg_from_ring_mask,   )
 
 
-from chxanalys.Two_Time_Correlation_Function import (show_C12, get_one_time_from_two_time,
+from chxanalys.Two_Time_Correlation_Function import (show_C12, get_one_time_from_two_time, 
                                             get_four_time_from_two_time,rotate_g12q_to_rectangle)
 from chxanalys.chx_compress import (combine_binary_files,
                        segment_compress_eigerdata,     create_compress_header,            
