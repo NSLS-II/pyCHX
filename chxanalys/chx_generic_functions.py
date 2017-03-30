@@ -6,15 +6,38 @@ from scipy.special import erf
 
 
         
+    
+def create_user_folder( CYCLE, username = None ):
+    '''
+    Crate a folder for saving user data analysis result
+    Input:
+        CYCLE: run cycle
+        username: if None, get username from the jupyter username
+    Return:
+        Created folder name
+    '''
+    if username is None:
+        username = getpass.getuser() 
+    data_dir0 = os.path.join('/XF11ID/analysis/', CYCLE, username, 'Results/')
+    ##Or define data_dir here, e.g.,#data_dir = '/XF11ID/analysis/2016_2/rheadric/test/'
+    os.makedirs(data_dir0, exist_ok=True)
+    print('Results from this analysis will be stashed in the directory %s' % data_dir0) 
+    return data_dir0    
+    
+    
+    
+    
+    
+    
 ##################################
 #########For dose analysis #######
 ##################################
-def get_fra_num_by_dose( exp_dose, exp_time, dead_time =2 ):
+def get_fra_num_by_dose( exp_dose, exp_time, att=1, dead_time =2 ):
     '''
     Calculate the frame number to be correlated by giving a X-ray exposure dose
     
     Paramters:
-        exp_dose: a list, the exposed dose, e.g., [ 3.34* 20, 3.34*50, 3.34*100 ]
+        exp_dose: a list, the exposed dose, e.g., in unit of exp_time(ms)*N(fram num)*att( attenuation)
         exp_time: float, the exposure time for a xpcs time sereies
         dead_time: dead time for the fast shutter reponse time, CHX = 2ms
     Return:
@@ -26,7 +49,7 @@ def get_fra_num_by_dose( exp_dose, exp_time, dead_time =2 ):
                                    
     --> no_dose_fra  will be array([ 20,  50, 100, 502, 504])     
     '''
-    return np.int_(np.array( exp_dose )/( exp_time + dead_time))
+    return np.int_(    np.array( exp_dose )/( exp_time + dead_time)/ att )
 
 
 def get_multi_tau_lag_steps( fra_max, num_bufs = 8 ):
@@ -1930,7 +1953,7 @@ def stretched_flow_para_function( x, beta, relaxation_rate, alpha, flow_velocity
     return  beta*Diff_part * Flow_part + baseline
 
 
-def get_g2_fit_general( g2, taus,  function='simple_exponential', *argv,**kwargs):
+def get_g2_fit_general( g2, taus,  function='simple_exponential', sequential_fit=False, *argv,**kwargs):
     '''
     Dec 29,2016, Y.G.@CHX
     
@@ -1941,7 +1964,7 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential', *argv,**kwargs
     ---------- 
         g2: one-time correlation function for fit, with shape as [taus, qs]
         taus: the time delay
-        
+        sequential_fit: if True, will use the low-q fit result as initial value to fit the higher Qs
         function: 
             supported function include:
                 'simple_exponential' (or 'simple'): fit by a simple exponential function, defined as  
@@ -2068,7 +2091,11 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential', *argv,**kwargs
         else:
             y=g2[1:, i]
             lags=taus[1:]            
-        result1 = mod.fit(y, pars, x =lags )        
+        result1 = mod.fit(y, pars, x =lags ) 
+        if sequential_fit:
+            for k in list(pars.keys()):
+                pars[k].value = result1.best_values[k]  
+                #print( pars )
         fit_res.append( result1) 
         model_data.append(  result1.best_fit )
     return fit_res, lags, np.array( model_data ).T
@@ -2139,11 +2166,13 @@ def get_short_long_labels_from_qval_dict(qval_dict, geometry='saxs'):
 ############################################
 ##a good func to plot g2 for all types of geogmetries
 ############################################ 
-
  
+    
+    
 
 def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='saxs',filename='g2', 
-                    path=None, function='simple_exponential',  g2_labels=None,
+                    path=None, function='simple_exponential',  g2_labels=None, 
+                    fig_ysize= 12, qth_interest = None,
                     ylabel='g2',  return_fig=False, append_name='', outsize=(2000, 2400), *argv,**kwargs):    
     '''
     Dec 26,2016, Y.G.@CHX
@@ -2196,12 +2225,17 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
      mastp) = get_short_long_labels_from_qval_dict(qval_dict, geometry=geometry)  
     fps = [] 
     
+    #print( num_short, num_long )
+    
     for s_ind in range( num_short  ):
         if RUN_GUI:
             fig = Figure(figsize=(10, 12))            
         else:
+            #if num_long <=4:
+            #    fig = plt.figure(figsize=(8, 6))    
+            #else:
             fig = plt.figure(figsize=(10, 12))
-            
+        
         if master_plot == 'qz':
             if geometry=='ang_saxs':
                 title_short = 'Angle= %.2f'%( short_ulabel[s_ind] )  + r'$^\circ$'                               
@@ -2223,13 +2257,16 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
         num_long_i = len( ind_long_i )
         
         #print( num_long )
-        if num_long!=1:            
+        if num_long!=1:   
+            #print( 'here')
             plt.axis('off') 
             sy = 4
-            fig.set_size_inches(10, 12)
+            #fig.set_size_inches(10, 12)
+            fig.set_size_inches(10, fig_ysize )
         else: 
             sy =1
             fig.set_size_inches(8,6)
+            
             #plt.axis('off') 
         sx = int( np.ceil( num_long_i/float(sy) ) )
         #print( num_long_i, sx, sy )  
@@ -2297,7 +2334,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                                 
                         if nlst==0:
                             if l_ind==0:
-                                ax.legend(loc='best', fontsize = 8)               
+                                ax.legend(loc='best', fontsize = 8, fancybox=True, framealpha=0.5)             
                 
                 else:    
                     y=g2_dict[k][:, l_ind ]    
@@ -2309,7 +2346,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                     else:
                         ax.semilogx(x, y, m,  color=c,markersize=6, label=g2_labels[ki]) 
                         if l_ind==0:
-                            ax.legend(loc='best', fontsize = 8)                    
+                            ax.legend(loc='best', fontsize = 8, fancybox=True, framealpha=0.5)                   
 
             if fit_res is not None:
                 result1 = fit_res[l_ind]    
@@ -2379,8 +2416,10 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
             fp = path + filename + '_%s_%s'%(mastp, s_ind)            
         if append_name is not '':
             fp = fp + append_name
-        fps.append( fp  + '.png' )             
-        fig.set_tight_layout(True)                 
+        fps.append( fp  + '.png' )  
+        
+        fig.set_tight_layout(True)  
+        
         plt.savefig( fp + '.png', dpi=fig.dpi)        
     #combine each saved images together
     if num_short !=1:
