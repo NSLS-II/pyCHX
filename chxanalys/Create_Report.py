@@ -202,7 +202,8 @@ class create_pdf_report( object ):
         
         self.xsvs_fit_file = 'uid=%s_xsvs_fit.png'%uid_
         self.contrast_file = 'uid=%s_contrast.png'%uid_
-        
+        self.dose_file =  'uid=%s_dose_analysis.png'%uid_
+        #print( self.dose_file )
         if False:
             self.flow_g2v = 'uid=%s_1a_mqv_g2_v_fit.png'%uid_
             self.flow_g2p = 'uid=%s_1a_mqp_g2_p_fit.png'%uid_        
@@ -211,6 +212,18 @@ class create_pdf_report( object ):
         
         if True:
 
+            
+            self.two_time = 'uid=%s_pv_two_time.png'%uid_
+            #self.two_time_v = 'uid=%s_pv_two_time.png'%uid_
+            
+            #self.flow_g2bv = 'uid=%s_g2b_v_fit.png'%uid_
+            #self.flow_g2bp = 'uid=%s_g2b_p_fit.png'%uid_   
+            self.flow_g2_g2b_p = 'uid=%s_g2_two_g2_p.png'%uid_   
+            self.flow_g2_g2b_v = 'uid=%s_g2_two_g2_v.png'%uid_              
+            
+            self.flow_g2bv_rate_fit = 'uid=%s_vertb_Q_Rate_fit.png'%uid_
+            self.flow_g2bp_rate_fit = 'uid=%s_parab_Q_Rate_fit.png'%uid_   
+        
             self.flow_g2v = 'uid=%s_g2_v_fit.png'%uid_
             self.flow_g2p = 'uid=%s_g2_p_fit.png'%uid_        
             self.flow_g2v_rate_fit = 'uid=%s_vert_Q_Rate_fit.png'%uid_
@@ -755,7 +768,37 @@ class create_pdf_report( object ):
             c.showPage()
             c.save()  
 
+    def report_dose( self,  top= 720, new_page=False):
+        
+        c= self.c
+        uid=self.uid
+        #add sub-title, Time-dependent plot
+        c.setFont("Helvetica", 20)        
+        ds = 20
+        self.sub_title_num +=1
+        c.drawString(10, top, "%s. Dose Analysis"%self.sub_title_num )  #add title
+        c.setFont("Helvetica", 14)
+        
+        top1=top
+        top = top1 - 530
+        #add q_Iq_t
+        imgf = self.dose_file
+        
+        img_height= 500
+        img_left,img_top = 80, top
+        str1_left, str1_top,str1= 180, top + 500,  'dose analysis'
+        str2_left, str2_top = 180, top - 10
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top )
+         
+
+        if new_page:
+            c.showPage()
+            c.save()  
             
+            
+        
     def report_flow_pv_g2( self, top= 720, new_page=False):
         '''create the one time correlation function report
            Two images:
@@ -769,7 +812,7 @@ class create_pdf_report( object ):
         
         ds = 20
         self.sub_title_num +=1
-        c.drawString(10, top, "%s. Flow Analysis"%self.sub_title_num )  #add title
+        c.drawString(10, top, "%s. Flow One Time Analysis"%self.sub_title_num )  #add title
         c.setFont("Helvetica", 14)
         
         top1=top
@@ -800,8 +843,7 @@ class create_pdf_report( object ):
         
         top = top - 340
         #add contrast fit
-        imgf = self.flow_g2p
-        
+        imgf = self.flow_g2p        
         img_height= 300
         img_left,img_top = 80, top
         str1_left, str1_top,str1= 210, top + 300,   'XPCS Parallel Flow'
@@ -823,7 +865,86 @@ class create_pdf_report( object ):
             c.showPage()
             c.save() 
         
+
+    def report_flow_pv_two_time( self, top= 720, new_page=False):
+        '''create the two time correlation function report
+           Two images:
+               Two Time Correlation Function
+               two one-time correlatoin function from multi-one-time and from diagonal two-time
+        '''   
+        c= self.c
+        uid=self.uid
+        #add sub-title, Time-dependent plot
+        c.setFont("Helvetica", 20)
         
+        ds = 20
+        self.sub_title_num +=1
+        c.drawString(10, top, "%s. Flow One &Two Time Comparison"%self.sub_title_num )  #add title
+        c.setFont("Helvetica", 14)
+        
+        top1=top
+        top = top1 - 330
+        #add xsvs fit       
+
+        
+        if False:
+            imgf = self.two_time
+            image = self.data_dir + imgf
+
+            img_height= 300
+            img_left,img_top = 80, top
+            str1_left, str1_top,str1= 210, top + 300,   'Two_time'
+            str2_left, str2_top = 180, top - 10
+            add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                         str1_left, str1_top,str1,
+                         str2_left, str2_top )  
+        
+        
+        imgf = self.flow_g2_g2b_p 
+        img_height= 300
+        img_left,img_top = 80, top
+        str1_left, str1_top,str1= 210, top + 300,   'XPCS Vertical Flow by two-time'
+        str2_left, str2_top = 180, top - 10
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top )         
+        
+        imgf = self.flow_g2bp_rate_fit  
+        img_height= 200
+        img_left,img_top = 350, top +50
+        str1_left, str1_top,str1= 210, top + 300,   ''
+        str2_left, str2_top = 350, top - 10 + 50
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top )       
+        
+        
+        
+        top = top - 340
+        #add contrast fit
+        imgf = self.flow_g2_g2b_v 
+        
+        img_height= 300
+        img_left,img_top = 80, top
+        str1_left, str1_top,str1= 210, top + 300,   'XPCS Parallel Flow by two-time'
+        str2_left, str2_top = 180, top - 10
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top ) 
+        
+        imgf = self.flow_g2bv_rate_fit  
+        img_height= 200
+        img_left,img_top = 350, top +50
+        str1_left, str1_top,str1= 210, top + 300,   ''
+        str2_left, str2_top = 350, top - 10 + 50
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top )         
+
+        if new_page:
+            c.showPage()
+            c.save() 
+            
     def report_xsvs( self, top= 720, new_page=False):
         '''create the one time correlation function report
            Two images:
@@ -1047,7 +1168,7 @@ def load_res_h5( full_uid, data_dir   ):
 
     
 def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username, 
-                    run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs, report_type='saxs', md=None
+                    run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs, run_dose=None, report_type='saxs', md=None
                    ):
     
     if uid.startswith("uid=") or uid.startswith("Uid="):
@@ -1090,9 +1211,15 @@ def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username,
             c.new_page()
             page +=1
             c.report_header(page= page)
-            c.report_xsvs(  top= 720 )    
+            c.report_xsvs(  top= 720 ) 
+        if run_dose:
+            c.new_page()
+            page +=1
+            c.report_header(page= page)
+            c.report_dose( top = 702)
     else:
-        c.report_flow_pv_g2( top= 720) 
+        c.report_flow_pv_g2( top= 720, new_page= True) 
+        c.report_flow_pv_two_time(   top= 720, new_page= True ) 
 
     c.save_page()
     c.done() 
@@ -1132,7 +1259,7 @@ def export_xpcs_results_to_h5( filename, export_dir, export_dict ):
                 data = hf.create_dataset(key, data = export_dict[key] )
     print( 'The xpcs analysis results are exported to %s with filename as %s'%(export_dir , filename))
             
-def extract_xpcs_results_from_h5( filename, import_dir, onekey=None ):
+def extract_xpcs_results_from_h5( filename, import_dir, onekey=None, exclude_keys=None ):
     '''
        YG. Dec 22, 2016 
        extract data from a h5 file
@@ -1150,27 +1277,31 @@ def extract_xpcs_results_from_h5( filename, import_dir, onekey=None ):
     fp = import_dir + filename
     pds_type_keys = []
     dicts = ['md', 'qval_dict', 'qval_dict_v', 'qval_dict_p']
+    if exclude_keys is None:
+        exclude_keys =[]
     if onekey is None:
         for k in dicts:
             extract_dict[k] = {}
         with h5py.File( fp, 'r') as hf:  
             #print (list( hf.keys()) )
             for key in list( hf.keys()): 
-                if key in dicts:
-                    md = hf.get(key)
-                    for key_ in list(md.attrs):
-                        #print(key, key_)
-                        if key == 'qval_dict':
-                            extract_dict[key][int(key_)] = md.attrs[key_] 
-                        else:
-                            extract_dict[key][key_] = md.attrs[key_] 
-                        
-                elif key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds', 'qr_1d_pds']:
-                    pds_type_keys.append( key )                
-                else:    
-                    extract_dict[key] = np.array( hf.get( key  ))
+                if key not in exclude_keys:
+                    if key in dicts:
+                        md = hf.get(key)
+                        for key_ in list(md.attrs):
+                            #print(key, key_)
+                            if key == 'qval_dict':
+                                extract_dict[key][int(key_)] = md.attrs[key_] 
+                            else:
+                                extract_dict[key][key_] = md.attrs[key_] 
+
+                    elif key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds', 'qr_1d_pds']:
+                        pds_type_keys.append( key )                
+                    else:    
+                        extract_dict[key] = np.array( hf.get( key  ))
         for key in pds_type_keys:
-            extract_dict[key] = pds.read_hdf(fp, key= key )     
+            if key not in exclude_keys:
+                extract_dict[key] = pds.read_hdf(fp, key= key )     
     else:
         if onekey == 'md':
             with h5py.File( fp, 'r') as hf:
