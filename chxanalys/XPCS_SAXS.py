@@ -36,16 +36,22 @@ def combine_ring_anglar_mask(ring_mask, ang_mask   ):
     dumy_ring_ang = dumy_ring_mask * ang_mask
     real_ang_lab =   np.int_( np.unique( dumy_ring_ang )[1:] ) -1    
     ring_ang = ring_mask * ang_mask_      
-    #convert label_array_qzr to [1,2,3,...]
+    #print( real_ang_lab )
+    
     ura = np.unique( ring_ang )[1:]    
     ur = np.unique( ring_mask )[1:]
-    ua = np.unique( ang_mask )[real_ang_lab] 
+    ua = np.unique( ang_mask )[real_ang_lab]     
+    #print( np.unique( ring_mask )[1:], np.unique( ang_mask )[1:], np.unique( ring_ang )[1:] )    
+    
     ring_ang_ = np.zeros_like( ring_ang )
     newl = np.arange( 1, len(ura)+1)
     #newl = np.int_( real_ang_lab )  
+    #print( ura,  ur, ua  )
+    #print( len(ura) )
     for i, label in enumerate(ura):
         #print (i, label)
         ring_ang_.ravel()[ np.where(  ring_ang.ravel() == label)[0] ] = newl[i]
+    #print( np.unique( ring_ang_ ), len( np.unique( ring_ang_ ) ) )
     return   np.int_(ring_ang_)
 
 
@@ -65,10 +71,80 @@ def get_seg_from_ring_mask( inner_angle, outer_angle, num_angles, width_angle, c
     widtha = (outer_angle - inner_angle )/(num_angles+ 0.01)
     ang_mask, ang_center, ang_edges = get_angular_mask( ring_mask,  inner_angle= inner_angle, 
                 outer_angle = outer_angle, width = widtha, 
-            num_angles = num_angles, center = center, flow_geometry=True )    
+            num_angles = num_angles, center = center, flow_geometry=True )  
+    #print( np.unique( ang_mask)[1:] )
     seg_mask = combine_ring_anglar_mask( ring_mask, ang_mask)   
     qval_dict = get_qval_dict(  qr_center = qr_center, qz_center = ang_center)
     return seg_mask,qval_dict
+
+
+
+
+def get_seg_dict_from_ring_mask( inner_angle, outer_angle, num_angles, width_angle, center,
+                                ring_mask, qr_center ):
+    '''YG. Jan 6, 2017
+       A simple wrap function to get angle cut mask from ring_mask
+       Parameter:
+           inner_angle, outer_angle, num_angles, width_angle: to define the angle
+           center: beam center
+           ring_mask: two-d array
+       Return:
+           seg_mask: two-d array      
+       
+    '''
+    widtha = (outer_angle - inner_angle )/(num_angles+ 0.01)
+    ang_mask, ang_center, ang_edges = get_angular_mask( 
+        np.ones_like(ring_mask),  inner_angle= inner_angle, 
+                outer_angle = outer_angle, width = widtha, 
+            num_angles = num_angles, center = center, flow_geometry=True )  
+    #print( np.unique( ang_mask)[1:] )
+    seg_mask, good_ind = combine_two_roi_mask( ring_mask, ang_mask)   
+    qval_dict = get_qval_dict(  qr_center = qr_center, qz_center = ang_center)
+    #print( np.unique( seg_mask)[1:], good_ind )
+    #print( list( qval_dict.keys()), good_ind , len(good_ind) )
+    qval_dict_ = {  i:qval_dict[k] for (i,k) in enumerate( good_ind) }
+    return seg_mask,  qval_dict_
+
+
+def combine_two_roi_mask( ring_mask, ang_mask):
+    '''combine two roi_mask into a new roi_mask
+    e.g., ring_mask is a ring shaped mask, with unique index as (1,2)
+          ang_mask is a angular shaped mask, with unique index as (1,2,3,4)
+          the new mask will be ( 1,2,3,4 [for first ring]; 
+                                 5,6,7,8 [for second ring];
+                                 ...)
+    
+    '''
+    rf = np.ravel( ring_mask )
+    af = np.ravel( ang_mask )
+    ruiq = np.unique( ring_mask) 
+    auiq = np.unique( ang_mask)
+    maxa = np.max( auiq )
+    ring_mask_ = np.zeros_like( ring_mask )
+    new_mask_ = np.zeros_like( ring_mask )
+    new_mask_  = np.zeros_like( ring_mask )
+    for i, ind in enumerate(ruiq[1:]):
+        ring_mask_.ravel()[ 
+            np.where(  rf == ind)[0]  ] =  maxa * i
+    
+    new_mask = ( ( ring_mask_ + ang_mask) * 
+               np.array( ring_mask, dtype=bool) *
+               np.array( ang_mask, dtype=bool)
+            )
+    good_ind = np.unique( new_mask )[1:]
+    #print( good_ind )
+    l = len(good_ind)
+    new_ind = np.arange( 1, l+1 )
+    for i, gi in enumerate( good_ind ):
+        new_mask_.ravel()[ 
+            np.where(  new_mask.ravel()  == gi)[0]  ] = new_ind[i]    
+    return new_mask_, good_ind -1
+
+
+
+
+
+
 
 
     
@@ -272,11 +348,11 @@ def get_circular_average( avg_img, mask, pargs, show_pixel=True,  min_x=None, ma
         title.set_y(1.1)
         fig.subplots_adjust(top=0.85)
         path = pargs['path']
-        fp = path + 'uid=%s--q-Iq'%uid  + '.png'  
+        fp = path + '%s_q_Iq'%uid  + '.png'  
         fig.savefig( fp, dpi=fig.dpi)
     if save:
         path = pargs['path']
-        save_lists(  [q, iq], label=['q_A-1', 'Iq'],  filename='uid=%s--q-Iq'%uid, path= path  )        
+        save_lists(  [q, iq], label=['q_A-1', 'Iq'],  filename='%s_q_Iq.csv'%uid, path= path  )        
     return  qp, iq, q
 
  
@@ -925,7 +1001,7 @@ def get_angular_mask( mask,  inner_angle=0, outer_angle = 360, width = None, edg
     nopr = np.bincount( np.array(labels, dtype=int) )[1:]
    
     if len( np.where( nopr ==0 )[0] !=0):
-        print (nopr)
+        #print (nopr)
         print ("Some angs contain zero pixels. Please redefine the edges.")      
     return ang_mask, ang_center, edges1
 
