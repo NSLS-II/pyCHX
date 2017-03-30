@@ -398,7 +398,7 @@ Returns
         # and img_per_level in place!
         _one_time_process(s.buf, s.G, s.past_intensity, s.future_intensity,
                           s.label_array, num_bufs, s.num_pixels,
-                          s.img_per_level, level, buf_no, s.norm, s.lev_len) 
+                          s.img_per_level, level, buf_no, s.norm, s.lev_len)
 
         # check whether the number of levels is one, otherwise
         # continue processing the next level
@@ -448,25 +448,6 @@ Returns
 
 
 
-def multi_tau_auto_corr(num_levels, num_bufs, labels, images, bad_frame_list=None, 
-                        imgsum=None, norm=None ):
-    """Wraps generator implementation of multi-tau
-    Original code(in Yorick) for multi tau auto correlation
-    author: Mark Sutton
-    For parameter description, please reference the docstring for
-    lazy_one_time. Note that there is an API difference between this function
-    and `lazy_one_time`. The `images` arugment is at the end of this function
-    signature here for backwards compatibility, but is the first argument in
-    the `lazy_one_time()` function. The semantics of the variables remain
-    unchanged.
-    """
-    gen = lazy_one_time(images, num_levels, num_bufs, labels,bad_frame_list=bad_frame_list, imgsum=imgsum,
-                       norm=norm )
-    for result in gen:
-        pass
-    return result.g2, result.lag_steps
-
-
 
 def auto_corr_scat_factor(lags, beta, relaxation_rate, baseline=1):
     """
@@ -508,8 +489,29 @@ def auto_corr_scat_factor(lags, beta, relaxation_rate, baseline=1):
        J. Synchrotron Rad. vol 21, p 1288-1295, 2014
     """
     return beta * np.exp(-2 * relaxation_rate * lags) + baseline
+ 
 
-def two_time_corr(labels, images, num_frames, num_bufs, num_levels=1):
+def multi_tau_auto_corr(num_levels, num_bufs, labels, images, bad_frame_list=None, 
+                        imgsum=None, norm=None ):
+    """Wraps generator implementation of multi-tau
+    Original code(in Yorick) for multi tau auto correlation
+    author: Mark Sutton
+    For parameter description, please reference the docstring for
+    lazy_one_time. Note that there is an API difference between this function
+    and `lazy_one_time`. The `images` arugment is at the end of this function
+    signature here for backwards compatibility, but is the first argument in
+    the `lazy_one_time()` function. The semantics of the variables remain
+    unchanged.
+    """
+    gen = lazy_one_time(images, num_levels, num_bufs, labels,bad_frame_list=bad_frame_list, imgsum=imgsum,
+                       norm=norm )
+    for result in gen:
+        pass
+    return result.g2, result.lag_steps
+
+
+def  multi_tau_two_time_auto_corr(num_lev, num_buf, ring_mask, FD, bad_frame_list =None, 
+                                         imgsum= None, norm = None ):
     """Wraps generator implementation of multi-tau two time correlation
     This function computes two-time correlation
     Original code : author: Yugang Zhang
@@ -518,14 +520,17 @@ def two_time_corr(labels, images, num_frames, num_bufs, num_levels=1):
     results : namedtuple
     For parameter definition, see the docstring for the `lazy_two_time()`
     function in this module
-    """
-    gen = lazy_two_time(labels, images, num_frames, num_bufs, num_levels)
+    """    
+    gen = lazy_two_time(FD, num_lev, num_buf, ring_mask,
+                  two_time_internal_state= None,
+                    bad_frame_list=bad_frame_list, imgsum=imgsum, norm = norm )        
     for result in gen:
         pass
     return two_time_state_to_results(result)
     
+    
 def lazy_two_time(FD, num_levels, num_bufs, labels,
-                  two_time_internal_state=None, bad_frame_list=None, imgsum=None, norm = None ):
+                  two_time_internal_state=None, bad_frame_list=None, imgsum= None, norm = None ):
 
 #def lazy_two_time(labels, images, num_frames, num_bufs, num_levels=1,
 #                  two_time_internal_state=None):
@@ -584,12 +589,11 @@ def lazy_two_time(FD, num_levels, num_bufs, labels,
         spectroscopy," Phys. Rev. E., vol 76, p 010401(1-4), 2007.
     """
     
+    num_frames = FD.end - FD.beg  
     if two_time_internal_state is None:
-        two_time_internal_state = _init_state_two_time(num_levels, num_bufs,
-                                                       labels, num_frames)
+        two_time_internal_state = _init_state_two_time(num_levels, num_bufs,labels, num_frames)
     # create a shorthand reference to the results and state named tuple
-    s = two_time_internal_state
-    
+    s = two_time_internal_state    
     qind, pixelist = roi.extract_label_indices(  labels  )    
     # iterate over the images to compute multi-tau correlation
     fra_pix = np.zeros_like( pixelist, dtype=np.float64)    
@@ -597,35 +601,43 @@ def lazy_two_time(FD, num_levels, num_bufs, labels,
     timg[pixelist] =   np.arange( 1, len(pixelist) + 1  )     
     if bad_frame_list is None:
         bad_frame_list=[]
-    #for  i in tqdm(range( FD.beg , FD.end )): 
         
+    for  i in tqdm(range( FD.beg , FD.end )):        
+        if i in bad_frame_list:
+            fra_pix[:]= np.nan
+        else:
+            (p,v) = FD.rdrawframe(i)
+            w = np.where( timg[p] )[0]
+            pxlist = timg[  p[w]   ] -1            
+            if imgsum is None:
+                if norm is None:
+                    fra_pix[ pxlist] = v[w] 
+                else: 
+                    fra_pix[ pxlist] = v[w]/ norm[pxlist]   #-1.0  
+            else:
+                if norm is None:
+                    fra_pix[ pxlist] = v[w] / imgsum[i] 
+                else:
+                    fra_pix[ pxlist] = v[w]/ imgsum[i]/  norm[pxlist]            
         
-
-    for img in images:
-        s.cur[0] = (1 + s.cur[0]) % num_bufs  # increment buffer
-
+        level = 0   
+        # increment buffer
+        s.cur[0] = (1 + s.cur[0]) % num_bufs         
         s.count_level[0] = 1 + s.count_level[0]
-
         # get the current image time
-        s = s._replace(current_img_time=(s.current_img_time + 1))
-
-        # Put the image into the ring buffer.
-        s.buf[0, s.cur[0] - 1] = (np.ravel(img))[s.pixel_list]
-
-        # Compute the two time correlations between the first level
-        # (undownsampled) frames. two_time and img_per_level in place!
+        s = s._replace(current_img_time=(s.current_img_time + 1))        
+        # Put the ROI pixels into the ring buffer. 
+        s.buf[0, s.cur[0] - 1] =  fra_pix 
+        fra_pix[:]=0
         _two_time_process(s.buf, s.g2, s.label_array, num_bufs,
                           s.num_pixels, s.img_per_level, s.lag_steps,
                           s.current_img_time,
                           level=0, buf_no=s.cur[0] - 1)
-
         # time frame for each level
         s.time_ind[0].append(s.current_img_time)
-
         # check whether the number of levels is one, otherwise
         # continue processing the next level
         processing = num_levels > 1
-
         # Compute the correlations for all higher levels.
         level = 1
         while processing:
@@ -635,23 +647,18 @@ def lazy_two_time(FD, num_levels, num_bufs, labels,
             else:
                 prev = 1 + (s.cur[level - 1] - 2) % num_bufs
                 s.cur[level] = 1 + s.cur[level] % num_bufs
-                s.count_level[level] = 1 + s.count_level[level]
-
-                s.buf[level, s.cur[level] - 1] = (s.buf[level - 1, prev - 1] +
-                                                  s.buf[level - 1,
-                                                  s.cur[level - 1] - 1])/2
+                s.count_level[level] = 1 + s.count_level[level]                
+                s.buf[level, s.cur[level] - 1] = ( s.buf[level - 1, prev - 1] +  
+                                                  s.buf[level - 1, s.cur[level - 1] - 1] )/2
 
                 t1_idx = (s.count_level[level] - 1) * 2
 
                 current_img_time = ((s.time_ind[level - 1])[t1_idx] +
                                     (s.time_ind[level - 1])[t1_idx + 1])/2.
-
                 # time frame for each level
                 s.time_ind[level].append(current_img_time)
-
                 # make the track_level zero once that level is processed
                 s.track_level[level] = 0
-
                 # call the _two_time_process function for each multi-tau level
                 # for multi-tau levels greater than one
                 # Again, this is modifying things in place. See comment
@@ -664,6 +671,7 @@ def lazy_two_time(FD, num_levels, num_bufs, labels,
 
                 # Checking whether there is next level for processing
                 processing = level < num_levels
+        #print (s.g2[1,:,1] )
         yield s
 
 
@@ -685,7 +693,8 @@ def two_time_state_to_results(state):
                                np.diag(np.diag(x0)))
     return results(state.g2, state.lag_steps, state)
 
-
+ 
+    
 def _two_time_process(buf, g2, label_array, num_bufs, num_pixels,
                       img_per_level, lag_steps, current_img_time,
                       level, buf_no):
@@ -729,12 +738,12 @@ def _two_time_process(buf, g2, label_array, num_bufs, num_pixels,
 
     for i in range(i_min, min(img_per_level[level], num_bufs)):
         t_index = level*num_bufs/2 + i
-
         delay_no = (buf_no - i) % num_bufs
-
         past_img = buf[level, delay_no]
-        future_img = buf[level, buf_no]
-
+        future_img = buf[level, buf_no]    
+        
+        #print( np.sum( past_img ), np.sum( future_img ))
+        
         #  get the matrix of correlation function without normalizations
         tmp_binned = (np.bincount(label_array,
                                   weights=past_img*future_img)[1:])
@@ -747,9 +756,9 @@ def _two_time_process(buf, g2, label_array, num_bufs, num_pixels,
                                  weights=future_img)[1:])
 
         tind1 = (current_img_time - 1)
-
-        tind2 = (current_img_time - lag_steps[t_index] - 1)
-
+        tind2 = (current_img_time - lag_steps[int(t_index)] - 1)
+        #print( current_img_time )
+        
         if not isinstance(current_img_time, int):
             nshift = 2**(level-1)
             for i in range(-nshift+1, nshift+1):
@@ -757,7 +766,9 @@ def _two_time_process(buf, g2, label_array, num_bufs, num_pixels,
                    int(tind2+i)] = (tmp_binned/(pi_binned *
                                                 fi_binned))*num_pixels
         else:
-            g2[:, tind1, tind2] = tmp_binned/(pi_binned * fi_binned)*num_pixels
+            g2[:, int(tind1), int(tind2)] = tmp_binned/(pi_binned * fi_binned)*num_pixels        
+        
+        #print( num_pixels )
 
 
 def _init_state_two_time(num_levels, num_bufs, labels, num_frames):
@@ -833,6 +844,37 @@ def one_time_from_two_time(two_time_corr):
             one_time_corr[:, j] = np.trace(g, offset=j)/two_time_corr.shape[2]
     return one_time_corr
  
+
+def cal_c12c( FD, ring_mask, 
+           bad_frame_list=None,good_start=0, num_buf = 8, num_lev = None, imgsum=None, norm=None ):
+    '''calculation two_time correlation by using a multi-tau algorithm'''
+    
+    #noframes = FD.end - good_start   # number of frames, not "no frames"    
+    
+    FD.beg = max(FD.beg, good_start)
+    noframes = FD.end - FD.beg   # number of frames, not "no frames"
+    #num_buf = 8  # number of buffers
+
+    if num_lev is None:
+        num_lev = int(np.log( noframes/(num_buf-1))/np.log(2) +1) +1
+    print ('In this g2 calculation, the buf and lev number are: %s--%s--'%(num_buf,num_lev))
+    if  bad_frame_list is not None:
+        if len(bad_frame_list)!=0:
+            print ('Bad frame involved and will be precessed!')                        
+            noframes -=  len(np.where(np.in1d( bad_frame_list, 
+                                              range(good_start, FD.end)))[0])            
+    print ('%s frames will be processed...'%(noframes))
+
+    c12, lag_steps, state =  multi_tau_two_time_auto_corr(num_lev, num_buf,   ring_mask, FD, bad_frame_list, 
+                                         imgsum=imgsum, norm = norm )
+    
+    print( 'Two Time Calculation is DONE!')
+    m, n, n = c12.shape
+    #print( m,n,n)
+    c12_ = np.zeros( [n,n,m] )
+    for i in range( m):
+        c12_[:,:,i ]  = c12[i]    
+    return c12_, lag_steps
 
 
 
