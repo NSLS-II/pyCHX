@@ -111,8 +111,15 @@ def read_compressed_eigerdata( mask, filename, beg, end,
             
     ''' 
     #should use try and except instead of with_pickle in the future!
-    
+    CAL = False
     if not with_pickle:
+        CAL = True
+    else:
+        try:
+            mask, avg_img, imgsum, bad_frame_list_ =  pkl.load( open(filename + '.pkl', 'rb' ) )             
+        except:
+            CAL = True
+    if CAL:            
         FD = Multifile( filename, beg, end)    
         imgsum  =  np.zeros(   FD.end- FD.beg, dtype= np.float  )     
         avg_img = np.zeros(  [FD.md['ncols'], FD.md['nrows'] ] , dtype= np.float )     
@@ -121,9 +128,8 @@ def read_compressed_eigerdata( mask, filename, beg, end,
                                         hot_pixel_threshold=hot_pixel_threshold, plot_ = False,
                                                 bad_frame_list=bad_frame_list) 
         avg_img = get_avg_imgc( FD,  beg=None,end=None,sampling = 1, plot_ = False,bad_frame_list=bad_frame_list_ )
-        FD.FID.close()
-    else:
-        mask, avg_img, imgsum, bad_frame_list_ =  pkl.load( open(filename + '.pkl', 'rb' ) )    
+        FD.FID.close() 
+            
     return   mask, avg_img, imgsum, bad_frame_list_
 
 def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
@@ -808,7 +814,7 @@ def mean_intensityc(FD, labeled_array,  sampling=1, index=None):
 def get_each_frame_intensityc( FD, sampling = 1, 
                              bad_pixel_threshold=1e10, bad_pixel_low_threshold=0, 
                               hot_pixel_threshold=2**30,                             
-                             plot_ = False, bad_frame_list=None, *argv,**kwargs):   
+                             plot_ = False, bad_frame_list=None, save=False, *argv,**kwargs):   
     '''Get the total intensity of each frame by sampling every N frames
        Also get bad_frame_list by check whether above  bad_pixel_threshold  
        
