@@ -7,7 +7,7 @@ from chxanalys.chx_packages import *
 ####################################################################################################
 ##compress multi uids, sequential compress for uids, but for each uid, can apply parallel compress##
 #################################################################################################
-def compress_multi_uids( uids, mask, force_compress=False,  para_compress= True, bin_frame_number=1 ):
+def compress_multi_uids( uids, mask, mask_dict = None, force_compress=False,  para_compress= True, bin_frame_number=1 ):
     ''' Compress time series data for a set of uids
     Parameters:
         uids: list, a list of uid
@@ -31,7 +31,12 @@ def compress_multi_uids( uids, mask, force_compress=False,  para_compress= True,
         else:
             filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s_bined--%s.cmp'%(md['uid'],bin_frame_number)
         
-        imgs = load_data( uid, md['detector'], reverse= True  ) 
+        imgs = load_data( uid, md['detector'], reverse= True  )
+        print( imgs )
+        if mask_dict is not None:
+            mask = mask_dict[md['detector']]
+            print('The detecotr is: %s'% md['detector'])
+            
         md.update( imgs.md )
         mask, avg_img, imgsum, bad_frame_list = compress_eigerdata(imgs, mask, md, filename, 
              force_compress= force_compress,  para_compress= para_compress,  bad_pixel_threshold= 1e14,
@@ -137,7 +142,8 @@ def get_series_g2_from_g12( g12b, fra_num_by_dose = None, dose_label = None,
             good_end = L            
         if not log_taus:            
             g2[ key ] = get_one_time_from_two_time(g12b[good_start:good_end,good_start:good_end,:] )
-        else:            
+        else:      
+            #print(  good_end,  num_bufs )
             lag_step = get_multi_tau_lag_steps(good_end,  num_bufs)
             lag_step = lag_step[ lag_step < good_end - good_start]            
             #print( len(lag_steps ) )
@@ -184,9 +190,9 @@ def get_series_one_time_mulit_uids( uids,  qval_dict,  good_start=0,  path=None,
             g2_path =  path + uid + '/'
             g12b = np.load( g2_path + 'uid=%s_g12b.npy'%uid)
             try:
-                exp_time = float( md['cam_acquire_t']) *1000 #from second to ms
+                exp_time = float( md['cam_acquire_time']) #*1000 #from second to ms
             except:                
-                exp_time = float( md['exposure time']) * 1000  #from second to ms
+                exp_time = float( md['exposure time']) #* 1000  #from second to ms
                 
             fra_num_by_dose = get_fra_num_by_dose(  exp_dose = exposure_dose,
                                    exp_time =exp_time, dead_time = dead_time)
@@ -336,78 +342,38 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
     good_start =     run_pargs['good_start'] 
     use_imgsum_norm =  run_pargs['use_imgsum_norm']
     try:
+        use_sqnorm =     run_pargs['use_sqnorm']
+    except:
+        use_sqnorm = False
+    try:
         inc_x0 = run_pargs['inc_x0']
         inc_y0 = run_pargs['inc_y0']
     except:
         inc_x0 = None
         inc_y0=  None 
-    #print( scat_geometry )
-    if scat_geometry =='saxs' or scat_geometry =='ang_saxs':
-        uniformq =      run_pargs['uniformq']
-        use_sqnorm = run_pargs['use_sqnorm']
-              
-        inner_radius= run_pargs['inner_radius']
-        outer_radius =   run_pargs['outer_radius']
-        gap_ring_number =run_pargs['gap_ring_number']
-        num_rings =   run_pargs['num_rings']
         
-        number_rings= run_pargs['number_rings'] 
-        qcenters = run_pargs['qcenters']
-        
-            
-        if 'ring_width' in list(run_pargs.keys()):
-            ring_width = run_pargs['ring_width']
-            if ring_width is None:ring_width =    ( outer_radius - inner_radius)/(num_rings + gap_ring_number)                
-        else:
-            ring_width =    ( outer_radius - inner_radius)/(num_rings + gap_ring_number)
-        
-    if scat_geometry =='ang_saxs':  
-        width_angle_v =  run_pargs['width_angle_v']#2
-        angle_v =  run_pargs['angle_v']#132
-        num_angles_v =    run_pargs['num_angles_v']#1  
-        width_angle_p =  run_pargs['width_angle_p']#2
-        angle_p =  run_pargs['angle_p']#42
-        num_angles_p =   run_pargs['num_angles_p']#1
-    if scat_geometry =='gi_waxs':    
+    #for different scattering geogmetry, we only need to change roi_mask
+    #and qval_dict
+    qval_dict = run_pargs['qval_dict'] 
+    if scat_geometry != 'ang_saxs':
         roi_mask = run_pargs['roi_mask']
-        qval_dict = run_pargs['qval_dict']
+        qind, pixelist = roi.extract_label_indices(  roi_mask  )
+        noqs = len(np.unique(qind))
+        nopr = np.bincount(qind, minlength=(noqs+1))[1:]
         
-    elif scat_geometry =='gi_saxs':
+    else:        
+        roi_mask_p = run_pargs['roi_mask_p']   
+        qval_dict_p = run_pargs['qval_dict_p']
+        roi_mask_v = run_pargs['roi_mask_v']   
+        qval_dict_v = run_pargs['qval_dict_v']
+        
+    if scat_geometry == 'gi_saxs': 
         refl_x0 = run_pargs['refl_x0']
-        refl_y0 = run_pargs['refl_y0']        
-        qr_start , qr_end, gap_qr_num, qr_num  = run_pargs['qr_start'],run_pargs['qr_end'],run_pargs['gap_qr_num'], run_pargs['qr_num']        
-        qz_start , qz_end, gap_qz_num, qz_num  = run_pargs['qz_start'],run_pargs['qz_end'],run_pargs['gap_qr_num'], run_pargs['qz_num']   
+        refl_y0 = run_pargs['refl_y0']
+        Qr, Qz, qr_map, qz_map  =   run_pargs['Qr'], run_pargs['Qz'], run_pargs['qr_map'], run_pargs['qz_map']
         
-        if 'qr_width' in list(run_pargs.keys()):
-            qr_width = run_pargs['qr_width']
-            if qr_width is None:qr_width =   ( qr_end- qr_start)/(qr_num+gap_qr_num) 
-        else:
-            qr_width =   ( qr_end- qr_start)/(qr_num+gap_qr_num)        
-        if 'qz_width' in list(run_pargs.keys()):
-            qz_width = run_pargs['qz_width']
-            if qz_width is None:qz_width =   ( qz_end- qz_start)/(qz_num+gap_qz_num)
-        else:
-            qz_width =   ( qz_end- qz_start)/(qz_num+gap_qz_num)
-
-        
-        define_second_roi = run_pargs['define_second_roi'] #if True to define another line; else: make it False
-        if define_second_roi:
-            qr_start2 , qr_end2, gap_qr_num2, qr_num2  = run_pargs['qr_start2'],run_pargs['qr_end2'],run_pargs['gap_qr_num2'], run_pargs['qr_num2']        
-            qz_start2 , qz_end2, gap_qz_num2, qz_num2  = run_pargs['qz_start2'],run_pargs['qz_end2'],run_pargs['gap_qr_num2'], run_pargs['qz_num2']   
-            
-            if 'qr_width2' in list(run_pargs.keys()):
-                qr_width2 = run_pargs['qr_width2']
-            else:
-                qr_width2 =   ( qr_end2- qr_start2)/(qr_num2+gap_qr_num2)        
-            if 'qz_width2' in list(run_pargs.keys()):
-                qz_width2 = run_pargs['qz_width2']
-            else:
-                qz_width2 =   ( qz_end2- qz_start2)/(qz_num2+gap_qz_num2)
-            
-        use_sqnorm = False  #to be developed for gisaxs 
-        
-    taus=None;g2=None;tausb=None;g2b=None;g12b=None;taus4=None;g4=None;times_xsv=None;contrast_factorL=None; 
     
+    taus=None;g2=None;tausb=None;g2b=None;g12b=None;taus4=None;g4=None;times_xsv=None;contrast_factorL=None;     
     qth_interest = run_pargs['qth_interest']    
     pdf_version = run_pargs['pdf_version']    
     
@@ -453,7 +419,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
     
     mask = load_mask(mask_path, mask_name, plot_ =  False, image_name = uidstr + '_mask', reverse=True ) 
     mask *= pixel_mask
-    mask[:,2069] =0 # False  #Concluded from the previous results
+    if md['detector'] =='eiger4m_single_image':
+        mask[:,2069] =0 # False  #Concluded from the previous results
     show_img(mask,image_name = uidstr + '_mask', save=True, path=data_dir)
     mask_load=mask.copy()
     imgsa = apply_mask( imgs, mask )
@@ -519,54 +486,38 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
            filename=uidstr + '_img_sum_t', path= data_dir  )
         plot1D( y = imgsum_y, title = uidstr + '_img_sum_t', xlabel='Frame',
                ylabel='Total_Intensity', legend='imgsum', save=True, path=data_dir)
- 
+        
+        
+        ############for SAXS and ANG_SAXS (Flow_SAXS)
         if scat_geometry =='saxs' or scat_geometry =='ang_saxs':
         
-            show_saxs_qmap( avg_img, setup_pargs, width=600,vmin=.1, vmax=np.max(avg_img*.1), logs=True,
+            show_saxs_qmap( avg_img, setup_pargs, width=600, vmin=.1, vmax=np.max(avg_img*.1), logs=True,
                image_name= uidstr + '_img_avg',  save=True)  
             #np.save(  data_dir + 'uid=%s--img-avg'%uid, avg_img)
 
-            hmask = create_hot_pixel_mask( avg_img, threshold = 100, center=center, center_radius= 400)
+            hmask = create_hot_pixel_mask( avg_img, threshold = 100, center=center, center_radius= 60)
             qp_saxs, iq_saxs, q_saxs = get_circular_average( avg_img, mask * hmask, pargs=setup_pargs  )
         
-            plot_circular_average( qp_saxs, iq_saxs, q_saxs,  pargs=setup_pargs, 
+            plot_circular_average( qp_saxs, iq_saxs, q_saxs,  pargs= setup_pargs, 
                               xlim=[q_saxs.min(), q_saxs.max()], ylim = [iq_saxs.min(), iq_saxs.max()] )
 
             pd = trans_data_to_pd( np.where( hmask !=1), 
                     label=[md['uid']+'_hmask'+'x', md['uid']+'_hmask'+'y' ], dtype='list')
-            pd.to_csv('/XF11ID/analysis/Commissioning/eiger4M_badpixel.csv', mode='a'  )
+            
+            #pd.to_csv('/XF11ID/analysis/Commissioning/eiger4M_badpixel.csv', mode='a'  )
+            
             mask =np.array( mask * hmask, dtype=bool) 
             #show_img( mask )
          
             if run_fit_form:
                 form_res = fit_form_factor( q_saxs,iq_saxs,  guess_values={'radius': 2500, 'sigma':0.05, 
                  'delta_rho':1E-10 },  fit_range=[0.0001, 0.015], fit_variables={'radius': T, 'sigma':T, 
-                 'delta_rho':T},  res_pargs=setup_pargs, xlim=[0.0001, 0.015]) 
-            ### Define a non-uniform distributed rings by giving edges
-            if not uniformq:    
-                #width = 0.0002    
-                #number_rings= 1    
-                #qcenters = [ 0.00235,0.00379,0.00508,0.00636,0.00773, 0.00902] #in A-1
-                edges = get_non_uniform_edges(  qcenters, ring_width, number_rings )    
-                inner_radius= None
-                outer_radius = None
-                ring_width = None
-                num_rings = None
-            if uniformq:    
-                #inner_radius= 0.006  #16
-                #outer_radius = 0.05  #112    
-                #num_rings = 12                
-                edges = None 
+                 'delta_rho':T},  res_pargs=setup_pargs, xlim=[0.0001, 0.015])
 
-            roi_mask, qr, qr_edge = get_ring_mask(  mask, inner_radius=inner_radius, 
-                    outer_radius = outer_radius , width = ring_width, num_rings = num_rings, edges=edges,
-                                  unit='A',       pargs=setup_pargs   )
-            qind, pixelist = roi.extract_label_indices(  roi_mask  ) 
-            qr = np.round( qr, 4)
             show_ROI_on_image( avg_img, roi_mask, center, label_on = False, rwidth =700, alpha=.9,  
                              save=True, path=data_dir, uid=uidstr, vmin= np.min(avg_img), vmax= np.max(avg_img) ) 
-            qval_dict = get_qval_dict( np.round(qr, 4)  )      
-
+            
+            qr = np.array( [ qval_dict[k][0] for k in list( qval_dict.keys()) ] )
             plot_qIq_with_ROI( q_saxs, iq_saxs, qr, logs=True, uid=uidstr, xlim=[q_saxs.min(), q_saxs.max()],
                       ylim = [iq_saxs.min(), iq_saxs.max()],  save=True, path=data_dir)
             
@@ -577,55 +528,21 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
                 #print( time_edge )
                 qpt, iqst, qt = get_t_iqc( FD, time_edge, mask, pargs=setup_pargs, nx=1500 )
                 plot_t_iqc( qt, iqst, time_edge, pargs=setup_pargs, xlim=[qt.min(), qt.max()],
-                       ylim = [iqst.min(), iqst.max()], save=True )       
-        
-            if scat_geometry == 'ang_saxs':
-                inner_angle_v=  angle_v -  width_angle_v
-                outer_angle_v =  angle_v + width_angle_v            
-                roi_mask_v, qval_dict_v =  get_seg_from_ring_mask( inner_angle_v, outer_angle_v,
-                                                        num_angles_v, width_angle_v, center, roi_mask, qr )            
-                inner_angle_p=  angle_p -  width_angle_p
-                outer_angle_p =  angle_p + width_angle_p      
-                roi_mask_p, qval_dict_p =  get_seg_from_ring_mask( inner_angle_p, outer_angle_p,
-                                                        num_angles_p, width_angle_p, center, roi_mask, qr )
+                       ylim = [iqst.min(), iqst.max()], save=True )   
                 
         elif scat_geometry == 'gi_waxs':  
-            #roi_mask[badpixel] = 0
-            
-            show_ROI_on_image( avg_img, roi_mask, label_on = True,  alpha=.5,
-                 save=True, path= data_dir, uid=uidstr)#, vmin=1, vmax=15)
+            #roi_mask[badpixel] = 0   
+            qr = np.array( [ qval_dict[k][0] for k in list( qval_dict.keys()) ] )
+            show_ROI_on_image( avg_img, roi_mask, label_on = True,  alpha=.5,save=True, path= data_dir, uid=uidstr)#, vmin=1, vmax=15)
 
-        elif scat_geometry == 'gi_saxs':
-            
+        elif scat_geometry == 'gi_saxs':            
             show_img( avg_img,  vmin=.1, vmax=np.max(avg_img*.1),
-                     logs=True, image_name= uidstr + '_img_avg',  save=True, path=data_dir)
-            
-            alphaf,thetaf, alphai, phi = get_reflected_angles( inc_x0, inc_y0,refl_x0 , refl_y0, Lsd=Ldet )
-            qx_map, qy_map, qr_map, qz_map = convert_gisaxs_pixel_to_q( inc_x0, inc_y0,refl_x0,refl_y0, lamda=lambda_, Lsd=Ldet )
+                     logs=True, image_name= uidstr + '_img_avg',  save=True, path=data_dir)            
             ticks_  = get_qzr_map(  qr_map, qz_map, inc_x0, Nzline=10,  Nrline=10   )
-            ticks = ticks_[:4]
-            plot_qzr_map(  qr_map, qz_map, inc_x0, ticks = ticks_, data= avg_img, uid= uidstr, path = data_dir   )
-            
-            Qr = [qr_start , qr_end, qr_width, qr_num]
-            Qz=  [qz_start,   qz_end,  qz_width , qz_num ]
-            roi_mask, qval_dict = get_gisaxs_roi( Qr, Qz, qr_map, qz_map, mask= mask ) 
-            
-            if define_second_roi:    
-                qval_dict1 = qval_dict.copy()
-                roi_mask1 = roi_mask.copy()
-                del qval_dict, roi_mask                
-                Qr2 = [qr_start2 , qr_end2, qr_width2, qr_num2]
-                Qz2=  [qz_start2,   qz_end2,  qz_width2 , qz_num2 ]    
-                roi_mask2, qval_dict2 = get_gisaxs_roi( Qr2, Qz2, qr_map, qz_map, mask= mask )
-                qval_dict = update_qval_dict(  qval_dict1, qval_dict2 )
-                roi_mask = update_roi_mask(  roi_mask1, roi_mask2 )
-                
-            show_qzr_roi( avg_img, roi_mask, inc_x0, ticks, alpha=0.5, save=True, path=data_dir, uid=uidstr )    
-            qind, pixelist = roi.extract_label_indices(roi_mask)
-            noqs = len(np.unique(qind))
-            nopr = np.bincount(qind, minlength=(noqs+1))[1:]
-            
-            qr_1d_pds = cal_1d_qr( avg_img, Qr, Qz, qr_map, qz_map, inc_x0,  setup_pargs=setup_pargs )
+            ticks = ticks_[:4]            
+            plot_qzr_map(  qr_map, qz_map, inc_x0, ticks = ticks_, data= avg_img, uid= uidstr, path = data_dir   ) 
+            show_qzr_roi( avg_img, roi_mask, inc_x0, ticks, alpha=0.5, save=True, path=data_dir, uid=uidstr )            
+            qr_1d_pds = cal_1d_qr( avg_img, Qr, Qz, qr_map, qz_map, inc_x0,  setup_pargs=setup_pargs )            
             plot_qr_1d_with_ROI( qr_1d_pds, qr_center=np.unique( np.array(list( qval_dict.values() ) )[:,0] ),
                     loglog=False, save=True, uid=uidstr, path = data_dir)
             
@@ -634,11 +551,15 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
             time_edge =  np.array( time_edge ) + good_start
             qrt_pds = get_t_qrc( FD, time_edge, Qr, Qz, qr_map, qz_map, path=data_dir, uid = uidstr )    
             plot_qrt_pds( qrt_pds, time_edge, qz_index = 0, uid = uidstr, path =  data_dir )
+            
+            
 
+        ##############################
         ##the below works for all the geometries     
+        ########################################
         if scat_geometry !='ang_saxs':    
             roi_inten = check_ROI_intensity( avg_img, roi_mask, ring_number= qth_interest, uid =uidstr, save=True, path=data_dir ) 
-        if scat_geometry =='saxs' or scat_geometry =='gi_saxs':
+        if scat_geometry =='saxs' or scat_geometry =='gi_saxs' or scat_geometry =='gi_waxs':
             if run_waterfall:
                 qindex = qth_interest
                 wat = cal_waterfallc( FD, roi_mask, qindex= qindex, save =True, path=data_dir,uid=uidstr)
@@ -666,13 +587,11 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
             uid_ = uidstr + '_fra_%s_%s'%(FD.beg, FD.end)
             print( uid_ )
     
-        if run_one_time:    
-            
+        if run_one_time: 
             if use_imgsum_norm:
                 imgsum_ = imgsum
             else:
-                imgsum_ = None         
-
+                imgsum_ = None 
             if scat_geometry !='ang_saxs':  
                 t0 = time.time()
                 g2, lag_steps  = cal_g2p( FD,  roi_mask, bad_frame_list,good_start, num_buf = 8, num_lev= None,
@@ -775,17 +694,18 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
                      path= data_dir, uid = uid_ ) 
             
             max_taus = Nimg    
-            t0=time.time()
-            g2b = get_one_time_from_two_time(g12b)[:max_taus]
-            run_time(t0)
-            tausb = np.arange( g2b.shape[0])[:max_taus] *timeperframe     
+            t0=time.time()            
+            #g2b = get_one_time_from_two_time(g12b)[:max_taus]
+            g2b = get_one_time_from_two_time(g12b)[lag_steps]
+            tausb = lag_steps *timeperframe
+            run_time(t0)            
+            #tausb = np.arange( g2b.shape[0])[:max_taus] *timeperframe            
             g2b_pds = save_g2_general( g2b, taus=tausb, qr= np.array( list( qval_dict.values() ) )[:,0],
-                                      qz=None, uid=uid_ +'_g2b.csv', path= data_dir, return_res=True )
- 
+                                      qz=None, uid=uid_ +'_g2b.csv', path= data_dir, return_res=True ) 
             
             g2_fit_resultb, taus_fitb, g2_fitb = get_g2_fit_general( g2b,  tausb, 
                 function = fit_g2_func,  vlim=[0.95, 1.05], fit_range= None,  
-                fit_variables={'baseline':True, 'beta':True, 'alpha':False,'relaxation_rate':True},                                  
+                fit_variables={'baseline':True, 'beta':True, 'alpha':False,'relaxation_rate':True},
                 guess_values={'baseline':1.0,'beta':0.05,'alpha':1.0,'relaxation_rate':0.01,}) 
     
             g2b_fit_paras = save_g2_fit_para_tocsv(g2_fit_resultb, 
@@ -823,7 +743,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
             #time_steps = np.array( utils.geometric_series(2,   len(imgs)   ) )
             time_steps = [0,1]  #only run the first two levels
             num_times = len(time_steps)    
-            times_xsvs = exposuretime + (2**(  np.arange( len(time_steps) ) ) -1 ) * acquisition_period    
+            times_xsvs = exposuretime + (2**(  np.arange( len(time_steps) ) ) -1 ) *timeperframe    
             print( 'The max counts are: %s'%max_cts )
 
         ### Do historam 
@@ -899,9 +819,9 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
             md['beam_refl_center_x'] = refl_x0
             md['beam_refl_center_y'] = refl_y0
 
-        elif  scat_geometry == 'saxs':
+        elif  scat_geometry == 'saxs' or 'gi_waxs':
             md['qr']= qr
-            md['qr_edge'] = qr_edge
+            #md['qr_edge'] = qr_edge
             md['qval_dict'] = qval_dict
             md['beam_center_x'] =  center[1]
             md['beam_center_y']=  center[0]  
@@ -910,7 +830,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
             md['qval_dict_v'] = qval_dict_v
             md['qval_dict_p'] = qval_dict_p
             md['beam_center_x'] =  center[1]
-            md['beam_center_y']=  center[0]     
+            md['beam_center_y']=  center[0]  
+            
 
         md['beg'] = FD.beg
         md['end'] = FD.end
@@ -927,6 +848,10 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
             for k,v in zip( ['md', 'q_saxs', 'iq_saxs','iqst','qt','roi_mask','qval_dict','avg_img','mask','pixel_mask', 'imgsum', 'bad_frame_list'], 
                         [md, q_saxs, iq_saxs, iqst, qt,roi_mask, qval_dict, avg_img,mask,pixel_mask, imgsum, bad_frame_list] ):
                 Exdt[ k ] = v
+        elif scat_geometry == 'gi_waxs': 
+            for k,v in zip( ['md', 'roi_mask','qval_dict','avg_img','mask','pixel_mask', 'imgsum', 'bad_frame_list'], 
+                        [md, roi_mask, qval_dict, avg_img,mask,pixel_mask, imgsum, bad_frame_list] ):
+                Exdt[ k ] = v                
         elif scat_geometry == 'ang_saxs':     
             for k,v in zip( ['md', 'q_saxs', 'iq_saxs','roi_mask_v','roi_mask_p',
                              'qval_dict_v','qval_dict_p','avg_img','mask','pixel_mask', 'imgsum', 'bad_frame_list'], 
@@ -996,6 +921,11 @@ def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
                 for k,v in zip( ['md', 'roi_mask','qval_dict','avg_img','mask','pixel_mask', 'imgsum', 'bad_frame_list', 'qr_1d_pds'], 
                         [md,    roi_mask, qval_dict, avg_img,mask,pixel_mask, imgsum, bad_frame_list, qr_1d_pds] ):
                     res[ k ] = v
+                    
+            elif scat_geometry == 'gi_waxs': 
+                for k,v in zip( ['md', 'roi_mask','qval_dict','avg_img','mask','pixel_mask', 'imgsum', 'bad_frame_list'], 
+                        [md, roi_mask, qval_dict, avg_img,mask,pixel_mask, imgsum, bad_frame_list] ):
+                    res[ k ] = v                      
                 
             if run_waterfall:
                 res['wat'] =  wat
