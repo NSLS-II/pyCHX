@@ -19,15 +19,15 @@ from chxanalys.chx_libs import multi_tau_lags
 
 
 
-def compress_timepixeldata( p,t, tbins, filename,  md= None,nobytes=2   ):    
+def compress_timepix_data( data_pixel, filename, rois=None,
+                           md = None, nobytes=2   ):    
     '''
         Compress the timepixeldata
-        md: a string to describle the data info
- 
+        md: a dict to describle the data info
+        rois: [y1,y2, x1, x2]
             
     ''' 
-    fp = open( filename,'wb' )
- 
+    fp = open( filename,'wb' ) 
     if md is None:
         md={}
         md['beam_center_x'] = 0
@@ -40,41 +40,35 @@ def compress_timepixeldata( p,t, tbins, filename,  md= None,nobytes=2   ):
         md['y_pixel_size'] =25
         #nobytes = 2
         md['sx'] = 256
-        md['sy'] = 256    
-                            
-    Header = struct.pack('@16s8d7I916x',b'Version-COMP0001',
+        md['sy'] = 256  
+        md['roi_rb']= 0
+        md['roi_re']= md['sy']
+        md['roi_cb']= 0
+        md['roi_ce']= md['sx']
+    if rois is not None:
+        md['roi_rb']= rois[2]
+        md['roi_re']= rois[3]
+        md['roi_cb']= rois[1]
+        md['roi_ce']= rois[0]
+        
+        md['sy'] = md['roi_cb'] - md['roi_ce']
+        md['sx'] = md['roi_re'] - md['roi_rb']
+     
+    #TODList: for different detector using different md structure, March 2, 2017,
+    
+    #8d include, 
+    #'bytes', 'nrows', 'ncols', (detsize)
+    #'rows_begin', 'rows_end', 'cols_begin', 'cols_end'  (roi)                        
+    Header = struct.pack('@16s8d7I916x',b'Version-COMPtpx1',
                     md['beam_center_x'],md['beam_center_y'], md['count_time'], md['detector_distance'],
                     md['frame_time'],md['incident_wavelength'], md['x_pixel_size'],md['y_pixel_size'],
-                        nobytes, md['sy'], md['sx'],
-                         0, md['sy'],
-                         0, md['sx']                
-                    )
-        
-        
-    #Header = struct.pack('@16s%ds%dx'%(n,lx),b'Version-COMP0002', md.encode('ascii')  )      
-    fp.write( Header)
+                         
+            nobytes, md['sy'], md['sx'],
+            md['roi_rb'], md['roi_re'],md['roi_cb'],md['roi_ce']
+        )
      
-    tx = np.arange(  t.min(), t.max(), tbins   )  
-    N = len(tx)
-    print( 'Will Compress %s Frames.'%(N-1)  )
-    #imgsum  =  np.zeros(    N   )   
-    for i in tqdm( range(N-1) ):
-        ind1 = np.argmin( np.abs( tx[i] - t )  )
-        ind2 = np.argmin( np.abs( tx[i+1] - t )  )
-        #print( i, ind1, ind2 )
-        p_i = p[ind1: ind2]
-        pos,val = np.unique( p_i, return_counts= True )
-        #print(i,  pos, val )            
-        dlen = len(pos)         
-        #imgsum[i] = val.sum()
-        fp.write(  struct.pack( '@I', dlen   ))
-        fp.write(  struct.pack( '@{}i'.format( dlen), *pos))
-        fp.write(  struct.pack( '@{}{}'.format( dlen,'ih'[nobytes==2]), *val)) 
-    fp.close()  
-    return N -1 
-        #return    imgsum
-
-    
+    fp.write( Header)  
+    fp.write( data_pixel )
     
     
     
@@ -88,10 +82,13 @@ class Get_TimePixel_Arrayc(object):
         data_pixel =   Get_Pixel_Array( imgsr, pixelist).get_data()
     '''
     
-    def __init__(self, pos, hitime, tbins, pixelist, beg=None, end=None, norm=None, detx = 256, dety = 256):
+    def __init__(self, pos, hitime, tbins, pixelist, beg=None, end=None, norm=None,flat_correction=None,
+                 detx = 256, dety = 256):
         '''
         indexable: a images sequences
         pixelist:  1-D array, interest pixel list
+        #flat_correction, normalized by flatfield
+        #norm, normalized by total intensity, like a incident beam intensity
         '''
         self.hitime = hitime
         self.tbins   = tbins
@@ -107,11 +104,10 @@ class Get_TimePixel_Arrayc(object):
         self.length = self.end - self.beg 
         self.pos = pos
         self.pixelist = pixelist        
-        self.norm = norm   
+        self.norm = norm  
+        self.flat_correction = flat_correction
         self.detx = detx
         self.dety = dety
-
-        
         
     def get_data(self ): 
         '''
@@ -129,28 +125,28 @@ class Get_TimePixel_Arrayc(object):
         tx = self.tx
         N = len(self.tx)
         print( 'The Produced Array Length is  %d.'%(N-1)  )
+        flat_correction = self.flat_correction
         #imgsum  =  np.zeros(    N   )   
         for i in tqdm( range(N-1) ):
             ind1 = np.argmin( np.abs( tx[i] - self.hitime )  )
             ind2 = np.argmin( np.abs( tx[i+1] - self.hitime )  )
-            
-            #print( 'N=%d:'%i, ind1, ind2 )
-            
+            #print( 'N=%d:'%i, ind1, ind2 )            
             p_i = self.pos[ind1: ind2]
-            pos,val = np.unique( p_i, return_counts= True )
-            
+            pos,val = np.unique( p_i, return_counts= True )            
             #print( val.sum() )
-
             w = np.where( timg[pos] )[0]
             pxlist = timg[  pos[w]   ] -1 
             #print( val[w].sum() )
-            #fra_pix[ pxlist] = v[w] 
-            if norm is None:
+            #fra_pix[ pxlist] = v[w]                
+            if flat_correction is not None:
+                #normalized by flatfield
                 data_array[n][ pxlist] = val[w] 
-            else: 
-                data_array[n][ pxlist] = val[w] / norm[pxlist]   #-1.0                    
-            n += 1
-            
+            else:
+                data_array[n][ pxlist] = val[w] / flat_correction[pxlist]   #-1.0
+            if norm is not None: 
+                #normalized by total intensity, like a incident beam intensity
+                data_array[n][ pxlist] /= norm[i] 
+            n += 1            
         return data_array     
     
     
@@ -486,6 +482,20 @@ class xpcs( object):
         plt.show()
     
  
+def histogram_xyt( x, y, t, binstep=100, detx=256, dety=256  ):
+    '''x: coordinate-x
+       y: coordinate-y
+       t: photon hit time
+       
+       bin t in binstep (in t unit) period
+    
+    '''    
+    L= np.max( (t-t[0])//binstep ) + 1
+    arr = np.ravel_multi_index( [x, y, (t-t[0])//binstep ], [detx, dety,L ]    )
+    M,N = arr.max(),arr.min()
+    da = np.zeros( [detx, dety, L ]  )
+    da.flat[np.arange(N,  M  ) ] = np.bincount( arr- N  )
+    return da
 
 ######################################################
  
