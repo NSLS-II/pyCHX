@@ -1,5 +1,5 @@
 from chxanalys.chx_packages import *
-
+from chxanalys.chx_libs import markers, colors
 #from chxanalys.chx_generic_functions import get_short_long_labels_from_qval_dict
 #RUN_GUI = False
 #from chxanalys.chx_libs import markers
@@ -135,8 +135,10 @@ def realtime_xpcs_analysis( start_time, stop_time,  run_pargs, md_update=None,
                     try:
                         md = get_meta_data( uid )  
                         ##corect some metadata
-                        md.update( md_update )
-                        run_xpcs_xsvs_single( uid, run_pargs= run_pargs, md_cor = md,
+                        if md_update is not None:
+                            md.update( md_update )
+                        #uid = uid[:8]
+                        run_xpcs_xsvs_single( uid, run_pargs= run_pargs, md_cor = None,
                                              return_res= False )                        
                         #update_olog_uid( uid= md['uid'], text='Data are on-line sparsified!',attachments=None)              
                     except:
@@ -369,9 +371,14 @@ def get_series_one_time_mulit_uids( uids,  qval_dict,  trans = None, good_start=
             except:                
                 exp_time = float( md['exposure time']) #* 1000  #from second to ms
             if trans is  None:
-                trans = [1] * len( uids )
+                try:
+                    transi = md['transmission']
+                except:
+                    transi = [1] 
+            else:
+                transi = trans[i]
             fra_num_by_dose = get_fra_num_by_dose(  exp_dose = exposure_dose,
-                                   exp_time =exp_time, dead_time = dead_time, att = trans[i] )
+                                   exp_time =exp_time, dead_time = dead_time, att = transi )
             
             print( 'uid: %s--> fra_num_by_dose: %s'%(uid, fra_num_by_dose ) )
             
@@ -393,7 +400,7 @@ def get_series_one_time_mulit_uids( uids,  qval_dict,  trans = None, good_start=
     
     
 def plot_dose_g2( taus_uids, g2_uids, qval_dict, qth_interest = None, ylim=[0.95, 1.05], vshift=0.1,
-                   fit_res= None,  geometry= 'saxs',filename= 'dose'+'_g2', 
+                   fit_res= None,  geometry= 'saxs',filename= 'dose'+'_g2', legend_size=None,
             path= None, function= None,  g2_labels=None, ylabel= 'g2_dose', append_name=  '_dose' ):
     '''Plot a does-dependent g2 
     taus_uids, dict, with format as {uid1: { dose1: tau_1, dose2: tau_2...}, uid2: ...}
@@ -430,18 +437,30 @@ def plot_dose_g2( taus_uids, g2_uids, qval_dict, qth_interest = None, ylim=[0.95
     else:
         fig,ax= plt.subplots()        
         q =   qval_dict[qth_interest][0] 
-        uid = uids[0]
-        #print( uid )
-        dose_list = sorted( list(taus_uids['%s'%uid].keys()) )
-        #print( dose_list )
-        for i, dose in enumerate(dose_list):
-            plot1D(x= taus_uids['%s'%uid][dose_list[i]], 
-                   y =g2_uids['%s'%uid][dose_list[i]][:,qth_interest], 
-                   logx=True, ax=ax, legend='dose_%s'%round(dose,4), ylim=[0.99, 1.18], 
-                   lw=3, title='%s_Q=%s'%(uid, q) + r'$\AA^{-1}$',   )
-            ylabel='g2--Dose (trans*exptime_sec)' 
-            ax.set_ylabel( r"$%s$"%ylabel + '(' + r'$\tau$' + ')' ) 
-            ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
+        j = 0 
+        for uid in uids:
+            #uid = uids[0]
+            #print( uid )
+            dose_list = sorted( list(taus_uids['%s'%uid].keys()) )
+            #print( dose_list )
+            for i, dose in enumerate(dose_list):
+                if j ==0:
+                    legend= 'dose_%s'%round(dose,4)
+                else:
+                    legend = ''
+                    
+                #print( markers[i], colors[i] )
+                
+                plot1D(x= taus_uids['%s'%uid][dose_list[i]], 
+                       y =g2_uids['%s'%uid][dose_list[i]][:,qth_interest] + i*vshift, 
+                       logx=True, ax=ax, legend= legend,   m = markers[i], c= colors[i],
+                       lw=3, title='%s_Q=%s'%(uid, q) + r'$\AA^{-1}$',  legend_size=legend_size  )
+                ylabel='g2--Dose (trans*exptime_sec)' 
+            j +=1
+                
+        ax.set_ylabel( r"$%s$"%ylabel + '(' + r'$\tau$' + ')' )         
+        ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
+        ax.set_ylim ( ylim )
     
     #return taus_dict, g2_dict
     
@@ -588,9 +607,10 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False):
     os.makedirs(data_dir, exist_ok=True)
     print('Results from this analysis will be stashed in the directory %s' % data_dir)
     md = get_meta_data( uid )
-    uidstr = 'uid=%s'%uid
+    uidstr = 'uid=%s'%uid[:6]
     imgs = load_data( uid, md['detector'], reverse= True  )
-    md.update( imgs.md );Nimg = len(imgs);
+    md.update( imgs.md )
+    Nimg = len(imgs)
     if md_cor is not None:
         md.update( md_cor )
     
@@ -892,36 +912,45 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False):
 
         # For two-time
         data_pixel = None
-        if run_two_time:    
+        if run_two_time: 
+            
             data_pixel =   Get_Pixel_Arrayc( FD, pixelist,  norm=norm ).get_data()
             t0=time.time()    
             g12b = auto_two_Arrayc(  data_pixel,  roi_mask, index = None   )
             if run_dose:
                 np.save( data_dir + 'uid=%s_g12b'%uid, g12b)
+            
+            
             if lag_steps is None:
                 num_bufs=8
                 noframes = FD.end - FD.beg
                 num_levels = int(np.log( noframes/(num_bufs-1))/np.log(2) +1) +1
                 tot_channels, lag_steps, dict_lag = multi_tau_lags(num_levels, num_bufs)
                 max_taus= lag_steps.max()
+                lag_steps = lag_steps[ lag_steps < Nimg - good_start ]
+             
             run_time( t0 )    
 
             show_C12(g12b, q_ind= qth_interest, N1= FD.beg, N2=min( FD.end,5000), vmin= 0.99, vmax=1.3,
                      timeperframe=timeperframe,save=True, cmap=cmap_albula,
-                     path= data_dir, uid = uid_ ) 
+                     path= data_dir, uid = uid_ )
             
+            #print('here')
             #show_C12(g12b, q_ind= 3, N1= 5, N2=min(5000,5000), vmin=.8, vmax=1.31, cmap=cmap_albula,
-            # timeperframe= timeperframe,save=False, path= data_dir,  uid  =  uid_ +'_' + k)   
-            
+            # timeperframe= timeperframe,save=False, path= data_dir,  uid  =  uid_ +'_' + k)  
             max_taus = Nimg    
-            t0=time.time()            
+            t0=time.time()             
             #g2b = get_one_time_from_two_time(g12b)[:max_taus]
             g2b = get_one_time_from_two_time(g12b)[lag_steps]
+            
             tausb = lag_steps *timeperframe
-            run_time(t0)            
+            run_time(t0) 
+            
+            
             #tausb = np.arange( g2b.shape[0])[:max_taus] *timeperframe            
             g2b_pds = save_g2_general( g2b, taus=tausb, qr= np.array( list( qval_dict.values() ) )[:,0],
                                       qz=None, uid=uid_ +'_g2b.csv', path= data_dir, return_res=True )
+            
             
             g2_fit_resultb, taus_fitb, g2_fitb = get_g2_fit_general( g2b,  tausb, 
                 function = fit_g2_func,  vlim=[0.95, 1.05], fit_range= None,  
@@ -932,9 +961,14 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False):
                 
             D0b, qrate_fit_resb = get_q_rate_fit_general(  qval_dict, g2b_fit_paras['relaxation_rate'],
                                     fit_range=None,  geometry= scat_geometry )
+            
+
+            #print( qval_dict,   g2b_fit_paras['relaxation_rate'],  qrate_fit_resb )
             plot_q_rate_fit_general( qval_dict, g2b_fit_paras['relaxation_rate'],  qrate_fit_resb,   
-                      geometry= scat_geometry,uid=uid_ +'_two_time' , path= data_dir, plot_all_range= True )
-    
+                      geometry= scat_geometry,uid=uid_ +'_two_time' , path= data_dir )
+            
+       
+        
             plot_g2_general( g2_dict={1:g2b, 2:g2_fitb}, taus_dict={1:tausb, 2:taus_fitb},vlim=[0.95, 1.05],
                 qval_dict=qval_dict, fit_res= g2_fit_resultb,  geometry=scat_geometry,filename=uid_+'_g2', 
                     path= data_dir, function= fit_g2_func,  ylabel='g2', append_name=  '_b_fit')
@@ -944,6 +978,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False):
                 qval_dict=qval_dict, g2_labels=['from_one_time', 'from_two_time'],
             geometry=scat_geometry,filename=uid_+'_g2_two_g2', path= data_dir, ylabel='g2', )
 
+                
+                
         # Four Time Correlation
 
         if run_four_time: #have to run one and two first
@@ -1046,7 +1082,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False):
    
 
         
-    
+        
+        
         md['mask_file']= mask_path + mask_name
         md['mask'] = mask
         md['NOTEBOOK_FULL_PATH'] = None
@@ -1081,7 +1118,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False):
         md['beg'] = FD.beg
         md['end'] = FD.end
         md['metadata_file'] = data_dir + 'md.csv-&-md.pkl'
-        psave_obj(  md, data_dir + 'uid=%s_md'%uid ) #save the setup parameters
+        psave_obj(  md, data_dir + 'uid=%s_md'%uid[:6] ) #save the setup parameters
         save_dict_csv( md,  data_dir + 'uid=%s_md.csv'%uid, 'w')
 
         Exdt = {} 
@@ -1129,7 +1166,10 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False):
         if run_xsvs:
             pdf_filename = "XPCS_XSVS_Analysis_Report_for_uid=%s%s.pdf"%(uid,pdf_version)
         #pdf_filename
-        make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username, 
+        
+        print(  data_dir, uid[:6], pdf_out_dir, pdf_filename, username )
+        
+        make_pdf_report( data_dir, uid[:6], pdf_out_dir, pdf_filename, username, 
                         run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs, run_dose=run_dose,
                         report_type= scat_geometry
                        ) 
