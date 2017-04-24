@@ -17,8 +17,8 @@ import itertools
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from chxanalys.chx_libs import  ( colors as colors_array,  markers as markers_array, markers_copy, lstyles, Figure, RUN_GUI)
-from chxanalys.chx_libs import  colors_ as mcolors,  markers_ as markers
-
+#from chxanalys.chx_libs import  colors_ as mcolors,  markers_ as markers
+from chxanalys.chx_libs import    mcolors,    markers
 
 
 def delays( num_lev=3, num_buf=4, time=1 ): 
@@ -379,21 +379,21 @@ def get_aged_g2_from_g12( g12, age_edge, age_center  ):
 
 
 
-def get_aged_g2_from_g12q( g12q, age_edge, age_center  ):
+def get_aged_g2_from_g12q( g12q, age_edge, age_center =None  ):
     
     ''' 
     Dec 16, 2015, Y.G.@CHX
+    Revised at April 19, 2017
     Get one-time correlation function of different age from 1q-two correlation function
     namely, calculate the different aged mean of each diag line of g12 to get one-time correlation fucntion
     
     Parameters:
         g12q: a 2-D array, one-q two correlation function, shape as ( imgs_length, imgs_length ) 
-    
+        age_edge, list, e.g.,  [[0, 500], [2249, 2749], [4500, 5000]]
+                       can be obtained by function:   
+                    age_edge = create_time_slice( len(imgsa), slice_num= 3, slice_width= 500, edges = None )
     Options:
-        slice_num: int, the slice number of the diagonal of g12
-        slice_width: int,  each slice width in unit of pixel
-        slice start: int, can start from 0
-        slice end: int, can end at 2*imgs_length -1 
+       age_center: None, will use the center of age_edge
    
    
     Return:
@@ -403,25 +403,30 @@ def get_aged_g2_from_g12q( g12q, age_edge, age_center  ):
                            a 1-D array, shape as ( imgs_length ), 
                            a one-q one-time correlation function
     One example:     
-        g2_aged = get_aged_g2_from_g12q( g12q, slice_num =3, slice_width= 500, 
-                slice_start=4000, slice_end= 20000-4000  )
+        g2_aged = get_aged_g2_from_g12q( g12q, age_edge  )
     '''
  
     
     arr= rotate_g12q_to_rectangle( g12q )
     m,n = arr.shape #m should be 2*n-1
     #age_edge, age_center = get_qedge( qstart=slice_start,qend= slice_end,
-    #                 qwidth = slice_width, noqs =slice_num  )    
-    age_edge, age_center = np.int_(age_edge), np.int_(age_center)  
-    #print (age_edge, age_center)
+    #                 qwidth = slice_width, noqs =slice_num  ) 
+    age_edge  = np.int_(age_edge)
+    if age_center is None:
+        age_center = (age_edge[:,0]   +  age_edge[:,1] )//2
     g2_aged = {}
+    #print( age_edge, age_center)
     for i,age in enumerate(age_center):         
-        age_edges_0, age_edges_1 = age_edge[ i*2 : 2*i+2]  
+        age_edges_0, age_edges_1 = age_edge[i][0],   age_edge[i][1]
+        #print(i, age, age_edges_0, age_edges_1)
         g2i = arr[ age_edges_0: age_edges_1   ].mean( axis =0 )
+        #print('here')
         g2i_ = np.array( g2i )       
         g2_aged[age] =   g2i_[np.nonzero( g2i_)[0]]
         
     return g2_aged 
+
+
 
 
 
@@ -603,7 +608,7 @@ def plot_aged_g2( g2_aged, tau=None,timeperframe=1, ylim=None, xlim=None):
         ax = plt.subplot(gs[n]) 
         if tau is None:
             gx= np.arange(len(g2_aged[i])) * timeperframe
-        marker = next(markers)           
+        marker = markers[n]
         ax.plot( gx,g2_aged[i],  '-%s'%marker, label=r"$age= %.1f s$"%(i*timeperframe))
         ax.set_xscale('log')
         ax.legend(fontsize='large', loc='best' ) 
