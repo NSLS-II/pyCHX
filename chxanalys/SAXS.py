@@ -431,7 +431,7 @@ def show_saxs_qmap( img, pargs, width=200,vmin=.1, vmax=300, logs=True,image_nam
         
         show_img( 1e-15+ img[  ROI[0]:ROI[1], ROI[2]:ROI[3]  ], 
         xlabel=r"$q_x$" +  '('+r'$\AA^{-1}$'+')', 
-         ylabel= r"$q_y$" +  '('+r'$\AA^{-1}$'+')', extent=[qext[0],qext[1],qext[2],qext[3]],
+         ylabel= r"$q_y$" +  '('+r'$\AA^{-1}$'+')', extent=[qext[3],qext[2],qext[0],qext[1]],
             vmin=vmin, vmax=vmax, logs= logs, image_name= image_name, save= save, path=path,aspect= aspect) 
     else:        
         #qext = w
