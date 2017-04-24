@@ -5,7 +5,100 @@ from scipy.special import erf
 
 
 
+def plot_g1( taus, g2, g2_fit_paras, qr=None, ylim=[0,1], title=''):
+    '''Dev Apr 19, 2017,
+       Plot one-time correlation, giving taus, g2, g2_fit'''
+    noqs = g2.shape[1]
+    fig,ax=plt.subplots()
+    if qr is None:
+        qr = np.arange(noqs)
+    for i in range(noqs):
+        b =  g2_fit_paras['baseline'][i]
+        beta = g2_fit_paras['beta'][i]
+        y= np.sqrt( np.abs(g2[1:,i] - b)/beta )
+        plot1D( x =  taus[1:], y= y, ax=ax, legend= 'q=%s'%qr[i],  ls='-', lw=2, 
+           m=markers[i], c= colors[i], title=title, ylim=ylim,
+           logx=True,  legend_size= 8 )
+    ax.set_ylabel( r"$g_1$" + '(' + r'$\tau$' + ')' ) 
+    ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16)   
+    return ax 
+
+
+
+def filter_roi_mask( filter_limit_dict, roi_mask, avg_img ):
+    '''Remove bad pixels in roi_mask. The bad pixel is defined by the filter_limit_dict, which give a 
+       high and low limit thresholds. The value of the pixels in avg_img above or below the limit are 
+       considered as bad pixels.
+       
+    avg_img, the averaged image
+    roi_mask: two-d array, the same shape as image, the roi mask, value is integer, e.g., 0, 1 ,2 ,...
+    filter_limit_dict: keys, as roi_mask integer, value, by default is [None,None], is the limit,
+                      example, {2:[4,5], 10:[0.1,1.1]}
+    '''
+    rm =   roi_mask.copy()
+    rf =   np.ravel(rm)    
+    for k in list(filter_limit_dict.keys()):        
+        pixel = roi.roi_pixel_values(avg_img, roi_mask, [k] )[0][0]
+        #print(   np.max(pixel), np.min(pixel)   )
+        xmin,xmax = filter_limit_dict[k]
+        badp =np.where( (pixel>= xmax) | ( pixel <= xmin) )[0]
+        pls = np.where([rf==k])[1]
+        rf[ pls[badp] ] = 0       
+    return rm
+
         
+##
+#Dev at March 31 for create Eiger chip mask
+def create_chip_edges_mask( det='1M' ):
+    ''' Create a chip edge mask for Eiger detector
+    
+    '''
+    if det == '1M':
+        shape = [1065, 1030]
+        w = 4
+        mask = np.ones( shape , dtype = np.int32)
+        cx = [ 1030//4 *i for i in range(1,4) ]
+        #cy = [ 1065//4 *i for i in range(1,4) ]
+        cy =  [808, 257 ]
+        #print (cx, cy )
+        for c in cx:
+            mask[:, c-w//2:c+w//2  ] = 0        
+        for c in cy:
+            mask[ c-w//2:c+w//2, :  ] = 0        
+    
+    return mask
+        
+Eiger1M_Chip_Mask = create_chip_edges_mask( det= '1M')
+np.save(  '/XF11ID/analysis/2017_1/masks/Eiger1M_Chip_Mask', Eiger1M_Chip_Mask   )  
+   
+    
+def create_ellipse_donut(  cx, cy , wx_inner, wy_inner, wx_outer, wy_outer, roi_mask, gap=0):
+    Nmax = np.max( np.unique( roi_mask ) )
+    rr1, cc1 = ellipse( cy,cx,  wy_inner, wx_inner  )    
+    rr2, cc2 = ellipse( cy, cx,  wy_inner + gap, wx_inner +gap ) 
+    rr3, cc3 = ellipse( cy, cx,  wy_outer,wx_outer ) 
+    roi_mask[rr3,cc3] = 2 + Nmax
+    roi_mask[rr2,cc2] = 0
+    roi_mask[rr1,cc1] = 1 + Nmax
+    return roi_mask
+    
+def create_box( cx, cy, wx, wy, roi_mask):
+    Nmax = np.max( np.unique( roi_mask ) )
+    for i, [cx_,cy_] in enumerate(list( zip( cx,cy  ))):  #create boxes
+        x = np.array( [ cx_-wx, cx_+wx,  cx_+wx, cx_-wx])  
+        y = np.array( [ cy_-wy, cy_-wy, cy_+wy, cy_+wy])
+        rr, cc = polygon( y,x)         
+        roi_mask[rr,cc] = i +1 + Nmax
+    return roi_mask
+
+
+
+
+
+
+
+
+    
     
 def create_user_folder( CYCLE, username = None ):
     '''
@@ -1019,7 +1112,7 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
     
     
 def plot1D( y,x=None, yerr=None, ax=None,return_fig=False, ls='-', 
-           legend_size=None, lw=None, *argv,**kwargs):    
+           legend_size=None, lw=None, markersize=None,*argv,**kwargs):    
     """a simple function to plot two-column data by using matplotlib.plot
     pass *argv,**kwargs to plot
     
@@ -1078,9 +1171,11 @@ def plot1D( y,x=None, yerr=None, ax=None,return_fig=False, ls='-',
     if x is None:
         x=range(len(y))
     if yerr is None:    
-        ax.plot(x,y, marker=marker,color=color,ls=ls,label= legend, lw=lw)#,*argv,**kwargs)
+        ax.plot(x,y, marker=marker,color=color,ls=ls,label= legend, lw=lw,
+                markersize=markersize, )#,*argv,**kwargs)
     else:
-        ax.errorbar(x,y,yerr, marker=marker,color=color,ls=ls,label= legend, lw=lw)#,*argv,**kwargs)
+        ax.errorbar(x,y,yerr, marker=marker,color=color,ls=ls,label= legend, 
+                    lw=lw,markersize=markersize,)#,*argv,**kwargs)
     if logx:
         ax.set_xscale('log')
     if logy:
@@ -1216,7 +1311,7 @@ def create_time_slice( N, slice_num, slice_width, edges=None ):
                                  
             
 
-    return time_edge
+    return np.array(time_edge)
 
 
 def show_label_array_on_image(ax, image, label_array, cmap=None,norm=None, log_img=True,alpha=0.3, vmin=0.1, vmax=5,
