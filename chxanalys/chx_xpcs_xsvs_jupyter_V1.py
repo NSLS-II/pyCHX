@@ -401,7 +401,8 @@ def get_series_one_time_mulit_uids( uids,  qval_dict,  trans = None, good_start=
     
 def plot_dose_g2( taus_uids, g2_uids, qval_dict, qth_interest = None, ylim=[0.95, 1.05], vshift=0.1,
                    fit_res= None,  geometry= 'saxs',filename= 'dose'+'_g2', legend_size=None,
-            path= None, function= None,  g2_labels=None, ylabel= 'g2_dose', append_name=  '_dose' ):
+            path= None, function= None,  g2_labels=None, ylabel= 'g2_dose', append_name=  '_dose',
+                return_fig=False):
     '''Plot a does-dependent g2 
     taus_uids, dict, with format as {uid1: { dose1: tau_1, dose2: tau_2...}, uid2: ...}
     g2_uids, dict, with format as {uid1: { dose1: g2_1, dose2: g2_2...}, uid2: ...}
@@ -444,8 +445,9 @@ def plot_dose_g2( taus_uids, g2_uids, qval_dict, qth_interest = None, ylim=[0.95
             dose_list = sorted( list(taus_uids['%s'%uid].keys()) )
             #print( dose_list )
             for i, dose in enumerate(dose_list):
+                dose = float(dose)
                 if j ==0:
-                    legend= 'dose_%s'%round(dose,4)
+                    legend= 'dose_%s'%round(dose,2)
                 else:
                     legend = ''
                     
@@ -461,7 +463,8 @@ def plot_dose_g2( taus_uids, g2_uids, qval_dict, qth_interest = None, ylim=[0.95
         ax.set_ylabel( r"$%s$"%ylabel + '(' + r'$\tau$' + ')' )         
         ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
         ax.set_ylim ( ylim )
-    
+        if return_fig:
+            return fig, ax
     #return taus_dict, g2_dict
     
  
