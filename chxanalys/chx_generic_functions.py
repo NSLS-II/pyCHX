@@ -5,6 +5,50 @@ from scipy.special import erf
 
 
 
+def get_current_pipeline_filename(NOTEBOOK_FULL_PATH):
+    '''Y.G. April 25, 2017
+       Get the current running pipeline filename and path 
+       Assume the piple is located in /XF11ID/
+       Return, path and filename
+    '''
+    from IPython.core.magics.display import Javascript
+    if False:
+        Javascript( '''
+        var nb = IPython.notebook;
+        var kernel = IPython.notebook.kernel;
+        var command = "NOTEBOOK_FULL_PATH = '" + nb.base_url + nb.notebook_path + "'";
+        kernel.execute(command);
+        ''' ) 
+        print(NOTEBOOK_FULL_PATH)
+    filename   = NOTEBOOK_FULL_PATH.split('/')[-1]
+    path = '/XF11ID/'
+    for s in NOTEBOOK_FULL_PATH.split('/')[3:-1]:
+        path +=    s  + '/'
+    return path, filename    
+        
+def get_current_pipeline_fullpath(NOTEBOOK_FULL_PATH):
+    '''Y.G. April 25, 2017
+       Get the current running pipeline full filepath 
+       Assume the piple is located in /XF11ID/
+       Return, the fullpath (path + filename)
+    '''    
+    p,f = get_current_pipeline_filename(NOTEBOOK_FULL_PATH)
+    return p + f
+    
+def save_current_pipeline(NOTEBOOK_FULL_PATH, outDir):
+    '''Y.G. April 25, 2017
+       Save the current running pipeline to outDir
+       The save pipeline should be the snapshot of the current state.    
+    '''
+
+    import  shutil
+    path, fp = get_current_pipeline_filename(NOTEBOOK_FULL_PATH)
+    shutil.copyfile(  path + fp, outDir + fp    ) 
+    
+    print('This pipeline: %s is saved in %s.'%(fp, outDir))
+    
+    
+
 def plot_g1( taus, g2, g2_fit_paras, qr=None, ylim=[0,1], title=''):
     '''Dev Apr 19, 2017,
        Plot one-time correlation, giving taus, g2, g2_fit'''
@@ -25,25 +69,30 @@ def plot_g1( taus, g2, g2_fit_paras, qr=None, ylim=[0,1], title=''):
 
 
 
-def filter_roi_mask( filter_limit_dict, roi_mask, avg_img ):
-    '''Remove bad pixels in roi_mask. The bad pixel is defined by the filter_limit_dict, which give a 
-       high and low limit thresholds. The value of the pixels in avg_img above or below the limit are 
-       considered as bad pixels.
+def filter_roi_mask( filter_dict, roi_mask, avg_img, filter_type= 'ylim' ):
+    '''Remove bad pixels in roi_mask. The bad pixel is defined by the filter_dict, 
+       if filter_type ='ylim', the filter_dict wit key as q and each value gives a high and low limit thresholds. The value of the pixels in avg_img above or below the limit are considered as bad pixels.
+       if filter_type='badpix': the filter_dict wit key as q and each value gives a list of bad pixel.
        
     avg_img, the averaged image
-    roi_mask: two-d array, the same shape as image, the roi mask, value is integer, e.g., 0, 1 ,2 ,...
-    filter_limit_dict: keys, as roi_mask integer, value, by default is [None,None], is the limit,
+    roi_mask: two-d array, the same shape as image, the roi mask, value is integer, e.g.,   1 ,2 ,...
+    filter_dict: keys, as roi_mask integer, value, by default is [None,None], is the limit,
                       example, {2:[4,5], 10:[0.1,1.1]}
+    NOTE: first q = 1 (not 0)
     '''
     rm =   roi_mask.copy()
     rf =   np.ravel(rm)    
-    for k in list(filter_limit_dict.keys()):        
+    for k in list(filter_dict.keys()):        
         pixel = roi.roi_pixel_values(avg_img, roi_mask, [k] )[0][0]
         #print(   np.max(pixel), np.min(pixel)   )
-        xmin,xmax = filter_limit_dict[k]
-        badp =np.where( (pixel>= xmax) | ( pixel <= xmin) )[0]
-        pls = np.where([rf==k])[1]
-        rf[ pls[badp] ] = 0       
+        if filter_type == 'ylim':
+            xmin,xmax = filter_dict[k]
+            badp =np.where( (pixel>= xmax) | ( pixel <= xmin) )[0]
+        else:
+            badp = filter_dict[k]
+        if len(badp)!=0:    
+            pls = np.where([rf==k])[1]
+            rf[ pls[badp] ] = 0       
     return rm
 
         
@@ -236,9 +285,13 @@ def check_lost_metadata(md, Nimg=None, inc_x0 =None, inc_y0= None, pixelsize=7.5
     except:    
         exposuretime= md['count_time']     #exposure time in sec
     try:
+        uid = md['uid']
         acquisition_period = float( db[uid]['start']['acquire period'] )
-    except:    
-        acquisition_period = md['frame_time']  
+    except:  
+        try:
+            acquisition_period = md['acquire period']
+        except:    
+            acquisition_period = md['frame_time']  
     timeperframe = acquisition_period 
     if inc_x0 is not None:
         md['beam_center_x']= inc_y0
@@ -434,10 +487,15 @@ def ployfit( y, x=None, order = 20 ):
 
 
 def get_bad_frame_list( imgsum, fit=True, polyfit_order = 30,legend_size = 12,
-                       plot=True, scale=1.0, good_start=None, good_end=None, uid='uid',path=None ):
+                       plot=True, scale=1.0, good_start=None, good_end=None, uid='uid',path=None,
+                        
+                      return_ylim=False):
     '''
     imgsum: the sum intensity of a time series
     scale: the scale of deviation
+    fit: if True, use a ploynominal function to fit the imgsum, to get a mean-inten(array), then use the scale to get low and high threshold, it's good to remove bad frames/pixels on top of not-flatten curve
+         else: use the mean (a value) of imgsum and scale to get low and high threshold, it's good to remove bad frames/pixels on top of  flatten curve
+     
     '''
     if good_start is  None:
         good_start=0
@@ -447,35 +505,43 @@ def get_bad_frame_list( imgsum, fit=True, polyfit_order = 30,legend_size = 12,
     bd3 = [i for i in range(good_end,len( imgsum ) )]
     
     imgsum_ = imgsum[good_start:good_end]
+    
     if fit:
         pfit = ployfit( imgsum_, order = polyfit_order)
-        data = imgsum_ - pfit
-        
-        if plot:
-            fig = plt.figure( )            
-            ax = fig.add_subplot(2,1,1 )             
-            plot1D( imgsum_, ax = ax,legend='data',legend_size=legend_size  )
-            plot1D( pfit,ax=ax, legend='ploy-fit', title=uid + '_imgsum',legend_size=legend_size  )
-            
-            ax2 = fig.add_subplot(2,1,2 )      
-            plot1D( data, ax = ax2,legend='difference',marker='s', color='b', )
-            
-            ymin = data.mean()-scale *data.std()
-            ymax =  data.mean()+scale *data.std()
-            #print('here')
-            plot1D(x=[0,len(imgsum_)], y=[ymin,ymin], ax = ax2, ls='--',lw= 3, marker='o', color='r', legend='low_thresh', legend_size=legend_size  )
-            
-            plot1D(x=[0,len(imgsum_)], y=[ymax,ymax], ax = ax2 , ls='--', lw= 3,marker='o', color='r',legend='high_thresh',title='imgsum_to_find_bad_frame',legend_size=legend_size  )
-            
-            if path is not None:
-                fp = path + '%s'%( uid ) + '_imgsum_analysis'  + '.png' 
-                plt.savefig( fp, dpi=fig.dpi)            
-        
+        data = imgsum_ - pfit 
     else:
-        data = imgsum_       
+        data = imgsum_ 
+        pfit = np.ones_like(data) * data.mean()
+        
+    ymin = data.mean()-scale *data.std()
+    ymax =  data.mean()+scale *data.std() 
+    
+    if plot:
+        fig = plt.figure( )            
+        ax = fig.add_subplot(2,1,1 )             
+        plot1D( imgsum_, ax = ax,legend='data',legend_size=legend_size  )
+        plot1D( pfit,ax=ax, legend='ploy-fit', title=uid + '_imgsum',legend_size=legend_size  )
+
+        ax2 = fig.add_subplot(2,1,2 )      
+        plot1D( data, ax = ax2,legend='difference',marker='s', color='b', )          
+
+        #print('here')
+        plot1D(x=[0,len(imgsum_)], y=[ymin,ymin], ax = ax2, ls='--',lw= 3, marker='o', color='r', legend='low_thresh', legend_size=legend_size  )
+
+        plot1D(x=[0,len(imgsum_)], y=[ymax,ymax], ax = ax2 , ls='--', lw= 3,marker='o', color='r',legend='high_thresh',title='imgsum_to_find_bad_frame',legend_size=legend_size  )
+
+        if path is not None:
+            fp = path + '%s'%( uid ) + '_imgsum_analysis'  + '.png' 
+            plt.savefig( fp, dpi=fig.dpi)            
+        
+
+        
     bd2=  list(   np.where( np.abs(data -data.mean()) > scale *data.std() )[0] + good_start )
-    return np.array( bd1 + bd2 + bd3 )
- 
+     
+    if return_ylim:
+        return np.array( bd1 + bd2 + bd3 ), ymin, ymax
+    else:
+        return np.array( bd1 + bd2 + bd3 )
 
 def save_dict_csv( mydict, filename, mode='w'):
     import csv
@@ -1492,7 +1558,7 @@ def get_avg_img( data_series,  img_samp_index=None, sampling = 100, plot_ = Fals
 
 
 
-def check_ROI_intensity( avg_img, ring_mask, ring_number=3 , save=False, *argv,**kwargs):
+def check_ROI_intensity( avg_img, ring_mask, ring_number=3 , save=False, plot=True, *argv,**kwargs):
     
     """plot intensity versus pixel of a ring        
     Parameters
@@ -1512,17 +1578,21 @@ def check_ROI_intensity( avg_img, ring_mask, ring_number=3 , save=False, *argv,*
     if 'uid' in kwargs.keys():
         uid = kwargs['uid'] 
     pixel = roi.roi_pixel_values(avg_img, ring_mask, [ring_number] )
-    fig, ax = plt.subplots()
-    ax.set_title('%s--check-RIO-%s-intensity'%(uid, ring_number) )
-    ax.plot( pixel[0][0] ,'bo', ls='-' )
-    ax.set_ylabel('Intensity')
-    ax.set_xlabel('pixel')
-    if save:           
+    
+    if plot:
+        fig, ax = plt.subplots()
+        ax.set_title('%s--check-RIO-%s-intensity'%(uid, ring_number) )
+        ax.plot( pixel[0][0] ,'bo', ls='-' )
+        ax.set_ylabel('Intensity')
+        ax.set_xlabel('pixel')
+        if save: 
+            path = kwargs['path']  
+            fp = path + "%s_Mean_intensity_of_one_ROI"%uid  + '.png'         
+            fig.savefig( fp, dpi=fig.dpi)
+    if save:
         path = kwargs['path']  
-        fp = path + "%s_Mean_intensity_of_one_ROI"%uid  + '.png'         
-        fig.savefig( fp, dpi=fig.dpi)
         save_lists( [range( len(  pixel[0][0] )), pixel[0][0]], label=['pixel_list', 'roi_intensity'],
-                filename="%s_Mean_intensity_of_one_ROI"%uid, path= path)    
+                filename="%s_Mean_intensity_of_one_ROI"%uid, path= path)  
     #plt.show()
     return pixel[0][0]
 
@@ -1710,7 +1780,7 @@ def save_arrays( data, label=None, dtype='array', filename=None, path=None, retu
 def get_diffusion_coefficient( visocity, radius, T=298):
     '''July 10, 2016, Y.G.@CHX
         get diffusion_coefficient of a Brownian motion particle with radius in fuild with visocity
-        visocity: N*s/m^2
+        visocity: N*s/m^2  (water at 25K = 8.9*10^(-4) )
         radius: m
         T: K
         k: 1.38064852(79)×10−23 J/T, Boltzmann constant   
@@ -1725,8 +1795,6 @@ def get_diffusion_coefficient( visocity, radius, T=298):
     
     k=  1.38064852*10**(-23)    
     return k*T / ( 6*np.pi* visocity * radius) * 10**20 
-
-
 
 
 def ring_edges(inner_radius, width, spacing=0, num_rings=None):
@@ -1795,30 +1863,31 @@ def ring_edges(inner_radius, width, spacing=0, num_rings=None):
                 raise ValueError("Since width and spacing are constant, "
                                  "num_rings cannot be inferred and must be "
                                  "specified.")
-    else:
+    else:        
         if width_is_list:
             if num_rings != len(width):
                 raise ValueError("num_rings does not match width list")
         if spacing_is_list:
             if num_rings-1 != len(spacing):
                 raise ValueError("num_rings does not match spacing list")
-
     # Now regularlize the input.
     if not width_is_list:
         width = np.ones(num_rings) * width
-    if not spacing_is_list:
-        spacing = np.ones(num_rings - 1) * spacing
-
+        
+    if spacing is None:
+        spacing = [] 
+    else:    
+        if not spacing_is_list:
+            spacing = np.ones(num_rings - 1) * spacing
     # The inner radius is the first "spacing."
-    all_spacings = np.insert(spacing, 0, inner_radius)
+    all_spacings = np.insert(spacing, 0, inner_radius)     
     steps = np.array([all_spacings, width]).T.ravel()
     edges = np.cumsum(steps).reshape(-1, 2)
-
     return edges
 
+ 
 
-
-def get_non_uniform_edges(  centers, width = 4, number_rings=3 ):
+def get_non_uniform_edges(  centers, width = 4, spacing=0, number_rings=3 ):
     '''
     YG CHX Spe 6
     get_non_uniform_edges(  centers, width = 4, number_rings=3 )
@@ -1848,12 +1917,16 @@ def get_non_uniform_edges(  centers, width = 4, number_rings=3 ):
         inner and outer radius for each ring    
     '''
     
-    
-    
+    if number_rings is  None:    
+        number_rings = 1
     edges = np.zeros( [len(centers)*number_rings, 2]  )
+    #print( width )
+    
+    if not isinstance(width, collections.Iterable):
+        width = np.ones_like( centers ) * width               
     for i, c in enumerate(centers):       
-        edges[i*number_rings:(i+1)*number_rings,:] = ring_edges( inner_radius =  c - width*number_rings/2,  
-                      width=width, spacing= 0, num_rings=number_rings)
+        edges[i*number_rings:(i+1)*number_rings,:] = ring_edges( inner_radius =  c - width[i]*number_rings/2,  
+                      width= width[i], spacing=  spacing, num_rings=number_rings)
     return edges   
 
 
@@ -2048,7 +2121,36 @@ def stretched_flow_para_function( x, beta, relaxation_rate, alpha, flow_velocity
     return  beta*Diff_part * Flow_part + baseline
 
 
-def get_g2_fit_general( g2, taus,  function='simple_exponential', sequential_fit=False, *argv,**kwargs):
+def get_g2_fit_general_two_steps( g2, taus,  function='simple_exponential', 
+                                 second_fit_range=[0,20],  
+                       sequential_fit=False, *argv,**kwargs):
+    '''
+    Fit g2 in two steps,
+    i)  Using the "function" to fit whole g2 to get baseline and beta (contrast)
+    ii) Then using the obtained baseline and beta to fit g2 in a "second_fit_range" by using simple_exponential function
+    '''
+    g2_fit_result, taus_fit, g2_fit =  get_g2_fit_general( g2, taus,  function, sequential_fit, *argv,**kwargs)     
+    guess_values = {}
+    for k in list (g2_fit_result[0].params.keys()):
+        guess_values[k] =   np.array( [ g2_fit_result[i].params[k].value
+                                   for i in range(  g2.shape[1]  )      ]) 
+        
+    if 'guess_limits' in kwargs:         
+        guess_limits  = kwargs['guess_limits'] 
+    else:
+         guess_limits = dict( baseline =[1, 1.8], alpha=[0, 2],
+                            beta = [0., 1], relaxation_rate= [0.001, 10000])
+            
+    g2_fit_result, taus_fit, g2_fit =  get_g2_fit_general( g2, taus,  function ='simple_exponential', 
+                                    sequential_fit= sequential_fit, fit_range=second_fit_range,
+            fit_variables={'baseline':False, 'beta': False, 'alpha':False,'relaxation_rate':True},
+                guess_values= guess_values,  guess_limits = guess_limits )         
+        
+    return g2_fit_result, taus_fit, g2_fit
+
+
+def get_g2_fit_general( g2, taus,  function='simple_exponential', 
+                       sequential_fit=False, *argv,**kwargs):
     '''
     Dec 29,2016, Y.G.@CHX
     
@@ -2185,12 +2287,28 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential', sequential_fit
             lags=taus[1:][fit_range[0]:fit_range[1]] 
         else:
             y=g2[1:, i]
-            lags=taus[1:]            
+            lags=taus[1:]     
+        #print( _relaxation_rate )
+        if isinstance( _beta, (np.ndarray, list) ):
+             pars['beta'].value = _guess_val['beta'][i]      
+        if isinstance( _baseline, (np.ndarray, list) ):
+             pars['baseline'].value = _guess_val['baseline'][i]                
+        if isinstance( _relaxation_rate, (np.ndarray, list) ):
+             pars['relaxation_rate'].value = _guess_val['relaxation_rate'][i]               
+        if isinstance( _alpha, (np.ndarray, list) ):
+             pars['alpha'].value = _guess_val['alpha'][i] 
+                
+            #for k in list(pars.keys()):
+                #print(k, _guess_val[k]  )
+            # pars[k].value = _guess_val[k][i]        
+        
         result1 = mod.fit(y, pars, x =lags ) 
         if sequential_fit:
             for k in list(pars.keys()):
-                pars[k].value = result1.best_values[k]  
                 #print( pars )
+                if k in list(result1.best_values.keys()):
+                    pars[k].value = result1.best_values[k]  
+                
         fit_res.append( result1) 
         model_data.append(  result1.best_fit )
     return fit_res, lags, np.array( model_data ).T
@@ -2530,7 +2648,7 @@ def power_func(x, D0, power=2):
     return D0 * x**power
 
 
-def get_q_rate_fit_general( qval_dict, rate, geometry ='saxs',  *argv,**kwargs): 
+def get_q_rate_fit_general( qval_dict, rate, geometry ='saxs', weights=None, *argv,**kwargs): 
     '''
     Dec 26,2016, Y.G.@CHX
     
@@ -2587,15 +2705,17 @@ def get_q_rate_fit_general( qval_dict, rate, geometry ='saxs',  *argv,**kwargs):
             y=y[fit_range[0]:fit_range[1]]
             x=x[fit_range[0]:fit_range[1]]             
         #print (i, y,x)          
-        _result = mod.fit(y, pars, x = x )
+        _result = mod.fit(y, pars, x = x ,weights=weights )
         qrate_fit_res.append(  _result )
         D0[i]  = _result.best_values['D0']
         #power[i] = _result.best_values['power']  
         print ('The fitted diffusion coefficient D0 is:  %.3e   A^2S-1'%D0[i])
     return D0, qrate_fit_res
 
+
 def plot_q_rate_fit_general( qval_dict, rate, qrate_fit_res, geometry ='saxs',  ylim = None,
-                            plot_all_range=True, plot_index_range = None, *argv,**kwargs): 
+                            plot_all_range=True, plot_index_range = None, show_text=True,return_fig=False,
+                            *argv,**kwargs): 
     '''
     Dec 26,2016, Y.G.@CHX
     
@@ -2652,9 +2772,10 @@ def plot_q_rate_fit_general( qval_dict, rate, qrate_fit_res, geometry ='saxs',  
             ax.plot(x**power, x**power*D0,  '-r') 
         else:        
             ax.plot( (x**power)[:len(yfit) ], yfit,  '-r')  
-        txts = r'$D0: %.3e$'%D0 + r' $A^2$' + r'$s^{-1}$'
-        dy=0.1
-        ax.text(x =0.15, y=.65 -dy *i, s=txts, fontsize=14, transform=ax.transAxes) 
+        if show_text:
+            txts = r'$D0: %.3e$'%D0 + r' $A^2$' + r'$s^{-1}$'
+            dy=0.1
+            ax.text(x =0.15, y=.65 -dy *i, s=txts, fontsize=14, transform=ax.transAxes) 
         if Nqz!=1:legend = ax.legend(loc='best')
 
     if plot_index_range is not None:
@@ -2670,6 +2791,8 @@ def plot_q_rate_fit_general( qval_dict, rate, qrate_fit_res, geometry ='saxs',  
     fp = path + '%s_Q_Rate'%(uid) + '_fit.png'
     fig.savefig( fp, dpi=fig.dpi)
     fig.tight_layout()
+    if return_fig:
+        return fig,ax
   
 
 def save_g2_fit_para_tocsv( fit_res, filename, path):
