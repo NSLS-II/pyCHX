@@ -611,7 +611,7 @@ def get_t_iqc( FD, frame_edge, mask, pargs, nx=1500, plot_ = False , save=False,
     return qp, np.array( iqs ),q
 
  
-def plot_t_iqc( q, iqs, frame_edge, pargs, save=True, *argv,**kwargs):   
+def plot_t_iqc( q, iqs, frame_edge, pargs, save=True, return_fig=False, *argv,**kwargs):   
     '''Plot t-dependent Iq 
     
         Parameters        
@@ -661,7 +661,8 @@ def plot_t_iqc( q, iqs, frame_edge, pargs, save=True, *argv,**kwargs):
         save_arrays(  np.vstack( [q, np.array(iqs)]).T, 
                     label=  ['q_A-1']+ ['Fram-%s-%s'%(t[0],t[1]) for t in frame_edge],
                     filename='%s_q_Iqt'%uid , path= path  )
-
+    if return_fig:
+        return fig,ax
     #plt.show() 
 
         
