@@ -1089,7 +1089,7 @@ def show_C12(C12,  q_ind=0, return_fig=False, interpolation = 'none', cmap='viri
     '''
     plot one-q of two-time correlation function
     C12: two-time correlation function, with shape as [ time, time, qs]
-    q_ind: if integer, for a SAXS q, the nth of q to be plotted
+    q_ind: if integer, for a SAXS q, the nth of q to be plotted, starting from 0,
             if a list: for a GiSAXS [qz_ind, qr_ind]  
     kwargs: support        
         timeperframe: the time interval
