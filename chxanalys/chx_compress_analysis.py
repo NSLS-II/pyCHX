@@ -43,7 +43,7 @@ def cal_waterfallc(FD, labeled_array,   qindex=1,
         labeled array; 0 is background.
         Each ROI is represented by a nonzero integer. It is not required that
         the ROI labels are contiguous
-    qindex : int 
+    qindex : int, qindex=1, give the first ring in SAXS geometry. NOTE: qindex=0 is non-photon pixels. 
         The ROI's to use.  
         
     bin_waterfall: if True, will bin the waterfall along y-axis

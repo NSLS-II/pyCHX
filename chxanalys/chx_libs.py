@@ -4,6 +4,8 @@ yuzhang@bnl.gov
 This module is for the necessary packages for the XPCS analysis 
 """
 
+from IPython.core.magics.display import Javascript
+
 
 from skbeam.core.utils import multi_tau_lags
 
