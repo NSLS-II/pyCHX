@@ -12,6 +12,8 @@ This module is for the static SAXS analysis, such as fit form factor
 #from matplotlib.colors import LogNorm
 from chxanalys.chx_libs import *
 from chxanalys.chx_generic_functions import show_img
+from scipy.special import gamma, gammaln
+
 
 def mono_sphere_form_factor_intensity( x, radius, delta_rho=100):
     '''
@@ -37,28 +39,45 @@ def mono_sphere_form_factor_intensity( x, radius, delta_rho=100):
 def gaussion( x, u, sigma):
     return 1/( sigma*np.sqrt(2*np.pi) )* np.exp( - ((x-u)**2)/(2*( sigma**2 ) ) )
 
-
-def distribution_gaussian( radius=1.0, sigma=0.1, num_points=20, spread=3):
+def Schultz_Zimm(x,u,sigma):
+    '''http://sasfit.ingobressler.net/manual/Schultz-Zimm
+      See also The size distribution of ‘gold standard’ nanoparticles
+          Anal Bioanal Chem (2009) 395:1651–1660
+          DOI 10.1007/s00216-009-3049-5
+    '''
+    k = 1.0/ (sigma)**2
+    return 1.0/u * (x/u)**(k-1) * k**k*np.exp( -k*x/u)/gamma(k)
+    
+def distribution_func( radius=1.0, sigma=0.1, num_points=20, spread=3, func='G'):
     '''
     radius: the central radius
     sigma: sqrt root of variance in percent
     '''
     
     if 1 - spread* sigma<=0:
-        spread= (1 - sigma)/sigma -1
-        
+        spread= (1 - sigma)/sigma -1        
     x, rs= np.linspace( radius - radius*spread* sigma, radius+radius*spread*sigma, num_points,retstep=True)
+    if func=='G':
+        func=gaussion
+    elif func=='S':
+        func= Schultz_Zimm
+        
+    return x, rs, func( x, radius, radius*sigma)*rs    
+
+
+
+
+ 
     
-    return x, rs, gaussion( x, radius, radius*sigma)*rs
     
-    
-def poly_sphere_form_factor_intensity( x, radius, sigma=0.1, delta_rho=100):
+def poly_sphere_form_factor_intensity( x, radius, sigma=0.1, delta_rho=100, fit_func='G'):
     '''
     Input:
         x/q: in A-1, array or a value
         radius/R: in A
         sigma:sqrt root of variance in percent
         delta_rho: Scattering Length Density(SLD) difference between solvent and the scatter, A-2
+        fit_func: G: Guassian;S:  Flory–Schulz distribution 
     Output:
         The form factor intensity of the polydispersed scatter    
     '''    
@@ -70,13 +89,15 @@ def poly_sphere_form_factor_intensity( x, radius, sigma=0.1, delta_rho=100):
     if sigma==0:
         v= mono_sphere_form_factor_intensity( q, R, delta_rho)
     else:
-        r, rs, wt = distribution_gaussian( radius=R, sigma=sigma, num_points=20, spread=5)
+        r, rs, wt = distribution_func( radius=R, sigma=sigma, num_points=20, spread=5, func=fit_func)
+ 
+            
         for i, Ri in enumerate(r):
             v += mono_sphere_form_factor_intensity( q, Ri, delta_rho)*wt[i]*rs
     return v #* delta_rho
 
 
-def poly_sphere_form_factor_intensity_q2( x, radius, sigma=0.1, delta_rho=1):#, scale=1, baseline=0):
+def poly_sphere_form_factor_intensity_q2( x, radius, sigma=0.1, delta_rho=1, fit_func='G'):#, scale=1, baseline=0):
     '''
     Input:
         x/q: in A-1, array or a value
@@ -87,7 +108,7 @@ def poly_sphere_form_factor_intensity_q2( x, radius, sigma=0.1, delta_rho=1):#, 
         The form factor intensity of the polydispersed scatter    
     ''' 
     
-    return poly_sphere_form_factor_intensity( x, radius, sigma, delta_rho)*x**2 #* scale + baseline
+    return poly_sphere_form_factor_intensity( x, radius, sigma, delta_rho, fit_func)*x**2 #* scale + baseline
     
 
 def find_index( x,x0,tolerance= None):
@@ -107,7 +128,8 @@ def find_index( x,x0,tolerance= None):
     return position
 
 
-def get_form_factor_fit( q, iq, guess_values, fit_range=None, fit_variables = None,function='poly_sphere', 
+def get_form_factor_fit( q, iq, guess_values, fit_range=None, fit_variables = None,function='poly_sphere',
+                        fit_func='G',
                          *argv,**kwargs): 
     '''
     Fit form factor for GUI
@@ -174,7 +196,7 @@ def get_form_factor_fit( q, iq, guess_values, fit_range=None, fit_variables = No
             pars[var].vary = fit_variables[var]            
     #pars['delta_rho'].vary =False       
     fit_power = 2    
-    result = mod.fit( iq_* q_**fit_power, pars, x = q_ )    
+    result = mod.fit( iq_* q_**fit_power, pars, x = q_, fit_func=fit_func )    
     if function=='poly_sphere':        
         sigma = result.best_values['sigma']
     elif function=='mono_sphere':  
@@ -243,7 +265,7 @@ def plot_form_factor_with_fit(q, iq, q_, result,  fit_power=2,  res_pargs=None, 
 
 
     
-def fit_form_factor( q, iq,  guess_values, fit_range=None, fit_variables = None, res_pargs=None,function='poly_sphere', 
+def fit_form_factor( q, iq,  guess_values, fit_range=None, fit_variables = None, res_pargs=None,function='poly_sphere', fit_func='G',
                          *argv,**kwargs):    
      
     '''
@@ -333,7 +355,7 @@ def fit_form_factor( q, iq,  guess_values, fit_range=None, fit_variables = None,
        
     fit_power = 2
     
-    result = mod.fit( iq_* q_**fit_power, pars, x = q_ )
+    result = mod.fit( iq_* q_**fit_power, pars, x = q_ ,fit_func= fit_func )
     
     if function=='poly_sphere':        
         sigma = result.best_values['sigma']
@@ -385,7 +407,8 @@ def fit_form_factor( q, iq,  guess_values, fit_range=None, fit_variables = None,
     
     
 def show_saxs_qmap( img, pargs, width=200,vmin=.1, vmax=300, logs=True,image_name='', 
-                   save=False, show_pixel=False, aspect= 1):
+                   show_colorbar=True, file_name='',  show_time = False,
+                   save=False, show_pixel=False, aspect= 1,save_format='png', cmap='viridis',):
     '''
     Show a SAXS q-map by giving 
     Parameter:
@@ -421,6 +444,7 @@ def show_saxs_qmap( img, pargs, width=200,vmin=.1, vmax=300, logs=True,image_nam
     
     ROI = [ max(0, center[0]-w), min( center[0]+w, lx), max(0,  center[1]-w), min( ly, center[1]+w )  ]
     #print( ROI )
+    ax = plt.subplots()
     if not show_pixel:
         #print( 'here' )
         two_theta = utils.radius_to_twotheta(Ldet ,np.array( [ ( ROI[0] - cx )   * dpix,( ROI[1] - cx )   * dpix,
@@ -429,15 +453,21 @@ def show_saxs_qmap( img, pargs, width=200,vmin=.1, vmax=300, logs=True,image_nam
         qext  = utils.twotheta_to_q(two_theta, lambda_) 
         #print( two_theta, qext )
         
-        show_img( 1e-15+ img[  ROI[0]:ROI[1], ROI[2]:ROI[3]  ], 
+        show_img( 1e-15+ img[  ROI[0]:ROI[1], ROI[2]:ROI[3]  ],  ax=ax,
         xlabel=r"$q_x$" +  '('+r'$\AA^{-1}$'+')', 
          ylabel= r"$q_y$" +  '('+r'$\AA^{-1}$'+')', extent=[qext[3],qext[2],qext[0],qext[1]],
-            vmin=vmin, vmax=vmax, logs= logs, image_name= image_name, save= save, path=path,aspect= aspect) 
+            vmin=vmin, vmax=vmax, logs= logs, image_name= image_name,  file_name= file_name,
+                 show_time = show_time,
+                 save_format=save_format,cmap=cmap, show_colorbar=show_colorbar,
+                 save= save, path=path,aspect= aspect) 
     else:        
         #qext = w
-        show_img( 1e-15+ img[ ROI[0]:ROI[1], ROI[2]:ROI[3] ], 
+        show_img( 1e-15+ img[ ROI[0]:ROI[1], ROI[2]:ROI[3] ],  ax=ax,
         xlabel= 'pixel',  ylabel= 'pixel', extent=[ROI[0],ROI[1],ROI[2],ROI[3]],
-            vmin=vmin, vmax=vmax, logs= logs, image_name= image_name, save= save, path=path,aspect= aspect)     
+            vmin=vmin, vmax=vmax, logs= logs, image_name= image_name, save_format=save_format,cmap=cmap,
+                 show_colorbar=show_colorbar, file_name= file_name, show_time = show_time,
+                 save= save, path=path,aspect= aspect) 
+    return ax
     
 
 
