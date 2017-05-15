@@ -106,15 +106,16 @@ def save_png_series( imgs, ROI=None, logs=True, outDir=None, uid=None,vmin=None,
     
     
     
+    
 def movie_maker( imgs, num_frames=None, ROI=None,interval=20, fps=15, real_interval = 1.0,
                     movie_name="movie.mp4", outDir=None,
-                 movie_writer='mencoder',
+                 movie_writer='ffmpeg', logs=True, show_text_on_image=False,
 		    vmin=None, vmax=None,cmap='viridis',dpi=100):
     
     import numpy as np
     import matplotlib.pyplot as plt
     import matplotlib.animation as animation
-    
+    from matplotlib.colors import LogNorm
 
     """
     Make a movie by give a image series
@@ -170,12 +171,15 @@ def movie_maker( imgs, num_frames=None, ROI=None,interval=20, fps=15, real_inter
         xs,xe,ys,ye = ROI        
         asp = (ye-ys)/float( xe - xs )      
          
-    ax.set_aspect('equal')    
+    ax.set_aspect('equal') 
+    #print( cmap, vmin, vmax )
     
-      
-        
-    im = ax.imshow( i0, cmap=cmap, vmin=vmin, vmax=vmax, origin='lower',
-	  interpolation='nearest',)# aspect = asp) 
+    if not logs:         
+        im=ax.imshow(i0, origin='lower' ,cmap=cmap,interpolation="nearest", vmin=vmin,vmax=vmax)  
+    else:
+        im=ax.imshow(i0, origin='lower' ,cmap=cmap,
+                        interpolation="nearest" , norm=LogNorm(vmin,  vmax))     
+
     ttl = ax.text(.75, .2, '', transform = ax.transAxes, va='center', color='white', fontsize=18)
     
     #print asp
@@ -189,22 +193,19 @@ def movie_maker( imgs, num_frames=None, ROI=None,interval=20, fps=15, real_inter
         if ROI is None:ign=imgs[n]
         else:ign=select_regoin(imgs[n], ROI, keep_shape=False,)
         im.set_data(ign)
-        if real_interval >=10:
-            ttl.set_text('%s s'%(n*real_interval/1000.))  
-        elif real_interval <10:
-            ttl.set_text('%s ms'%(n*real_interval))  
-        
-        
-        #im.set_text(n)
-        #print (n)
- 
+        if show_text_on_image:
+            if real_interval >=10:
+                ttl.set_text('%s s'%(n*real_interval/1000.))  
+            elif real_interval <10:
+                ttl.set_text('%s ms'%(n*real_interval))         
+            #im.set_text(n)
+            #print (n)
 
     ani = animation.FuncAnimation(fig, update_img, num_frames,
                                   interval=interval)
     writer = animation.writers[movie_writer](fps=fps)
 
     if outDir is not None:movie_name = outDir + movie_name
-
     ani.save(movie_name, writer=writer,dpi=dpi)
     #return ani
 
