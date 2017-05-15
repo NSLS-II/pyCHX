@@ -333,8 +333,11 @@ class create_pdf_report( object ):
         s.append(   'Mask file: %s'%md['mask_file'] )  ####line 8 mask filename
         s.append(    'Analysis Results Dir: %s'%self.data_dir    )  ####line 9 results folder
         s.append(   'Metadata Dir: %s.csv-&.pkl'%self.metafile   )  ####line 10 metadata folder
-        #s.append(  'Pipeline notebook: %s'%md['NOTEBOOK_FULL_PATH']    )  ####line 11 notebook folder        
-                    
+        try:
+            s.append(  'Pipeline notebook: %s'%md['NOTEBOOK_FULL_PATH']    )  ####line 11 notebook folder        
+        except:
+            pass
+        #print( 'here' )
         line =1 
         for s_ in s:            
             add_one_line_string( c, s_,  top -ds*line ,  left=30,fontsize = fontsize  )  
@@ -1178,8 +1181,8 @@ def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username,
     #Page one: Meta-data/Iq-Q/ROI
     c.report_header(page=1)
     c.report_meta( top=730)    
-    c.report_static( top=550, iq_fit = run_fit_form )
-    c.report_ROI( top= 300)
+    c.report_static( top=540, iq_fit = run_fit_form )
+    c.report_ROI( top= 290)
     
     #Page Two: img~t/iq~t/waterfall/mean~t/g2/rate~q
     c.new_page()
@@ -1225,40 +1228,104 @@ def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username,
     c.done() 
     
     
- 
     
+######################################
+###Deal with saving dict to hdf5 file
+def save_dict_to_hdf5(dic, filename):
+    """
+    ....
+    """
+    with h5py.File(filename, 'w') as h5file:
+        recursively_save_dict_contents_to_group(h5file, '/', dic)
+
+def load_dict_from_hdf5(filename):
+    """
+    ....
+    """
+    with h5py.File(filename, 'r') as h5file:
+        return recursively_load_dict_contents_from_group(h5file, '/')
+    
+def recursively_save_dict_contents_to_group( h5file, path, dic):
+    """..."""
+    # argument type checking
+    if not isinstance(dic, dict):
+        raise ValueError("must provide a dictionary")        
+        
+    if not isinstance(path, str):
+        raise ValueError("path must be a string")
+    if not isinstance(h5file, h5py._hl.files.File):
+        raise ValueError("must be an open h5py file")
+    # save items to the hdf5 file
+    for key, item in dic.items():
+        #print(key,item)
+        key = str(key)
+        if isinstance(item, list):
+            item = np.array(item)
+            #print(item)
+        if not isinstance(key, str):
+            raise ValueError("dict keys must be strings to save to hdf5")
+        # save strings, numpy.int64, and numpy.float64 types
+        if isinstance(item, (np.int64, np.float64, str, np.float, float, np.float32,int)):
+            #print( 'here' )
+            h5file[path + key] = item
+            if not h5file[path + key].value == item:
+                raise ValueError('The data representation in the HDF5 file does not match the original dict.')
+        # save numpy arrays
+        elif isinstance(item, np.ndarray):            
+            try:
+                h5file[path + key] = item
+            except:
+                item = np.array(item).astype('|S9')
+                h5file[path + key] = item
+            if not np.array_equal(h5file[path + key].value, item):
+                raise ValueError('The data representation in the HDF5 file does not match the original dict.')
+        # save dictionaries
+        elif isinstance(item, dict):
+            recursively_save_dict_contents_to_group(h5file, path + key + '/', item)
+        # other types cannot be saved and will result in an error
+        else:
+            #print(item)
+            raise ValueError('Cannot save %s type.' % type(item))
+            
+            
+def recursively_load_dict_contents_from_group( h5file, path):
+    """..."""
+    ans = {}
+    for key, item in h5file[path].items():
+        if isinstance(item, h5py._hl.dataset.Dataset):
+            ans[key] = item.value
+        elif isinstance(item, h5py._hl.group.Group):
+            ans[key] = recursively_load_dict_contents_from_group(h5file, path + key + '/')
+    return ans            
     
  
 def export_xpcs_results_to_h5( filename, export_dir, export_dict ):
     '''
-       YG. Dec 22, 2016 
+       YG. May 10, 2017 
        save the results to a h5 file
        
        filename:  the h5 file name
        export_dir: the exported file folder
        export_dict: dict, with keys as md, g2, g4 et.al.
     '''   
-    import h5py     
+      
     fout = export_dir + filename
-    dicts = ['md', 'qval_dict', 'qval_dict_v', 'qval_dict_p']
+    dicts = ['md', 'qval_dict', 'qval_dict_v', 'qval_dict_p','taus_uids', 'g2_uids' ] 
+     
     with h5py.File(fout, 'w') as hf: 
         for key in list(export_dict.keys()):   
             #print( key )
-            if key in dicts: #=='md' or key == 'qval_dict':                
-                md= export_dict[key]
-                meta_data = hf.create_dataset( key, (1,), dtype='i')
-                for key_ in md.keys(): 
-                    try:
-                        meta_data.attrs[str(key_)] = md[key_]                        
-                    except:
-                        pass 
+            if key in dicts: #=='md' or key == 'qval_dict': 
+                recursively_save_dict_contents_to_group(hf, '/%s/'%key, export_dict[key] )               
             
             elif key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds', 'qr_1d_pds']:
                 export_dict[key].to_hdf( fout, key=key,  mode='a',   )                
             else:
                 data = hf.create_dataset(key, data = export_dict[key] )
     print( 'The xpcs analysis results are exported to %s with filename as %s'%(export_dir , filename))
-            
+        
+
+        
 def extract_xpcs_results_from_h5( filename, import_dir, onekey=None, exclude_keys=None ):
     '''
        YG. Dec 22, 2016 
@@ -1276,7 +1343,105 @@ def extract_xpcs_results_from_h5( filename, import_dir, onekey=None, exclude_key
     extract_dict = {}    
     fp = import_dir + filename
     pds_type_keys = []
-    dicts = ['md', 'qval_dict', 'qval_dict_v', 'qval_dict_p']
+    dicts = ['md', 'qval_dict', 'qval_dict_v', 'qval_dict_p', 'taus_uids', 'g2_uids']
+    if exclude_keys is None:
+        exclude_keys =[]
+    if onekey is None:
+        for k in dicts:
+            extract_dict[k] = {}
+        with h5py.File( fp, 'r') as hf:  
+            #print (list( hf.keys()) )
+            for key in list( hf.keys()): 
+                if key not in exclude_keys:
+                    if key in dicts:
+                        extract_dict[key] = recursively_load_dict_contents_from_group(hf, '/' + key + '/')
+                    elif key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds', 'qr_1d_pds']:
+                        pds_type_keys.append( key )                
+                    else:    
+                        extract_dict[key] = np.array( hf.get( key  ))
+        for key in pds_type_keys:
+            if key not in exclude_keys:
+                extract_dict[key] = pds.read_hdf(fp, key= key )     
+    else:
+        if onekey == 'md':
+            with h5py.File( fp, 'r') as hf:
+                md = hf.get('md')
+                for key in list(md.attrs):
+                    extract_dict['md'][key] = md.attrs[key]                 
+        elif onekey in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds', 'qr_1d_pds']:
+            extract_dict[onekey] = pds.read_hdf(fp, key= onekey ) 
+        else:
+            try:
+                with h5py.File( fp, 'r') as hf: 
+                    extract_dict[onekey] = np.array( hf.get( onekey  ))
+            except:
+                print("The %s dosen't have this %s value"%(fp, onekey) )
+    return extract_dict
+
+
+
+
+
+
+
+ 
+def export_xpcs_results_to_h5_old( filename, export_dir, export_dict ):
+    '''
+       YG. Dec 22, 2016 
+       save the results to a h5 file
+       
+       filename:  the h5 file name
+       export_dir: the exported file folder
+       export_dict: dict, with keys as md, g2, g4 et.al.
+    '''   
+    import h5py     
+    fout = export_dir + filename
+    dicts = ['md', 'qval_dict', 'qval_dict_v', 'qval_dict_p'] #{k1: { }}
+    dict_nest= ['taus_uids', 'g2_uids']  #{k1: {k2:}}
+    with h5py.File(fout, 'w') as hf: 
+        for key in list(export_dict.keys()):   
+            #print( key )
+            if key in dicts: #=='md' or key == 'qval_dict':                
+                md= export_dict[key]
+                meta_data = hf.create_dataset( key, (1,), dtype='i')
+                for key_ in md.keys(): 
+                    try:
+                        meta_data.attrs[str(key_)] = md[key_]                        
+                    except:
+                        pass 
+            elif key in dict_nest:
+                k1 = export_dict[key]
+                v1 = hf.create_dataset( key, (1,), dtype='i')
+                for k2 in k1.keys():
+                    
+                    v2 =  hf.create_dataset( k1, (1,), dtype='i')
+                
+            
+            elif key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds', 'qr_1d_pds']:
+                export_dict[key].to_hdf( fout, key=key,  mode='a',   )                
+            else:
+                data = hf.create_dataset(key, data = export_dict[key] )
+    print( 'The xpcs analysis results are exported to %s with filename as %s'%(export_dir , filename))
+    
+            
+def extract_xpcs_results_from_h5_old( filename, import_dir, onekey=None, exclude_keys=None ):
+    '''
+       YG. Dec 22, 2016 
+       extract data from a h5 file
+       
+       filename:  the h5 file name
+       import_dir: the imported file folder
+       onekey: string, if not None, only extract that key
+       return:
+           extact_dict: dict, with keys as md, g2, g4 et.al.
+    '''   
+    
+    import pandas as pds 
+    import numpy as np
+    extract_dict = {}    
+    fp = import_dir + filename
+    pds_type_keys = []
+    dicts = ['md', 'qval_dict', 'qval_dict_v', 'qval_dict_p', 'taus_uids', 'g2_uids']
     if exclude_keys is None:
         exclude_keys =[]
     if onekey is None:
