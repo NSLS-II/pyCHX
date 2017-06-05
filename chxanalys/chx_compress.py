@@ -287,7 +287,9 @@ def segment_compress_eigerdata( images,  mask, md, filename,
         dtype=np.float64
     else:
         print ( "Wrong type of nobytes, only support 2 [np.int16] or 4 [np.int32]")
-        dtype= np.int32         
+        dtype= np.int32   
+     
+    
     #Nimg =   Nimg_//bins 
     Nimg = int( np.ceil( Nimg_ / bins  ) )
     time_edge = np.array(create_time_slice( N= Nimg_, 
@@ -295,14 +297,16 @@ def segment_compress_eigerdata( images,  mask, md, filename,
     #print( time_edge, Nimg_, Nimg, bins, N1, N2 )
     imgsum  =  np.zeros(    Nimg   )         
     if bins!=1:
-        print('The frames will be binned by %s'%bins) 
+        #print('The frames will be binned by %s'%bins) 
+        dtype=np.float64
+        
     fp = open( filename,'wb' )    
     for n in   range(Nimg):            
         t1,t2 = time_edge[n]  
         if bins!=1:
-            img = np.array( np.average(  images[t1:t2], axis=0   )   , dtype=np.int32)
+            img = np.array( np.average(  images[t1:t2], axis=0   )   , dtype= dtype)
         else:
-            img =   np.array( images[t1], dtype=np.int32) 
+            img =   np.array( images[t1], dtype=dtype) 
         mask &= img < hot_pixel_threshold         
         p = np.where( (np.ravel(img)>0) *  np.ravel(mask) )[0] #don't use masked data 
         v = np.ravel( np.array( img, dtype= dtype )) [p] 
