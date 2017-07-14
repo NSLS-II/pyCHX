@@ -190,6 +190,17 @@ class create_pdf_report( object ):
         self.g2_file = 'uid=%s_g2.png'%uid_
         self.g2_fit_file = 'uid=%s_g2_fit.png'%uid_
         
+        self.g2_new_page = False
+        self.g2_fit_new_page = False
+        jfn = 'uid=%s_g2__joint.png'%uid_
+        if os.path.exists( data_dir + jfn):
+            self.g2_file = jfn
+            self.g2_new_page = True   
+        jfn = 'uid=%s_g2_fit__joint.png'%uid_
+        if os.path.exists(data_dir + jfn ):
+            self.g2_fit_file = jfn
+            self.g2_fit_new_page = True              
+            
         #print( self.g2_fit_file )
         
         self.q_rate_file = 'uid=%s_Q_Rate_fit.png'%uid_ 
@@ -198,11 +209,24 @@ class create_pdf_report( object ):
 
         self.two_time_file = 'uid=%s_Two_time.png'%uid_
         self.two_g2_file = 'uid=%s_g2_two_g2.png'%uid_
-        self.four_time_file = 'uid=%s_g4.png'%uid_
         
+        jfn = 'uid=%s_g2_two_g2__joint.png'%uid_  
+        self.two_g2_new_page = False
+        if os.path.exists(  data_dir + jfn ):
+            self.two_g2_file = jfn
+            self.two_g2_new_page = True  
+            
+        self.four_time_file = 'uid=%s_g4.png'%uid_        
         self.xsvs_fit_file = 'uid=%s_xsvs_fit.png'%uid_
         self.contrast_file = 'uid=%s_contrast.png'%uid_
         self.dose_file =  'uid=%s_dose_analysis.png'%uid_
+        
+        jfn = 'uid=%s_dose_analysis__joint.png'%uid_  
+        self.dose_file_new_page = False
+        if os.path.exists(  data_dir + jfn ):
+            self.dose_file =  jfn
+            self.dose_file_new_page = True
+            
         #print( self.dose_file )
         if False:
             self.flow_g2v = 'uid=%s_1a_mqv_g2_v_fit.png'%uid_
@@ -297,7 +321,7 @@ class create_pdf_report( object ):
                 
         nec_keys = [   'sample', 'start_time', 'stop_time','Measurement' ,'exposure time' ,'incident_wavelength', 'cam_acquire_t',
                        'frame_time','detector_distance', 'feedback_x', 'feedback_y', 'shutter mode',
-                    'beam_center_x', 'beam_center_y', 'beam_refl_center_x', 'beam_refl_center_y','mask_file','bad_frame_list']
+                    'beam_center_x', 'beam_center_y', 'beam_refl_center_x', 'beam_refl_center_y','mask_file','bad_frame_list', 'transmission']
         for key in nec_keys:
             check_dict_keys(md, key) 
         
@@ -328,7 +352,7 @@ class create_pdf_report( object ):
             s7 = ''
             
         s7 += ' || ' + 'BadLen: %s'%len(md['bad_frame_list'])
-            
+        s7 += ' || ' + 'Transmission: %s'%md['transmission']     
         s.append( s7  ) ####line 7 'Beam center...      
         s.append(   'Mask file: %s'%md['mask_file'] )  ####line 8 mask filename
         s.append(    'Analysis Results Dir: %s'%self.data_dir    )  ####line 9 results folder
@@ -561,9 +585,7 @@ class create_pdf_report( object ):
         self.sub_title_num +=1
         c.drawString(10, top, "%s. One Time Correlation Function"%self.sub_title_num  )  #add title
         c.setFont("Helvetica", 14)
-        #add g2 plot        
-        
-                     
+        #add g2 plot                      
         if g2_fit_file is None:
             imgf = self.g2_fit_file
         else:
@@ -578,8 +600,14 @@ class create_pdf_report( object ):
             top = top - 600
             str2_left, str2_top = 80, top  - 400
         #add one_time caculation 
-         
         img_left,img_top = 1, top
+        if self.g2_fit_new_page or self.g2_new_page:
+            
+            img_height= 550
+            top = top - 250
+            str2_left, str2_top = 80, top  - 0             
+            img_left,img_top = 60, top
+            
         str1_left, str1_top,str1= 150, top + img_height,  'g2 fit plot'
         
 
@@ -605,6 +633,14 @@ class create_pdf_report( object ):
             img_left,img_top = 350, top - 150
             str2_left, str2_top = 380, top - 5 
             str1_left, str1_top,str1= 450, top + 180,  'q-rate fit  plot' 
+            
+        if self.g2_fit_new_page or self.g2_new_page:
+            top = top + 200
+            img_height= 180     
+            img_left,img_top = 350, top
+            str2_left, str2_top = 380, top - 5
+            str1_left, str1_top,str1= 450, top + 230,  'q-rate fit  plot'             
+            
         add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
                      str2_left, str2_top )  
@@ -708,29 +744,36 @@ class create_pdf_report( object ):
         #add q_Iq_t
         imgf = self.two_g2_file
         
-        img_height= 300
-        img_left,img_top = 100 -70, top
-        str1_left, str1_top,str1= 210-70, top + 310,  'compared g2'  
-        str2_left, str2_top = 180-70, top - 10
-        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
-                     str1_left, str1_top,str1,
-                     str2_left, str2_top ) 
+        if True:#not self.two_g2_new_page:      
         
-        
-          
-        top = top + 50   
-        imgf = self.q_rate_two_time_fit_file
-        img_height= 140
-        img_left,img_top = 350, top + 30
-        str2_left, str2_top = 380 - 80, top - 5
-        str1_left, str1_top,str1= 450 -80 , top + 230,  'q-rate fit from two-time' 
-        
-        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
-                     str1_left, str1_top,str1,
-                     str2_left, str2_top ) 
+            img_height= 300
+            img_left,img_top = 100 -70, top
+            str1_left, str1_top,str1= 210-70, top + 310,  'compared g2'  
+            str2_left, str2_top = 180-70, top - 10
+            
+            if self.two_g2_new_page:
+                img_left,img_top = 100, top       
+                
+            add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                         str1_left, str1_top,str1,
+                         str2_left, str2_top ) 
+            
+            
+
+            top = top + 50   
+            imgf = self.q_rate_two_time_fit_file
+            img_height= 140
+            img_left,img_top = 350, top + 30
+            str2_left, str2_top = 380 - 80, top - 5
+            str1_left, str1_top,str1= 450 -80 , top + 230,  'q-rate fit from two-time' 
+
+            add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                         str1_left, str1_top,str1,
+                         str2_left, str2_top ) 
         
   
-        
+         
+            
         
         if new_page:
             c.showPage()
@@ -791,6 +834,11 @@ class create_pdf_report( object ):
         img_left,img_top = 80, top
         str1_left, str1_top,str1= 180, top + 500,  'dose analysis'
         str2_left, str2_top = 180, top - 10
+        
+        if self.dose_file_new_page:
+            img_left,img_top = 180, top
+        
+        
         add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
                      str2_left, str2_top )
@@ -1188,16 +1236,26 @@ def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username,
     c.new_page()
     c.report_header(page=2)
     
+    page = 2
     if c.report_type != 'ang_saxs':
-        c.report_time_analysis( top= 720)    
+        c.report_time_analysis( top= 720)   
         if run_one_time: 
             if c.report_type != 'ang_saxs':
                 top = 350
             else: 
                 top = 500
-            c.report_one_time( top= top )
-            #Page Three: two-time/two g2   
-        page = 2
+            if c.g2_fit_new_page:
+                c.new_page()
+                page +=1    
+                top = 720
+            c.report_one_time( top= top )                
+                
+        
+        #self.two_g2_new_page = True  
+        #self.g2_fit_new_page = True                  
+                
+        #Page Three: two-time/two g2   
+        
         if run_two_time:
             c.new_page()
             page +=1
@@ -1310,13 +1368,22 @@ def export_xpcs_results_to_h5( filename, export_dir, export_dict ):
     '''   
       
     fout = export_dir + filename
-    dicts = ['md', 'qval_dict', 'qval_dict_v', 'qval_dict_p','taus_uids', 'g2_uids' ] 
+    dicts = ['md', 'qval_dict', 'qval_dict_v', 'qval_dict_p']
+    dict_nest=['taus_uids', 'g2_uids' ] 
      
-    with h5py.File(fout, 'w') as hf: 
+    with h5py.File(fout, 'w') as hf:        
         for key in list(export_dict.keys()):   
             #print( key )
-            if key in dicts: #=='md' or key == 'qval_dict': 
-                recursively_save_dict_contents_to_group(hf, '/%s/'%key, export_dict[key] )               
+            if key in dicts: #=='md' or key == 'qval_dict':                
+                md= export_dict[key]
+                meta_data = hf.create_dataset( key, (1,), dtype='i')
+                for key_ in md.keys(): 
+                    try:
+                        meta_data.attrs[str(key_)] = md[key_]                        
+                    except:
+                        pass 
+            elif key in dict_nest:
+                recursively_save_dict_contents_to_group(hf, '/%s/'%key, export_dict[key] ) 
             
             elif key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds', 'qr_1d_pds']:
                 export_dict[key].to_hdf( fout, key=key,  mode='a',   )                
@@ -1326,7 +1393,7 @@ def export_xpcs_results_to_h5( filename, export_dir, export_dict ):
         
 
         
-def extract_xpcs_results_from_h5( filename, import_dir, onekey=None, exclude_keys=None ):
+def extract_xpcs_results_from_h5_debug( filename, import_dir, onekey=None, exclude_keys=None ):
     '''
        YG. Dec 22, 2016 
        extract data from a h5 file
@@ -1424,7 +1491,7 @@ def export_xpcs_results_to_h5_old( filename, export_dir, export_dict ):
     print( 'The xpcs analysis results are exported to %s with filename as %s'%(export_dir , filename))
     
             
-def extract_xpcs_results_from_h5_old( filename, import_dir, onekey=None, exclude_keys=None ):
+def extract_xpcs_results_from_h5( filename, import_dir, onekey=None, exclude_keys=None ):
     '''
        YG. Dec 22, 2016 
        extract data from a h5 file
