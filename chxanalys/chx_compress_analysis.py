@@ -221,10 +221,7 @@ def cal_each_ring_mean_intensityc( FD, ring_mask, sampling=1, timeperframe=None,
         times = ( FD.beg + np.arange( FD.end - FD.beg ) )*timeperframe
     num_rings = len( np.unique( ring_mask)[1:] )     
     return times, mean_int_sets
-
-
-
-
+ 
 
 def plot_each_ring_mean_intensityc( times, mean_int_sets, xlabel= 'Frame',save=False, *argv,**kwargs):   
     
@@ -236,10 +233,10 @@ def plot_each_ring_mean_intensityc( times, mean_int_sets, xlabel= 'Frame',save=F
     fig, ax = plt.subplots(figsize=(8, 8))
     uid = 'uid'
     if 'uid' in kwargs.keys():
-        uid = kwargs['uid'] 
-        
+        uid = kwargs['uid']         
     ax.set_title("%s--Mean intensity of each ROI"%uid)
-    for i in range(num_rings):
+    for i in range(num_rings):        
+        #print(  markers[i],  colors[i] )        
         ax.plot( times, mean_int_sets[:,i], label="ROI "+str(i+1),marker = markers[i], color=colors[i], ls='-')
         ax.set_xlabel(xlabel)
         ax.set_ylabel("Mean Intensity")
