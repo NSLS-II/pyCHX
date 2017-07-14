@@ -67,10 +67,12 @@ import warnings
 from eiger_io.fs_handler2 import EigerHandler2
 from eiger_io.fs_handler import LazyEigerHandler
 
-db.fs.deregister_handler('AD_EIGER')
-db.fs.register_handler('AD_EIGER', LazyEigerHandler)
-db.fs.deregister_handler('AD_EIGER2')
-db.fs.register_handler('AD_EIGER2', EigerHandler2)
+fs = db.event_sources[0].fs
+fs.deregister_handler('AD_EIGER')
+fs.register_handler('AD_EIGER', LazyEigerHandler)
+fs.deregister_handler('AD_EIGER2')
+fs.register_handler('AD_EIGER2', EigerHandler2)
+
 
 
 
@@ -118,7 +120,7 @@ colors = np.array( ['darkorange', 'mediumturquoise', 'seashell', 'mediumaquamari
            'coral', 'lightyellow', 'chocolate', 'lavenderblush', 'darkred', 'lightseagreen', 
            'darkviolet', 'lightcyan', 'cadetblue', 'blanchedalmond', 'midnightblue', 
            'darksage', 'lightsteelblue', 'darkcyan', 'floralwhite', 'darkgray', 
-           'lavender', 'sandybrown', 'cornflowerblue', 'sage',  'gray', 
+           'lavender', 'sandybrown', 'cornflowerblue',   'gray', 
            'mediumpurple', 'lightslategrey',   'seagreen', 
            'silver', 'darkmagenta', 'darkslategrey', 'darkgoldenrod', 'rosybrown', 
            'goldenrod',   'darkturquoise', 'plum',
