@@ -3,6 +3,24 @@ from chxanalys.chx_libs import *
 from chxanalys.chx_libs import  ( colors,  markers )
 from scipy.special import erf
 
+def get_mass_center_one_roi(FD, roi_mask, roi_ind):
+    '''Get the mass center (in pixel unit) of one roi in a time series FD
+    FD: handler for a compressed time series
+    roi_mask: the roi array
+    roi_ind: the interest index of the roi  
+    
+    '''
+    import scipy
+    m =  (roi_mask == roi_ind)
+    cx, cy = np.zeros(    int( ( FD.end - FD.beg)/1 )  ), np.zeros(    int( ( FD.end - FD.beg)/1 )  ) 
+    n =0 
+    for  i in tqdm(range( FD.beg, FD.end, 1  ), desc= 'Get mass center of one ROI of each frame' ):
+        img = FD.rdframe(i) * m
+        c = scipy.ndimage.measurements.center_of_mass(img)
+        cx[n], cy[n] = int(c[0]), int(c[1])
+        n +=1
+    return cx,cy
+
 
 
 def get_current_pipeline_filename(NOTEBOOK_FULL_PATH):
@@ -277,9 +295,18 @@ def check_lost_metadata(md, Nimg=None, inc_x0 =None, inc_y0= None, pixelsize=7.5
         md['x_pixel_size'] = 7.5000004e-05
     dpix = md['x_pixel_size'] * 1000.  #in mm, eiger 4m is 0.075 mm
     lambda_ =md['incident_wavelength']    # wavelegth of the X-rays in Angstroms
-    if md['det_distance']<=1000: #should be in meter unit
-        md['det_distance'] *=1000  
-    Ldet = md['det_distance']
+    try:
+        Ldet = md['det_distance']
+        if Ldet<=1000:
+            Ldet *=1000
+            md['det_distance'] = Ldet
+    except:
+        Ldet = md['detector_distance']
+        if Ldet<=1000:
+            Ldet *=1000
+            md['detector_distance'] = Ldet        
+
+    
     try:
         exposuretime= md['cam_acquire_time']     #exposure time in sec
     except:    
@@ -314,8 +341,12 @@ def combine_images( filenames, outputfile, outsize=(2000, 2400)):
         save a combined image file
     '''
     N = len( filenames)
-    nx = np.int( np.ceil( np.sqrt(N)) )
-    ny = np.int( np.ceil( N / float(nx)  ) )
+    #nx = np.int( np.ceil( np.sqrt(N)) )
+    #ny = np.int( np.ceil( N / float(nx)  ) )
+
+    ny = np.int( np.ceil( np.sqrt(N)) )
+    nx = np.int( np.ceil( N / float(ny)  ) )
+    
     #print(nx,ny)
     result = Image.new("RGB", outsize, color=(255,255,255,0))    
     basewidth = int( outsize[0]/nx )     
@@ -926,7 +957,9 @@ def load_data( uid , detector = 'eiger4m_single_image', fill=True, reverse=False
         try:
             imgs = get_images( hdr, detector)
             #print( 'here')
-            if len(imgs[0])==1:
+            print('This should be dscan data.')
+            print('You also can use get_images( hdr, detector) function to retrive data.')
+            if len(imgs[0])>=1:
                 md = imgs[0].md
                 imgs = pims.pipeline(lambda img:  img[0])(imgs)
                 imgs.md = md
@@ -943,6 +976,34 @@ def load_data( uid , detector = 'eiger4m_single_image', fill=True, reverse=False
         imgs.md = md
     return imgs
 
+
+def mask_badpixels( mask, detector ):
+    '''
+    Mask known bad pixel from the giveing mask
+    
+    '''
+    if detector =='eiger1m_single_image':
+        #to be determined
+        mask = mask
+    elif detector =='eiger4m_single_image' or detector == 'image':    
+        mask[513:552,:] =0 
+        mask[1064:1103,:] =0 
+        mask[1615:1654,:] =0     
+        mask[:,1029:1041] = 0     
+        mask[:, 0] =0 
+        mask[0:, 2069] =0 
+        mask[0] =0 
+        mask[2166] =0 
+
+    elif detector =='eiger500K_single_image':
+        #to be determined
+        mask = mask
+    else:
+        mask = mask        
+    return mask
+    
+    
+    
 
 
 def load_data2( uid , detector = 'eiger4m_single_image'  ):
@@ -1887,7 +1948,7 @@ def ring_edges(inner_radius, width, spacing=0, num_rings=None):
 
  
 
-def get_non_uniform_edges(  centers, width = 4, spacing=0, number_rings=3 ):
+def get_non_uniform_edges(  centers, width = 4, number_rings=1, spacing=0,  ):
     '''
     YG CHX Spe 6
     get_non_uniform_edges(  centers, width = 4, number_rings=3 )
@@ -2107,15 +2168,21 @@ def flow_para_function_with_vibration( x, beta, relaxation_rate, flow_velocity, 
     Flow_part =  np.pi**2/(16*x*flow_velocity) *  abs(  erf(  np.sqrt(   4/np.pi * 1j* x * flow_velocity ) ) )**2    
     return  beta* vibration_part* Diff_part * Flow_part + baseline
 
-def flow_para_function( x, beta, relaxation_rate, flow_velocity, baseline=1):    
+def flow_para_function( x, beta, relaxation_rate, flow_velocity, baseline=1):
+    '''flow_velocity: q.v (q vector dot v vector = q*v*cos(angle) )'''
+    
     Diff_part=    np.exp(-2 * relaxation_rate * x)
     Flow_part =  np.pi**2/(16*x*flow_velocity) *  abs(  erf(  np.sqrt(   4/np.pi * 1j* x * flow_velocity ) ) )**2    
     return  beta*Diff_part * Flow_part + baseline
 
-def get_flow_velocity( average_velocity, shape_factor):    
+def get_flow_velocity( average_velocity, shape_factor):  
+    
     return average_velocity * (1- shape_factor)/(1+  shape_factor)
 
-def stretched_flow_para_function( x, beta, relaxation_rate, alpha, flow_velocity, baseline=1):    
+def stretched_flow_para_function( x, beta, relaxation_rate, alpha, flow_velocity, baseline=1):  
+    '''
+    flow_velocity: q.v (q vector dot v vector = q*v*cos(angle) )
+    '''
     Diff_part=    np.exp(-2 *  (relaxation_rate * x)**alpha   )
     Flow_part =  np.pi**2/(16*x*flow_velocity) *  abs(  erf(  np.sqrt(   4/np.pi * 1j* x * flow_velocity ) ) )**2    
     return  beta*Diff_part * Flow_part + baseline
@@ -2289,14 +2356,20 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
             y=g2[1:, i]
             lags=taus[1:]     
         #print( _relaxation_rate )
-        if isinstance( _beta, (np.ndarray, list) ):
-             pars['beta'].value = _guess_val['beta'][i]      
-        if isinstance( _baseline, (np.ndarray, list) ):
-             pars['baseline'].value = _guess_val['baseline'][i]                
-        if isinstance( _relaxation_rate, (np.ndarray, list) ):
-             pars['relaxation_rate'].value = _guess_val['relaxation_rate'][i]               
-        if isinstance( _alpha, (np.ndarray, list) ):
-             pars['alpha'].value = _guess_val['alpha'][i] 
+        for k in list(pars.keys()):
+            #print(k, _guess_val[k]  )
+            if isinstance( _guess_val[k], (np.ndarray, list) ):
+                pars[k].value = _guess_val[k][i]  
+        
+        if False:
+            if isinstance( _beta, (np.ndarray, list) ):
+                 pars['beta'].value = _guess_val['beta'][i]      
+            if isinstance( _baseline, (np.ndarray, list) ):
+                 pars['baseline'].value = _guess_val['baseline'][i]                
+            if isinstance( _relaxation_rate, (np.ndarray, list) ):
+                 pars['relaxation_rate'].value = _guess_val['relaxation_rate'][i]               
+            if isinstance( _alpha, (np.ndarray, list) ):
+                 pars['alpha'].value = _guess_val['alpha'][i] 
                 
             #for k in list(pars.keys()):
                 #print(k, _guess_val[k]  )
@@ -2359,11 +2432,22 @@ def get_short_long_labels_from_qval_dict(qval_dict, geometry='saxs'):
         mastp= 'ang'   
     num_short = min(num_qz, num_qr)
     num_long =  max(num_qz, num_qr)
-    short_label = [qz_label,qr_label][ np.argmin( [num_qz, num_qr]    ) ]
-    long_label  = [qz_label,qr_label][ np.argmax( [num_qz, num_qr]    ) ]
-    short_ulabel = [uqz_label,uqr_label][ np.argmin( [num_qz, num_qr]    ) ]
-    long_ulabel  = [uqz_label,uqr_label][ np.argmax( [num_qz, num_qr]    ) ]
-    #print( long_ulabel )
+    
+    #print( mastp, num_short, num_long)
+    if num_qz != num_qr:
+        short_label = [qz_label,qr_label][ np.argmin( [num_qz, num_qr]    ) ]
+        long_label  = [qz_label,qr_label][ np.argmax( [num_qz, num_qr]    ) ]
+        short_ulabel = [uqz_label,uqr_label][ np.argmin( [num_qz, num_qr]    ) ]
+        long_ulabel  = [uqz_label,uqr_label][ np.argmax( [num_qz, num_qr]    ) ]
+    else:
+        short_label = qz_label
+        long_label  = qr_label
+        short_ulabel = uqz_label
+        long_ulabel  = uqr_label        
+    #print( long_ulabel )    
+    #print( qz_label,qr_label )
+    #print( short_label, long_label ) 
+        
     if geometry == 'saxs' or geometry == 'gi_waxs':
         ind_long = [ range( num_long )  ] 
     else:
@@ -2441,13 +2525,26 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
     #print( num_short, num_long )
     
     for s_ind in range( num_short  ):
+        ind_long_i = ind_long[ s_ind ]
+        num_long_i = len( ind_long_i )
+        
         if RUN_GUI:
             fig = Figure(figsize=(10, 12))            
         else:
-            #if num_long <=4:
-            #    fig = plt.figure(figsize=(8, 6))    
-            #else:
-            fig = plt.figure(figsize=(10, 12))
+            #fig = plt.figure( )
+            if num_long_i <=4:
+                if master_plot != 'qz':
+                    fig = plt.figure(figsize=(8, 6))   
+                else:
+                    fig = plt.figure(figsize=(8, 4))
+            elif num_long_i > 16:
+                num_fig = num_long_i //16
+                fig = [ plt.figure(figsize=(10, 12))  for i in range(num_fig) ]
+            else:
+                if master_plot != 'qz':
+                    fig = plt.figure(figsize=(10, 12))
+                else:
+                    fig = plt.figure(figsize=(10, 10))
         
         if master_plot == 'qz':
             if geometry=='ang_saxs':
@@ -2463,30 +2560,36 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                 title_short=''        
                 
         #filename =''
-        til = '%s:--->%s'%(filename,  title_short )         
-        plt.title( til,fontsize=20, y =1.06)  
-
-        ind_long_i = ind_long[ s_ind ]
-        num_long_i = len( ind_long_i )
+        til = '%s:--->%s'%(filename,  title_short ) 
+        if num_long_i < 4:            
+            plt.title( til,fontsize= 14, y =1.15)  
+        else:
+            plt.title( til,fontsize=20, y =1.06) 
         
         #print( num_long )
         if num_long!=1:   
             #print( 'here')
-            plt.axis('off') 
-            sy = 4
+            plt.axis('off')             
+            sy =   min(num_long_i,4)             
             #fig.set_size_inches(10, 12)
-            fig.set_size_inches(10, fig_ysize )
+            #fig.set_size_inches(10, fig_ysize )
         else: 
             sy =1
-            fig.set_size_inches(8,6)
+            #fig.set_size_inches(8,6)
             
             #plt.axis('off') 
-        sx = int( np.ceil( num_long_i/float(sy) ) )
+        sx = min(4, int( np.ceil( num_long_i/float(sy) ) ))
         #print( num_long_i, sx, sy )  
         
         #print( master_plot )
-        for i, l_ind in enumerate( ind_long_i ):            
-            ax = fig.add_subplot(sx,sy, i + 1 )        
+        for i, l_ind in enumerate( ind_long_i ):  
+            if num_long_i <= 16:
+                ax = fig.add_subplot(sx,sy, i + 1 ) 
+            else:
+                fig_subnum = l_ind//16
+                ax = fig[fig_subnum].add_subplot(sx,sy, i + 1 - fig_subnum*16) 
+                
+                  
             ax.set_ylabel( r"$%s$"%ylabel + '(' + r'$\tau$' + ')' ) 
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16)         
             if master_plot == 'qz' or master_plot == 'angle':                 
@@ -2500,7 +2603,12 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                 else:
                     title_long = ''    
 
-            ax.set_title(title_long, y =1.1, fontsize=12) 
+            if master_plot != 'qz':
+                ax.set_title(title_long + ' (%s)'%l_ind, y =1.1, fontsize=12) 
+            else:                
+                ax.set_title(title_long + ' (%s)'%l_ind, y =1.05, fontsize=12) 
+            
+            
             for ki, k in enumerate( list(g2_dict.keys()) ):                
                 if ki==0:
                     c='b'
@@ -2580,9 +2688,9 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                     flow = result1.best_values['flow_velocity']                          
 
                 if rate!=0:
-                    txts = r'$\gamma$' + r'$ = %.3f$'%(1/rate) +  r'$ s$'
+                    txts = r'$\tau_0$' + r'$ = %.3f$'%(1/rate) +  r'$ s$'
                 else:
-                    txts = r'$\gamma$' + r'$ = inf$' +  r'$ s$'
+                    txts = r'$\tau_0$' + r'$ = inf$' +  r'$ s$'
                 x=0.25
                 y0=0.9
                 fontsize = 12
@@ -2623,22 +2731,35 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                 pass
             if 'xlim' in kwargs:
                 ax.set_xlim( kwargs['xlim'])
-        if   num_short == 1:      
-            fp = path + filename      
+        if   num_short == 1: 
+            fp = path + filename 
         else:
-            fp = path + filename + '_%s_%s'%(mastp, s_ind)            
+            fp = path + filename + '_%s_%s'%(mastp, s_ind)   
+            
         if append_name is not '':
             fp = fp + append_name
         fps.append( fp  + '.png' )  
-        
-        fig.set_tight_layout(True)  
-        
-        plt.savefig( fp + '.png', dpi=fig.dpi)        
+        if num_long_i <= 16:
+            fig.set_tight_layout(True)              
+            plt.savefig( fp + '.png', dpi=fig.dpi) 
+        else:
+            fps=[]
+            for fn, f in enumerate(fig):
+                f.set_tight_layout(True)
+                fp = path + filename + '_q_%s_%s'%(fn*16, (fn+1)*16) 
+                if append_name is not '':
+                    fp = fp + append_name
+                fps.append( fp  + '.png' )  
+                f.savefig( fp + '.png', dpi=f.dpi)
+        #plt.savefig( fp + '.png', dpi=fig.dpi)        
     #combine each saved images together
-    if num_short !=1:
+    
+    if (num_short !=1) or (num_long_i > 16):
         outputfile =  path + filename + '.png'
         if append_name is not '':
-            outputfile =  path + filename  + append_name + '.png'
+            outputfile =  path + filename  + append_name + '__joint.png'
+        else:
+            outputfile =  path + filename   + '__joint.png'
         combine_images( fps, outputfile, outsize= outsize )    
     if return_fig:
         return fig   
