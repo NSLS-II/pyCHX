@@ -55,7 +55,7 @@ def get_uids_in_time_period( start_time, stop_time ):
         fuids: list, uid with full length
     
     '''
-    hdrs = db(start_time= start_time, stop_time = stop_time)
+    hdrs = list( db(start_time= start_time, stop_time = stop_time) )
     if len(hdrs)!=0:
         print ('Totally %s uids are found.'%(len(hdrs)))
     
@@ -105,7 +105,7 @@ def do_compress_on_line( start_time, stop_time, mask_dict=None, mask=None,
 
 
 def realtime_xpcs_analysis( start_time, stop_time,  run_pargs, md_update=None,
-                        wait_time = 2,  max_try_num = 3  ):
+                        wait_time = 2,  max_try_num = 3, emulation=False  ):
     '''Y.G. Mar 10, 2017
         Do on-line xpcs by giving start time and stop time
         Parameters:
@@ -117,6 +117,7 @@ def realtime_xpcs_analysis( start_time, stop_time,  run_pargs, md_update=None,
                             md['det_distance']= 16718.0
             wait_time: search interval time
             max_try_num: for each found uid, will try max_try_num*wait_time seconds
+            emulation: if True, it will only check dataset and not do real analysis
         Return:
             running time     
     '''
@@ -127,8 +128,9 @@ def realtime_xpcs_analysis( start_time, stop_time,  run_pargs, md_update=None,
     if len(fuids):
         for uid in fuids:
             print('*'*50)
-            print('Do compress for %s now...'%uid)
-            if db[uid]['start']['plan_name'] == 'count':  
+            #print('Do compress for %s now...'%uid)
+            print('Starting analysis for %s now...'%uid)
+            if db[uid]['start']['plan_name'] == 'count' or db[uid]['start']['plan_name'] == 'manual_count':  
             #if db[uid]['start']['dtype'] =='xpcs':
                 finish = wait_data_acquistion_finish( uid, wait_time,max_try_num )
                 if finish: 
@@ -136,9 +138,16 @@ def realtime_xpcs_analysis( start_time, stop_time,  run_pargs, md_update=None,
                         md = get_meta_data( uid )  
                         ##corect some metadata
                         if md_update is not None:
-                            md.update( md_update )
+                            md.update( md_update )                            
+                            #if 'username' in list(md.keys()):
+                            #try:
+                            #    md_cor['username'] = md_update['username']
+                            #except:
+                            #    md_cor = None
                         #uid = uid[:8]
-                        run_xpcs_xsvs_single( uid, run_pargs= run_pargs, md_cor = None,
+                        #print(md_cor)
+                        if not emulation:
+                            run_xpcs_xsvs_single( uid, run_pargs= run_pargs, md_cor = None,
                                              return_res= False )                        
                         #update_olog_uid( uid= md['uid'], text='Data are on-line sparsified!',attachments=None)              
                     except:
@@ -207,7 +216,8 @@ def compress_multi_uids( uids, mask, mask_dict = None, force_compress=False,  pa
 ##get_two_time_mulit_uids, sequential cal for uids, but apply parallel for each uid ##
 #################################################################################################
 
-def get_two_time_mulit_uids( uids, roi_mask,  norm= None, bin_frame_number=1, path=None, force_generate=False ): 
+def get_two_time_mulit_uids( uids, roi_mask,  norm= None, bin_frame_number=1, path=None, force_generate=False,
+                           md=None,  imgs=None,direct_load_data=False ): 
     
     ''' Calculate two time correlation by using auto_two_Arrayc func for a set of uids, 
         if the two-time resutls are already created, by default (force_generate=False), just pass
@@ -231,8 +241,11 @@ def get_two_time_mulit_uids( uids, roi_mask,  norm= None, bin_frame_number=1, pa
     qind, pixelist = roi.extract_label_indices(roi_mask)
     for uid in uids:
         print('UID: %s is in processing...'%uid)
-        md = get_meta_data( uid )        
-        imgs = load_data( uid, md['detector'], reverse= True  )
+        if not direct_load_data:
+            md = get_meta_data( uid )        
+            imgs = load_data( uid, md['detector'], reverse= True  )
+        else:
+            pass
         N = len(imgs)
         #print( N )
         if bin_frame_number==1:
@@ -333,7 +346,8 @@ def get_fra_num_by_dose( exp_dose, exp_time, att=1, dead_time =2 ):
     
 def get_series_one_time_mulit_uids( uids,  qval_dict,  trans = None, good_start=0,  path=None, 
                                 exposure_dose = None, dead_time = 0, 
-                                   num_bufs =8, save_g2=True,   ):
+                                   num_bufs =8, save_g2=True,
+                                  md = None, imgs=None, direct_load_data= False ):
     ''' Calculate a dose depedent series of one time correlations from two time 
     Parameters:
         uids: list, a list of uid
@@ -359,8 +373,11 @@ def get_series_one_time_mulit_uids( uids,  qval_dict,  trans = None, good_start=
         g2_uids = {}
         for i, uid in enumerate(uids):
             print('UID: %s is in processing...'%uid)
-            md = get_meta_data( uid )
-            imgs = load_data( uid, md['detector'], reverse= True  )
+            if not direct_load_data:
+                md = get_meta_data( uid )
+                imgs = load_data( uid, md['detector'], reverse= True  )
+            else:
+                pass
             N = len(imgs)
             if exposure_dose is None:
                 exposure_dose = [N]
@@ -470,12 +487,13 @@ def plot_dose_g2( taus_uids, g2_uids, qval_dict, qth_interest = None, ylim=[0.95
  
 
 
-def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False):
+def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=True ):
     '''Y.G. Dec 22, 2016
        Run XPCS XSVS analysis for a single uid
        Parameters:
            uid: unique id
            run_pargs: dict, control run type and setup parameters, such as q range et.al.
+           reverse:,True, revserse the image upside down
        Return:
        save analysis result to csv/png/h5 files
        return_res: if true, return a dict, containing g2,g4,g12,contrast et.al. depending on the run type
@@ -527,6 +545,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False):
     run_fit_form = run_pargs['run_fit_form']
     run_waterfall = run_pargs['run_waterfall'] 
     run_t_ROI_Inten = run_pargs['run_t_ROI_Inten'] 
+     
     #run_fit_g2 = run_pargs['run_fit_g2'], 
     fit_g2_func = run_pargs['fit_g2_func']
     run_one_time = run_pargs['run_one_time'] 
@@ -571,7 +590,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False):
     except:
         inc_x0 = None
         inc_y0=  None 
-        
+     
     #for different scattering geogmetry, we only need to change roi_mask
     #and qval_dict
     qval_dict = run_pargs['qval_dict'] 
@@ -598,7 +617,11 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False):
     pdf_version = run_pargs['pdf_version']    
     
     
-    username = getpass.getuser()
+    try:
+        username = run_pargs['username']
+    except:
+        username = getpass.getuser()
+    
     data_dir0 = os.path.join('/XF11ID/analysis/', CYCLE, username, 'Results/')
     os.makedirs(data_dir0, exist_ok=True)
     print('Results from this analysis will be stashed in the directory %s' % data_dir0)
@@ -611,7 +634,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False):
     print('Results from this analysis will be stashed in the directory %s' % data_dir)
     md = get_meta_data( uid )
     uidstr = 'uid=%s'%uid[:6]
-    imgs = load_data( uid, md['detector'], reverse= True  )
+    imgs = load_data( uid, md['detector'], reverse= reverse  )
     md.update( imgs.md )
     Nimg = len(imgs)
     if md_cor is not None:
@@ -621,8 +644,15 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False):
     if inc_x0 is not None:
         md['beam_center_x']= inc_x0
     if inc_y0 is not None:
-        md['beam_center_y']= inc_y0         
-    center = [  int(md['beam_center_y']),int( md['beam_center_x'] ) ]  #beam center [y,x] for python image
+        md['beam_center_y']= inc_y0      
+        
+    #print( run_pargs )   
+    #print( run_pargs['inc_x0'],run_pargs['inc_y0'] )
+    #print(  inc_x0, inc_y0 )
+    
+    center = [  int(md['beam_center_y']),int( md['beam_center_x'] ) ]  #beam center [y,x] for python image    
+    print( 'The beam center is: %s'%center )
+    
     pixel_mask =  1- np.int_( np.array( imgs.md['pixel_mask'], dtype= bool)  )
     print( 'The data are: %s' %imgs )
     
@@ -641,7 +671,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False):
         timeperframe=timeperframe, center=center, path= data_dir)
     #print_dict( setup_pargs )
     
-    mask = load_mask(mask_path, mask_name, plot_ =  False, image_name = uidstr + '_mask', reverse=True ) 
+    mask = load_mask(mask_path, mask_name, plot_ =  False, image_name = uidstr + '_mask', reverse=reverse ) 
     mask *= pixel_mask
     if md['detector'] =='eiger4m_single_image':
         mask[:,2069] =0 # False  #Concluded from the previous results
@@ -717,8 +747,12 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False):
             #   image_name= uidstr + '_img_avg',  save=True)  
             #np.save(  data_dir + 'uid=%s--img-avg'%uid, avg_img)
 
-            hmask = create_hot_pixel_mask( avg_img, threshold = 100, center=center, center_radius= 60)
-            qp_saxs, iq_saxs, q_saxs = get_circular_average( avg_img, mask * hmask, pargs=setup_pargs  )
+            #try:                 
+            #    hmask = create_hot_pixel_mask( avg_img, threshold = 1000, center=center, center_radius= 600)
+            #except:
+            #    hmask=1
+            hmask=1
+            qp_saxs, iq_saxs, q_saxs = get_circular_average( avg_img, mask * hmask, pargs=setup_pargs, save=True  )
         
             plot_circular_average( qp_saxs, iq_saxs, q_saxs,  pargs= setup_pargs, 
                               xlim=[q_saxs.min(), q_saxs.max()], ylim = [iq_saxs.min(), iq_saxs.max()] )
@@ -728,7 +762,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False):
             
             #pd.to_csv('/XF11ID/analysis/Commissioning/eiger4M_badpixel.csv', mode='a'  )
             
-            mask =np.array( mask * hmask, dtype=bool) 
+            #mask =np.array( mask * hmask, dtype=bool) 
             #show_img( mask )
          
             if run_fit_form:
@@ -789,7 +823,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False):
                 plot_waterfallc( wat, qindex=qth_interest, aspect=None, 
                                 vmax=  np.max(wat), uid=uidstr, save =True, 
                                 path=data_dir, beg= FD.beg)
-        ring_avg = None    
+        ring_avg = None  
+        
         if run_t_ROI_Inten:
             times_roi, mean_int_sets = cal_each_ring_mean_intensityc(FD, roi_mask, timeperframe = None,  ) 
             plot_each_ring_mean_intensityc( times_roi, mean_int_sets,  uid = uidstr, save=True, path=data_dir )
