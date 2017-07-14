@@ -357,7 +357,7 @@ def get_circular_average( avg_img, mask, pargs, show_pixel=True,  min_x=None, ma
 
  
  
-def plot_circular_average( qp, iq, q,  pargs, show_pixel= False, 
+def plot_circular_average( qp, iq, q,  pargs, show_pixel= False, loglog=False, 
                           save=True,return_fig=False, *argv,**kwargs):
     
     if RUN_GUI:
@@ -369,12 +369,18 @@ def plot_circular_average( qp, iq, q,  pargs, show_pixel= False,
     uid = pargs['uid']
 
     if  show_pixel:  
-        ax1.semilogy(qp, iq, '-o')
+        if loglog:
+            ax1.loglog(qp, iq, '-o')
+        else:    
+            ax1.semilogy(qp, iq, '-o')
         ax1.set_xlabel('q (pixel)')  
         ax1.set_ylabel('I(q)')
         title = ax1.set_title('%s_Circular Average'%uid)  
     else:
-        ax1.semilogy(q,  iq , '-o') 
+        if loglog:
+            ax1.loglog(qp, iq, '-o')
+        else:            
+            ax1.semilogy(q,  iq , '-o') 
         ax1.set_xlabel('q ('r'$\AA^{-1}$)')        
         ax1.set_ylabel('I(q)')
         title = ax1.set_title('%s_Circular Average'%uid)     
