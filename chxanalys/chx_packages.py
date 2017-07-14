@@ -23,7 +23,7 @@ create_hot_pixel_mask,show_ROI_on_image,create_time_slice,save_lists,
                         update_qval_dict,  update_roi_mask,     combine_images,   create_rectangle_mask, create_cross_mask,  create_polygon_mask, check_lost_metadata, 
         get_fra_num_by_dose,  get_multi_tau_lag_steps, get_series_g2_taus, create_user_folder,
               get_current_pipeline_filename, get_current_pipeline_fullpath,save_current_pipeline,
-                                             filter_roi_mask
+                                             filter_roi_mask, mask_badpixels
                                             
                                             )
 
