@@ -838,7 +838,7 @@ def plot_qr_1d_with_ROI( qr_1d, qr_center,  loglog=False, save=True, uid='uid', 
     fig, ax = plt.subplots()
     Ncol = len( qr_1d.columns )
     Nqr = Ncol%2
-    qz_center = qr_1d.columns[1::2]
+    qz_center = qr_1d.columns[1::1]#qr_1d.columns[1::2]
     Nqz = len(qz_center)              
     for i,qzc_ in enumerate(qz_center):        
         x= qr_1d[  qr_1d.columns[0]   ]
