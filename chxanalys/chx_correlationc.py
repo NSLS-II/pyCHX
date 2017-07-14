@@ -920,9 +920,9 @@ def get_pixelist_interp_iq( qp, iq, ring_mask, center):
     r= np.hypot(pixelx, pixely)              #leave as float.
     #r= np.int_( np.hypot(pixelx, pixely)  +0.5  ) + 0.5  
     return np.interp( r, qp, iq ) 
+ 
     
-
-class Get_Pixel_Arrayc(object):
+class Get_Pixel_Arrayc_todo(object):
     '''
     a class to get intested pixels from a images sequence, 
     load ROI of all images into memory 
@@ -932,10 +932,17 @@ class Get_Pixel_Arrayc(object):
         data_pixel =   Get_Pixel_Array( imgsr, pixelist).get_data()
     '''
     
-    def __init__(self, FD, pixelist,beg=None, end=None, norm=None):
+    def __init__(self, FD, pixelist,beg=None, end=None, norm=None, imgsum = None,
+                norm_inten = False, qind=None):
         '''
         indexable: a images sequences
         pixelist:  1-D array, interest pixel list
+        norm:   each q-ROI of each frame is normalized by the corresponding q-ROI of time averaged intensity
+        imgsum: each q-ROI of each frame is normalized by the total intensity of the corresponding frame, should have the same time sequences as FD, e.g., imgsum[10] corresponding to FD[10]
+        norm_inten: if True, each q-ROI of each frame is normlized by total intensity of the correponding q-ROI of the corresponding frame
+        qind: the index of each ROI in one frame, i.e., q
+        if norm_inten is True: qind has to be given
+                
         '''
         if beg is None:
             self.beg = FD.beg
@@ -951,28 +958,181 @@ class Get_Pixel_Arrayc(object):
         self.FD = FD
         self.pixelist = pixelist        
         self.norm = norm    
-        
+        self.imgsum = imgsum
+        self.norm_inten= norm_inten
+        self.qind = qind
+        if self.norm_inten:
+            if self.qind is None:
+                print('Please give qind.')
+                
     def get_data(self ): 
         '''
         To get intested pixels array
         Return: 2-D array, shape as (len(images), len(pixellist))
         '''
-        norm = self.norm
-        data_array = np.zeros([ self.length,len(self.pixelist)])        
+        
+        data_array = np.zeros([ self.length,len(self.pixelist)], dtype=np.float)        
         #fra_pix = np.zeros_like( pixelist, dtype=np.float64)
         timg = np.zeros(    self.FD.md['ncols'] * self.FD.md['nrows']   , dtype=np.int32   ) 
         timg[self.pixelist] =   np.arange( 1, len(self.pixelist) + 1  ) 
-        n=0
+        
+        if self.norm_inten:
+            #Mean_Int_Qind = np.array( self.qind.copy(), dtype=np.float)
+            Mean_Int_Qind = np.ones( len( self.qind),  dtype = np.float)
+            noqs = len(np.unique( self.qind ))
+            nopr = np.bincount(self.qind-1)
+            noprs = np.concatenate( [ np.array([0]), np.cumsum(nopr) ] )
+            qind_ = np.zeros_like( self.qind )
+            for j in range(noqs):
+                qind_[ noprs[j]: noprs[j+1] ]   = np.where(self.qind==j+1)[0]   
+                
+        n=0    
         for  i in tqdm(range( self.beg , self.end )):
             (p,v) = self.FD.rdrawframe(i)
             w = np.where( timg[p] )[0]
-            pxlist = timg[  p[w]   ] -1 
-            #fra_pix[ pxlist] = v[w] 
-            if norm is None:
-                data_array[n][ pxlist] = v[w] 
-            else: 
-                data_array[n][ pxlist] = v[w] / norm[pxlist]   #-1.0                    
-            n += 1
+            pxlist = timg[  p[w]   ] -1
+            #np.bincount( qind[pxlist], weight=
+            
+            
+            if self.mean_int_sets is not None:#for normalization of each averaged ROI of each frame
+                for j in range(noqs):
+                    #if i ==100:
+                    #    if j==0:
+                    #        print( self.mean_int_sets[i][j] )                        
+                    #        print( qind_[ noprs[j]: noprs[j+1] ] )
+                    Mean_Int_Qind[ qind_[ noprs[j]: noprs[j+1] ]  ] = self.mean_int_sets[i][j]        
+                norm_Mean_Int_Qind =  Mean_Int_Qind[pxlist] #self.mean_int_set or Mean_Int_Qind[pxlist]
+                
+                #if i==100:
+                #    print( i, Mean_Int_Qind[ self.qind== 11    ])
+
+                #print('Do norm_mean_int here')
+                #if i ==10:
+                #    print( norm_Mean_Int_Qind )
+            else:
+                norm_Mean_Int_Qind =  1.0       
+            if  self.imgsum is not None:   
+                norm_imgsum = self.imgsum[i] 
+            else:
+                norm_imgsum = 1.0            
+            if self.norm is not None:
+                norm_avgimg_roi = self.norm[pxlist] 
+            else:
+                norm_avgimg_roi = 1.0 
+                
+            norms  = norm_Mean_Int_Qind * norm_imgsum * norm_avgimg_roi 
+            #if i==100:
+            #    print(norm_Mean_Int_Qind[:100])
+            data_array[n][ pxlist] = v[w]/ norms 
+            n +=1
+            
+        return data_array  
+
+    
+    
+    
+    
+class Get_Pixel_Arrayc(object):
+    '''
+    a class to get intested pixels from a images sequence, 
+    load ROI of all images into memory 
+    get_data: to get a 2-D array, shape as (len(images), len(pixellist))
+    
+    One example:        
+        data_pixel =   Get_Pixel_Array( imgsr, pixelist).get_data()
+    '''
+    
+    def __init__(self, FD, pixelist,beg=None, end=None, norm=None, imgsum = None,
+                mean_int_sets = None, qind=None):
+        '''
+        indexable: a images sequences
+        pixelist:  1-D array, interest pixel list
+        norm:   each q-ROI of each frame is normalized by the corresponding q-ROI of time averaged intensity
+        imgsum: each q-ROI of each frame is normalized by the total intensity of the corresponding frame, should have the same time sequences as FD, e.g., imgsum[10] corresponding to FD[10]
+        mean_int_sets: each q-ROI of each frame is normlized by total intensity of the correponding q-ROI of the corresponding frame
+        qind: the index of each ROI in one frame, i.e., q
+        if mean_int_sets is not None: qind has to be not None        
+                
+        '''
+        if beg is None:
+            self.beg = FD.beg
+        if end is None:
+            self.end = FD.end
+        #if self.beg ==0:
+        #    self.length = self.end - self.beg
+        #else:
+        #    self.length = self.end - self.beg + 1
+            
+        self.length = self.end - self.beg    
+            
+        self.FD = FD
+        self.pixelist = pixelist        
+        self.norm = norm    
+        self.imgsum = imgsum
+        self.mean_int_sets= mean_int_sets
+        self.qind = qind
+        if self.mean_int_sets is not None:
+            if self.qind is None:
+                print('Please give qind.')
+                
+    def get_data(self ): 
+        '''
+        To get intested pixels array
+        Return: 2-D array, shape as (len(images), len(pixellist))
+        '''
+        
+        data_array = np.zeros([ self.length,len(self.pixelist)], dtype=np.float)        
+        #fra_pix = np.zeros_like( pixelist, dtype=np.float64)
+        timg = np.zeros(    self.FD.md['ncols'] * self.FD.md['nrows']   , dtype=np.int32   ) 
+        timg[self.pixelist] =   np.arange( 1, len(self.pixelist) + 1  ) 
+        
+        if self.mean_int_sets is not None:
+            #Mean_Int_Qind = np.array( self.qind.copy(), dtype=np.float)
+            Mean_Int_Qind = np.ones( len( self.qind),  dtype = np.float)
+            noqs = len(np.unique( self.qind ))
+            nopr = np.bincount(self.qind-1)
+            noprs = np.concatenate( [ np.array([0]), np.cumsum(nopr) ] )
+            qind_ = np.zeros_like( self.qind )
+            for j in range(noqs):
+                qind_[ noprs[j]: noprs[j+1] ]   = np.where(self.qind==j+1)[0]   
+                
+        n=0    
+        for  i in tqdm(range( self.beg , self.end )):
+            (p,v) = self.FD.rdrawframe(i)
+            w = np.where( timg[p] )[0]
+            pxlist = timg[  p[w]   ] -1
+            
+            if self.mean_int_sets is not None:#for normalization of each averaged ROI of each frame
+                for j in range(noqs):
+                    #if i ==100:
+                    #    if j==0:
+                    #        print( self.mean_int_sets[i][j] )                        
+                    #        print( qind_[ noprs[j]: noprs[j+1] ] )
+                    Mean_Int_Qind[ qind_[ noprs[j]: noprs[j+1] ]  ] = self.mean_int_sets[i][j]        
+                norm_Mean_Int_Qind =  Mean_Int_Qind[pxlist] #self.mean_int_set or Mean_Int_Qind[pxlist]
+                
+                #if i==100:
+                #    print( i, Mean_Int_Qind[ self.qind== 11    ])
+
+                #print('Do norm_mean_int here')
+                #if i ==10:
+                #    print( norm_Mean_Int_Qind )
+            else:
+                norm_Mean_Int_Qind =  1.0       
+            if  self.imgsum is not None:   
+                norm_imgsum = self.imgsum[i] 
+            else:
+                norm_imgsum = 1.0            
+            if self.norm is not None:
+                norm_avgimg_roi = self.norm[pxlist] 
+            else:
+                norm_avgimg_roi = 1.0 
+                
+            norms  = norm_Mean_Int_Qind * norm_imgsum * norm_avgimg_roi 
+            #if i==100:
+            #    print(norm_Mean_Int_Qind[:100])
+            data_array[n][ pxlist] = v[w]/ norms 
+            n +=1
             
         return data_array  
 
@@ -1042,4 +1202,28 @@ def auto_two_Arrayc(  data_pixel, rois, index=None):
 
         
 
+def check_normalization( frame_num, q_list, imgsa, data_pixel ):
+    '''check the ROI intensity before and after normalization
+    Input:
+        frame_num: integer, the number of frame to be checked
+        q_list: list of integer, the list of q to be checked
+        imgsa: the raw data
+        data_pixel: the normalized data, caculated by fucntion  Get_Pixel_Arrayc
+    Plot the intensities    
+    '''
+    fig,ax=plt.subplots(2)
+    n=0
+    for q in q_list:
+        norm_data = data_pixel[frame_num][qind==q]
+        raw_data = np.ravel( np.array(imgsa[frame_num]) )[pixelist[qind==q]]
+        #print(raw_data.mean())
+        plot1D( raw_data,ax=ax[0], legend='q=%s'%(q), m=markers[n],
+               title='fra=%s_raw_data'%(frame_num))
+        
+        #plot1D( raw_data/mean_int_sets_[frame_num][q-1], ax=ax[1], legend='q=%s'%(q), m=markers[n],
+        #       xlabel='pixel',title='fra=%s_norm_data'%(frame_num))
+        #print( mean_int_sets_[frame_num][q-1] )
+        plot1D( norm_data, ax=ax[1], legend='q=%s'%(q), m=markers[n],
+               xlabel='pixel',title='fra=%s_norm_data'%(frame_num))
+        n +=1
 
