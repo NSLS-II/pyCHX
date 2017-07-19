@@ -323,21 +323,29 @@ class create_pdf_report( object ):
                        'frame_time','detector_distance', 'feedback_x', 'feedback_y', 'shutter mode',
                     'beam_center_x', 'beam_center_y', 'beam_refl_center_x', 'beam_refl_center_y','mask_file','bad_frame_list', 'transmission']
         for key in nec_keys:
-            check_dict_keys(md, key) 
-        
-        try:            
-            exposuretime= md['cam_acquire_t']     #exposure time in sec
+            check_dict_keys(md, key)
+            
+        try:#try exp time from detector
+            exposuretime= md['count_time']     #exposure time in sec        
         except:    
-            exposuretime= md['count_time']     #exposure time in sec
-        if exposuretime == 'unknown':
-            exposuretime= md['count_time']     #exposure time in sec  
+            exposuretime= md['cam_acquire_time']     #exposure time in sec
+            
+        try:#try acq time from detector
+            acquisition_period = md['frame_time']  
+        except:
+            try:
+                acquisition_period = md['acquire period']
+            except: 
+                uid = md['uid']
+                acquisition_period = float( db[uid]['start']['acquire period'] )
+ 
                     
         s = []
         s.append( 'UID: %s'%uid ) ###line 1, for uid
         s.append('Sample: %s'%md['sample'] )   ####line 2 sample   
         s.append('Data Acquisition From: %s To: %s'%(md['start_time'], md['stop_time']))####line 3 Data Acquisition time
         s.append(    'Measurement: %s'%md['Measurement']  ) ####line 4 'Measurement
-        s.append( 'Wavelength: %s A | Num of Image: %d | Exposure time: %s ms | Acquire period: %s ms'%( md['incident_wavelength'],  int(md['number of images']),round(float(exposuretime)*1000,4), round(float(md['frame_time'])*1000,4) ) )   ####line 5 'lamda...        
+        s.append( 'Wavelength: %s A | Num of Image: %d | Exposure time: %s ms | Acquire period: %s ms'%( md['incident_wavelength'],  int(md['number of images']),round(float(exposuretime)*1000,4), round(float( acquisition_period  )*1000,4) ) )   ####line 5 'lamda...        
         s.append( 'Detector-Sample Distance: %s m| FeedBack Mode: x -> %s & y -> %s| Shutter Mode: %s'%(
                 md['detector_distance'], md['feedback_x'], md['feedback_y'], md['shutter mode']  ) )  ####line 6 'Detector-Sample Distance..
         if self.report_type == 'saxs':
@@ -635,7 +643,7 @@ class create_pdf_report( object ):
             str1_left, str1_top,str1= 450, top + 180,  'q-rate fit  plot' 
             
         if self.g2_fit_new_page or self.g2_new_page:
-            top = top + 200
+            top = top - 200   
             img_height= 180     
             img_left,img_top = 350, top
             str2_left, str2_top = 380, top - 5
@@ -836,8 +844,8 @@ class create_pdf_report( object ):
         str2_left, str2_top = 180, top - 10
         
         if self.dose_file_new_page:
-            img_left,img_top = 180, top
-        
+            #img_left,img_top = 180, top
+            img_left,img_top = 100, top
         
         add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
