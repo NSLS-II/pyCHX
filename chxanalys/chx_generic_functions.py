@@ -3,6 +3,71 @@ from chxanalys.chx_libs import *
 from chxanalys.chx_libs import  ( colors,  markers )
 from scipy.special import erf
 
+
+
+
+
+
+
+def get_today_date( ):
+    from time import gmtime, strftime
+    return strftime("%m-%d-%Y", gmtime() )
+
+
+def move_beamstop( mask, xshift, yshift ):
+    '''Y.G. Developed at July 18, 2017 @CHX
+    Create new mask by shift the old one with xshift, yshift
+    Input
+    ---
+    mask: 2D numpy array, 0 for bad pixels, 1 for good pixels
+    xshift, integer, shift value along x direction
+    yshift, integer, shift value along y direction
+    
+    Output
+    ---
+    mask, 2D numpy array,
+    '''
+    m = np.ones_like(mask)
+    W,H = mask.shape
+    w = np.where(mask==0)
+    nx, ny = w[0]+ int(yshift), w[1]+ int(xshift    )
+    gw = np.where( (nx >= 0) & (nx<W) & (ny >= 0) & (ny<H) )
+    nx = nx[  gw  ]
+    ny = ny[  gw  ] 
+    m[ nx,ny ] = 0
+    return m
+
+
+
+def validate_uid(uid):
+    '''check uid whether be able to load data'''
+    try:
+        sud = get_sid_filenames(db[uid])
+        print(sud)
+        md = get_meta_data( uid )
+        imgs = load_data( uid, md['detector'], reverse= True  )
+        print(imgs)
+        return 1
+    except:
+        print("Can't load this uid=%s!"%uid)
+        return 0
+
+def validate_uid_dict(  uid_dict  ):
+    ''' Y.G. developed July 17, 2017 @CHX
+    Check each uid in a dict can load data or not
+    uids: dict, val: meaningful decription, key: a list of uids 
+ 
+    ''' 
+    badn = 0
+    badlist=[]
+    for k in list(uids.keys()):
+        for uid in uids[k]:  
+            flag = validate_uid(uid)
+            if not flag:
+                badn += 1
+                badlist.append( uid )
+    print( 'There are %s bad uids:%s in this uid_dict.'%(badn, badlist))
+
 def get_mass_center_one_roi(FD, roi_mask, roi_ind):
     '''Get the mass center (in pixel unit) of one roi in a time series FD
     FD: handler for a compressed time series
@@ -307,23 +372,25 @@ def check_lost_metadata(md, Nimg=None, inc_x0 =None, inc_y0= None, pixelsize=7.5
             md['detector_distance'] = Ldet        
 
     
-    try:
-        exposuretime= md['cam_acquire_time']     #exposure time in sec
+    try:#try exp time from detector
+        exposuretime= md['count_time']     #exposure time in sec        
     except:    
-        exposuretime= md['count_time']     #exposure time in sec
-    try:
-        uid = md['uid']
-        acquisition_period = float( db[uid]['start']['acquire period'] )
-    except:  
+        exposuretime= md['cam_acquire_time']     #exposure time in sec
+    try:#try acq time from detector
+        acquisition_period = md['frame_time']  
+    except:
         try:
             acquisition_period = md['acquire period']
-        except:    
-            acquisition_period = md['frame_time']  
+        except: 
+            uid = md['uid']
+            acquisition_period = float( db[uid]['start']['acquire period'] )
     timeperframe = acquisition_period 
     if inc_x0 is not None:
         md['beam_center_x']= inc_y0
+        print( 'The metadata: beam_center_x has been changed to %s.'%inc_y0)
     if inc_y0 is not None:
         md['beam_center_y']= inc_x0         
+        print( 'The metadata: beam_center_y has been changed to %s.'%inc_x0)
     center = [  int(md['beam_center_x']),int( md['beam_center_y'] ) ]  #beam center [y,x] for python image
     center=[center[1], center[0]]
     
@@ -761,6 +828,71 @@ def create_rectangle_mask(  image, xcorners, ycorners   ):
     return bst_mask
        
     
+def create_multi_rotated_rectangle_mask(  image, center=None, length=100, width=50, angles=[0] ):
+    ''' Developed at July 10, 2017 by Y.G.@CHX, NSLS2
+     Create multi rectangle-shaped mask by rotating a rectangle with a list of angles
+     The original rectangle is defined by four corners, i.e.,  
+         [   (center[1] - width//2, center[0]),
+             (center[1] + width//2, center[0]), 
+             (center[1] + width//2, center[0] + length),
+             (center[1] - width//2, center[0] + length)
+          ]
+     
+     Parameters:
+         image: 2D numpy array, to give mask shape 
+         center: integer list, if None, will be the center of the image
+         length: integer, the length of the non-ratoted rectangle 
+         width: integer,  the width of the non-ratoted rectangle 
+         angles: integer list, a list of rotated angles
+
+    Return:
+        mask: 2D bool-type numpy array
+    '''
+    
+    from skimage.draw import  polygon
+    from skimage.transform import rotate 
+    cx,cy = center
+    imy, imx = image.shape   
+    mask = np.zeros( image.shape, dtype = bool) 
+    wy =  length
+    wx =   width
+    x = np.array( [ max(0, cx - wx//2), min(imx, cx+wx//2), min(imx, cx+wx//2), max(0,cx-wx//2 ) ])  
+    y = np.array( [ cy, cy, min( imy, cy + wy) , min(imy, cy + wy) ])
+    rr, cc = polygon( y,x)
+    mask[rr,cc] =1
+    mask_rot=  np.zeros( image.shape, dtype = bool) 
+    for angle in angles:
+        mask_rot +=  np.array( rotate( mask, angle, center= center ), dtype=bool) #, preserve_range=True)        
+    return  ~mask_rot
+    
+def create_wedge(  image, center, radius, wcors,  acute_angle=True) :
+    '''YG develop at June 18, 2017, @CHX
+        Create a wedge by a combination of circle and a triangle defined by center and wcors
+        wcors: [ [x1,x2,x3...], [y1,y2,y3..]
+    
+    '''
+    from skimage.draw import line_aa, line, polygon, circle
+    imy, imx = image.shape   
+    cy,cx = center
+    x  = [cx] + list(wcors[0])
+    y =  [cy] + list(wcors[1])
+    
+    maskc = np.zeros_like( image , dtype = bool) 
+    rr, cc = circle( cy, cx, radius, shape = image.shape)
+    maskc[rr,cc] =1  
+    
+    maskp = np.zeros_like( image , dtype = bool)
+    x = np.array( x )  
+    y = np.array( y ) 
+    print(x,y)
+    rr, cc = polygon( y,x)
+    maskp[rr,cc] =1
+    if acute_angle:
+        return maskc*maskp
+    else:
+        return maskc*~maskp
+        
+                
 
 def create_cross_mask(  image, center, wy_left=4, wy_right=4, wx_up=4, wx_down=4,
                      center_circle = True, center_radius=10
@@ -813,8 +945,9 @@ def create_cross_mask(  image, center, wy_left=4, wy_right=4, wx_up=4, wx_down=4
     rr, cc = polygon( y,x)
     bst_mask[rr,cc] =1   
     
-    rr, cc = circle( cy, cx, center_radius, shape = bst_mask.shape)
-    bst_mask[rr,cc] =1   
+    if center_radius!=0:
+        rr, cc = circle( cy, cx, center_radius, shape = bst_mask.shape)
+        bst_mask[rr,cc] =1   
     
     
     full_mask= ~bst_mask
@@ -2834,8 +2967,9 @@ def get_q_rate_fit_general( qval_dict, rate, geometry ='saxs', weights=None, *ar
     return D0, qrate_fit_res
 
 
-def plot_q_rate_fit_general( qval_dict, rate, qrate_fit_res, geometry ='saxs',  ylim = None,
+def plot_q_rate_fit_general( qval_dict, rate, qrate_fit_res, geometry ='saxs',  ylim = None, 
                             plot_all_range=True, plot_index_range = None, show_text=True,return_fig=False,
+                            show_fit=True,
                             *argv,**kwargs): 
     '''
     Dec 26,2016, Y.G.@CHX
@@ -2853,6 +2987,7 @@ def plot_q_rate_fit_general( qval_dict, rate, qrate_fit_res, geometry ='saxs',  
     Option:
     if power_variable = False, power =2 to fit q^2~rate, 
                 Otherwise, power is variable.
+    show_fit:, bool, if False, not show the fit
     
     ''' 
     
@@ -2878,7 +3013,7 @@ def plot_q_rate_fit_general( qval_dict, rate, qrate_fit_res, geometry ='saxs',  
     else:
         ls=''    
     for i  in range(Nqz):
-        ind_long_i = ind_long[ i ]
+        ind_long_i = ind_long[ i ]        
         y = np.array( rate  )[ind_long_i]        
         x =   long_label[ind_long_i]
         D0  = qrate_fit_res[i].best_values['D0']         
@@ -2889,14 +3024,17 @@ def plot_q_rate_fit_general( qval_dict, rate, qrate_fit_res, geometry ='saxs',  
             label=''
         ax.plot(x**power,  y, marker = 'o', ls =ls, label=label)
         yfit = qrate_fit_res[i].best_fit
-        if plot_all_range:
-            ax.plot(x**power, x**power*D0,  '-r') 
-        else:        
-            ax.plot( (x**power)[:len(yfit) ], yfit,  '-r')  
-        if show_text:
-            txts = r'$D0: %.3e$'%D0 + r' $A^2$' + r'$s^{-1}$'
-            dy=0.1
-            ax.text(x =0.15, y=.65 -dy *i, s=txts, fontsize=14, transform=ax.transAxes) 
+
+        if show_fit:  
+            if plot_all_range:
+                ax.plot(x**power, x**power*D0,  '-r') 
+            else:        
+                ax.plot( (x**power)[:len(yfit) ], yfit,  '-r')  
+            
+            if show_text:
+                txts = r'$D0: %.3e$'%D0 + r' $A^2$' + r'$s^{-1}$'
+                dy=0.1
+                ax.text(x =0.15, y=.65 -dy *i, s=txts, fontsize=14, transform=ax.transAxes) 
         if Nqz!=1:legend = ax.legend(loc='best')
 
     if plot_index_range is not None:
