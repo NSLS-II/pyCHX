@@ -3,6 +3,32 @@ from pyOlog import SimpleOlogClient
 from pyOlog.OlogDataTypes import  Logbook
 
 
+
+def update_olog_uid_with_file( uid, text, filename, append_name='_r'):
+    '''YG developed at July 18, 2017, attached text and file (with filename) to CHX olog 
+            with entry defined by uid
+       uid: string of unique id
+       text: string, put into olog book
+       filename: string, 
+       First try to attach olog with the file, if there is already a same file in attached file, 
+       copy the file with different filename (append append_name), and then attach to olog 
+            
+    '''
+    
+    atch=[  Attachment(open(filename, 'rb')) ] 
+    try:
+        update_olog_uid( uid= uid, text= text, attachments= atch )
+    except:
+        from shutil import copyfile
+        npname = filename[:-4] + append_name + '.pdf'
+        copyfile( filename, npname )
+        atch=[  Attachment(open(npname, 'rb')) ] 
+        print("Append %s to the filename."%append_name)
+        update_olog_uid( uid= uid, text= text, attachments= atch )
+    
+    
+    
+    
 def update_olog_id( logid, text, attachments):   
     '''Update olog book  logid entry with text and attachments files
     logid: integer, the log entry id
@@ -50,5 +76,10 @@ def update_olog_uid( uid, text, attachments):
                                     username= 'xf11id', password= '***REMOVED***' )
     
     logid = olog_client.find( search= uid )[0]['id']
+    #print(attachments)
     update_olog_id( logid, text, attachments)    
+    
+    
+    
+    
     
