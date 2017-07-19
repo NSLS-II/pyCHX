@@ -23,6 +23,43 @@ from chxanalys.chx_correlationp import ( cal_g2p)
 from pandas import DataFrame 
 import os
 
+def recover_img_from_iq(  qp, iq, center, mask):
+    '''YG. develop at CHX, 2017 July 18,
+    Recover image a circular average
+    '''        
+    norm = get_pixelist_interp_iq( qp,  iq, np.ones_like(mask), center)
+    img_ = norm.reshape( mask.shape)*mask
+    return img_
+
+def get_cirucular_average_std(  img, mask, setup_pargs, img_name='xx'  ):
+    '''YG. develop at CHX, 2017 July 18,
+    Get the standard devation of tge circular average of img
+    image-->I(q)-->image_mean--> (image- image_mean)**2 --> I(q) --> std = sqrt(I(q))
+    '''
+    qp, iq, q = get_circular_average( img, mask , pargs=setup_pargs, save= False  )
+    center = setup_pargs['center']
+    img_ = ( img - recover_img_from_iq(  qp, iq, center, mask) )**2
+    qp_, iq_, q_ = get_circular_average( img_, mask , pargs=setup_pargs,save= False  )
+    std = np.sqrt(iq_)  
+    return qp, iq, q,std
+
+
+
+    
+def get_delta_img(  img, mask, setup_pargs, img_name='xx', plot=False ):
+    '''YG. develop at CHX, 2017 July 18,
+    Get the difference between img and image recovered from the circular average of img'''
+    qp, iq, q = get_circular_average( img, mask , pargs=setup_pargs,save= False  )
+    center = setup_pargs['center']
+    img_ = recover_img_from_iq(  qp, iq, center, mask) 
+    delta =  img -  img_ * img.mean()/ img_.mean()
+    if plot:
+        show_img( delta, logs=True, aspect= 1,
+         cmap= cmap_albula, vmin=1e-5, vmax=10**1, image_name= img_name)    
+    return delta
+        
+    
+    
     
 def combine_ring_anglar_mask(ring_mask, ang_mask   ):
     '''combine ring and anglar mask  '''
