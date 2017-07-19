@@ -127,7 +127,8 @@ def get_qr( data, Qr, Qz, qr, qz,  mask = None   ):
 
 def cal_1d_qr(  data, Qr,Qz, qr, qz, inc_x0=None,  mask=None, path=None, uid=None, setup_pargs=None, save = True,
              print_save_message=True): 
-    '''Dec 16, 2016, Y.G.@CHX
+    ''' Revised at July 18, 2017 by YG, to correct a divide by zero bug
+        Dec 16, 2016, Y.G.@CHX
        calculate one-d of I(q) as a function of qr for different qz
        data: a dataframe
        Qr: info for qr, = qr_start , qr_end, qr_width, qr_num, the purpose of Qr is only for the defination of qr range (qr number does not matter)
@@ -139,10 +140,7 @@ def cal_1d_qr(  data, Qr,Qz, qr, qz, inc_x0=None,  mask=None, path=None, uid=Non
        setup_pargs: gives path, filename...
        
        Return: qr_1d, a dataframe, with columns as qr1, qz1 (float value), qz2,....                       
-               Plot 1D cureve as a function of Qr for each Qz  
-               
-               
-               
+               Plot 1D cureve as a function of Qr for each Qz               
                
     Examples:
         #to make two-qz, from 0.018 to 0.046, width as 0.008,
@@ -170,14 +168,13 @@ def cal_1d_qr(  data, Qr,Qz, qr, qz, inc_x0=None,  mask=None, path=None, uid=Non
     '''          
     qr_start , qr_end, qr_width, qr_num =Qr
     qz_start,   qz_end,  qz_width , qz_num =Qz
-    qr_edge, qr_center = get_qedge(qr_start , qr_end, qr_width, qr_num )    
-    qz_edge, qz_center = get_qedge( qz_start,   qz_end,  qz_width , qz_num ) 
+    qr_edge, qr_center = get_qedge(qr_start , qr_end, qr_width, qr_num,verbose=False )    
+    qz_edge, qz_center = get_qedge( qz_start,   qz_end,  qz_width , qz_num,verbose=False ) 
      
     #print ('The qr_edge is:  %s\nThe qr_center is:  %s'%(qr_edge, qr_center))
     #print ('The qz_edge is:  %s\nThe qz_center is:  %s'%(qz_edge, qz_center))    
     
     label_array_qr = get_qmap_label( qr, qr_edge)
-
     #qr_1d ={}
     columns=[]
     for i,qzc_ in enumerate(qz_center):        
@@ -189,10 +186,16 @@ def cal_1d_qr(  data, Qr,Qz, qr, qz, inc_x0=None,  mask=None, path=None, uid=Non
         if mask is not None:
             label_array_qzr *=   mask
         roi_pixel_num = np.sum( label_array_qzr, axis=0)
+        #print( label_array_qzr )
         qr_ = qr  *label_array_qzr
         data_ = data*label_array_qzr    
-        qr_ave = np.sum( qr_, axis=0)/roi_pixel_num
-        data_ave = np.sum( data_, axis=0)/roi_pixel_num 
+        
+        w = np.where(roi_pixel_num)          
+        qr_ave = np.zeros_like(  roi_pixel_num, dtype= float )[w]
+        data_ave = np.zeros_like(  roi_pixel_num, dtype= float )[w]
+        
+        qr_ave = (np.sum( qr_, axis=0))[w]/roi_pixel_num[w]
+        data_ave = (np.sum( data_, axis=0))[w]/roi_pixel_num[w] 
         qr_ave, data_ave =   zip(* sorted(  zip( * [ qr_ave[~np.isnan(qr_ave)] ,   data_ave[~np.isnan( data_ave)] ]) ) )          
         if i==0:
             N_interp = len( qr_ave  ) 
@@ -246,7 +249,8 @@ def get_t_qrc( FD, frame_edge, Qr, Qz, qr, qz, mask=None, path=None, uid=None, s
     Nt = len( frame_edge )
     iqs = list( np.zeros( Nt ) )
     qz_start,   qz_end,  qz_width , qz_num =Qz
-    qz_edge, qz_center = get_qedge( qz_start,   qz_end,  qz_width , qz_num ) 
+    qz_edge, qz_center = get_qedge( qz_start,   qz_end,  qz_width , qz_num, verbose=False ) 
+    #print('here')
     #qr_1d = np.zeros(   )
     
     if uid is None:
@@ -256,7 +260,7 @@ def get_t_qrc( FD, frame_edge, Qr, Qz, qr, qz, mask=None, path=None, uid=None, s
         t1,t2 = frame_edge[i]       
         avg_imgx = get_avg_imgc( FD, beg=t1,end=t2, sampling = 1, plot_ = False ) 
         
-        qrti = cal_1d_qr( avg_imgx, Qr, Qz, qr, qz, mask = mask, save=False)  
+        qrti = cal_1d_qr( avg_imgx, Qr, Qz, qr, qz, mask = mask, save=False )  
         if i == 0:
             qrt_pds = np.zeros(  [len(qrti), 1 + Nt * qz_num ] )
             columns = np.zeros(    1 + Nt * qz_num, dtype=object   )
@@ -497,31 +501,29 @@ def convert_gisaxs_pixel_to_q( inc_x0, inc_y0, refl_x0, refl_y0,
         
     
 
-    
-    
-
-def get_qedge( qstart,qend,qwidth,noqs ):
-    ''' Dec 16, 2015, Y.G.@CHX
-    DOCUMENT make_qlist( )
+def get_qedge( qstart,qend,qwidth,noqs,verbose=True ):
+    ''' July 18, 2017 Revised by Y.G.@CHX,
+    Add print info for noqs=1
+    Dec 16, 2015, Y.G.@CHX
+    DOCUMENT get_qedge( )
     give qstart,qend,qwidth,noqs
     return a qedge by giving the noqs, qstart,qend,qwidth.
            a qcenter, which is center of each qedge 
     KEYWORD:  None    ''' 
     import numpy as np 
-
     if noqs!=1:
         spacing =  (qend - qstart - noqs* qwidth )/(noqs-1)      # spacing between rings
-    else:
-        spacing = 0
-    qedges = (roi.ring_edges(qstart,qwidth,spacing, noqs)).ravel()
-     
-    if noqs!=1:
+        qedges = (roi.ring_edges(qstart,qwidth,spacing, noqs)).ravel()
         qcenter = ( qedges[::2] + qedges[1::2] )/2
-    else:
+    else:        
+        spacing =  0
+        qedges = (roi.ring_edges(qstart,qwidth,spacing, noqs)).ravel()
+        #qedges =  np.array( [qstart, qend] )     
         qcenter = [( qedges[1] + qedges[0] )/2]
-
-    return qedges, qcenter 
-    
+        if verbose:
+            print("Since noqs=1, the qend is actually defined by qstart + qwidth.")
+    return qedges, qcenter     
+ 
     
     
 def get_qedge2( qstart,qend,qwidth,noqs,  ):
