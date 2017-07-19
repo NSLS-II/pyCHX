@@ -208,13 +208,14 @@ def get_waterfallc(FD, labeled_array, qindex=1, aspect = 1.0,
     return  wat
 
 
-def cal_each_ring_mean_intensityc( FD, ring_mask, sampling=1, timeperframe=None, *argv,**kwargs):   
+def cal_each_ring_mean_intensityc( FD, ring_mask, sampling=1, timeperframe=None, multi_cor= False,
+                                  *argv,**kwargs):   
     
     """
     get time dependent mean intensity of each ring
     """
-    
-    mean_int_sets, index_list = mean_intensityc(FD, ring_mask, sampling, index=None) 
+
+    mean_int_sets, index_list = mean_intensityc(FD, ring_mask, sampling, index=None, multi_cor=multi_cor)         
     if timeperframe is None: 
         times = np.arange( FD.end - FD.beg  ) + FD.beg # get the time for each frame
     else:
@@ -222,6 +223,8 @@ def cal_each_ring_mean_intensityc( FD, ring_mask, sampling=1, timeperframe=None,
     num_rings = len( np.unique( ring_mask)[1:] )     
     return times, mean_int_sets
  
+
+
 
 def plot_each_ring_mean_intensityc( times, mean_int_sets, xlabel= 'Frame',save=False, *argv,**kwargs):   
     

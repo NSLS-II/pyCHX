@@ -757,9 +757,10 @@ def get_avg_imgc( FD,  beg=None,end=None, sampling = 100, plot_ = False, bad_fra
         #plt.show() 
     return avg_img
 
+ 
 
-def mean_intensityc(FD, labeled_array,  sampling=1, index=None):
-    """Compute the mean intensity for each ROI in the compressed file (FD)
+def mean_intensityc(FD, labeled_array,  sampling=1, index=None, multi_cor = False):
+    """Compute the mean intensity for each ROI in the compressed file (FD), support parallel computation
 
     Parameters
     ----------
@@ -818,15 +819,53 @@ def mean_intensityc(FD, labeled_array,  sampling=1, index=None):
     #maxqind = max(qind)    
     norm = np.bincount( qind  )[1:]
     n= 0         
-    #for  i in tqdm(range( FD.beg , FD.end )):        
-    for  i in tqdm(range( FD.beg, FD.end, sampling  ), desc= 'Get ROI intensity of each frame' ):    
+    #for  i in tqdm(range( FD.beg , FD.end )):     
+    if not multi_cor:
+        for  i in tqdm(range( FD.beg, FD.end, sampling  ), desc= 'Get ROI intensity of each frame' ):    
+            (p,v) = FD.rdrawframe(i)
+            w = np.where( timg[p] )[0]
+            pxlist = timg[  p[w]   ] -1 
+            mean_intensity[n] = np.bincount( qind[pxlist], weights = v[w], minlength = len(index)+1 )[1:]
+            n +=1     
+    else:
+        ring_masks = [   np.array(labeled_array==i, dtype = np.int64)  for i in np.unique( labeled_array )[1:] ]
+        inputs = range( len(ring_masks) )         
+        pool =  Pool(processes= len(inputs) )         
+        print( 'Starting assign the tasks...')    
+        results = {}         
+        for i in tqdm ( inputs ): 
+            results[i] = apply_async( pool,  _get_mean_intensity_one_q, ( FD, sampling,   ring_masks[i] ) )
+        pool.close()    
+        print( 'Starting running the tasks...')    
+        res =   [ results[k].get() for k in   tqdm( list(sorted(results.keys())) )   ] 
+        #return res     
+        for i in inputs:            
+            mean_intensity[:,i] = res[i]
+        print( 'ROI mean_intensit calculation is DONE!')
+        del results
+        del res    
+        
+    mean_intensity /= norm        
+    return mean_intensity, index
+
+
+def _get_mean_intensity_one_q( FD, sampling,   labels ):
+    mi = np.zeros(     int( ( FD.end - FD.beg)/sampling )   ) 
+    n=0    
+    qind, pixelist = roi.extract_label_indices(  labels  )    
+    # iterate over the images to compute multi-tau correlation 
+    fra_pix = np.zeros_like( pixelist, dtype=np.float64)    
+    timg = np.zeros(    FD.md['ncols'] * FD.md['nrows']   , dtype=np.int32   ) 
+    timg[pixelist] =   np.arange( 1, len(pixelist) + 1  )     
+    for  i in range( FD.beg, FD.end, sampling  ):    
         (p,v) = FD.rdrawframe(i)
         w = np.where( timg[p] )[0]
         pxlist = timg[  p[w]   ] -1 
-        mean_intensity[n] = np.bincount( qind[pxlist], weights = v[w], minlength = len(index)+1 )[1:]
-        n +=1        
-    mean_intensity /= norm        
-    return mean_intensity, index
+        mi[n] = np.bincount( qind[pxlist], weights = v[w], minlength = 2 )[1:]
+        n +=1 
+    return mi
+            
+            
 
 def get_each_frame_intensityc( FD, sampling = 1, 
                              bad_pixel_threshold=1e10, bad_pixel_low_threshold=0, 
