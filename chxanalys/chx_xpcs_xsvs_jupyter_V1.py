@@ -4,10 +4,127 @@ from chxanalys.chx_libs import markers, colors
 #RUN_GUI = False
 #from chxanalys.chx_libs import markers
 
+ 
+def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1, yshift=0.01, xlim=None, ylim=None  ):
+    '''plot enteries for a list uids
+    Input:
+        uid_list: list, a list of uid (string)
+        inDir: string, imported folder for saved analysis results
+        key: string, plot entry, surport 
+            'g2' for two-time, 
+            'mean_int_sets' for mean intensity of each roi as a function of frame            
+            TODOLIST:#also can plot the following
+                dict_keys(['qt', 'imgsum', 'qval_dict_v', 'bad_frame_list', 'iqst', 
+                'times_roi', 'iq_saxs', 'g2', 'mask', 'g2_uids', 'taus_uids', 
+                'g2_fit_paras', 'mean_int_sets', 'roi_mask', 'qval_dict', 'taus', 
+                'pixel_mask', 'avg_img', 'qval_dict_p', 'q_saxs', 'md'])            
+        qth: integer, the intesrest q number
+        yshift: float, values of shift in y direction
+        xlim: [x1,x2], for plot x limit
+        ylim: [y1,y2], for plot y limit
+    Output:
+        show the plot
+        
+    '''
+    
+    uid_dict = {}
+    fig, ax =plt.subplots() 
+    for uid in uid_list:
+        uid_dict[uid] =  get_meta_data( uid )['uid']
+    for i, u in enumerate( list( uid_dict.keys() )):
+        inDiru =  inDir + u + '/'        
+        total_res  = extract_xpcs_results_from_h5( filename = 'uid=%s_Res.h5'%uid_dict[u], import_dir = inDiru )
+        if key=='g2':
+            d = total_res[key][1:,qth]
+            taus = total_res['taus'][1:]
+            plot1D(  x = taus, y=d + yshift*i, c=colors[i], m = markers[i], ax=ax, logx=True, legend= u,
+                  xlabel='t (sec)', ylabel='g2',)  
+        else:
+            d = total_res[key][:,qth]             
+            plot1D(  x = np.arange(len(d)), y= d + yshift*i, c=colors[i], m = markers[i], ax=ax, logx=False, legend= u,
+                  xlabel= 'xx', ylabel=key ) 
+    if key=='mean_int_sets':ax.set_xlabel( 'frame ')            
+    if xlim is not None:ax.set_xlim(xlim)        
+    if ylim is not None:ax.set_ylim(ylim)   
+        
+        
+
+
+
+
 ####################################################################################################
 ##For real time analysis##
 #################################################################################################
 
+
+
+
+
+def get_iq_from_uids(  uids, mask, setup_pargs ):
+    ''' Y.G. developed July 17, 2017 @CHX
+    Get q-Iq of a uids dict, each uid could corrrespond one frame or a time seriers
+    uids: dict, val: meaningful decription, key: a list of uids
+    mask: bool-type 2D array
+    setup_pargs: dict, at least should contains, the following paramters for calculation of I(q)
+
+         'Ldet': 4917.50495,
+         'center': [988, 1120],
+         'dpix': 0.075000003562308848,
+         'exposuretime': 0.99998999,
+         'lambda_': 1.2845441,
+         'path': '/XF11ID/analysis/2017_2/yuzhang/Results/Yang_Pressure/',
+ 
+    '''
+    Nuid = len( np.concatenate( np.array( list(uids.values()) ) ) )
+    label = np.zeros( [  Nuid+1], dtype=object)
+    img_data = {} #np.zeros( [ Nuid, avg_img.shape[0], avg_img.shape[1]])
+    
+    n = 0 
+    for k in list(uids.keys()):
+        for uid in uids[k]:
+            
+            uidstr = 'uid=%s'%uid
+            sud = get_sid_filenames(db[uid])
+            #print(sud)
+            md = get_meta_data( uid )
+            imgs = load_data( uid, md['detector'], reverse= True  )
+            md.update( imgs.md );
+            Nimg = len(imgs);
+            if Nimg !=1:
+                filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%sud[1]
+                mask0, avg_img, imgsum, bad_frame_list = compress_eigerdata(imgs, mask, md, filename, 
+                     force_compress= False,  para_compress= True,  bad_pixel_threshold = 1e14,
+                                    bins=1, num_sub= 100, num_max_para_process= 500, with_pickle=True  )
+            else:
+                avg_img = imgs[0]
+            show_img( avg_img,  vmin=0.00001, vmax= 1e1, logs=True, aspect=1, #save_format='tif',
+                    image_name= uidstr + '_img_avg',  save=True,
+                     path=setup_pargs['path'],  cmap = cmap_albula )
+            
+            setup_pargs['uid'] = uidstr           
+            
+            qp_saxs, iq_saxs, q_saxs = get_circular_average( avg_img, mask,
+                                                            pargs= setup_pargs, save=True  )
+            if n ==0:
+                iqs = np.zeros( [ len(q_saxs), Nuid+1])
+                iqs[:,0] = q_saxs
+                label[0] = 'q'                
+            img_data[ k + '_'+  uid ] = avg_img    
+            iqs[:,n+1] = iq_saxs   
+            label[n+1] = k + '_'+  uid   
+            n +=1
+            plot_circular_average( qp_saxs, iq_saxs, q_saxs,  pargs= setup_pargs, 
+                        xlim=[q_saxs.min(), q_saxs.max()*0.9], ylim = [iq_saxs.min(), iq_saxs.max()] )
+    if 'filename' in list(setup_pargs.keys()):
+        filename = setup_pargs['filename']
+    else:
+        filename = 'qIq.csv'
+    pd = save_arrays( iqs, label=label, dtype='array', filename=  filename, 
+                        path= setup_pargs['path'], return_res=True)
+    return pd, img_data
+    
+    
+    
 def wait_func( wait_time = 2 ):
     print( 'Waiting %s secdons for upcoming data...'%wait_time)
     time.sleep(  wait_time)
