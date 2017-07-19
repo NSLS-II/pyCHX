@@ -23,7 +23,9 @@ create_hot_pixel_mask,show_ROI_on_image,create_time_slice,save_lists,
                         update_qval_dict,  update_roi_mask,     combine_images,   create_rectangle_mask, create_cross_mask,  create_polygon_mask, check_lost_metadata, 
         get_fra_num_by_dose,  get_multi_tau_lag_steps, get_series_g2_taus, create_user_folder,
               get_current_pipeline_filename, get_current_pipeline_fullpath,save_current_pipeline,
-                                             filter_roi_mask, mask_badpixels
+                                             filter_roi_mask, mask_badpixels,
+                                             validate_uid,   
+                move_beamstop, get_today_date
                                             
                                             )
 
@@ -31,7 +33,10 @@ create_hot_pixel_mask,show_ROI_on_image,create_time_slice,save_lists,
 from chxanalys.XPCS_SAXS import (get_circular_average,save_lists,get_ring_mask, get_each_ring_mean_intensity,
                              plot_qIq_with_ROI, cal_g2, create_hot_pixel_mask,get_circular_average,get_t_iq, 
                               get_t_iqc,multi_uids_saxs_xpcs_analysis,
-                              plot_t_iqc,  plot_circular_average, get_seg_from_ring_mask,   )
+                              plot_t_iqc,  plot_circular_average, get_seg_from_ring_mask, 
+                                recover_img_from_iq,get_cirucular_average_std
+                                
+                                )
 
 
 from chxanalys.Two_Time_Correlation_Function import (show_C12, get_one_time_from_two_time, 
@@ -54,7 +59,8 @@ from chxanalys.Create_Report import (create_pdf_report,
                             create_multi_pdf_reports_for_uids,create_one_pdf_reports_for_uids,
                                     make_pdf_report, export_xpcs_results_to_h5, extract_xpcs_results_from_h5 )
 
-from chxanalys.chx_olog import LogEntry,Attachment, update_olog_uid, update_olog_id
+from chxanalys.chx_olog import (LogEntry,Attachment, update_olog_uid, update_olog_id,
+                                update_olog_uid_with_file)
 
 from chxanalys.XPCS_GiSAXS import (get_qedge,get_qmap_label,get_qr_tick_label, get_reflected_angles,
 convert_gisaxs_pixel_to_q, show_qzr_map, get_1d_qr, get_qzrmap, show_qzr_roi,get_each_box_mean_intensity,
