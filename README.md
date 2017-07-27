@@ -1,4 +1,4 @@
-chxtools
+chxanalys--CHX XPCS Data Analysis Packages
 ========
 
 Repository for data collection and analysis scripts that are useful at the
