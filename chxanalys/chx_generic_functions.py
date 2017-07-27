@@ -199,11 +199,7 @@ def create_chip_edges_mask( det='1M' ):
             mask[ c-w//2:c+w//2, :  ] = 0        
     
     return mask
-        
-Eiger1M_Chip_Mask = create_chip_edges_mask( det= '1M')
-np.save(  '/XF11ID/analysis/2017_1/masks/Eiger1M_Chip_Mask', Eiger1M_Chip_Mask   )  
-   
-    
+     
 def create_ellipse_donut(  cx, cy , wx_inner, wy_inner, wx_outer, wy_outer, roi_mask, gap=0):
     Nmax = np.max( np.unique( roi_mask ) )
     rr1, cc1 = ellipse( cy,cx,  wy_inner, wx_inner  )    
@@ -1620,7 +1616,7 @@ def show_label_array_on_image(ax, image, label_array, cmap=None,norm=None, log_i
     
 def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on = True,
                        save=False, return_fig = False, rect_reqion=None, log_img = True, vmin=0.01, vmax=5,  
-                      uid='uid', path='',  aspect = 1, *argv,**kwargs):
+                      uid='uid', path='',  aspect = 1, show_colorbar=True, *argv,**kwargs):
     
     '''show ROI on an image
         image: the data frame
@@ -1635,7 +1631,7 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
         fig = Figure(figsize=(8,8))
         axes = fig.add_subplot(111)
     else:
-        fig, axes = plt.subplots(figsize=(8,8))
+        fig, axes = plt.subplots( ) #plt.subplots(figsize=(8,8))
     
     #print( vmin, vmax)
     #norm=LogNorm(vmin,  vmax)
@@ -1674,7 +1670,8 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
 
     axes.set_aspect(aspect)
     #fig.colorbar(im_label)
-    fig.colorbar(im)
+    if show_colorbar:
+        fig.colorbar(im)
     if save:   
         fp = path + "%s_ROI_on_Image"%uid  + '.png'    
         plt.savefig( fp, dpi=fig.dpi)      
@@ -2603,7 +2600,8 @@ def get_short_long_labels_from_qval_dict(qval_dict, geometry='saxs'):
 def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='saxs',filename='g2', 
                     path=None, function='simple_exponential',  g2_labels=None, 
                     fig_ysize= 12, qth_interest = None,
-                    ylabel='g2',  return_fig=False, append_name='', outsize=(2000, 2400), *argv,**kwargs):    
+                    ylabel='g2',  return_fig=False, append_name='', outsize=(2000, 2400), 
+                    max_plotnum_fig=16, figsize=(10, 12), *argv,**kwargs):    
     '''
     Dec 26,2016, Y.G.@CHX
     
@@ -2669,13 +2667,19 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                 if master_plot != 'qz':
                     fig = plt.figure(figsize=(8, 6))   
                 else:
-                    fig = plt.figure(figsize=(8, 4))
-            elif num_long_i > 16:
-                num_fig = num_long_i //16
-                fig = [ plt.figure(figsize=(10, 12))  for i in range(num_fig) ]
+                    if num_short>1:
+                        fig = plt.figure(figsize=(8, 4))
+                    else:
+                        fig = plt.figure(figsize=(10, 6))
+                    #print('Here')
+            elif num_long_i > max_plotnum_fig:
+                num_fig = int(np.ceil(num_long_i/max_plotnum_fig)) #num_long_i //16
+                fig = [ plt.figure(figsize=figsize)  for i in range(num_fig) ]
+                #print( figsize )
             else:
+                #print('Here')
                 if master_plot != 'qz':
-                    fig = plt.figure(figsize=(10, 12))
+                    fig = plt.figure(figsize=figsize)
                 else:
                     fig = plt.figure(figsize=(10, 10))
         
@@ -2693,17 +2697,20 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                 title_short=''        
                 
         #filename =''
-        til = '%s:--->%s'%(filename,  title_short ) 
-        if num_long_i < 4:            
+        til = '%s:--->%s'%(filename,  title_short )
+
+        if num_long_i <=4:            
             plt.title( til,fontsize= 14, y =1.15)  
         else:
-            plt.title( til,fontsize=20, y =1.06) 
+            plt.title( til,fontsize=20, y =1.06)                 
         
         #print( num_long )
+        
         if num_long!=1:   
             #print( 'here')
             plt.axis('off')             
-            sy =   min(num_long_i,4)             
+            #sy =   min(num_long_i,4) 
+            sy =   min(num_long_i,  int( np.ceil( min(max_plotnum_fig,num_long_i)/4))   ) 
             #fig.set_size_inches(10, 12)
             #fig.set_size_inches(10, fig_ysize )
         else: 
@@ -2711,16 +2718,22 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
             #fig.set_size_inches(8,6)
             
             #plt.axis('off') 
-        sx = min(4, int( np.ceil( num_long_i/float(sy) ) ))
+        sx = min(4, int( np.ceil( min(max_plotnum_fig,num_long_i)/float(sy) ) ))
+        
+        temp = sy
+        sy = sx
+        sx = temp
         #print( num_long_i, sx, sy )  
         
         #print( master_plot )
         for i, l_ind in enumerate( ind_long_i ):  
-            if num_long_i <= 16:
+            if num_long_i <= max_plotnum_fig:
+                #print('Here')
+                #print(i, l_ind,long_label[l_ind] )                
                 ax = fig.add_subplot(sx,sy, i + 1 ) 
             else:
-                fig_subnum = l_ind//16
-                ax = fig[fig_subnum].add_subplot(sx,sy, i + 1 - fig_subnum*16) 
+                fig_subnum = l_ind//max_plotnum_fig
+                ax = fig[fig_subnum].add_subplot(sx,sy, i + 1 - fig_subnum*max_plotnum_fig) 
                 
                   
             ax.set_ylabel( r"$%s$"%ylabel + '(' + r'$\tau$' + ')' ) 
@@ -2737,9 +2750,9 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                     title_long = ''    
 
             if master_plot != 'qz':
-                ax.set_title(title_long + ' (%s)'%l_ind, y =1.1, fontsize=12) 
+                ax.set_title(title_long + ' (%s  )'%(1+l_ind), y =1.1, fontsize=12) 
             else:                
-                ax.set_title(title_long + ' (%s)'%l_ind, y =1.05, fontsize=12) 
+                ax.set_title(title_long + ' (%s  )'%(1+l_ind), y =1.05, fontsize=12) 
             
             
             for ki, k in enumerate( list(g2_dict.keys()) ):                
@@ -2872,8 +2885,10 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
         if append_name is not '':
             fp = fp + append_name
         fps.append( fp  + '.png' )  
-        if num_long_i <= 16:
-            fig.set_tight_layout(True)              
+        #if num_long_i <= 16:
+        if num_long_i <= max_plotnum_fig:            
+            fig.set_tight_layout(True)    
+            #fig.tight_layout()
             plt.savefig( fp + '.png', dpi=fig.dpi) 
         else:
             fps=[]
