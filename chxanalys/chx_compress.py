@@ -829,7 +829,8 @@ def mean_intensityc(FD, labeled_array,  sampling=1, index=None, multi_cor = Fals
             n +=1     
     else:
         ring_masks = [   np.array(labeled_array==i, dtype = np.int64)  for i in np.unique( labeled_array )[1:] ]
-        inputs = range( len(ring_masks) )         
+        inputs = range( len(ring_masks) )   
+        go_through_FD(FD)
         pool =  Pool(processes= len(inputs) )         
         print( 'Starting assign the tasks...')    
         results = {}         
