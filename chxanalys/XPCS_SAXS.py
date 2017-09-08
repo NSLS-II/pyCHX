@@ -23,6 +23,58 @@ from chxanalys.chx_correlationp import ( cal_g2p)
 from pandas import DataFrame 
 import os
 
+
+
+def get_iq_invariant( qt, iqst  ):
+    '''Get integer( q**2 * iqst )
+    iqst: shape should be time, q-length
+    qt: shape as q-length
+    return   q**2 * iqst, shape will be time length 
+    '''    
+    return   np.sum(iqst * qt**2, axis =1 )
+
+def plot_time_iq_invariant( time_stamp, invariant, pargs,   save=True,):  
+    fig,ax = plt.subplots( ) 
+    plot1D( x = time_stamp, y = invariant, 
+           xlabel='time (s)', ylabel='I(q)*Q^2', title='I(q)*Q^2 ~ time',
+               m='o', c = 'b', ax=ax  )    
+    if save:
+        path = pargs['path']
+        uid = pargs['uid']
+        
+        save_arrays(  np.vstack( [time_stamp, np.array(invariant)]).T, 
+                    label=  ['time','Invariant'],filename='%s_iq_invariant.csv'%uid , path= path  )  
+        #fp = path + 'uid= %s--Iq~t-'%uid + CurTime + '.png'  
+        fp = path + '%s_iq_invariant'%uid + '.png'  
+        fig.savefig( fp, dpi=fig.dpi)
+        
+        
+
+def plot_q2_iq( qt, iqst, time_stamp, pargs, ylim=[ -0.001, 0.01] , 
+               xlim=[0.007,0.2],legend_size=4, save=True,  ):
+    fig, ax = plt.subplots()
+    N = iqst.shape[0]
+    for i in range(N):
+        yi = iqst[i] * qt**2      
+        #time_labeli = 'time_%s s'%( round(  time_edge[i][0] * timeperframe, 3) )
+        time_labeli = 'time_%s s'%( round(  time_stamp[i],4) )
+        plot1D( x = qt, y = yi, legend= time_labeli, xlabel='Q (A-1)', ylabel='I(q)*Q^2', title='I(q)*Q^2 ~ time',
+               m=markers[i], c = colors[i], ax=ax, ylim=ylim, xlim=xlim,
+              legend_size=legend_size) 
+    if save:
+        path = pargs['path']
+        uid = pargs['uid']        
+        fp = path + '%s_q2_iq'%uid + '.png'  
+        fig.savefig( fp, dpi=fig.dpi)        
+
+        
+        
+
+
+
+
+
+
 def recover_img_from_iq(  qp, iq, center, mask):
     '''YG. develop at CHX, 2017 July 18,
     Recover image a circular average
@@ -143,8 +195,11 @@ def get_seg_dict_from_ring_mask( inner_angle, outer_angle, num_angles, width_ang
     return seg_mask,  qval_dict_
 
 
-def combine_two_roi_mask( ring_mask, ang_mask):
+def combine_two_roi_mask( ring_mask, ang_mask, pixel_num_thres=10):
     '''combine two roi_mask into a new roi_mask
+    pixel_num_thres: integer, the low limit pixel number in each roi of the combined mask, 
+                        i.e., if the pixel number in one roi of the combined mask smaller than pixel_num_thres,
+                        that roi will be considered as bad one and be removed.
     e.g., ring_mask is a ring shaped mask, with unique index as (1,2)
           ang_mask is a angular shaped mask, with unique index as (1,2,3,4)
           the new mask will be ( 1,2,3,4 [for first ring]; 
@@ -162,15 +217,21 @@ def combine_two_roi_mask( ring_mask, ang_mask):
     new_mask_  = np.zeros_like( ring_mask )
     for i, ind in enumerate(ruiq[1:]):
         ring_mask_.ravel()[ 
-            np.where(  rf == ind)[0]  ] =  maxa * i
+            np.where(  rf == ind )[0]  ] =  maxa * i
     
     new_mask = ( ( ring_mask_ + ang_mask) * 
                np.array( ring_mask, dtype=bool) *
                np.array( ang_mask, dtype=bool)
             )
-    good_ind = np.unique( new_mask )[1:]
+
+    qind, pixelist = roi.extract_label_indices(new_mask)
+    noqs = len(np.unique(qind))
+    nopr = np.bincount(qind, minlength=(noqs+1))[1:]
+    #good_ind = np.unique( new_mask )[1:]
+    good_ind = np.where( nopr >= pixel_num_thres)[0] +1
     #print( good_ind )
     l = len(good_ind)
+ 
     new_ind = np.arange( 1, l+1 )
     for i, gi in enumerate( good_ind ):
         new_mask_.ravel()[ 
@@ -586,7 +647,8 @@ def angular_average(image, calibrated_center, threshold=0, nx=1500,
     return bin_centers*180/np.pi, ang_averages 
 
 
-def get_t_iqc( FD, frame_edge, mask, pargs, nx=1500, plot_ = False , save=False, *argv,**kwargs):   
+def get_t_iqc( FD, frame_edge, mask, pargs, nx=1500, plot_ = False , save=False, show_progress=True,
+              *argv,**kwargs):   
     '''Get t-dependent Iq 
     
         Parameters        
@@ -612,7 +674,7 @@ def get_t_iqc( FD, frame_edge, mask, pargs, nx=1500, plot_ = False , save=False,
     for i in range(Nt):
         t1,t2 = frame_edge[i]
         #print (t1,t2)        
-        avg_img = get_avg_imgc( FD, beg=t1,end=t2, sampling = 1, plot_ = False )
+        avg_img = get_avg_imgc( FD, beg=t1,end=t2, sampling = 1, plot_ = False,show_progress=show_progress )
         qp, iqs[i], q = get_circular_average( avg_img, mask,pargs, nx=nx,
                            plot_ = False)
         
@@ -631,7 +693,7 @@ def get_t_iqc( FD, frame_edge, mask, pargs, nx=1500, plot_ = False , save=False,
             ax.set_ylim(    kwargs['ylim']  )
  
 
-        ax.legend(loc = 'best')  
+        ax.legend(loc = 'best', )  
         
         uid = pargs['uid']
         title = ax.set_title('uid= %s--t~I(q)'%uid)        
@@ -654,7 +716,7 @@ def get_t_iqc( FD, frame_edge, mask, pargs, nx=1500, plot_ = False , save=False,
     return qp, np.array( iqs ),q
 
  
-def plot_t_iqc( q, iqs, frame_edge, pargs, save=True, return_fig=False, *argv,**kwargs):   
+def plot_t_iqc( q, iqs, frame_edge, pargs, save=True, return_fig=False,  legend_size=None, *argv,**kwargs):   
     '''Plot t-dependent Iq 
     
         Parameters        
@@ -688,7 +750,7 @@ def plot_t_iqc( q, iqs, frame_edge, pargs, save=True, return_fig=False, *argv,**
         ax.set_xlim(    kwargs['xlim']  )    
     if 'ylim' in kwargs.keys():
         ax.set_ylim(    kwargs['ylim']  )
-    ax.legend(loc = 'best')  
+    ax.legend(loc = 'best', fontsize = legend_size)  
     uid = pargs['uid']
     title = ax.set_title('%s--t~I(q)'%uid)        
     title.set_y(1.01)
@@ -1022,11 +1084,11 @@ def get_angular_mask( mask,  inner_angle=0, outer_angle = 360, width = None, edg
             spacing =  (outer_angle - inner_angle - num_angles* width )/(num_angles-1)      # spacing between rings
         else:
             spacing = 0
-        edges1 = roi.ring_edges(inner_angle, width, spacing, num_angles) 
+        edges = roi.ring_edges(inner_angle, width, spacing, num_angles) 
 
     #print (edges)
-    angs = angulars( np.radians( edges1 ), center, mask.shape)    
-    ang_center = np.average(edges1, axis=1)        
+    angs = angulars( np.radians( edges ), center, mask.shape)    
+    ang_center = np.average(edges, axis=1)        
     ang_mask = angs*mask
     ang_mask = np.array(ang_mask, dtype=int)
         
@@ -1047,7 +1109,7 @@ def get_angular_mask( mask,  inner_angle=0, outer_angle = 360, width = None, edg
     if len( np.where( nopr ==0 )[0] !=0):
         #print (nopr)
         print ("Some angs contain zero pixels. Please redefine the edges.")      
-    return ang_mask, ang_center, edges1
+    return ang_mask, ang_center, edges
 
 
        
@@ -1073,7 +1135,7 @@ def two_theta_to_radius(dist_sample, two_theta):
 
 
 def get_ring_mask(  mask, inner_radius=40, outer_radius = 762, width = 6, num_rings = 12,
-                  edges=None, unit='pixel',pargs=None   ):
+                  edges=None, unit='pixel',pargs=None, return_q_in_pixel=False   ):
     
 #def get_ring_mask(  mask, inner_radius= 0.0020, outer_radius = 0.009, width = 0.0002, num_rings = 12,
 #                  edges=None, unit='pixel',pargs=None   ):     
@@ -1117,8 +1179,12 @@ def get_ring_mask(  mask, inner_radius=40, outer_radius = 762, width = 6, num_ri
         edges = roi.ring_edges(inner_radius, width, spacing, num_rings)    
    
     if (unit=='pixel') or (unit=='p'):
-        two_theta = utils.radius_to_twotheta(Ldet, edges*dpix)
-        q_ring_val = utils.twotheta_to_q(two_theta, lambda_)
+        if not return_q_in_pixel:
+            two_theta = utils.radius_to_twotheta(Ldet, edges*dpix)
+            q_ring_val = utils.twotheta_to_q(two_theta, lambda_)
+        else:
+            q_ring_val = edges
+            #print(edges)
     else: #in unit of A-1 
         two_theta = utils.q_to_twotheta( edges, lambda_)
         q_ring_val =  edges
