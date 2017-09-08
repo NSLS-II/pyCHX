@@ -28,13 +28,14 @@ create_hot_pixel_mask,show_ROI_on_image,create_time_slice,save_lists,
                 move_beamstop, get_today_date
                                             
                                             )
-
+ 
 
 from chxanalys.XPCS_SAXS import (get_circular_average,save_lists,get_ring_mask, get_each_ring_mean_intensity,
                              plot_qIq_with_ROI, cal_g2, create_hot_pixel_mask,get_circular_average,get_t_iq, 
                               get_t_iqc,multi_uids_saxs_xpcs_analysis,
                               plot_t_iqc,  plot_circular_average, get_seg_from_ring_mask, 
-                                recover_img_from_iq,get_cirucular_average_std
+                                recover_img_from_iq,get_cirucular_average_std,
+                                 get_angular_mask
                                 
                                 )
 
