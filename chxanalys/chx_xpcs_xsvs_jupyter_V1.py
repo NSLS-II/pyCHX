@@ -4,7 +4,72 @@ from chxanalys.chx_libs import markers, colors
 #RUN_GUI = False
 #from chxanalys.chx_libs import markers
 
- 
+def get_t_iqc_uids( uid_list, setup_pargs, slice_num= 10, slice_width= 1):
+    '''Get Iq at different time edge (difined by slice_num and slice_width) for a list of uids
+    Input:
+        uid_list: list of string (uid)
+        setup_pargs: dict, for caculation of Iq, the key of this dict should include
+                        'center': beam center
+                        'dpix': pixel size
+                        'lambda_': X-ray wavelength
+                        'Ldet':  distance between detector and sample
+        slice_num: slice number of the time edge
+        slice_edge: the width of the time_edge
+    Output:
+        qs: dict, with uid as key, with value as q values
+        iqsts:dict, with uid as key, with value as iq values
+        tstamp:dict, with uid as key, with value as time values                   
+    
+    '''
+    iqsts = {}
+    tstamp = {}
+    qs = {}
+    label = []
+    for uid in uid_list:
+        md = get_meta_data( uid )
+        luid = md['uid']
+        timeperframe = md['cam_acquire_period']
+        N = md['cam_num_images']
+        filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%luid        
+        good_start = 5
+        FD = Multifile(filename, good_start,  N )        
+        Nimg = FD.end - FD.beg 
+        time_edge = create_time_slice( Nimg, slice_num= slice_num, slice_width= slice_width, edges = None )
+        time_edge =  np.array( time_edge ) + good_start
+        #print( time_edge )
+        tstamp[uid] = time_edge[:,0] * timeperframe
+        qpt, iqsts[uid], qt = get_t_iqc( FD, time_edge, None, pargs=setup_pargs, nx=1500 )
+        qs[uid] = qt        
+    
+    return qs, iqsts, tstamp
+
+def plot_t_iqtMq2(qt, iqst, tstamp, ax=None, perf='' ):
+    '''plot q2~Iq at differnt time'''
+    if ax is None:
+        fig, ax = plt.subplots()
+    q = qt
+    for i in range(iqst.shape[0]):
+        yi = iqst[i] * q**2
+        time_labeli = perf+'time_%s s'%( round(  tstamp[i], 3) )
+        plot1D( x = q, y = yi, legend= time_labeli, xlabel='Q (A-1)', ylabel='I(q)*Q^2', title='I(q)*Q^2 ~ time',
+               m=markers[i], c = colors[i], ax=ax, ylim=[ -0.001, 0.005]) #, xlim=[0.007,0.1] )
+        
+        
+def plot_t_iqc_uids( qs, iqsts, tstamps  ):
+    '''plot q2~Iq at differnt time for a uid list 
+    '''
+    keys = list(qs.keys())
+    fig, ax = plt.subplots()
+    for uid in keys:
+        qt = qs[uid]
+        iqst = iqsts[uid]
+        tstamp =  tstamps[uid]
+        plot_t_iqtMq2(qt, iqst, tstamp, ax=ax, perf=uid + '_' ) 
+        
+    
+    
+    
+
 def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1, yshift=0.01, xlim=None, ylim=None  ):
     '''plot enteries for a list uids
     Input:
@@ -24,6 +89,9 @@ def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1, yshift=0.01, x
         ylim: [y1,y2], for plot y limit
     Output:
         show the plot
+    Example:
+    uid_list = ['5492b9', '54c5e0']
+    plot_entries_from_uids( uid_list, inDir, yshift = 0.01, key= 'g2', ylim=[1, 1.2])
         
     '''
     
@@ -39,6 +107,10 @@ def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1, yshift=0.01, x
             taus = total_res['taus'][1:]
             plot1D(  x = taus, y=d + yshift*i, c=colors[i], m = markers[i], ax=ax, logx=True, legend= u,
                   xlabel='t (sec)', ylabel='g2',)  
+        elif key=='imgsum':
+            d = total_res[key]            
+            plot1D(  y=d + yshift*i, c=colors[i], m = markers[i], ax=ax, logx=False, legend= u,
+                  xlabel='Frame', ylabel='imgsum',)              
         else:
             d = total_res[key][:,qth]             
             plot1D(  x = np.arange(len(d)), y= d + yshift*i, c=colors[i], m = markers[i], ax=ax, logx=False, legend= u,
@@ -46,7 +118,6 @@ def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1, yshift=0.01, x
     if key=='mean_int_sets':ax.set_xlabel( 'frame ')            
     if xlim is not None:ax.set_xlim(xlim)        
     if ylim is not None:ax.set_ylim(ylim)   
-        
         
 
 
@@ -571,7 +642,7 @@ def plot_dose_g2( taus_uids, g2_uids, qval_dict, qth_interest = None, ylim=[0.95
         
     else:
         fig,ax= plt.subplots()        
-        q =   qval_dict[qth_interest][0] 
+        q =   qval_dict[qth_interest-1][0] 
         j = 0 
         for uid in uids:
             #uid = uids[0]
