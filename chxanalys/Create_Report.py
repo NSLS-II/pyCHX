@@ -52,14 +52,18 @@ def add_one_line_string( c, s,  top, left=30, fontsize = 11  ):
         
 def add_image_string( c, imgf, data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
-                     str2_left, str2_top ): 
+                     str2_left, str2_top, return_ = False ): 
     
     image = data_dir + imgf 
     if os.path.exists(image):
         im = Image.open( image )
         ratio = float(im.size[1])/im.size[0]
         height= img_height
-        c.drawImage( image, img_left, img_top,  width= height/ratio,height=height,mask=None)
+        width = height/ratio
+        #if width>400:
+        #    width = 350
+        #    height = width*ratio
+        c.drawImage( image, img_left, img_top,  width= width,height=height,mask=None)
 
         c.setFont("Helvetica", 16)
         c.setFillColor( blue ) 
@@ -67,6 +71,9 @@ def add_image_string( c, imgf, data_dir, img_left, img_top, img_height,
         c.setFont("Helvetica", 12)
         c.setFillColor(red) 
         c.drawString(str2_left, str2_top, 'filename: %s'%imgf    )
+        if return_:
+            return height/ratio
+        
     else:
         c.setFillColor( blue ) 
         c.drawString( str1_left, str1_top, str1)
@@ -111,7 +118,7 @@ class create_pdf_report( object ):
     '''       
     
     def __init__( self, data_dir, uid,  out_dir=None, filename=None, load=True, user=None,
-                 report_type='saxs',md=None, ):
+                 report_type='saxs',md=None,  ):
         self.data_dir = data_dir
         self.uid = uid
         self.md = md
@@ -128,7 +135,7 @@ class create_pdf_report( object ):
         self.styles = getSampleStyleSheet()
         self.width, self.height = letter
         
-        self.report_type = report_type
+        self.report_type = report_type        
         dt =datetime.now()
         CurTime = '%02d/%02d/%s/-%02d/%02d/' % ( dt.month, dt.day, dt.year,dt.hour,dt.minute)
         self.CurTime = CurTime
@@ -256,7 +263,51 @@ class create_pdf_report( object ):
         #self.report_header(page=1, top=730, new_page=False)
         #self.report_meta(new_page=False)
         
+        self.q2Iq_file =  'uid=%s_q2_iq.png'%uid        
+        self.iq_invariant_file = 'uid=%s_iq_invariant.png'%uid   
         
+    def report_invariant( self, top= 300, new_page=False):
+        '''create the invariant analysis report
+            two images:
+               ROI on average intensity image
+               ROI on circular average
+        '''   
+        uid=self.uid
+        c= self.c
+        #add sub-title, static images
+        c.setFillColor(black)
+        c.setFont("Helvetica", 20)        
+        ds = 230
+        self.sub_title_num +=1
+        c.drawString(10, top, "%s. I(q) Invariant Analysis"%self.sub_title_num )  #add title
+        #add q2Iq
+        c.setFont("Helvetica", 14)          
+        imgf = self.q2Iq_file 
+        #print( imgf )
+        label = 'q^2*I(q)' 
+        add_image_string( c, imgf, self.data_dir, img_left= 60, img_top=top - ds*1.15, img_height=180, 
+                     str1_left=110, str1_top = top-35,str1=label,
+                     str2_left = 60, str2_top = top -320 )       
+        
+        #add iq_invariant
+        imgf = self.iq_invariant_file
+        img_height= 180
+        img_left,img_top =320, top - ds*1.15        
+        str1_left, str1_top,str1= 420, top- 35,  'I(q) Invariant'
+        str2_left, str2_top = 350, top- 320
+
+        #print ( imgf )
+
+        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top )
+
+        
+        if new_page:
+            c.showPage()
+            c.save()           
+            
+            
         
     def report_header(self, page=1, new_page=False):
         '''create headers, including title/page number'''
@@ -584,6 +635,7 @@ class create_pdf_report( object ):
                One Time Correlation Function with fit
                q-rate fit
         '''   
+        
         c= self.c
         uid=self.uid
         #add sub-title, One Time Correlation Function
@@ -603,6 +655,7 @@ class create_pdf_report( object ):
             img_height= 300
             top = top - 320 
             str2_left, str2_top = 80, top- 0
+            
         else:
             img_height= 550
             top = top - 600
@@ -618,10 +671,10 @@ class create_pdf_report( object ):
             
         str1_left, str1_top,str1= 150, top + img_height,  'g2 fit plot'
         
-
-        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+        #print( imgf )
+        img_width = add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
-                     str2_left, str2_top ) 
+                     str2_left, str2_top, return_=True ) 
 
         #add g2 plot fit
         top = top + 70 #
@@ -632,10 +685,16 @@ class create_pdf_report( object ):
             
         
         if self.report_type != 'ang_saxs':
-            img_height= 180     
-            img_left,img_top = 350, top
-            str2_left, str2_top = 380, top - 5
+            #print(img_width)
+            if img_width > 400:
+                img_height =  90
+            else:
+                img_height= 180 
+                
+            img_left,img_top = img_width-10, top #350, top
+            str2_left, str2_top = img_width + 50, top - 5  #380, top - 5
             str1_left, str1_top,str1= 450, top + 230,  'q-rate fit  plot' 
+            
         else:
             img_height= 300
             img_left,img_top = 350, top - 150
@@ -742,9 +801,9 @@ class create_pdf_report( object ):
         img_left,img_top = 80, top
         str1_left, str1_top,str1= 180, top + 300,  'two time correlation function'  
         str2_left, str2_top = 180, top - 10
-        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+        img_width = add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
-                     str2_left, str2_top ) 
+                     str2_left, str2_top, return_=True ) 
 
         
         
@@ -762,19 +821,26 @@ class create_pdf_report( object ):
             if self.two_g2_new_page:
                 img_left,img_top = 100, top       
                 
-            add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+            img_width = add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                          str1_left, str1_top,str1,
-                         str2_left, str2_top ) 
-            
-            
+                         str2_left, str2_top,return_=True )            
 
             top = top + 50   
             imgf = self.q_rate_two_time_fit_file
-            img_height= 140
-            img_left,img_top = 350, top + 30
-            str2_left, str2_top = 380 - 80, top - 5
-            str1_left, str1_top,str1= 450 -80 , top + 230,  'q-rate fit from two-time' 
 
+            if img_width < 400:
+                img_height= 140 
+                img_left,img_top = 350, top + 30
+                str2_left, str2_top = 380 - 80, top - 5
+                str1_left, str1_top,str1= 450 -80 , top + 230,  'q-rate fit from two-time' 
+
+            else:
+                img_height =  90 
+                img_left,img_top = img_width-10, top #350, top
+                str2_left, str2_top = img_width + 50, top - 5  #380, top - 5
+                str1_left, str1_top,str1= 450, top + 230,  'q-rate fit  plot' 
+            
+            
             add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                          str1_left, str1_top,str1,
                          str2_left, str2_top ) 
@@ -843,6 +909,16 @@ class create_pdf_report( object ):
         str1_left, str1_top,str1= 180, top + 500,  'dose analysis'
         str2_left, str2_top = 180, top - 10
         
+        #print( self.data_dir + self.dose_file)
+        if os.path.exists( self.data_dir +  imgf):
+            #print( self.dose_file)
+            im = Image.open( self.data_dir + imgf )
+            ratio = float(im.size[1])/im.size[0]
+            width = img_height/ratio
+            #print(width)
+            if width >450:
+                img_height = 450*ratio
+            
         if self.dose_file_new_page:
             #img_left,img_top = 180, top
             img_left,img_top = 100, top
@@ -1227,7 +1303,7 @@ def load_res_h5( full_uid, data_dir   ):
 
     
 def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username, 
-                    run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs, run_dose=None, report_type='saxs', md=None
+                    run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs, run_dose=None, report_type='saxs', md=None,report_invariant=False
                    ):
     
     if uid.startswith("uid=") or uid.startswith("Uid="):
@@ -1286,6 +1362,12 @@ def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username,
             page +=1
             c.report_header(page= page)
             c.report_dose( top = 702)
+        if report_invariant:
+            c.new_page()
+            page +=1
+            c.report_header(page= page)             
+            c.report_invariant( top = 702)
+            
     else:
         c.report_flow_pv_g2( top= 720, new_page= True) 
         c.report_flow_pv_two_time(   top= 720, new_page= True ) 
@@ -1391,7 +1473,11 @@ def export_xpcs_results_to_h5( filename, export_dir, export_dict ):
                     except:
                         pass 
             elif key in dict_nest:
-                recursively_save_dict_contents_to_group(hf, '/%s/'%key, export_dict[key] ) 
+                #print(key)
+                try:
+                    recursively_save_dict_contents_to_group(hf, '/%s/'%key, export_dict[key] ) 
+                except:
+                    print("Can't export the key: %s in this dataset."%key)
             
             elif key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds', 'qr_1d_pds']:
                 export_dict[key].to_hdf( fout, key=key,  mode='a',   )                
