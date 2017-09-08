@@ -801,7 +801,7 @@ def get_roi(data, threshold=1e-3):
 def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None, spec_bins=None, 
                  lag_steps=None, varyK=True, 
                   qth=None, max_bins= None,  rois_lowthres=None,
-                           g2=None, times=None,taus=None, max_cutoff_photon =None ):
+                           g2=None, times=None,taus=None, max_cutoff_photon =None, fit_range=None ):
     '''
     Fit the xsvs by Negative Binomial Function using max-likelihood chi-squares
     '''
@@ -875,7 +875,11 @@ def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None, spec_bins=None,
                 x_ = x_[ind]
                 yerr = yerr[ind]
             #if j==0:
-            #    print( y, x_)    
+            #    print( y, x_)   
+            if fit_range is not None:
+                f1,f2 = fit_range
+                y, x_, yerr = y[f1:f2], x_[f1:f2], yerr[f1:f2] 
+            
             if not varyK:
                 fit_func = nbinomlog1                
                 #print(j,i,m0, y.shape, x_.shape, yerr.shape, N,  K_mean[i] * 2**j)
@@ -906,8 +910,11 @@ def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None, spec_bins=None,
 def plot_xsvs_fit(  spe_cts_all, ML_val, KL_val, K_mean, spec_std  =None,
                   xlim =[0,15], vlim=[.9,1], q_ring_center=None, max_bins=None,
                   uid='uid', qth=None,  times=None,fontsize=3, path=None, logy=True,
-                 spec_bins=None, lag_steps=None):
-   
+                 spec_bins=None, lag_steps=None,figsize=[10,10]):
+    '''
+    Plot visibility with fit
+    if qth is not None, should be an integer, starting from 1
+    '''
     
     #if qth is None:
     #    fig = plt.figure(figsize=(10,12))
@@ -932,8 +939,8 @@ def plot_xsvs_fit(  spe_cts_all, ML_val, KL_val, K_mean, spec_std  =None,
         lag_steps = lag_steps[np.nonzero( lag_steps )]        
     
     if qth is not None:
-        range_ = range(qth, qth+1)
-        num_times = len( ML_val[qth] )
+        range_ = range(qth-1, qth) 
+        num_times = len( ML_val[qth-1] )
     else:
         range_ = range( num_rings)
         num_times = len( ML_val[0] )
@@ -952,7 +959,10 @@ def plot_xsvs_fit(  spe_cts_all, ML_val, KL_val, K_mean, spec_std  =None,
     if qth is not None:
         fontsize =14
         
-    fig = plt.figure()      
+    if  qth is  None:
+        fig = plt.figure( figsize=figsize )      
+    else:
+        fig =  plt.figure(  )
     title = '%s'%uid+ "-NB-Fit"
     plt.title(title, fontsize= 16, y=1.08)  
     #plt.axes(frameon=False)
@@ -992,15 +1002,22 @@ def plot_xsvs_fit(  spe_cts_all, ML_val, KL_val, K_mean, spec_std  =None,
             if qth is None:
                 ith=0
             else:
-                ith=qth
-                
+                ith=qth 
+            
+            #print( i, ith, qth )
             if i==ith:  
                 if times is not None:
                     label =  'Data--' + str( round(times[j] * 1000,3) )+" ms"                     
                 else:
                     label = 'Bin_%s'%(2**j) 
             else:
-                label=''                
+                if qth is not None:
+                    if times is not None:
+                        label =  'Data--' + str( round(times[j] * 1000,3) )+" ms"                     
+                    else:
+                        label = 'Bin_%s'%(2**j)  
+                else:
+                    label=''                
                 
             if spec_std is None:
                 art, = axes.plot( x,y, 'o',  label= label)
@@ -1123,7 +1140,7 @@ def get_his_std_from_pds( spec_pds, his_shapes=None):
     
     
 def plot_g2_contrast( contrast_factorL, g2, times, taus, q_ring_center=None, 
-                     uid=None, vlim=[0.8,1.2], qth = None, path = None,legend_size=16):
+                     uid=None, vlim=[0.8,1.2], qth = None, path = None,legend_size=16, figsize=[10,10]):
     nq,nt = contrast_factorL.shape     
     
     if qth is not None:
@@ -1138,8 +1155,10 @@ def plot_g2_contrast( contrast_factorL, g2, times, taus, q_ring_center=None,
     else:
         sy = int(nr/sx+1)
     #fig = plt.figure(figsize=(14, 10))   
-    
-    fig = plt.figure()
+    if qth is not None:
+        fig = plt.figure()
+    else:
+        fig = plt.figure( figsize=figsize  )
     title = '%s_'%uid + "Contrast"
     plt.title(title, fontsize=14, y =1.08)  
     if qth is None:

@@ -121,6 +121,7 @@ def xsvs(image_sets, label_array, number_of_img, timebin_num=2, time_bin=None,on
     start_time = time.time()  # used to log the computation time (optionally)
 
     for i, images in enumerate(image_sets):
+        #print( i, images )
         # Ring buffer, a buffer with periodic boundary conditions.
         # Images must be keep for up to maximum delay in buf.
         #buf = np.zeros([num_times, timebin_num], dtype=np.object)  # matrix of buffers
@@ -249,7 +250,7 @@ def xsvs(image_sets, label_array, number_of_img, timebin_num=2, time_bin=None,on
     #print (img_per_level - track_bad_level)
     #print (buf)
     
-    return prob_k_all, prob_k_std_dev
+    return bin_edges, prob_k_all, prob_k_std_dev
 
 
 def _process(num_roi, level, buf_no, buf, img_per_level, labels,

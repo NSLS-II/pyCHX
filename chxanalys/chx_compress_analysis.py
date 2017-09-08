@@ -28,9 +28,6 @@ from chxanalys.chx_compress import   (compress_eigerdata, read_compressed_eigerd
 
                                       
 #from chxanalys.chx_compress import *
-
-
-
 def cal_waterfallc(FD, labeled_array,   qindex=1, 
                    bin_waterfall = False, waterfall_roi_size = None, save=False, *argv,**kwargs):   
     """Compute the mean intensity for each ROI in the compressed file (FD)
