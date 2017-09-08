@@ -3,7 +3,37 @@ from chxanalys.chx_libs import *
 from chxanalys.chx_libs import  ( colors,  markers )
 from scipy.special import erf
 
+from skimage.filters import  prewitt
 
+
+def get_image_edge(img):
+    '''
+    Y.G. Developed at Sep 8, 2017 @CHX
+    Get sharp edges of an image
+    img: two-D array, e.g., a roi mask
+    '''
+    edg_ = prewitt(img/1.0)
+    edg = np.zeros_like(edg_)
+    w = np.where(edg_ > 1e-10)
+    edg[w] = img[w]
+    edg[np.where(edg==0)] = 1
+    return edg      
+
+def get_image_with_roi( img, roi_mask, scale_factor = 2):
+    '''
+    Y.G. Developed at Sep 8, 2017 @CHX
+    Get image with edges of roi_mask by doing
+        i)  get edges of roi_mask by function get_image_edge
+        ii) scale img at region of interest (ROI) by scale_factor
+    img: two-D array for image
+    roi_mask: two-D array for ROI
+    scale_factor: scaling factor of ROI in image
+    '''
+    edg = get_image_edge( roi_mask )
+    img_ = img.copy()
+    w = np.where(roi_mask)
+    img_[w] = img[w] *  scale_factor
+    return img_ * edg 
 
 
 
@@ -613,8 +643,8 @@ def get_bad_frame_list( imgsum, fit=True, polyfit_order = 30,legend_size = 12,
     if plot:
         fig = plt.figure( )            
         ax = fig.add_subplot(2,1,1 )             
-        plot1D( imgsum_, ax = ax,legend='data',legend_size=legend_size  )
-        plot1D( pfit,ax=ax, legend='ploy-fit', title=uid + '_imgsum',legend_size=legend_size  )
+        plot1D( imgsum_, ax = ax, color='k', legend='data',legend_size=legend_size  )
+        plot1D( pfit,ax=ax, color='b', legend='ploy-fit', title=uid + '_imgsum',legend_size=legend_size  )
 
         ax2 = fig.add_subplot(2,1,2 )      
         plot1D( data, ax = ax2,legend='difference',marker='s', color='b', )          
@@ -1615,8 +1645,9 @@ def show_label_array_on_image(ax, image, label_array, cmap=None,norm=None, log_i
     
     
 def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on = True,
-                       save=False, return_fig = False, rect_reqion=None, log_img = True, vmin=0.01, vmax=5,  
-                      uid='uid', path='',  aspect = 1, show_colorbar=True, *argv,**kwargs):
+                       save=False, return_fig = False, rect_reqion=None, log_img = True, vmin=0.01, vmax=5, 
+                      show_ang_cor = False,
+                      uid='uid', path='',  aspect = 1, show_colorbar=True, show_roi_edge=False, *argv,**kwargs):
     
     '''show ROI on an image
         image: the data frame
@@ -1642,10 +1673,19 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
             vmin += 1e-10
     
     vmax = max(1, vmax ) 
-    
-    im,im_label = show_label_array_on_image(axes, image, ROI, imshow_cmap='viridis',
+    if not show_roi_edge:    
+        im,im_label = show_label_array_on_image(axes, image, ROI, imshow_cmap='viridis',
                             cmap='Paired',alpha=alpha, log_img=log_img,
                              vmin=vmin, vmax=vmax,  origin="lower")
+    else:
+        edg = get_image_edge( ROI )
+        image_ = get_image_with_roi( image, ROI, scale_factor = 2) 
+        #fig, axes = plt.subplots( )        
+        show_img(  image_,  ax=[fig,axes], vmin=vmin, vmax=vmax,  
+                  logs= log_img, image_name=  "%s_ROI_on_Image"%uid,
+                 cmap = cmap_albula )
+    
+    
     if rect_reqion is  None:
         if center is not None:
             x1,x2 = [center[1] - rwidth, center[1] + rwidth]
@@ -1667,11 +1707,17 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
             x_val = int( ind.mean() )
             #print (xval, y)
             axes.text(x_val, y_val, c, va='center', ha='center')    
+    if show_ang_cor:
+        axes.text(-0.0, 0.5, '-180' + r'$^0$', color='r', va='center', ha='center',transform=axes.transAxes)
+        axes.text(1.0, 0.5, '180' + r'$^0$', color='r', va='center', ha='center',transform=axes.transAxes)
+        axes.text(0.5, -0.0, '-90'+  r'$^0$', color='r', va='center', ha='center',transform=axes.transAxes)
+        axes.text(0.5, 1.0, '90' +  r'$^0$', color='r', va='center', ha='center',transform=axes.transAxes)  
 
     axes.set_aspect(aspect)
     #fig.colorbar(im_label)
     if show_colorbar:
-        fig.colorbar(im)
+        if not show_roi_edge:   
+            fig.colorbar(im)
     if save:   
         fp = path + "%s_ROI_on_Image"%uid  + '.png'    
         plt.savefig( fp, dpi=fig.dpi)      
@@ -2601,7 +2647,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                     path=None, function='simple_exponential',  g2_labels=None, 
                     fig_ysize= 12, qth_interest = None,
                     ylabel='g2',  return_fig=False, append_name='', outsize=(2000, 2400), 
-                    max_plotnum_fig=16, figsize=(10, 12), *argv,**kwargs):    
+                    max_plotnum_fig=16, figsize=(10, 12), show_average_ang_saxs=True, *argv,**kwargs):    
     '''
     Dec 26,2016, Y.G.@CHX
     
@@ -2640,6 +2686,8 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
     -------        
     None
 
+    ToDoList: plot an average g2 for ang_saxs for each q
+    
     '''    
 
     if ylabel=='g2':
@@ -2653,12 +2701,14 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
      mastp) = get_short_long_labels_from_qval_dict(qval_dict, geometry=geometry)  
     fps = [] 
     
-    #print( num_short, num_long )
+    #$print( num_short, num_long )
     
     for s_ind in range( num_short  ):
         ind_long_i = ind_long[ s_ind ]
         num_long_i = len( ind_long_i )
-        
+        #if show_average_ang_saxs:
+        #    if geometry=='ang_saxs':
+        #        num_long_i += 1        
         if RUN_GUI:
             fig = Figure(figsize=(10, 12))            
         else:
@@ -2723,16 +2773,21 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
         temp = sy
         sy = sx
         sx = temp
-        #print( num_long_i, sx, sy )  
         
+        #print( num_long_i, sx, sy )
         #print( master_plot )
+        #print(ind_long_i, len(ind_long_i) )
+        
         for i, l_ind in enumerate( ind_long_i ):  
             if num_long_i <= max_plotnum_fig:
                 #print('Here')
                 #print(i, l_ind,long_label[l_ind] )                
                 ax = fig.add_subplot(sx,sy, i + 1 ) 
             else:
-                fig_subnum = l_ind//max_plotnum_fig
+                #fig_subnum = l_ind//max_plotnum_fig
+                #ax = fig[fig_subnum].add_subplot(sx,sy, i + 1 - fig_subnum*max_plotnum_fig) 
+                fig_subnum = i//max_plotnum_fig
+                #print(  i, sx,sy, fig_subnum, max_plotnum_fig, i + 1 - fig_subnum*max_plotnum_fig )
                 ax = fig[fig_subnum].add_subplot(sx,sy, i + 1 - fig_subnum*max_plotnum_fig) 
                 
                   
@@ -2743,7 +2798,8 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                 #print(  long_label   )
             else:             
                 if geometry=='ang_saxs':
-                    title_long = 'Ang= ' + '%.2f'%(  long_label[l_ind] ) + r'$^\circ$' + '( %d )'%(l_ind)
+                    #title_long = 'Ang= ' + '%.2f'%(  long_label[l_ind] ) + r'$^\circ$' + '( %d )'%(l_ind)
+                    title_long = 'Ang= ' + '%.2f'%(  long_label[l_ind] ) #+ r'$^\circ$' + '( %d )'%(l_ind)
                 elif geometry=='gi_saxs':
                     title_long =   r'$Q_z= $'+ '%.5f  '%( long_label[l_ind]  ) + r'$\AA^{-1}$'                  
                 else:
