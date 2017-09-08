@@ -1083,13 +1083,13 @@ def show_one_C12( C12,   return_fig=False,interpolation = 'none',cmap='viridis',
 
     
 
-def show_C12(C12,  q_ind=0, return_fig=False, interpolation = 'none', cmap='viridis',
+def show_C12(C12,  q_ind=1, return_fig=False, interpolation = 'none', cmap='viridis',
              logs=True, *argv,**kwargs):  
  
     '''
     plot one-q of two-time correlation function
     C12: two-time correlation function, with shape as [ time, time, qs]
-    q_ind: if integer, for a SAXS q, the nth of q to be plotted, starting from 0,
+    q_ind: if integer, for a SAXS q, the nth of q to be plotted, starting from 1,
             if a list: for a GiSAXS [qz_ind, qr_ind]  
     kwargs: support        
         timeperframe: the time interval
@@ -1113,9 +1113,9 @@ def show_C12(C12,  q_ind=0, return_fig=False, interpolation = 'none', cmap='viri
         
     shape = C12.shape
     if isinstance(q_ind, int):
-        C12_num = q_ind
+        C12_num = q_ind -1
     else:
-        qz_ind, qr_ind = q_ind
+        qz_ind, qr_ind = q_ind -1
         C12_num =  qz_ind * num_qr + qr_ind 
     
     if 'timeperframe' in kwargs.keys():
