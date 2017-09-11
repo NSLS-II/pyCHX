@@ -1708,8 +1708,8 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
             #print (xval, y)
             axes.text(x_val, y_val, c, va='center', ha='center')    
     if show_ang_cor:
-        axes.text(-0.0, 0.5, '-180' + r'$^0$', color='r', va='center', ha='center',transform=axes.transAxes)
-        axes.text(1.0, 0.5, '180' + r'$^0$', color='r', va='center', ha='center',transform=axes.transAxes)
+        axes.text(-0.0, 0.5, '-/+180' + r'$^0$', color='r', va='center', ha='center',transform=axes.transAxes)
+        axes.text(1.0, 0.5, '0' + r'$^0$', color='r', va='center', ha='center',transform=axes.transAxes)
         axes.text(0.5, -0.0, '-90'+  r'$^0$', color='r', va='center', ha='center',transform=axes.transAxes)
         axes.text(0.5, 1.0, '90' +  r'$^0$', color='r', va='center', ha='center',transform=axes.transAxes)  
 
