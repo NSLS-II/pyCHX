@@ -1073,10 +1073,11 @@ def get_angular_mask( mask,  inner_angle=0, outer_angle = 360, width = None, edg
         
 
     if flow_geometry:
-        if inner_angle<0:
-            print('In this flow_geometry, the inner_angle should be larger than 0')
-        if outer_angle >180:
-            print('In this flow_geometry, the out_angle should be smaller than 180')
+        if edges is  None:
+            if inner_angle<0:
+                print('In this flow_geometry, the inner_angle should be larger than 0')
+            if outer_angle >180:
+                print('In this flow_geometry, the out_angle should be smaller than 180')
             
 
     if edges is None:
@@ -1093,10 +1094,11 @@ def get_angular_mask( mask,  inner_angle=0, outer_angle = 360, width = None, edg
     ang_mask = np.array(ang_mask, dtype=int)
         
     if flow_geometry:
+        
         outer_angle -= 180
         inner_angle -= 180 
-        if edges is None:
-            edges2 = roi.ring_edges(inner_angle, width, spacing, num_angles)
+        edges2 = roi.ring_edges(inner_angle, width, spacing, num_angles)
+
         #print (edges)
         angs2 = angulars( np.radians( edges2 ), center, mask.shape)
         ang_mask2 = angs2*mask
