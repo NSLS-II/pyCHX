@@ -468,13 +468,18 @@ def combine_images( filenames, outputfile, outsize=(2000, 2400)):
     print( 'The combined image is saved as: %s'%outputfile)
     
 
-def get_qval_dict( qr_center, qz_center=None, qval_dict = None,  multi_qr_for_one_qz= True,):
+def get_qval_dict( qr_center, qz_center=None, qval_dict = None,  multi_qr_for_one_qz= True,
+                 one_qz_multi_qr = True):
     '''Y.G. Dec 27, 2016
     Map the roi label array with qr or (qr,qz) or (q//, q|-) values
     Parameters:
         qr_center: list, a list of qr
         qz_center: list, a list of qz, 
-        multi_qr_for_one_qz: by default=True, one qz_center corresponds to  all qr_center, in other words, there are totally,  len(qr_center)* len(qz) qs
+        multi_qr_for_one_qz: by default=True, 
+            if one_qz_multi_qr:                
+                one qz_center corresponds to  all qr_center, in other words, there are totally,  len(qr_center)* len(qz) qs
+            else:
+                one qr_center corresponds to  all qz_center, 
             else: one qr with one qz
         qval_dict: if not None, will append the new dict to the qval_dict
     Return:
@@ -490,9 +495,16 @@ def get_qval_dict( qr_center, qz_center=None, qval_dict = None,  multi_qr_for_on
         
     if qz_center is not None:
         if multi_qr_for_one_qz:
-            for qzind in range( len( qz_center)):
-                for qrind in range( len( qr_center)):    
-                    qval_dict[ maxN + qzind* len( qr_center) + qrind ] = np.array( [qr_center[qrind], qz_center[qzind]  ] )
+            if one_qz_multi_qr:
+                for qzind in range( len( qz_center)):
+                    for qrind in range( len( qr_center)):    
+                        qval_dict[ maxN + qzind* len( qr_center) + qrind ] = np.array( [qr_center[qrind], qz_center[qzind]  ] )
+            else:
+                for qrind in range( len( qr_center)):
+                    for qzind in range( len( qz_center)):    
+                        qval_dict[ maxN + qrind* len( qz_center) + qzind ] = np.array( [qr_center[qrind], qz_center[qzind]  ] )
+       
+    
         else:
             for i, [qr, qz] in enumerate(zip( qr_center, qz_center)):     
                 qval_dict[ maxN + i  ] = np.array( [ qr, qz  ] )            
@@ -582,7 +594,10 @@ def find_uids(start_time, stop_time ):
     
     '''
     hdrs = db(start_time= start_time, stop_time = stop_time)
-    print ('Totally %s uids are found.'%(len(hdrs)))
+    try:
+        print ('Totally %s uids are found.'%(len(list(hdrs))))
+    except:
+        pass
     sids=[]
     uids=[]
     fuids=[]
@@ -1328,6 +1343,7 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
              aspect=None, logs=False,vmin=None,vmax=None,return_fig=False,cmap='viridis', 
              show_time= False, file_name =None, ylabel=None, xlabel=None, extent=None,
              show_colorbar=True, tight=True, show_ticks=True, save_format = 'png', dpi= None,
+             center=None,
              *argv,**kwargs ):    
     """a simple function to show image by using matplotlib.plt imshow
     pass *argv,**kwargs to imshow
@@ -1379,6 +1395,8 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
         ax.set_aspect(aspect)
     else:
         ax.set_aspect(aspect='auto')
+    if center is not None:
+        plot1D(center[0],center[1],ax=ax, c='b', m='o', legend='')
     if save:
         if show_time:
             dt =datetime.now()
@@ -1461,7 +1479,7 @@ def plot1D( y,x=None, yerr=None, ax=None,return_fig=False, ls='-',
                 markersize=markersize, )#,*argv,**kwargs)
     else:
         ax.errorbar(x,y,yerr, marker=marker,color=color,ls=ls,label= legend, 
-                    lw=lw,markersize=markersize,)#,*argv,**kwargs)
+                    lw=lw,markersize=markersize,)#,*argv,**kwargs)    
     if logx:
         ax.set_xscale('log')
     if logy:
@@ -1487,7 +1505,8 @@ def plot1D( y,x=None, yerr=None, ax=None,return_fig=False, ls='-',
         title =  'plot'
     ax.set_title( title ) 
     #ax.set_xlabel("$Log(q)$"r'($\AA^{-1}$)')    
-    ax.legend(loc = 'best', fontsize=legend_size )
+    if (legend!='') and (legend!=None):
+        ax.legend(loc = 'best', fontsize=legend_size )
     if 'save' in kwargs.keys():
         if  kwargs['save']: 
             #dt =datetime.now()
@@ -1706,7 +1725,7 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
             y_val = int( indz.mean() )
             x_val = int( ind.mean() )
             #print (xval, y)
-            axes.text(x_val, y_val, c, va='center', ha='center')    
+            axes.text(x_val, y_val, c, color='b',va='center', ha='center')    
     if show_ang_cor:
         axes.text(-0.0, 0.5, '-/+180' + r'$^0$', color='r', va='center', ha='center',transform=axes.transAxes)
         axes.text(1.0, 0.5, '0' + r'$^0$', color='r', va='center', ha='center',transform=axes.transAxes)
@@ -2647,7 +2666,9 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                     path=None, function='simple_exponential',  g2_labels=None, 
                     fig_ysize= 12, qth_interest = None,
                     ylabel='g2',  return_fig=False, append_name='', outsize=(2000, 2400), 
-                    max_plotnum_fig=16, figsize=(10, 12), show_average_ang_saxs=True, *argv,**kwargs):    
+                    max_plotnum_fig=16, figsize=(10, 12), show_average_ang_saxs=True,
+                    qphi_analysis = False,
+                    *argv,**kwargs):    
     '''
     Dec 26,2016, Y.G.@CHX
     
@@ -2695,6 +2716,9 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
     if ylabel=='g4':
         ylabel='g_4' 
         
+    if geometry =='saxs':
+        if qphi_analysis:
+            geometry = 'ang_saxs'
     (qr_label, qz_label, num_qz, num_qr, num_short,
      num_long, short_label, long_label,short_ulabel,
      long_ulabel,ind_long, master_plot,
@@ -3020,12 +3044,13 @@ def get_q_rate_fit_general( qval_dict, rate, geometry ='saxs', weights=None, *ar
     Nqz = num_short    
     D0= np.zeros( Nqz )
     power= 2 #np.zeros( Nqz )
-    qrate_fit_res=[]
-    
+    qrate_fit_res=[]    
+    #print(Nqz)    
     for i  in range(Nqz):        
         ind_long_i = ind_long[ i ]
         y = np.array( rate  )[ind_long_i]        
-        x =   long_label[ind_long_i]        
+        x =   long_label[ind_long_i] 
+        #print(y,x)
         if fit_range is not None:
             y=y[fit_range[0]:fit_range[1]]
             x=x[fit_range[0]:fit_range[1]]             
