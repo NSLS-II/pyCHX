@@ -4,7 +4,32 @@ from chxanalys.chx_libs import  ( colors,  markers )
 from scipy.special import erf
 
 from skimage.filters import  prewitt
+from skimage.draw import line_aa, line, polygon, ellipse, circle
 
+from modest_image import ModestImage, imshow
+ 
+    
+    
+def create_ring_mask( shape, r1, r2, center, mask=None):
+    '''YG. Sep 20, 2017 Develop@CHX 
+    Create 2D ring mask
+    input:
+        shape: two integer number  list, mask shape, e.g., [100,100]
+        r1: the inner radius
+        r2: the outer radius
+        center: two integer number  list, [cx,cy], ring center, e.g., [30,50]
+    output:
+        2D numpy array, 0,1 type
+    '''
+
+    m = np.zeros( shape, dtype= bool) 
+    rr,cc = circle(  center[1], center[0], r2, shape=shape  )
+    m[rr,cc] = 1
+    rr,cc = circle(  center[1], center[0], r1,shape=shape  )
+    m[rr,cc] = 0 
+    if mask is not None:
+        m += mask
+    return m
 
 def get_image_edge(img):
     '''
@@ -1343,7 +1368,7 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
              aspect=None, logs=False,vmin=None,vmax=None,return_fig=False,cmap='viridis', 
              show_time= False, file_name =None, ylabel=None, xlabel=None, extent=None,
              show_colorbar=True, tight=True, show_ticks=True, save_format = 'png', dpi= None,
-             center=None,
+             center=None,origin='lower', lab_fontsize = 16,  tick_size = 12, colorbar_fontsize = 8, 
              *argv,**kwargs ):    
     """a simple function to show image by using matplotlib.plt imshow
     pass *argv,**kwargs to imshow
@@ -1365,15 +1390,14 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
     else:
         fig, ax=ax
 
+    if center is not None:
+        plot1D(center[1],center[0],ax=ax, c='b', m='o', legend='')
     if not logs:
-        im=ax.imshow(image, origin='lower' ,cmap=cmap,interpolation="nearest", vmin=vmin,vmax=vmax,
+        im=imshow(ax, image, origin=origin,cmap=cmap,interpolation="nearest", vmin=vmin,vmax=vmax,
                     extent=extent)  #vmin=0,vmax=1,
     else:
-        im=ax.imshow(image, origin='lower' ,cmap=cmap,
-                interpolation="nearest" , norm=LogNorm(vmin,  vmax),extent=extent)          
-        
-    if show_colorbar:
-        fig.colorbar(im)
+        im=imshow(ax, image, origin=origin,cmap=cmap,
+                interpolation="nearest" , norm=LogNorm(vmin,  vmax),extent=extent)         
     ax.set_title( image_name )
     if xlim is not None:
         ax.set_xlim(   xlim  )        
@@ -1382,21 +1406,32 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
     
     if not show_ticks:
         ax.set_yticks([])
-        ax.set_xticks([])
+        ax.set_xticks([])        
+    else:   
         
+        ax.tick_params(axis='both', which='major', labelsize=tick_size )
+        ax.tick_params(axis='both', which='minor', labelsize=tick_size )
+        #mpl.rcParams['xtick.labelsize'] = tick_size 
+        #mpl.rcParams['ytick.labelsize'] = tick_size
+        #print(tick_size)
+    
     if ylabel is not None:
         #ax.set_ylabel(ylabel)#, fontsize = 9)
-        ax.set_ylabel(  ylabel , fontsize = 16    )
+        ax.set_ylabel(  ylabel , fontsize = lab_fontsize    )
     if xlabel is not None:
-        ax.set_xlabel(xlabel , fontsize = 16)          
+        ax.set_xlabel(xlabel , fontsize = lab_fontsize )          
         
     if aspect is not None:
         #aspect = image.shape[1]/float( image.shape[0] )
         ax.set_aspect(aspect)
     else:
         ax.set_aspect(aspect='auto')
-    if center is not None:
-        plot1D(center[0],center[1],ax=ax, c='b', m='o', legend='')
+        
+    if show_colorbar:
+        cbar = fig.colorbar(im, extend='neither', spacing='proportional',
+                orientation='vertical' )
+        cbar.ax.tick_params(labelsize=colorbar_fontsize)        
+
     if save:
         if show_time:
             dt =datetime.now()
@@ -1415,8 +1450,8 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
 
     
     
-def plot1D( y,x=None, yerr=None, ax=None,return_fig=False, ls='-', 
-           legend_size=None, lw=None, markersize=None,*argv,**kwargs):    
+def plot1D( y,x=None, yerr=None, ax=None,return_fig=False, ls='-', figsize=None,
+           legend_size=None, lw=None, markersize=None, tick_size=8, *argv,**kwargs):    
     """a simple function to plot two-column data by using matplotlib.plot
     pass *argv,**kwargs to plot
     
@@ -1433,7 +1468,10 @@ def plot1D( y,x=None, yerr=None, ax=None,return_fig=False, ls='-',
             fig = Figure()
             ax = fig.add_subplot(111)
         else:
-            fig, ax = plt.subplots()
+            if figsize is not None:
+                fig, ax = plt.subplots(figsize=figsize)
+            else:
+                fig, ax = plt.subplots()
         
     if 'legend' in kwargs.keys():
         legend =  kwargs['legend']  
@@ -1489,6 +1527,8 @@ def plot1D( y,x=None, yerr=None, ax=None,return_fig=False, ls='-',
         ax.set_yscale('log')
          
  
+    ax.tick_params(axis='both', which='major', labelsize=tick_size )
+    ax.tick_params(axis='both', which='minor', labelsize=tick_size )
     
     if 'xlim' in kwargs.keys():
          ax.set_xlim(    kwargs['xlim']  )    
