@@ -205,7 +205,7 @@ color_list_hdr_albula = [
     #[ 255.0/255.0, 255.0/255.0, 255.0/255.0],
 ]
 cmap_hdr_albula = mpl.colors.LinearSegmentedColormap.from_list('cmap_hdr_albula', color_list_hdr_albula)
-
+cmap_albula = cmap_hdr_albula
 # Ugly color-scale, but good for highlighting many features in HDR data
 color_list_cur_hdr_goldish = [
     [ 255.0/255.0, 255.0/255.0, 255.0/255.0], # white
