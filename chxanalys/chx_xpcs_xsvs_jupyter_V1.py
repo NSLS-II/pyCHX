@@ -4,6 +4,9 @@ from chxanalys.chx_libs import markers, colors
 #RUN_GUI = False
 #from chxanalys.chx_libs import markers
 
+
+
+
 def get_t_iqc_uids( uid_list, setup_pargs, slice_num= 10, slice_width= 1):
     '''Get Iq at different time edge (difined by slice_num and slice_width) for a list of uids
     Input:
@@ -43,6 +46,9 @@ def get_t_iqc_uids( uid_list, setup_pargs, slice_num= 10, slice_width= 1):
     
     return qs, iqsts, tstamp
 
+
+
+
 def plot_t_iqtMq2(qt, iqst, tstamp, ax=None, perf='' ):
     '''plot q2~Iq at differnt time'''
     if ax is None:
@@ -68,15 +74,18 @@ def plot_t_iqc_uids( qs, iqsts, tstamps  ):
         
     
     
+def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1,  legend_size=8,
+                           yshift=0.01, ymulti=1, xlim=None, ylim=None,legend=None, uid_length = None):#,title=''  ):
     
-
-def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1, yshift=0.01, xlim=None, ylim=None  ):
-    '''plot enteries for a list uids
+    '''YG June 9, 2017@CHX
+     YG Sep 29, 2017@CHX.
+    plot enteries for a list uids
     Input:
         uid_list: list, a list of uid (string)
         inDir: string, imported folder for saved analysis results
         key: string, plot entry, surport 
-            'g2' for two-time, 
+            'g2' for one-time, 
+            'iq' for q~iq
             'mean_int_sets' for mean intensity of each roi as a function of frame            
             TODOLIST:#also can plot the following
                 dict_keys(['qt', 'imgsum', 'qval_dict_v', 'bad_frame_list', 'iqst', 
@@ -92,33 +101,61 @@ def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1, yshift=0.01, x
     Example:
     uid_list = ['5492b9', '54c5e0']
     plot_entries_from_uids( uid_list, inDir, yshift = 0.01, key= 'g2', ylim=[1, 1.2])
-        
     '''
+        
+        
+ 
     
     uid_dict = {}
     fig, ax =plt.subplots() 
     for uid in uid_list:
-        uid_dict[uid] =  get_meta_data( uid )['uid']
-    for i, u in enumerate( list( uid_dict.keys() )):
+        if uid_length is not None:
+            uid_ = uid[:uid_length]
+        else:
+            uid_=uid
+        #print(uid_)
+        uid_dict[uid_] =  get_meta_data( uid )['uid']
+    #for i, u in enumerate( list( uid_dict.keys() )):
+    for i,u in enumerate( list(uid_list)): 
+        #print(u)
+        if uid_length is not None:
+            u = u[:uid_length]                         
         inDiru =  inDir + u + '/'        
-        total_res  = extract_xpcs_results_from_h5( filename = 'uid=%s_Res.h5'%uid_dict[u], import_dir = inDiru )
+        total_res  = extract_xpcs_results_from_h5( filename = 'uid=%s_Res.h5'%uid_dict[u], 
+                                    import_dir = inDiru, exclude_keys = ['g12b'] )
         if key=='g2':
             d = total_res[key][1:,qth]
             taus = total_res['taus'][1:]
-            plot1D(  x = taus, y=d + yshift*i, c=colors[i], m = markers[i], ax=ax, logx=True, legend= u,
-                  xlabel='t (sec)', ylabel='g2',)  
+            if legend is None:
+                leg=u
+            else:
+                leg='uid=%s-->'%u+legend[i]
+            plot1D(  x = taus, y=d + yshift*i, c=colors[i], m = markers[i], ax=ax, logx=True, legend= leg,
+                  xlabel='t (sec)', ylabel='g2', legend_size=legend_size,) 
+            title='Q = %s'%(total_res['qval_dict'][qth])
+            ax.set_title(title)
         elif key=='imgsum':
             d = total_res[key]            
             plot1D(  y=d + yshift*i, c=colors[i], m = markers[i], ax=ax, logx=False, legend= u,
-                  xlabel='Frame', ylabel='imgsum',)              
+                  xlabel='Frame', ylabel='imgsum',)  
+            
+        elif key == 'iq':
+            x= total_res['q_saxs']   
+            y= total_res['iq_saxs']
+            plot1D(  x=x, y= y* ymulti[i] + yshift*i, c=colors[i], m = markers[i], ax=ax, logx= False, logy=True,
+                   legend= u,   xlabel ='Q 'r'($\AA^{-1}$)', ylabel = "I(q)"  )             
+
         else:
             d = total_res[key][:,qth]             
             plot1D(  x = np.arange(len(d)), y= d + yshift*i, c=colors[i], m = markers[i], ax=ax, logx=False, legend= u,
                   xlabel= 'xx', ylabel=key ) 
     if key=='mean_int_sets':ax.set_xlabel( 'frame ')            
     if xlim is not None:ax.set_xlim(xlim)        
-    if ylim is not None:ax.set_ylim(ylim)   
-        
+    if ylim is not None:ax.set_ylim(ylim)  
+
+
+
+            
 
 
 
@@ -235,6 +272,29 @@ def wait_data_acquistion_finish( uid, wait_time = 2,  max_try_num = 3  ):
             sleep_time += wait_time 
     return FINISH * Fake_FINISH  #, sleep_time
 
+def get_uids_by_range(  start_uidth=-1, end_uidth = 0 ):
+    '''Y.G. Dec 22, 2016
+        A wrap funciton to find uids by giving start and end uid number, i.e. -10, -1
+        Return:        
+        uids: list, uid with 8 character length
+        fuids: list, uid with full length
+    
+    '''
+    hdrs = list([ db[n] for n in range(start_uidth, end_uidth)] )
+    if len(hdrs)!=0:
+        print ('Totally %s uids are found.'%(len(hdrs)))
+    
+    uids=[]  #short uid
+    fuids=[]  #full uid
+    for hdr in hdrs: 
+        fuid = hdr['start']['uid'] 
+        uids.append( fuid[:8] )
+        fuids.append( fuid )    
+    uids=uids[::-1]
+    fuids=fuids[::-1]
+    return  np.array(uids), np.array(fuids)
+
+
 def get_uids_in_time_period( start_time, stop_time ):
     '''Y.G. Dec 22, 2016
         A wrap funciton to find uids by giving start and end time
@@ -335,6 +395,7 @@ def realtime_xpcs_analysis( start_time, stop_time,  run_pargs, md_update=None,
                         #uid = uid[:8]
                         #print(md_cor)
                         if not emulation:
+                            #suid=uid[:6]
                             run_xpcs_xsvs_single( uid, run_pargs= run_pargs, md_cor = None,
                                              return_res= False )                        
                         #update_olog_uid( uid= md['uid'], text='Data are on-line sparsified!',attachments=None)              
@@ -817,7 +878,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
     print ('*'*40)
     print  ( '*'*5 + 'The processing uid is: %s'%uid + '*'*5)
     print ('*'*40)
-    data_dir = os.path.join(data_dir0, '%s/'%uid)
+    suid = uid[:6]
+    data_dir = os.path.join(data_dir0, '%s/'%suid)
     os.makedirs(data_dir, exist_ok=True)
     print('Results from this analysis will be stashed in the directory %s' % data_dir)
     md = get_meta_data( uid )
@@ -1230,7 +1292,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
             if 'dose_frame' in list(run_pargs.keys()):
                 dose_frame = run_pargs['dose_frame']
             else:
-                dose_frame =  np.int_([  N/32, N/16, N/8, N/4 ,N/2, 3*N/4, N*0.99 ] )
+                dose_frame =  np.int_([    N/8, N/4 ,N/2, 3*N/4, N*0.99 ] )
+                 #N/32, N/16, N/8, N/4 ,N/2, 3*N/4, N*0.99
             exposure_dose = tr * exposuretime * dose_frame
             taus_uids, g2_uids = get_series_one_time_mulit_uids( [ uid ],  qval_dict, good_start=good_start,  
                     path= data_dir0, exposure_dose = exposure_dose,  num_bufs =8, save_g2= False,
