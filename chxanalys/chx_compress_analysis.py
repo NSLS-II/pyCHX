@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 from chxanalys.chx_compress import   (compress_eigerdata, read_compressed_eigerdata,init_compress_eigerdata, 
                                       Multifile,pass_FD,get_avg_imgc,mean_intensityc, get_each_frame_intensityc)
 
-                                      
+from modest_image import ModestImage, imshow                                      
 #from chxanalys.chx_compress import *
 def cal_waterfallc(FD, labeled_array,   qindex=1, 
                    bin_waterfall = False, waterfall_roi_size = None, save=False, *argv,**kwargs):   
@@ -107,7 +107,7 @@ def cal_waterfallc(FD, labeled_array,   qindex=1,
     return watf
 
 def plot_waterfallc(wat, qindex=1, aspect = None,vmax=None, vmin=None, interpolation = 'none',
-                    save=False, return_fig=False,*argv,**kwargs):   
+                    save=False, return_fig=False, cmap='viridis',*argv,**kwargs):   
     '''plot waterfall for a giving compressed file
     
        FD: class object, the compressed file handler
@@ -145,7 +145,8 @@ def plot_waterfallc(wat, qindex=1, aspect = None,vmax=None, vmin=None, interpola
         vmin = wat.min()
     if aspect is None:
         aspect = wat.shape[0]/wat.shape[1]
-    im = ax.imshow(wat.T, cmap='viridis', vmax=vmax,extent= extent,interpolation = interpolation )
+    im = imshow(ax, wat.T, cmap=cmap, vmax=vmax,extent= extent,interpolation = interpolation )    
+    #im = ax.imshow(wat.T, cmap='viridis', vmax=vmax,extent= extent,interpolation = interpolation )
     fig.colorbar( im   )
     ax.set_aspect( aspect)
     
