@@ -7,8 +7,73 @@ from skimage.filters import  prewitt
 from skimage.draw import line_aa, line, polygon, ellipse, circle
 
 from modest_image import ModestImage, imshow
- 
+import matplotlib.cm as mcm
+import copy 
     
+    
+def get_print_uids( start_time, stop_time):
+    '''YG. Octo 3, 2017@CHX
+    Get full uids and print uid plus Measurement contents by giving start_time, stop_time
+    
+    
+    '''
+    
+    hdrs = list( db(start_time= start_time, stop_time = stop_time) )
+    uids = np.zeros( len(hdrs),dtype=object)
+    sids = np.zeros( len(hdrs), dtype=object)
+    n=0
+    for  i in range(len(hdrs)):
+        uid = hdrs[i]['start']['uid'][:6]
+        sid = hdrs[i]['start']['scan_id']
+        uids[n]=uid
+        sids[n]=sid
+        n +=1
+        try:
+            m = hdrs[i]['start']['Measurement']
+        except:
+            m=''
+        print( "   uid = '%s' #(scan num: %s (Measurement: %s        "%(uid,sid,m) )
+    return uids, sids
+    
+    
+def get_last_uids( n=-1 ):
+    '''YG Sep 26, 2017
+    A Convinient function to copy uid to jupyter for analysis'''
+    uid = db[n]['start']['uid'][:6]
+    sid = db[n]['start']['scan_id']
+    m = db[n]['start']['Measurement']
+    return "   uid = '%s' #(scan num: %s (Measurement: %s        "%(uid,sid,m) 
+
+
+    
+def get_base_all_filenames( inDir, base_filename_cut_length = -7  ):
+    '''YG Sep 26, 2017
+    Get base filenames and their related all filenames
+    Input:
+      inDir, str, input data dir
+       base_filename_cut_length: to which length the base name is unique
+    Output:
+      dict: keys,  base filename
+            vales, all realted filename
+    '''
+    from os import listdir
+    from os.path import isfile, join
+    tifs = np.array( [f for f in listdir(inDir) if isfile(join(inDir, f))] )
+    tifsc = list(tifs.copy())    
+    utifs = np.sort( np.unique( np.array([ f[:base_filename_cut_length] for f in tifs] ) )  )[::-1]
+    files = {}
+    for uf in utifs:     
+        files[uf] = []
+        i = 0
+        reName = []
+        for i in range(len(tifsc)): 
+            if uf in tifsc[i]: 
+                files[uf].append( tifsc[i] )            
+                reName.append(tifsc[i])
+        for fn in reName:
+            tifsc.remove(fn)
+    return files
+
     
 def create_ring_mask( shape, r1, r2, center, mask=None):
     '''YG. Sep 20, 2017 Develop@CHX 
@@ -648,7 +713,60 @@ def ployfit( y, x=None, order = 20 ):
     pol = np.polyfit(x, y, order)
     return np.polyval(pol, x)
     
+def check_bad_data_points( data, fit=True, polyfit_order = 30, legend_size = 12,
+                       plot=True, scale=1.0, good_start=None, good_end=None, path=None, return_ylim=False  ):
+    '''
+    data: 1D array
+    scale: the scale of deviation
+    fit: if True, use a ploynominal function to fit the imgsum, to get a mean-inten(array), then use the scale to get low and high threshold, it's good to remove bad frames/pixels on top of not-flatten curve
+         else: use the mean (a value) of imgsum and scale to get low and high threshold, it's good to remove bad frames/pixels on top of  flatten curve
+     
+    '''
+    if good_start is  None:
+        good_start=0
+    if good_end is None:
+        good_end = len( data )
+    bd1 = [i for i in range(0, good_start)]
+    bd3 = [i for i in range(good_end,len( data ) )]
+    
+    d_ = data[good_start:good_end]
+    
+    if fit:
+        pfit = ployfit( d_, order = polyfit_order)
+        d = d_ - pfit 
+    else:
+        d = d_ 
+        pfit = np.ones_like(d) * data.mean()
+        
+    ymin = d.mean()-scale *d.std()
+    ymax =  d.mean()+scale *d.std() 
+    
+    if plot:
+        fig = plt.figure( )            
+        ax = fig.add_subplot(2,1,1 )             
+        plot1D( d_, ax = ax, color='k', legend='data',legend_size=legend_size  )
+        plot1D( pfit,ax=ax, color='b', legend='ploy-fit', title='Find Bad Points',legend_size=legend_size  )
 
+        ax2 = fig.add_subplot(2,1,2 )      
+        plot1D( d, ax = ax2,legend='difference',marker='s', color='b', )          
+
+        #print('here')
+        plot1D(x=[0,len(d_)], y=[ymin,ymin], ax = ax2, ls='--',lw= 3, marker='o', color='r', legend='low_thresh', legend_size=legend_size  )
+
+        plot1D(x=[0,len(d_)], y=[ymax,ymax], ax = ax2 , ls='--', lw= 3,marker='o', color='r',legend='high_thresh',title='',legend_size=legend_size  )
+
+        if path is not None:
+            fp = path + '%s'%( uid ) + '_find_bad_points'  + '.png' 
+            plt.savefig( fp, dpi=fig.dpi)         
+    bd2=  list(   np.where( np.abs(d -d.mean()) > scale *d.std() )[0] + good_start )
+     
+    if return_ylim:
+        return np.array( bd1 + bd2 + bd3 ), ymin, ymax,pfit
+    else:
+        return np.array( bd1 + bd2 + bd3 ), pfit
+    
+    
+    
 
 def get_bad_frame_list( imgsum, fit=True, polyfit_order = 30,legend_size = 12,
                        plot=True, scale=1.0, good_start=None, good_end=None, uid='uid',path=None,
@@ -1364,13 +1482,16 @@ def RemoveHot( img,threshold= 1E7, plot_=True ):
 ############
 ###plot data
 
-def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,path=None, 
+def show_img( image, ax=None,label_array=None, alpha=0.5, interpolation='nearest',
+             xlim=None, ylim=None, save=False,image_name=None,path=None, 
              aspect=None, logs=False,vmin=None,vmax=None,return_fig=False,cmap='viridis', 
              show_time= False, file_name =None, ylabel=None, xlabel=None, extent=None,
              show_colorbar=True, tight=True, show_ticks=True, save_format = 'png', dpi= None,
              center=None,origin='lower', lab_fontsize = 16,  tick_size = 12, colorbar_fontsize = 8, 
              *argv,**kwargs ):    
-    """a simple function to show image by using matplotlib.plt imshow
+    """YG. Sep26, 2017 Add label_array/alpha option to show a mask on top of image
+    
+    a simple function to show image by using matplotlib.plt imshow
     pass *argv,**kwargs to imshow
     
     Parameters
@@ -1390,14 +1511,18 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
     else:
         fig, ax=ax
 
+      
     if center is not None:
         plot1D(center[1],center[0],ax=ax, c='b', m='o', legend='')
     if not logs:
-        im=imshow(ax, image, origin=origin,cmap=cmap,interpolation="nearest", vmin=vmin,vmax=vmax,
+        im=imshow(ax, image, origin=origin,cmap=cmap,interpolation=interpolation, vmin=vmin,vmax=vmax,
                     extent=extent)  #vmin=0,vmax=1,
     else:
         im=imshow(ax, image, origin=origin,cmap=cmap,
-                interpolation="nearest" , norm=LogNorm(vmin,  vmax),extent=extent)         
+                interpolation=interpolation, norm=LogNorm(vmin,  vmax),extent=extent)   
+    if label_array is not None:
+        im2=show_label_array(ax, label_array, alpha= alpha, cmap=cmap, interpolation=interpolation )  
+        
     ax.set_title( image_name )
     if xlim is not None:
         ax.set_xlim(   xlim  )        
@@ -1431,7 +1556,7 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
         cbar = fig.colorbar(im, extend='neither', spacing='proportional',
                 orientation='vertical' )
         cbar.ax.tick_params(labelsize=colorbar_fontsize)        
-
+    fig.set_tight_layout(tight) 
     if save:
         if show_time:
             dt =datetime.now()
@@ -1442,10 +1567,9 @@ def show_img( image, ax=None,xlim=None, ylim=None, save=False,image_name=None,pa
         if dpi is None:
             dpi = fig.dpi
         plt.savefig( fp, dpi= dpi)          
-    fig.set_tight_layout(tight) 
-    
+    #fig.set_tight_layout(tight)     
     if return_fig:
-        return fig
+        return im #fig
     
 
     
@@ -1659,10 +1783,50 @@ def create_time_slice( N, slice_num, slice_width, edges=None ):
     return np.array(time_edge)
 
 
+def show_label_array(ax, label_array, cmap=None, aspect=None,interpolation='nearest',**kwargs):
+    """
+    YG. Sep 26, 2017
+    Modified show_label_array(ax, label_array, cmap=None, **kwargs)
+        from https://github.com/Nikea/xray-vision/blob/master/xray_vision/mpl_plotting/roi.py
+    Display a labeled array nicely
+    Additional kwargs are passed through to `ax.imshow`.
+    If `vmin` is in kwargs, it is clipped to minimum of 0.5.
+    Parameters
+    ----------
+    ax : Axes
+        The `Axes` object to add the artist too
+    label_array: ndarray
+        Expected to be an unsigned integer array.  0 is background,
+        positive integers label region of interest
+    cmap : str or colormap, optional
+        Color map to use, defaults to 'Paired'
+    Returns
+    -------
+    img : AxesImage
+        The artist added to the axes
+    """
+    if cmap is None:
+        cmap = 'viridis'
+    #print(cmap)
+    _cmap = copy.copy((mcm.get_cmap(cmap)))
+    _cmap.set_under('w', 0)
+    vmin = max(.5, kwargs.pop('vmin', .5))
+    im = ax.imshow(label_array, cmap=cmap,
+                   interpolation=interpolation,
+                   vmin=vmin,
+                   **kwargs)    
+    if aspect is None:
+        ax.set_aspect(aspect='auto')
+        #ax.set_aspect('equal')
+    return im
+
+
+
 def show_label_array_on_image(ax, image, label_array, cmap=None,norm=None, log_img=True,alpha=0.3, vmin=0.1, vmax=5,
                               imshow_cmap='gray', **kwargs):  #norm=LogNorm(), 
     """
     This will plot the required ROI's(labeled array) on the image
+    
     Additional kwargs are passed through to `ax.imshow`.
     If `vmin` is in kwargs, it is clipped to minimum of 0.5.
     Parameters
