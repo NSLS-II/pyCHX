@@ -18,8 +18,8 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from chxanalys.chx_libs import  ( colors as colors_array,  markers as markers_array, markers_copy, lstyles, Figure, RUN_GUI)
 #from chxanalys.chx_libs import  colors_ as mcolors,  markers_ as markers
-from chxanalys.chx_libs import    mcolors,    markers
-
+from chxanalys.chx_libs import    mcolors,    markers, multi_tau_lags, colors
+from modest_image import ModestImage, imshow
 
 def delays( num_lev=3, num_buf=4, time=1 ): 
     ''' DOCUMENT delays(time=)
@@ -284,7 +284,7 @@ def auto_two_Array( data, rois, data_pixel=None  ):
 #get one-time @different age
 #####################################
  
-def get_qedge( qstart,qend,qwidth,noqs, return_int = False ):
+def get_qedge2( qstart,qend,qwidth,noqs, return_int = False ):
     ''' DOCUMENT make_qlist( )
     give qstart,qend,qwidth,noqs
     return a qedge by giving the noqs, qstart,qend,qwidth.
@@ -300,8 +300,24 @@ def get_qedge( qstart,qend,qwidth,noqs, return_int = False ):
         return qedge, qcenter  
     else:
         return np.int(qedge), np.int(qcenter  )
+    
 
- 
+def get_qedge( qstart,qend,qwidth,noqs, return_int = False ):
+    ''' DOCUMENT make_qlist( )
+    give qstart,qend,qwidth,noqs
+    return a qedge by giving the noqs, qstart,qend,qwidth.
+           a qcenter, which is center of each qedge 
+    KEYWORD:  None    ''' 
+    import numpy as np 
+    qcenter = np.linspace(qstart,qend,noqs)
+    #print ('the qcenter is:  %s'%qcenter )
+    qedge=np.zeros( [noqs,2]) 
+    qedge[:,0]= (  qcenter- (qwidth/2)  ) #+1  #render  even value
+    qedge[:,1]= ( qcenter+ qwidth/2) #render odd value
+    if not return_int:
+        return qedge, qcenter  
+    else:
+        return np.int(qedge), np.int(qcenter  ) 
  
 
 
@@ -379,11 +395,13 @@ def get_aged_g2_from_g12( g12, age_edge, age_center  ):
 
 
 
-def get_aged_g2_from_g12q( g12q, age_edge, age_center =None  ):
+def get_aged_g2_from_g12q( g12q, age_edge,  age_center =None, timeperframe=1,time_sampling='log', num_bufs=8 ):
     
     ''' 
     Dec 16, 2015, Y.G.@CHX
     Revised at April 19, 2017
+    Revised at Sep 28, 2017 add time_sampling='log', num_bufs=8 options
+    
     Get one-time correlation function of different age from 1q-two correlation function
     namely, calculate the different aged mean of each diag line of g12 to get one-time correlation fucntion
     
@@ -393,10 +411,14 @@ def get_aged_g2_from_g12q( g12q, age_edge, age_center =None  ):
                        can be obtained by function:   
                     age_edge = create_time_slice( len(imgsa), slice_num= 3, slice_width= 500, edges = None )
     Options:
+       timeperframe: in unit of sec
        age_center: None, will use the center of age_edge
+       time_sampling: 'log', log sampling of taus; Or 'linear', namely, delta tau = 1
+       num_bufs: 8, buf number for log sampling tau
    
    
     Return:
+        
         g2_aged: a dict, one time correlation function at different age
                  the keys of dict is ages in unit of pixel
                  dict[key]:    
@@ -415,6 +437,7 @@ def get_aged_g2_from_g12q( g12q, age_edge, age_center =None  ):
     if age_center is None:
         age_center = (age_edge[:,0]   +  age_edge[:,1] )//2
     g2_aged = {}
+    lag_dict = {}
     #print( age_edge, age_center)
     for i,age in enumerate(age_center):         
         age_edges_0, age_edges_1 = age_edge[i][0],   age_edge[i][1]
@@ -423,12 +446,25 @@ def get_aged_g2_from_g12q( g12q, age_edge, age_center =None  ):
         #print('here')
         g2i_ = np.array( g2i )       
         g2_aged[age] =   g2i_[np.nonzero( g2i_)[0]]
+        N = len( g2_aged[age] ) 
+        lag_dict[age] = np.arange( N ) *1.0 
+        if time_sampling =='log':
+            num_levels = int(np.log( N/(num_bufs-1))/np.log(2) +1) +1
+            tot_channels, lag_steps, dict_lag = multi_tau_lags(num_levels, num_bufs)
+            #max_taus= lag_steps[age].max()            
+            lag_steps_ = lag_steps[  lag_steps <= N ]
+            g2_aged[age] = g2_aged[age][lag_steps_]
+            lag_dict[age] = lag_steps_ *1.0
+            #print( lag_dict[age] )
+        lag_dict[age] *= timeperframe
         
-    return g2_aged 
+    return lag_dict, g2_aged 
 
 
 
-
+        
+        
+        
 
 def get_aged_g2_from_g12q2( g12q, slice_num = 6, slice_width=5, slice_start=0, slice_end= 1  ):
     
@@ -514,10 +550,10 @@ def show_g12q_aged_g2( g12q, g2_aged,slice_width=10, timeperframe=1,vmin= 1, vma
     figh = 8
     fig = plt.figure(figsize=(figw,figh)) 
     
-    gs = gridspec.GridSpec(1, 2, width_ratios=[10, 8],height_ratios=[8,8]   ) 
+    #gs = gridspec.GridSpec(1, 2, width_ratios=[10, 8],height_ratios=[8,8]   ) 
+    gs = gridspec.GridSpec(1, 2   ) 
     ax = plt.subplot(gs[0])
-    
-    im=ax.imshow( g12q, origin='lower' , cmap='viridis', 
+    im = imshow(ax, g12q, origin='lower' , cmap='viridis', 
              norm= LogNorm( vmin, vmax ), extent=[0, N,0,N])
     
     #plt.gca().set_xticks(ticks)
@@ -577,12 +613,15 @@ def show_g12q_aged_g2( g12q, g2_aged,slice_width=10, timeperframe=1,vmin= 1, vma
     ax.set_ylabel( r'$t_2$ $(s)$', fontsize = 18)
     fig.colorbar(im)     
     ax1.set_title("%s_aged_g2"%uid)
+    ki=0
     for i in sorted(g2_aged.keys()):
         #ax = fig.add_subplot(sx,sy,sn+1 )
         gx= np.arange(len(g2_aged[i])) * timeperframe
         #marker = next(markers)     
         #print( g2_aged[i], marker )
-        ax1.plot( gx,g2_aged[i], marker = '%s'%markers_array[i], ls='-', color= colors_array[i],  label=r"$t_a= %.1f s$"%(i*timeperframe/2))
+        #print(i)
+        ax1.plot( gx,g2_aged[i], marker = '%s'%markers_array[ki], ls='-', color= colors_array[ki],  label=r"$t_a= %.1f s$"%(i*timeperframe/2))
+        ki += 1
         ax1.set_ylim( vmin, vmax )
         ax1.set_xlabel(r"$\tau $ $(s)$", fontsize=18) 
         ax1.set_ylabel("g2")
@@ -608,8 +647,11 @@ def plot_aged_g2( g2_aged, tau=None,timeperframe=1, ylim=None, xlim=None):
         ax = plt.subplot(gs[n]) 
         if tau is None:
             gx= np.arange(len(g2_aged[i])) * timeperframe
+        else:
+            gx=tau[i]
         marker = markers[n]
-        ax.plot( gx,g2_aged[i],  '-%s'%marker, label=r"$age= %.1f s$"%(i*timeperframe))
+        c = colors[n]
+        ax.plot( gx,g2_aged[i],  '-%s'%marker, c=c, label=r"$age= %.1f s$"%(i*timeperframe))
         ax.set_xscale('log')
         ax.legend(fontsize='large', loc='best' ) 
         ax.set_xlabel(r"$\tau $ $(s)$", fontsize=18) 
@@ -720,8 +762,7 @@ def show_g12q_taus( g12q, taus,  slice_width=10, timeperframe=1,vmin= 1, vmax= 1
     gs = gridspec.GridSpec(1, 2, width_ratios=[10, 8],height_ratios=[8,8]   ) 
     ax = plt.subplot(gs[0])     
     ax1 = plt.subplot(gs[1])     
-    
-    im=ax.imshow( g12q, origin='lower' , cmap='viridis', 
+    im = imshow(ax,  g12q, origin='lower' , cmap='viridis', 
              norm= LogNorm( vmin= vmin, vmax= vmax ) , extent=[0, N, 0, N ] )
 
     linS = []
@@ -1052,8 +1093,7 @@ def show_one_C12( C12,   return_fig=False,interpolation = 'none',cmap='viridis',
         ax = fig.add_subplot(111)
     else:
         fig, ax = plt.subplots()
-
-    im=ax.imshow( data, origin='lower' , cmap=cmap, 
+    im = imshow(ax,  data, origin='lower' , cmap=cmap, 
                  norm= LogNorm( vmin, vmax ),  
             extent=[0, data.shape[0]*timeperframe, 0, data.shape[0]*timeperframe ],
                 interpolation = interpolation)
@@ -1081,10 +1121,11 @@ def show_one_C12( C12,   return_fig=False,interpolation = 'none',cmap='viridis',
     if return_fig:
         return fig, ax, im
 
+
     
 
 def show_C12(C12,  q_ind=1, return_fig=False, interpolation = 'none', cmap='viridis',
-             logs=True, *argv,**kwargs):  
+             logs=True, qlabel=None, *argv,**kwargs):  
  
     '''
     plot one-q of two-time correlation function
@@ -1109,13 +1150,15 @@ def show_C12(C12,  q_ind=1, return_fig=False, interpolation = 'none', cmap='viri
         uid=kwargs['uid']
     else:
         uid='uid'
-        
-        
-    shape = C12.shape
+    shape = C12.shape   
+    if (q_ind<0) or (q_ind>shape[2]-1):
+        raise Exceptions("Error: qind starts from 0 (corresponding to python array index 0, but in the plot it will show as 1) to the max Q-length of two time funcs-1 %s."%shape[2]-1) 
+ 
+                 
     if isinstance(q_ind, int):
-        C12_num = q_ind -1
+        C12_num = q_ind #-1
     else:
-        qz_ind, qr_ind = q_ind -1
+        qz_ind, qr_ind = q_ind #-1
         C12_num =  qz_ind * num_qr + qr_ind 
     
     if 'timeperframe' in kwargs.keys():
@@ -1153,18 +1196,22 @@ def show_C12(C12,  q_ind=1, return_fig=False, interpolation = 'none', cmap='viri
     else:
         fig, ax = plt.subplots()
 
-    if logs:    
-        im=ax.imshow( data, origin='lower' , cmap=cmap, 
+    if logs: 
+        im = imshow(ax,  data, origin='lower' , cmap=cmap, 
                  norm= LogNorm( vmin, vmax ), interpolation = interpolation, 
             extent=[0, data.shape[0]*timeperframe, 0, data.shape[0]*timeperframe ] )
     else:
-        im=ax.imshow( data, origin='lower' , cmap=cmap, 
+        im = imshow(ax, data, origin='lower' , cmap=cmap, 
                  vmin=vmin, vmax=vmax, interpolation = interpolation, 
             extent=[0, data.shape[0]*timeperframe, 0, data.shape[0]*timeperframe ] )    
-    
+    if qlabel is not None:
+        if isinstance(q_ind, int):
+            qstr = 'Qth= %s-qval=%s'%(C12_num+1, qlabel[C12_num])  
+    else:
+        qstr = 'Qth= %s'%(C12_num+1)  
     if title:
         if isinstance(q_ind, int):
-            tit = '%s-[%s-%s] frames--Qth= %s'%(uid,N1,N2,C12_num)            
+            tit = '%s-[%s-%s] frames--'%(uid,N1,N2)  + qstr          
         else:
             tit =  '%s-[%s-%s] frames--Qzth= %s--Qrth= %s'%(uid,N1,N2, qz_ind, qr_ind )
         ax.set_title( tit  )
@@ -1188,3 +1235,5 @@ def show_C12(C12,  q_ind=1, return_fig=False, interpolation = 'none', cmap='viri
         return fig, ax, im
 
 
+class Exceptions(Exception):
+    pass
