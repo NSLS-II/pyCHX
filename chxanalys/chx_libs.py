@@ -8,7 +8,9 @@ from IPython.core.magics.display import Javascript
 
 
 from skbeam.core.utils import multi_tau_lags
+
 from skimage.draw import line_aa, line, polygon, ellipse, circle
+from modest_image import ModestImage, imshow
 
 from databroker import DataBroker as db, get_images, get_table, get_events, get_fields
 from filestore.api import register_handler, deregister_handler
@@ -24,6 +26,10 @@ from filestore.path_only_handlers import RawHandler
 #    - https://github.com/Nikea/xray-vision
 
 import xray_vision
+
+import matplotlib.cm as mcm
+import copy
+
 import xray_vision.mpl_plotting as mpl_plot  
 from xray_vision.mpl_plotting import speckle
 from xray_vision.mask.manual_mask import ManualMask
@@ -53,7 +59,6 @@ from matplotlib.figure import Figure
 from matplotlib import gridspec
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from skimage.draw import line_aa, line, polygon
 from tqdm import tqdm
 
 import collections
