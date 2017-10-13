@@ -4,7 +4,7 @@ from pyOlog.OlogDataTypes import  Logbook
 
 
 
-def update_olog_uid_with_file( uid, text, filename, append_name='_r'):
+def update_olog_uid_with_file( uid, text, filename, append_name='', try_time = 10):
     '''YG developed at July 18, 2017, attached text and file (with filename) to CHX olog 
             with entry defined by uid
        uid: string of unique id
@@ -16,11 +16,12 @@ def update_olog_uid_with_file( uid, text, filename, append_name='_r'):
     '''
     
     atch=[  Attachment(open(filename, 'rb')) ] 
+    
     try:
         update_olog_uid( uid= uid, text= text, attachments= atch )
     except:
         from shutil import copyfile
-        npname = filename[:-4] + append_name + '.pdf'
+        npname = filename[:-4] + append_name +'_'+ '.pdf'
         copyfile( filename, npname )
         atch=[  Attachment(open(npname, 'rb')) ] 
         print("Append %s to the filename."%append_name)
