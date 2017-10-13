@@ -372,7 +372,7 @@ class create_pdf_report( object ):
                 
         nec_keys = [   'sample', 'start_time', 'stop_time','Measurement' ,'exposure time' ,'incident_wavelength', 'cam_acquire_t',
                        'frame_time','detector_distance', 'feedback_x', 'feedback_y', 'shutter mode',
-                    'beam_center_x', 'beam_center_y', 'beam_refl_center_x', 'beam_refl_center_y','mask_file','bad_frame_list', 'transmission']
+                    'beam_center_x', 'beam_center_y', 'beam_refl_center_x', 'beam_refl_center_y','mask_file','bad_frame_list', 'transmission', 'roi_mask_file']
         for key in nec_keys:
             check_dict_keys(md, key)
             
@@ -412,8 +412,11 @@ class create_pdf_report( object ):
             
         s7 += ' || ' + 'BadLen: %s'%len(md['bad_frame_list'])
         s7 += ' || ' + 'Transmission: %s'%md['transmission']     
-        s.append( s7  ) ####line 7 'Beam center...      
-        s.append(   'Mask file: %s'%md['mask_file'] )  ####line 8 mask filename
+        s.append( s7  ) ####line 7 'Beam center...   
+        m = 'Mask file: %s'%md['mask_file'] + ' || ' + 'ROI mask file: %s'%md['roi_mask_file']
+        #s.append(   'Mask file: %s'%md['mask_file'] )  ####line 8 mask filename
+        #s.append(    )  ####line 8 mask filename
+        s.append(m)
         s.append(    'Analysis Results Dir: %s'%self.data_dir    )  ####line 9 results folder
         s.append(   'Metadata Dir: %s.csv-&.pkl'%self.metafile   )  ####line 10 metadata folder
         try:
