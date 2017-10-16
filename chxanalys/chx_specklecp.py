@@ -46,11 +46,11 @@ def xsvsp(FD, label_array,  only_two_levels= True,
     '''
     
     if not isinstance( FD, list):
-        bin_edges,prob_k, prob_k_std_dev =  xsvsp_single(FD, label_array, only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
+        bin_edges,prob_k, prob_k_std_dev,his_sum  =  xsvsp_single(FD, label_array, only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
     else:
-        bin_edges,prob_k, prob_k_std_dev =  xsvsp_multi(FD, label_array,  only_two_levels,only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
+        bin_edges,prob_k, prob_k_std_dev,his_sum =  xsvsp_multi(FD, label_array,  only_two_levels,only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
         
-    return bin_edges,prob_k, prob_k_std_dev
+    return bin_edges,prob_k, prob_k_std_dev,his_sum
 
 
 def xsvsp_multi(FD_set, label_array,  only_two_levels= True,
@@ -62,15 +62,17 @@ def xsvsp_multi(FD_set, label_array,  only_two_levels= True,
     '''
     N = len( FD_set )
     for n in range(N):  
-        bin_edges,prob_k, prob_k_std_dev =  xsvsp_single(FD_set[n], label_array,  only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
+        bin_edges,prob_k, prob_k_std_dev,his_sum =  xsvsp_single(FD_set[n], label_array,  only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
         if n==0:
             prob_k_all = prob_k
+            his_sum_all = his_sum
             prob_k_std_dev_all = prob_k_std_dev
         else:            
             prob_k_all += (prob_k - prob_k_all)/(n + 1)
+            his_sum_all += ( his_sum - his_sum_all)/(n+1)
             prob_k_std_dev_all += ( prob_k_std_dev - prob_k_std_dev_all     )/(n+1)
             
-    return bin_edges, prob_k_all, prob_k_std_dev_all
+    return bin_edges, prob_k_all, prob_k_std_dev_all,his_sum_all
 
 
 
@@ -129,19 +131,19 @@ def xsvsp_single(FD, label_array,  only_two_levels= True, only_first_level= Fals
     # number of times in the time bin
     num_times = len(time_bin)        
     prob_k = np.zeros([num_times, num_roi], dtype=np.object)
-    prob_k_std_dev = np.zeros_like( prob_k )      
-    
+    prob_k_std_dev = np.zeros_like( prob_k )
+    his_sum = np.zeros([num_times, num_roi] )
     #print( len(res) )
     #print( prob_k.shape )
           
     for i in inputs:
         #print( i) 
-        bin_edges, prob_k[:,i], prob_k_std_dev[:,i] = res[i][0], res[i][1][:,0], res[i][2][:,0] 
+        bin_edges, prob_k[:,i], prob_k_std_dev[:,i], his_sum[:,i] = res[i][0], res[i][1][:,0], res[i][2][:,0],res[i][3][:,0],  
             
     print( 'Histogram calculation DONE!')
     del results
     del res
-    return   bin_edges, prob_k, prob_k_std_dev
+    return   bin_edges, prob_k, prob_k_std_dev, his_sum
     
 
 
@@ -155,12 +157,12 @@ def xsvsc(FD, label_array, only_two_levels= True,only_first_level= False,
     '''
     
     if not isinstance( FD, list):
-        bin_edges, prob_k, prob_k_std_dev =  xsvsc_single(FD, label_array,  only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
+        bin_edges, prob_k, prob_k_std_dev, his_sum   =  xsvsc_single(FD, label_array,  only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
     else:
-        bin_edges, prob_k, prob_k_std_dev =  xsvsc_multi(FD, label_array,  only_two_levels,
+        bin_edges, prob_k, prob_k_std_dev, his_sum =  xsvsc_multi(FD, label_array,  only_two_levels,
 only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
         
-    return bin_edges, prob_k, prob_k_std_dev
+    return  bin_edges, prob_k, prob_k_std_dev, his_sum
 
 
 def xsvsc_multi(FD_set, label_array,  only_two_levels= True, only_first_level= False,
@@ -172,15 +174,16 @@ def xsvsc_multi(FD_set, label_array,  only_two_levels= True, only_first_level= F
     '''
     N = len( FD_set )
     for n in range(N):  
-        bin_edges, prob_k, prob_k_std_dev =  xsvsc_single(FD_set[n], label_array,  only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
+        bin_edges, prob_k, prob_k_std_dev, his_sum =  xsvsc_single(FD_set[n], label_array,  only_two_levels, only_first_level, timebin_num, time_bin, max_cts, bad_images, threshold, imgsum, norm)
         if n==0:
             prob_k_all = prob_k
             prob_k_std_dev_all = prob_k_std_dev
+            his_sum_all = his_sum
         else:            
             prob_k_all += (prob_k - prob_k_all)/(n + 1)
-            prob_k_std_dev_all += ( prob_k_std_dev - prob_k_std_dev_all     )/(n+1)
-            
-    return bin_edges, prob_k_all, prob_k_std_dev_all
+            his_sum_all += ( his_sum - his_sum_all)/(n+1)
+            prob_k_std_dev_all += ( prob_k_std_dev - prob_k_std_dev_all     )/(n+1)            
+    return bin_edges, prob_k_all, prob_k_std_dev_all, his_sum_all
 
 
 
