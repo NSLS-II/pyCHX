@@ -190,7 +190,11 @@ def xsvsc_single(FD, label_array,  only_two_levels= True,
                  only_first_level= False, timebin_num=2, time_bin=None,
          max_cts=None, bad_images = None, threshold= 1e8, imgsum=None, norm=None, progress_bar=True):   
     
-    """
+    """YG MOD@Octo 12, 2017, Change photon statistic error bar from sampling statistic bar to error bar with phisical meaning, 
+    photon_number@one_particular_count = photon_tolal_number * photon_distribution@one_particular_count +/-
+                                                  sqrt( photon_number@one_particular_count )
+     
+    
     This function will provide the probability density of detecting photons
     for different integration times.
     The experimental probability density P(K) of detecting photons K is
@@ -242,6 +246,7 @@ def xsvsc_single(FD, label_array,  only_two_levels= True,
     It will demonstrate the use of these functions in this module for
     experimental data.
     """
+    
     label_array = np.int_( label_array )
     if max_cts is None:
         max_cts = roi.roi_max_counts(FD, label_array)
@@ -266,7 +271,8 @@ def xsvsc_single(FD, label_array,  only_two_levels= True,
     # number of pixels per ROI
     num_pixels = np.bincount(labels, minlength=(num_roi+1))[1:]
     # probability density of detecting photons
-    prob_k = np.zeros([num_times, num_roi], dtype=np.object)    
+    prob_k = np.zeros([num_times, num_roi], dtype=np.object)   
+    his_sum = np.zeros([num_times, num_roi] ) 
     # square of probability density of detecting photons
     prob_k_pow = np.zeros_like(prob_k)     
     # standard deviation of probability density of detecting photons     
@@ -368,33 +374,22 @@ def xsvsc_single(FD, label_array,  only_two_levels= True,
                 track_level[level] = 1
                 processing = 0       
             #print( level )
-        prob_k_std_dev = np.power((prob_k_pow -
-                               np.power(prob_k, 2)), .5) 
-        
-    #print( prob_k.shape,   num_times )   
+        #prob_k_std_dev = np.power((prob_k_pow -
+        #                       np.power(prob_k, 2)), .5) 
+         
+    for i in range(num_times):          
+        for j in range( num_roi ):
+            #print( prob_k[i,j] )
+            his_sum[i,j] = np.sum( np.array( prob_k[i,j] ) )/1.0
+            #print(his_sum[i,j])
+            prob_k_std_dev[i,j] = np.sqrt( prob_k[i,j] )/his_sum[i,j]
+            prob_k[i,j] =  prob_k[i,j]/his_sum[i,j]
+            
+    #for i in range(num_times):        
+    #    if  isinstance(prob_k[i,0], float ) or isinstance(prob_k[i,0], int ):
+    #        pass 
     
-    #return bin_edges, prob_k, prob_k_std_dev
-
-    #if False:
-    for i in range(num_times):
-        #print( i )
-        #print( prob_k.shape )
-        #if i ==3:
-            #print( 'here' )
-            #print( prob_k.shape )
-        #print( prob_k[i,0].shape )
-        
-        if  isinstance(prob_k[i,0], float ) or isinstance(prob_k[i,0], int ):
-            pass
-            #print( 'here' * 100 )
-            #print( prob_k[i,0] )
-            #prob_k[i], prob_k_std_dev[i] = prob_k[:i], prob_k_std_dev[:i]
-            #for j in range( len(u_labels)):                
-            #    prob_k[i,j] = np.array(  [0] * (len(bin_edges[i]) -1 ) )
-            #    prob_k_std_dev[i,j] = np.array(  [0] * (len(bin_edges[i]) -1 ) )
-                    
-    
-    return bin_edges, prob_k, prob_k_std_dev
+    return bin_edges, prob_k, prob_k_std_dev, his_sum
 
 
 def _process(num_roi, level, buf_no, buf, img_per_level, labels,
@@ -432,18 +427,26 @@ def _process(num_roi, level, buf_no, buf, img_per_level, labels,
     if (np.isnan(data).any()):
         track_bad_level[level] += 1 
     #print (img_per_level,track_bad_level)    
-    u_labels = list(np.unique(labels))
-    
+    u_labels = list(np.unique(labels))    
+    ##############
+    ##To Do list here, change histogram to bincount
+    ##Change error bar calculation    
     if not (np.isnan(data).any()):
         for j, label in enumerate(u_labels):        
             roi_data = data[labels == label]
-            spe_hist, bin_edges = np.histogram(roi_data, bins=bin_edges,  density=True)
+            #print(  np.max( bin_edges), prob_k[level, j]  ) 
+            #print( level, j, bin_edges )
+            spe_hist = np.bincount( np.int_(roi_data), minlength= np.max( bin_edges )  )
+            #spe_hist, bin_edges = np.histogram(roi_data, bins=bin_edges,  density=True)
             spe_hist = np.nan_to_num(spe_hist)
-            prob_k[level, j] += (spe_hist -
-                             prob_k[level, j])/( img_per_level[level] - track_bad_level[level] )
-
-            prob_k_pow[level, j] += (np.power(spe_hist, 2) -
-                                 prob_k_pow[level, j])/(img_per_level[level] - track_bad_level[level])
+            #print( spe_hist.shape )
+            #prob_k[level, j] += (spe_hist -
+            #                 prob_k[level, j])/( img_per_level[level] - track_bad_level[level] )            
+            #print(  prob_k[level, j] )
+            prob_k[level, j] += spe_hist
+            #print( spe_hist.shape, prob_k[level, j] )
+            #prob_k_pow[level, j] += (np.power(spe_hist, 2) -
+            #                     prob_k_pow[level, j])/(img_per_level[level] - track_bad_level[level])
 
 
 def normalize_bin_edges(num_times, num_rois, mean_roi, max_cts):
@@ -745,9 +748,39 @@ def nbinomres(p, hist, x, hist_err=None, N =1):
     #scale = 1
     err = (hist[w] - Np[w])/scale
     return err
+ 
 
-    
-def nbinomlog(p, hist, x, hist_err=None, N=1):
+
+
+###########
+##Dev at Octo 12, 2017
+
+def nbinom(p, x, mu):
+    """ Residuals for maximum likelihood fit to nbinom distribution.
+        Vary M (shape param) but mu (count rate) fixed (using leastsq)"""    
+    M = abs(p[0])    
+    Np= st.nbinom.pmf(x,M,1.0/(1.0+mu/M))
+    return Np
+
+def nbinomlog1(p, hist, x,  N, mu):
+    """ Residuals for maximum likelihood fit to nbinom distribution.
+        Vary M (shape param) but mu (count rate) fixed (using leastsq)
+        
+        p: fitting parameter, in this case is M, coherent mode number
+        hist: histogram of photon count for each bin (is a number not probablity)
+        x: photon count
+        N: total photons count in the statistics, ( probablity = hist / N )
+        mu: average photon count for each bin
+        
+    """    
+    M = abs(p[0])
+    w=np.where(hist>0.0);
+    Np=N * st.nbinom.pmf(x,M,1.0/(1.0+mu/M))
+    err=2*(Np[w]-hist[w])      
+    err = err - 2*hist[w]*np.log(Np[w]/hist[w])#note: sum(Np-hist)==0    
+    return np.sqrt( np.abs(err) )  
+
+def nbinomlog(p, hist, x, N ):
     """ Residuals for maximum likelihood fit to nbinom distribution.
         Vary M (shape param) and mu (count rate) vary (using leastsq)"""
     mu,M = p
@@ -756,37 +789,11 @@ def nbinomlog(p, hist, x, hist_err=None, N=1):
     w=np.where(hist>0.0);
     Np=N * st.nbinom.pmf(x,M,1.0/(1.0+mu/M)) 
     err=2*(Np[w]-hist[w])
-    err = err - 2*hist[w]*np.log(Np[w]/hist[w])#note: sum(Np-hist)==0   
-    if hist_err is None:
-        hist_err= np.ones_like( Np ) 
-        
-    #scale = ( hist_err[w]**2 ) #/Np[w] 
-    #scale = ( hist_err[w]**1 )
-    scale =  1
-    #print('here')
-    return np.sqrt(np.abs( err / scale ))
+    err = err - 2*hist[w]*np.log(Np[w]/hist[w])#note: sum(Np-hist)==0 
+    return np.sqrt(np.abs( err ) )
 
-    
-def nbinomlog1(p, hist, x, hist_err, N, mu):
-    """ Residuals for maximum likelihood fit to nbinom distribution.
-        Vary M (shape param) but mu (count rate) fixed (using leastsq)"""
-    M = abs(p[0])
-    w=np.where(hist>0.0);
-    Np=N * st.nbinom.pmf(x,M,1.0/(1.0+mu/M))
-    err=2*(Np[w]-hist[w])
-    if hist_err is None:
-        hist_err= np.ones_like( Np )    
-    #scale = ( hist_err[w] )**2  #fit much better than ( hist_err[w]/Np[w] )**2, but give a low-M value (high g2) 
-    #scale = ( hist_err[w]/hist[w] )**2    
-    #scale = ( hist_err[w]/hist[w] )**2    
-    #scale = (  hist_err[w]/hist[w]  )**0.1
-    if mu<=1:
-        power = 1
-    else:
-        power = 0.5        
-    scale = ( hist_err[w])** power 
-    err = err - 2*hist[w]*np.log(Np[w]/hist[w])#note: sum(Np-hist)==0    
-    return np.sqrt( np.abs(err/scale) )  
+
+
 
 
 def get_roi(data, threshold=1e-3):
@@ -798,10 +805,10 @@ def get_roi(data, threshold=1e-3):
     return ind
 
 
-def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None, spec_bins=None, 
+def get_xsvs_fit(spe_cts_all, spec_sum,  K_mean, spec_std = None, spec_bins=None, 
                  lag_steps=None, varyK=True, 
-                  qth=None, max_bins= None,  rois_lowthres=None,
-                           g2=None, times=None,taus=None, max_cutoff_photon =None, fit_range=None ):
+                  qth=None, max_bins= None,   min_cutoff_count =None,
+                           g2=None, times=None,taus=None,   fit_range=None ):
     '''
     Fit the xsvs by Negative Binomial Function using max-likelihood chi-squares
     '''
@@ -837,7 +844,7 @@ def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None, spec_bins=None,
     else:
         range_ = range( num_rings)
     for i in range_:         
-        N=1        
+              
         ML_val[i] =[]
         KL_val[i]= []
         if g2 is not None:
@@ -845,16 +852,12 @@ def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None, spec_bins=None,
             m_=np.interp( times, taus,  mi_g2  )            
         for j in range(   num_times  ): 
             kmean_guess =  K_mean[j,i]
-            
+            N= spec_sum[j,i]  
             if spec_bins is None:                
                 x_, x, y = bin_edges[j, i][:-1], Knorm_bin_edges[j, i][:-1], spe_cts_all[j, i] 
             else:                
-                #if j==0:
-                #    print(i,j, kmean_guess)
-                x_,x,y =  bin_edges[j],  bin_edges[j]/kmean_guess, spe_cts_all[j, i]
-            
-            #if max_cutoff_photon is not None:
-                
+                x_,x,y =  bin_edges[j],  bin_edges[j]/kmean_guess, spe_cts_all[j, i] 
+                         
             if spec_std is not None:
                 yerr = spec_std[j, i]
             else:
@@ -862,38 +865,28 @@ def get_xsvs_fit(spe_cts_all, K_mean, spec_std = None, spec_bins=None,
             if g2 is not None:
                 m0=m_[j]
             else:
-                m0= 10            
-            #resultL = minimize(nbinom_lnlike,  [K_mean[i] * 2**j, m0], args=(x_, y) ) 
-            #the normal leastsq
-            #result_n = leastsq(nbinomres, [K_mean[i] * 2**j, m0], args=(y,x_,N),full_output=1)             
-            #not vary K 
-            #if j==0:
-            #    print(y)
-            if rois_lowthres is not None:
-                ind= get_roi(y, threshold=rois_lowthres)
+                m0= 10 
+            if min_cutoff_count is not None:
+                ind= get_roi(y, threshold=min_cutoff_count)                
                 y=y[ind]
                 x_ = x_[ind]
-                yerr = yerr[ind]
-            #if j==0:
-            #    print( y, x_)   
+                yerr = yerr[ind] 
+                #print(y)
             if fit_range is not None:
                 f1,f2 = fit_range
                 y, x_, yerr = y[f1:f2], x_[f1:f2], yerr[f1:f2] 
-            
-            if not varyK:
-                fit_func = nbinomlog1                
-                #print(j,i,m0, y.shape, x_.shape, yerr.shape, N,  K_mean[i] * 2**j)
-                resultL = leastsq(fit_func, [ m0 ], args=(y, x_, yerr, N, kmean_guess ),
-                                  ftol=1.49012e-38, xtol=1.49012e-38, factor=100,
-                                  full_output=1)
                 
+            if not varyK:
+                fit_func = nbinomlog1  
+                resultL = leastsq(fit_func, [ m0 ], args=(y*N, x_, N, kmean_guess ),
+                                  ftol=1.49012e-38, xtol=1.49012e-38, factor=100,
+                                  full_output=1)                
                 ML_val[i].append(  abs(resultL[0][0] )  )            
                 KL_val[i].append( kmean_guess )  #   resultL[0][0] )                
             else:
                 #vary M and K     
                 fit_func = nbinomlog
-                #print( 'here' )                    
-                resultL = leastsq(fit_func, [kmean_guess, m0], args=(y,x_,yerr,N),
+                resultL = leastsq(fit_func, [kmean_guess, m0], args=(y*N,x_,N),
                             ftol=1.49012e-38, xtol=1.49012e-38, factor=100,full_output=1)
                 
                 ML_val[i].append(  abs(resultL[0][1] )  )            
