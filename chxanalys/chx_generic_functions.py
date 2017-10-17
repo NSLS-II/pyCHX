@@ -11,6 +11,58 @@ import matplotlib.cm as mcm
 import copy 
     
     
+    
+    
+def extract_data_from_file(  filename, filepath, good_line_pattern, good_cols=None, labels=None,):
+    '''YG Develop Octo 17, 2018 
+        Extract data from a file
+    Input:
+        filename: str, filename of the data
+        filepath: str, path of the data
+        good_line_pattern: str, data will be extract below this good_line_pattern
+        good_cols: list of integer, good index of cols
+        lables: the label of the good_cols
+        #save: False, if True will save the data into a csv file with filename appending csv ??
+    Return:
+        a pds.dataframe
+    Example:
+    filepath =  '/XF11ID/analysis/2017_3/lwiegart/Link_files/Exports/'
+    filename = 'ANPES2 15-10-17 16-31-11-84Exported.txt'    
+    good_cols = [ 1,2,4,6,8,10 ]
+    labels = [  'time', 'temperature', 'force', 'distance', 'stress', 'strain'  ]
+    good_line_pattern = "Index\tX\tY\tX\tY\tX\tY" 
+    df =  extract_data_from_file(  filename, filepath, good_line_pattern, good_cols, labels)
+    '''
+    import pandas as pds
+    with open( filepath + filename, 'r' ) as fin:
+        p=fin.readlines()
+        di = 1e20                
+        for i, line in enumerate(p):
+            if good_line_pattern in line:                
+                di = i
+            if i == di+1:
+                els = line.split()  
+                if good_cols is  None:
+                    data = np.array( els, dtype=float  )
+                else:
+                    data = np.array( [els[j] for j in good_cols], dtype=float  )
+            elif i > di:
+                try:                    
+                    els = line.split() 
+                    if good_cols is  None:
+                        temp = np.array( els, dtype=float  )
+                    else:
+                        temp=  np.array( [els[j] for j in good_cols], dtype=float  ) 
+                    data=np.vstack( (data,temp))
+                except:
+                    pass
+        if labels is None:
+            labels = np.arange(data.shape[1])
+        df = pds.DataFrame( data, index= np.arange(data.shape[0]), columns= labels  )    
+    return df
+    
+    
+    
 def get_print_uids( start_time, stop_time):
     '''YG. Octo 3, 2017@CHX
     Get full uids and print uid plus Measurement contents by giving start_time, stop_time
