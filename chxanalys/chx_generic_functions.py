@@ -8,7 +8,116 @@ from skimage.draw import line_aa, line, polygon, ellipse, circle
 
 from modest_image import ModestImage, imshow
 import matplotlib.cm as mcm
-import copy 
+import copy, scipy 
+    
+    
+    
+    
+
+def sgolay2d( z, window_size, order, derivative=None):
+    """YG Octo 16, 2017
+    Modified from http://scipy-cookbook.readthedocs.io/items/SavitzkyGolay.html
+    Procedure for sg2D:
+    https://en.wikipedia.org/wiki/Savitzky%E2%80%93Golay_filter#Two-dimensional_convolution_coefficients
+    
+        Two-dimensional smoothing and differentiation can also be applied to tables of data values, such as intensity values in a photographic image which is composed of a rectangular grid of pixels.[16] [17] The trick is to transform part of the table into a row by a simple ordering of the indices of the pixels. Whereas the one-dimensional filter coefficients are found by fitting a polynomial in the subsidiary variable, z to a set of m data points, the two-dimensional coefficients are found by fitting a polynomial in subsidiary variables v and w to a set of m × m data points. The following example, for a bicubic polynomial and m = 5, illustrates the process, which parallels the process for the one dimensional case, above.[18]
+
+    enter image description here enter image description here
+
+    The square of 25 data values, d1 − d25
+
+    enter image description here
+
+    becomes a vector when the rows are placed one after another.
+
+    enter image description here
+
+    The Jacobian has 10 columns, one for each of the parameters a00 − a03 and 25 rows, one for each pair of v and w values. Each row has the form
+
+    enter image description here
+
+    The convolution coefficients are calculated as
+
+    enter image description here
+
+    The first row of C contains 25 convolution coefficients which can be multiplied with the 25 data values to provide a smoothed value for the central data point (13) of the 25.
+
+    """
+    # number of terms in the polynomial expression
+    n_terms = ( order + 1 ) * ( order + 2)  / 2.0
+
+    if  window_size % 2 == 0:
+        raise ValueError('window_size must be odd')
+
+    if window_size**2 < n_terms:
+        raise ValueError('order is too high for the window size')
+
+    half_size = window_size // 2
+
+    # exponents of the polynomial. 
+    # p(x,y) = a0 + a1*x + a2*y + a3*x^2 + a4*y^2 + a5*x*y + ... 
+    # this line gives a list of two item tuple. Each tuple contains 
+    # the exponents of the k-th term. First element of tuple is for x
+    # second element for y.
+    # Ex. exps = [(0,0), (1,0), (0,1), (2,0), (1,1), (0,2), ...]
+    exps = [ (k-n, n) for k in range(order+1) for n in range(k+1) ]
+
+    # coordinates of points
+    ind = np.arange(-half_size, half_size+1, dtype=np.float64)
+    dx = np.repeat( ind, window_size )
+    dy = np.tile( ind, [window_size, 1]).reshape(window_size**2, )
+
+    # build matrix of system of equation
+    A = np.empty( (window_size**2, len(exps)) )
+    for i, exp in enumerate( exps ):
+        A[:,i] = (dx**exp[0]) * (dy**exp[1])
+
+    # pad input array with appropriate values at the four borders
+    new_shape = z.shape[0] + 2*half_size, z.shape[1] + 2*half_size
+    Z = np.zeros( (new_shape) )
+    # top band
+    band = z[0, :]
+    Z[:half_size, half_size:-half_size] =  band -  np.abs( np.flipud( z[1:half_size+1, :] ) - band )
+    # bottom band
+    band = z[-1, :]
+    Z[-half_size:, half_size:-half_size] = band  + np.abs( np.flipud( z[-half_size-1:-1, :] )  -band )
+    # left band
+    band = np.tile( z[:,0].reshape(-1,1), [1,half_size])
+    Z[half_size:-half_size, :half_size] = band - np.abs( np.fliplr( z[:, 1:half_size+1] ) - band )
+    # right band
+    band = np.tile( z[:,-1].reshape(-1,1), [1,half_size] )
+    Z[half_size:-half_size, -half_size:] =  band + np.abs( np.fliplr( z[:, -half_size-1:-1] ) - band )
+    # central band
+    Z[half_size:-half_size, half_size:-half_size] = z
+
+    # top left corner
+    band = z[0,0]
+    Z[:half_size,:half_size] = band - np.abs( np.flipud(np.fliplr(z[1:half_size+1,1:half_size+1]) ) - band )
+    # bottom right corner
+    band = z[-1,-1]
+    Z[-half_size:,-half_size:] = band + np.abs( np.flipud(np.fliplr(z[-half_size-1:-1,-half_size-1:-1]) ) - band )
+
+    # top right corner
+    band = Z[half_size,-half_size:]
+    Z[:half_size,-half_size:] = band - np.abs( np.flipud(Z[half_size+1:2*half_size+1,-half_size:]) - band )
+    # bottom left corner
+    band = Z[-half_size:,half_size].reshape(-1,1)
+    Z[-half_size:,:half_size] = band - np.abs( np.fliplr(Z[-half_size:, half_size+1:2*half_size+1]) - band )
+
+    # solve system and convolve
+    if derivative == None:
+        m = np.linalg.pinv(A)[0].reshape((window_size, -1))
+        return scipy.signal.fftconvolve(Z, m, mode='valid')
+    elif derivative == 'col':
+        c = np.linalg.pinv(A)[1].reshape((window_size, -1))
+        return scipy.signal.fftconvolve(Z, -c, mode='valid')
+    elif derivative == 'row':
+        r = np.linalg.pinv(A)[2].reshape((window_size, -1))
+        return scipy.signal.fftconvolve(Z, -r, mode='valid')
+    elif derivative == 'both':
+        c = np.linalg.pinv(A)[1].reshape((window_size, -1))
+        r = np.linalg.pinv(A)[2].reshape((window_size, -1))
+        return scipy.signal.fftconvolve(Z, -r, mode='valid'), scipy.signal.fftconvolve(Z, -c, mode='valid')
     
     
     
@@ -258,6 +367,7 @@ def get_mass_center_one_roi(FD, roi_mask, roi_ind):
         n +=1
     return cx,cy
 
+ 
 
 
 def get_current_pipeline_filename(NOTEBOOK_FULL_PATH):
