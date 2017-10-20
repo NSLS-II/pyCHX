@@ -1034,7 +1034,7 @@ def angulars(edges, center, shape):
 
     
 
-def get_angular_mask( mask,  inner_angle=0, outer_angle = 360, width = None, edges = None,
+def get_angular_mask( mask,  inner_angle= 0, outer_angle = 360, width = None, edges = None,
                      num_angles = 12, center = None, dpix=[1,1], flow_geometry=False    ):
      
     ''' 
@@ -1093,17 +1093,25 @@ def get_angular_mask( mask,  inner_angle=0, outer_angle = 360, width = None, edg
     ang_mask = angs*mask
     ang_mask = np.array(ang_mask, dtype=int)
         
-    if flow_geometry:
-        
+    if flow_geometry:        
         outer_angle -= 180
         inner_angle -= 180 
         edges2 = roi.ring_edges(inner_angle, width, spacing, num_angles)
-
         #print (edges)
         angs2 = angulars( np.radians( edges2 ), center, mask.shape)
         ang_mask2 = angs2*mask
         ang_mask2 = np.array(ang_mask2, dtype=int)        
         ang_mask +=  ang_mask2    
+    else:
+        for i, (al, ah) in enumerate( edges ):
+            if al<=-180. and ah >-180:
+                #print(i+1, al,ah)
+                edge3 = np.array([  [ al + 360, 180 ]  ])       
+                ang3 = angulars( np.radians( edge3 ), center, mask.shape) * mask
+                w = np.ravel(  ang3 )==1
+                #print(w)
+                np.ravel( ang_mask )[w] = i+1
+                
     
     labels, indices = roi.extract_label_indices(ang_mask)
     nopr = np.bincount( np.array(labels, dtype=int) )[1:]
