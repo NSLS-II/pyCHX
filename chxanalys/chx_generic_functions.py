@@ -12,7 +12,102 @@ import copy, scipy
     
     
     
+def get_fit_by_two_linear(x,y,  mid_xpoint1,  mid_xpoint2=None, xrange=None, ):
+    '''YG Octo 16,2017 Fit a curve with two linear func, the curve is splitted by mid_xpoint, 
+            namely, fit the curve in two regions defined by (xmin,mid_xpoint ) and  (mid_xpoint2, xmax)     
+    Input:
+        x: 1D np.array
+        y: 1D np.array
+        mid_xpoint: float, the middle point of x 
+        xrange: [x1,x2]
+    Return:
+        D1, gmfit1, D2, gmfit2 :
+            fit parameter (slope, background) of linear fit1
+            convinent fit class, gmfit1(x) gives yvale
+            fit parameter (slope, background) of linear fit2
+            convinent fit class, gmfit2(x) gives yvale     
+            
+    '''
+    if xrange is None:
+        x1,x2 = min(x), max(x)
+    x1,x2=xrange  
+    if mid_xpoint2 is None:
+        mid_xpoint2= mid_xpoint1
+    D1, gmfit1 = linear_fit( x,y, xrange= [ x1,mid_xpoint1 ])   
+    D2, gmfit2 = linear_fit( x,y, xrange= [mid_xpoint2, x2 ])
+    return D1, gmfit1, D2, gmfit2 
+
+def get_cross_point( x, gmfit1,  gmfit2 ): 
+    '''YG Octo 16,2017 
+    Get croess point of two curve
+    '''      
+    y1 = gmfit1(x)
+    y2 = gmfit2(x)
+    return x[np.argmin( np.abs(y1-y2) )]
     
+def get_curve_turning_points( x, y, mid_xpoint1,  mid_xpoint2=None, xrange=None, ):
+    '''YG Octo 16,2017 
+    Get a turning point of a curve by doing a two-linear fit
+    '''    
+    D1, gmfit1, D2, gmfit2  = get_fit_by_two_linear(x,y,  mid_xpoint1,  mid_xpoint2, xrange ) 
+    return  get_cross_point( x, gmfit1,  gmfit2 )
+ 
+    
+def plot_fit_two_linear_fit(x,y, gmfit1, gmfit2, ax=None ):
+    '''YG Octo 16,2017 Plot data with two fitted linear func            
+    '''    
+    if ax is None:
+        fig, ax =plt.subplots() 
+    plot1D( x = x, y =  y, ax =ax, c='k', legend='data', m='o', ls='')#logx=True, logy=True )
+    plot1D( x = x, y = gmfit1(x), ax =ax, c='r', m='', ls='-',legend='fit1'  )
+    plot1D( x = x, y = gmfit2(x), ax =ax, c='b', m='', ls='-',legend='fit2'  )
+    return ax 
+    
+
+def linear_fit( x,y, xrange=None):
+    '''YG Octo 16,2017 copied from XPCS_SAXS
+    a linear fit
+    '''
+    if xrange is not None:
+        xmin, xmax = xrange
+        x1,x2 = find_index( x,xmin,tolerance= None),find_index( x,xmax,tolerance= None)
+        x_ = x[x1:x2]
+        y_ = y[x1:x2]         
+    else:
+        x_=x
+        y_=y
+    D0 = np.polyfit(x_, y_, 1)
+    gmfit = np.poly1d(D0)    
+    return D0, gmfit
+
+
+
+def find_index( x,x0,tolerance= None):
+    '''YG Octo 16,2017 copied from SAXS
+    find index of x0 in x
+    #find the position of P in a list (plist) with tolerance
+    '''
+    
+
+    N=len(x)
+    i=0
+    position=None
+    if tolerance==None:
+        tolerance = (x[1]-x[0])/2.
+    if x0 > max(x):
+        position= len(x) -1
+    elif x0<min(x):
+        position=0
+    else:
+        for item in x:
+            if abs(item-x0)<=tolerance:
+                position=i
+                #print 'Found Index!!!'
+                break
+            i+=1
+    return position
+
+
 
 def sgolay2d( z, window_size, order, derivative=None):
     """YG Octo 16, 2017
