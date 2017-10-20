@@ -819,9 +819,9 @@ def get_xsvs_fit(spe_cts_all, spec_sum,  K_mean, spec_std = None, spec_bins=None
     max_cts=  spe_cts_all[0][0].shape[0] -1    
     num_times, num_rings = spe_cts_all.shape 
     if max_bins is not None:  
-        num_times = min( num_times, max_bins  ) 
-        
+        num_times = min( num_times, max_bins  )         
     if spec_bins is None:        
+        #print(   num_times, num_rings, K_mean[0], int(max_cts+2)  )
         bin_edges, bin_centers, Knorm_bin_edges, Knorm_bin_centers = get_bin_edges(
       num_times, num_rings, K_mean[0], int(max_cts+2)  )
         
