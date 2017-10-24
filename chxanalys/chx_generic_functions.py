@@ -12,6 +12,46 @@ import copy, scipy
     
     
     
+
+def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False, silent=True):
+    """
+    function to return roi number from qval_dict, corresponding  Q and phi, lists (sets) of all available Qs and phis
+    [roi_nr,Q,phi,Q_list,phi_list]=get_roi_nr(..)
+    calling sequence: get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False, verbose=True)
+    qdict: qval_dict from analysis pipeline/hdf5 result file
+    q: q of interest, can be either value (q_nr=False) or q-number (q_nr=True)
+    phi: phi of interest, can be either value (phi_nr=False) or phi-number (phi_nr=True)
+    silent=True/False: Don't/Do print lists of available qs and phis, q and phi of interest
+    by LW 20/21/2017
+    """
+    qs=[]
+    phis=[]
+    for i in qdict.keys():
+        qs.append(qdict[i][0])
+        phis.append(qdict[i][1])
+    from collections import OrderedDict
+    qslist=list(OrderedDict.fromkeys(qs))
+    phislist=list(OrderedDict.fromkeys(phis))
+    if q_nr:
+        qinterest=qslist[q]
+    else: qinterest=q
+    if phi_nr:
+        phiinterest=phislist[phi]
+    else: phiinterest=phi
+    qindices = [i for i,x in enumerate(qs) if x == qinterest]
+    phiindices = [i for i,x in enumerate(phis) if x == phiinterest]
+    ret_list=[list(set(qindices).intersection(phiindices))[0],qinterest,phiinterest,qslist,phislist]
+    if silent == False:
+        print('list of available Qs:')
+        print(qslist)
+        print('list of available phis:')
+        print(phislist)
+        print('Roi number for Q= '+str(ret_list[1])+' and phi= '+str(ret_list[2])+': '+str(ret_list[0]))
+    return ret_list
+
+
+
+    
 def get_fit_by_two_linear(x,y,  mid_xpoint1,  mid_xpoint2=None, xrange=None, ):
     '''YG Octo 16,2017 Fit a curve with two linear func, the curve is splitted by mid_xpoint, 
             namely, fit the curve in two regions defined by (xmin,mid_xpoint ) and  (mid_xpoint2, xmax)     
