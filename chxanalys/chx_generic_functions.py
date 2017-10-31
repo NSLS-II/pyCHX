@@ -3102,12 +3102,12 @@ def get_short_long_labels_from_qval_dict(qval_dict, geometry='saxs'):
 
     Nqs = len( qval_dict.keys())
     len_qrz = len( list( qval_dict.values() )[0] )
-    qr_label = np.array( list( qval_dict.values() ) )[:,0]
+    qr_label = sorted( np.array( list( qval_dict.values() ) )[:,0] )
     if geometry=='gi_saxs' or geometry=='ang_saxs':# or geometry=='gi_waxs':
         if len_qrz < 2:
             print( "please give qz or qang for the q-label")
         else:
-            qz_label = np.array( list( qval_dict.values() ) )[:,1] 
+            qz_label = sorted( np.array( list( qval_dict.values() ) )[:,1]  )
     else:
         qz_label = np.array(   [0]    ) 
         
@@ -3171,6 +3171,8 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                     qphi_analysis = False,
                     *argv,**kwargs):    
     '''
+    Oct31, 2017 add qth_interest option  
+    
     Dec 26,2016, Y.G.@CHX
     
     Plot one/four-time correlation function (with fit) for different geometry
@@ -3186,7 +3188,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                     format as {1: [qr1, qa1], 2: [qr2,qa2], ...] for ang-saxs
                     
     fit_res: give all the fitting parameters for showing in the plot    
-
+    qth_interest: if not None: should be a list, and will only plot the qth_interest qs
     filename: for the title of plot
     append_name: if not None, will save as filename + append_name as filename
     path: the path to save data        
@@ -3220,10 +3222,31 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
     if geometry =='saxs':
         if qphi_analysis:
             geometry = 'ang_saxs'
+            
+    
+            
+    if qth_interest is not None:
+        if not isinstance(qth_interest, list):
+            print('Please give a list for qth_interest') 
+        else:
+            #g2_dict0, taus_dict0, qval_dict0, fit_res0= g2_dict, taus_dict, qval_dict, fit_res         
+            qth_interest = np.array( qth_interest ) -1
+            g2_dict_ = {}   
+            #taus_dict_ = {}
+            for k in list(g2_dict.keys()): 
+                g2_dict_[k] = g2_dict[k][:,[i for i in qth_interest]] 
+            #for k in list(taus_dict.keys()):    
+            #    taus_dict_[k] = taus_dict[k][:,[i for i in qth_interest]]  
+            taus_dict_ = taus_dict
+            qval_dict_ = {k:qval_dict[k] for k in  qth_interest}            
+            fit_res_ = [ fit_res[k] for k in   qth_interest ]            
+    else:
+        g2_dict_, taus_dict_, qval_dict_, fit_res_ = g2_dict, taus_dict, qval_dict, fit_res        
+            
     (qr_label, qz_label, num_qz, num_qr, num_short,
      num_long, short_label, long_label,short_ulabel,
      long_ulabel,ind_long, master_plot,
-     mastp) = get_short_long_labels_from_qval_dict(qval_dict, geometry=geometry)  
+     mastp) = get_short_long_labels_from_qval_dict(qval_dict_, geometry=geometry)  
     fps = [] 
     
     #$print( num_short, num_long )
@@ -3273,14 +3296,11 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                 
         #filename =''
         til = '%s:--->%s'%(filename,  title_short )
-
         if num_long_i <=4:            
             plt.title( til,fontsize= 14, y =1.15)  
         else:
-            plt.title( til,fontsize=20, y =1.06)                 
-        
-        #print( num_long )
-        
+            plt.title( til,fontsize=20, y =1.06) 
+        #print( num_long )        
         if num_long!=1:   
             #print( 'here')
             plt.axis('off')             
@@ -3303,7 +3323,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
         #print( master_plot )
         #print(ind_long_i, len(ind_long_i) )
         
-        for i, l_ind in enumerate( ind_long_i ):  
+        for i, l_ind in enumerate( ind_long_i ):            
             if num_long_i <= max_plotnum_fig:
                 #print('Here')
                 #print(i, l_ind,long_label[l_ind] )                
@@ -3320,7 +3340,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16)         
             if master_plot == 'qz' or master_plot == 'angle':                 
                 title_long =  r'$Q_r= $'+'%.5f  '%( long_label[l_ind]  ) + r'$\AA^{-1}$'  
-                #print(  long_label   )
+                #print(  title_long,long_label,l_ind   )
             else:             
                 if geometry=='ang_saxs':
                     #title_long = 'Ang= ' + '%.2f'%(  long_label[l_ind] ) + r'$^\circ$' + '( %d )'%(l_ind)
@@ -3332,11 +3352,15 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
 
             if master_plot != 'qz':
                 ax.set_title(title_long + ' (%s  )'%(1+l_ind), y =1.1, fontsize=12) 
-            else:                
-                ax.set_title(title_long + ' (%s  )'%(1+l_ind), y =1.05, fontsize=12) 
+            else:                  
+                ax.set_title(title_long + ' (%s  )'%(1+l_ind), y =1.05, fontsize=12)
+                if qth_interest is not None:#it might have a bug here, todolist!!!
+                    lab = sorted(list(qval_dict_.keys()))
+                    #print( lab, l_ind)
+                    ax.set_title(title_long + ' (%s  )'%( lab[l_ind] +1), y =1.05, fontsize=12)    
+                
             
-            
-            for ki, k in enumerate( list(g2_dict.keys()) ):                
+            for ki, k in enumerate( list(g2_dict_.keys()) ): 
                 if ki==0:
                     c='b'
                     if fit_res is None:
@@ -3356,19 +3380,19 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                     c = colors[ki+2]
                     m= '-%s'%markers[ki+2] 
                 try:
-                    dumy = g2_dict[k].shape
+                    dumy = g2_dict_[k].shape
                     #print( 'here is the shape' )
                     islist = False 
                 except:
-                    islist_n = len( g2_dict[k] )
+                    islist_n = len( g2_dict_[k] )
                     islist = True
                     #print( 'here is the list' )                    
                 if islist:
                     for nlst in range( islist_n ):
                         m = '-%s'%markers[ nlst ]  
                         #print(m)
-                        y=g2_dict[k][nlst][:, l_ind ]
-                        x = taus_dict[k][nlst]
+                        y=g2_dict_[k][nlst][:, l_ind ]
+                        x = taus_dict_[k][nlst]
                         if ki==0:
                             ymin,ymax = min(y), max(y[1:])
                         if g2_labels is None:                             
@@ -3385,8 +3409,8 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                                 ax.legend(loc='best', fontsize = 8, fancybox=True, framealpha=0.5)             
                 
                 else:    
-                    y=g2_dict[k][:, l_ind ]    
-                    x = taus_dict[k]
+                    y=g2_dict_[k][:, l_ind ]    
+                    x = taus_dict_[k]
                     if ki==0:
                         ymin,ymax = min(y), max(y[1:])
                     if g2_labels is None:    
@@ -3396,8 +3420,8 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                         if l_ind==0:
                             ax.legend(loc='best', fontsize = 8, fancybox=True, framealpha=0.5)                   
 
-            if fit_res is not None:
-                result1 = fit_res[l_ind]    
+            if fit_res_ is not None:
+                result1 = fit_res_[l_ind]    
                 #print (result1.best_values)
                 rate = result1.best_values['relaxation_rate']
                 beta = result1.best_values['beta'] 
