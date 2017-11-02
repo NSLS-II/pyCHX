@@ -1486,6 +1486,8 @@ def export_xpcs_results_to_h5( filename, export_dir, export_dict ):
                 export_dict[key].to_hdf( fout, key=key,  mode='a',   )                
             else:
                 data = hf.create_dataset(key, data = export_dict[key] )
+                #add this fill line at Octo 27, 2017
+                data.set_fill_value = np.nan
     print( 'The xpcs analysis results are exported to %s with filename as %s'%(export_dir , filename))
         
 
