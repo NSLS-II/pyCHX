@@ -476,7 +476,7 @@ def cal_g2p( FD, ring_mask, bad_frame_list=None,
             print ('%s Bad frames involved and will be discarded!'%len(bad_frame_list) )            
             noframes -=  len(np.where(np.in1d( bad_frame_list, 
                                               range(good_start, FD.end)))[0])   
-    print ('%s frames will be processed...'%(noframes))      
+    print ('%s frames will be processed...'%(noframes-1))      
     ring_masks = [   np.array(ring_mask==i, dtype = np.int64) 
               for i in np.unique( ring_mask )[1:] ]    
     qind, pixelist = roi.extract_label_indices(  ring_mask  )    
