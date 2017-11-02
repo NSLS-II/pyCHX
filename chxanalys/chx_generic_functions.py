@@ -9,8 +9,34 @@ from skimage.draw import line_aa, line, polygon, ellipse, circle
 from modest_image import ModestImage, imshow
 import matplotlib.cm as mcm
 import copy, scipy 
+import PIL    
+    
+def save_array_to_tiff(array, output, verbose=True):
+    '''Y.G. Nov 1, 2017
+    Save array to a tif file
+    '''
+    img = PIL.Image.fromarray(array)  
+    img.save(  output )  
+    if verbose:
+        print( 'The data is save to: %s.'%( output ))
     
     
+    
+def load_pilatus(filename):
+    '''Y.G. Nov 1, 2017
+    Load a pilatus 2D image
+    '''    
+    return np.array(  PIL.Image.open(filename).convert('I') )
+    
+    
+def ls_dir(inDir):
+    '''Y.G. Nov 1, 2017
+    List all filenames in a filefolder (not include hidden files and subfolders)
+    '''
+    from os import listdir
+    from os.path import isfile, join
+    tifs = np.array( [f for f in listdir(inDir) if isfile(join(inDir, f))] )
+    return tifs
     
 
 def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False, silent=True):
