@@ -11,6 +11,49 @@ import matplotlib.cm as mcm
 import copy, scipy 
 import PIL    
     
+# function to get indices of local extrema (=indices of speckle echo maximum amplitudes):
+def get_echos(dat_arr,min_distance=10):
+    """
+    getting local maxima and minima from 1D data -> e.g. speckle echos
+    strategy: using peak_local_max (from skimage) with min_distance parameter to find well defined local maxima
+    using np.argmin to find absolute minima between relative maxima
+    returns [max_ind,min_ind] -> lists of indices corresponding to local maxima/minima
+    by LW 10/23/2018
+    """
+    from skimage.feature import peak_local_max
+    max_ind=peak_local_max(dat_arr, min_distance)   # !!! careful, skimage function reverses the order (wtf?)
+    min_ind=[]
+    for i in range(len(max_ind[:-1])):
+        min_ind.append(max_ind[i+1][0]+np.argmin(dat_arr[max_ind[i+1][0]:max_ind[i][0]]))
+    #unfortunately, skimage function fu$$s up the format: max_ind is an array of a list of lists...fix this:
+    mmax_ind=[]
+    for l in max_ind:
+        mmax_ind.append(l[0])
+    #return [mmax_ind,min_ind]
+    return [list(reversed(mmax_ind)),list(reversed(min_ind))]
+
+    
+def pad_length(arr,pad_val=np.nan):
+    """
+    arr: 2D matrix
+    pad_val: values being padded
+    adds pad_val to each row, to make the length of each row equal to the lenght of the longest row of the original matrix
+    -> used to convert python generic data object to HDF5 native format
+    function fixes python bug in padding (np.pad) integer array with np.nan
+    by LW 12/30/2017
+    """
+    max_len=[]
+    for i in range(np.shape(arr)[0]):
+        #print(np.size(arr[i]))
+        max_len.append([np.size(arr[i])])
+    #print(max_len)
+    max_len=np.max(max_len)
+    for l in range(np.shape(arr)[0]):
+        arr[l]=np.pad(arr[l]*1.,(0,max_len-np.size(arr[l])),mode='constant',constant_values=pad_val)
+    return arr
+
+
+
 def save_array_to_tiff(array, output, verbose=True):
     '''Y.G. Nov 1, 2017
     Save array to a tif file
@@ -46,7 +89,7 @@ def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False, silent=True):
     calling sequence: get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False, verbose=True)
     qdict: qval_dict from analysis pipeline/hdf5 result file
     q: q of interest, can be either value (q_nr=False) or q-number (q_nr=True)
-    phi: phi of interest, can be either value (phi_nr=False) or phi-number (phi_nr=True)
+    phi: phi of interest, can be either value (phi_nr=False) or q-number (phi_nr=True)
     silent=True/False: Don't/Do print lists of available qs and phis, q and phi of interest
     by LW 20/21/2017
     """
@@ -74,7 +117,6 @@ def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False, silent=True):
         print(phislist)
         print('Roi number for Q= '+str(ret_list[1])+' and phi= '+str(ret_list[2])+': '+str(ret_list[0]))
     return ret_list
-
 
 
     
