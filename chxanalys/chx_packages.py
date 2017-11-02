@@ -25,7 +25,13 @@ create_hot_pixel_mask,show_ROI_on_image,create_time_slice,save_lists,
               get_current_pipeline_filename, get_current_pipeline_fullpath,save_current_pipeline,
                                              filter_roi_mask, mask_badpixels,
                                              validate_uid,   
-                move_beamstop, get_today_date
+                move_beamstop, get_today_date,  get_print_uids, get_last_uids,get_base_all_filenames,create_ring_mask,
+                                             get_image_edge, get_image_with_roi,
+                       extract_data_from_file, sgolay2d,
+                                    get_roi_nr, get_mass_center_one_roi,  
+                 get_echos,  pad_length,    save_array_to_tiff,  load_pilatus, ls_dir,
+          get_fit_by_two_linear,get_cross_point,get_curve_turning_points, plot_fit_two_linear_fit,linear_fit,
+         find_index,                                    
                                             
                                             )
  
@@ -35,7 +41,7 @@ from chxanalys.XPCS_SAXS import (get_circular_average,save_lists,get_ring_mask, 
                               get_t_iqc,multi_uids_saxs_xpcs_analysis,
                               plot_t_iqc,  plot_circular_average, get_seg_from_ring_mask, 
                                 recover_img_from_iq,get_cirucular_average_std,
-                                 get_angular_mask
+                                 get_angular_mask, combine_two_roi_mask
                                 
                                 )
 
