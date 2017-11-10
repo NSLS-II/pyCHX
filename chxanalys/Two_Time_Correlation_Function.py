@@ -455,16 +455,18 @@ def get_aged_g2_from_g12q( g12q, age_edge,  age_center =None, timeperframe=1,tim
     m,n = arr.shape #m should be 2*n-1
     #age_edge, age_center = get_qedge( qstart=slice_start,qend= slice_end,
     #                 qwidth = slice_width, noqs =slice_num  ) 
+    #print(arr.shape)
     age_edge  = np.int_(age_edge)
     if age_center is None:
         age_center = (age_edge[:,0]   +  age_edge[:,1] )//2
-    age_edge  *=  2
-    age_center *= timeperframe
+    
+    age_edge_ = age_edge *  2
+    age_center_ = age_center * timeperframe
     g2_aged = {}
     lag_dict = {}
     #print( age_edge, age_center)
-    for i,age in enumerate(age_center):         
-        age_edges_0, age_edges_1 = age_edge[i][0],   age_edge[i][1]
+    for i,age in enumerate(age_center_):         
+        age_edges_0, age_edges_1 = age_edge_[i][0],   age_edge_[i][1]
         #print(i, age, age_edges_0, age_edges_1)
         g2i = arr[ age_edges_0: age_edges_1   ].mean( axis =0 )
         #print('here')
@@ -476,7 +478,8 @@ def get_aged_g2_from_g12q( g12q, age_edge,  age_center =None, timeperframe=1,tim
             num_levels = int(np.log( N/(num_bufs-1))/np.log(2) +1) +1
             tot_channels, lag_steps, dict_lag = multi_tau_lags(num_levels, num_bufs)
             #max_taus= lag_steps[age].max()            
-            lag_steps_ = lag_steps[  lag_steps <= N ]
+            lag_steps_ = lag_steps[  lag_steps < N ]
+            #print(i, age, lag_steps, N, lag_steps_, len(g2_aged[age]))
             g2_aged[age] = g2_aged[age][lag_steps_]
             lag_dict[age] = lag_steps_ *1.0
             #print( lag_dict[age] )
