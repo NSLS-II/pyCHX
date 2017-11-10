@@ -11,6 +11,23 @@ import matplotlib.cm as mcm
 import copy, scipy 
 import PIL    
     
+    
+def get_diff_fv(  g2_fit_paras, qval_dict, ang_init=137.2):
+    '''YG@CHX Nov 9,2017
+    Get flow velocity and diff from g2_fit_paras  '''
+    g2_fit_para_ = g2_fit_paras.copy()
+    qr = np.array( [qval_dict[k][0] for k in sorted( qval_dict.keys())] )
+    qang = np.array( [qval_dict[k][1] for k in sorted( qval_dict.keys())] )
+    #x=g2_fit_para_.pop( 'relaxation_rate' )
+    #x=g2_fit_para_.pop( 'flow_velocity' )
+    g2_fit_para_['diff'] = g2_fit_paras[ 'relaxation_rate' ]/qr**2
+    cos_part = np.abs( np.cos( np.radians( qang - ang_init)) )
+    g2_fit_para_['fv'] = g2_fit_paras[ 'flow_velocity' ]/cos_part/qr
+    return g2_fit_para_
+
+
+    
+    
 # function to get indices of local extrema (=indices of speckle echo maximum amplitudes):
 def get_echos(dat_arr,min_distance=10):
     """
@@ -707,7 +724,21 @@ def create_box( cx, cy, wx, wy, roi_mask):
 
 
 
+def create_folder( base_folder, sub_folder ):
+    '''
+    Crate a subfolder under base folder
+    Input:
+        base_folder: full path of the base folder
+        sub_folder: sub folder name to be created         
+    Return:
+        Created full path of the created folder
+    '''
 
+    data_dir0 = os.path.join( base_folder, sub_folder )
+    ##Or define data_dir here, e.g.,#data_dir = '/XF11ID/analysis/2016_2/rheadric/test/'
+    os.makedirs(data_dir0, exist_ok=True)
+    print('Results from this analysis will be stashed in the directory %s' % data_dir0) 
+    return data_dir0   
 
 
 
@@ -2939,6 +2970,17 @@ def flow_para_function( x, beta, relaxation_rate, flow_velocity, baseline=1):
     Flow_part =  np.pi**2/(16*x*flow_velocity) *  abs(  erf(  np.sqrt(   4/np.pi * 1j* x * flow_velocity ) ) )**2    
     return  beta*Diff_part * Flow_part + baseline
 
+
+def flow_para_function_explicitq( x, beta, relaxation_rate, flow_velocity, baseline=1, qr=1, q_ang=0 ):
+    '''Nov 9, 2017 Basically, make q vector to (qr, angle),  relaxation_rate is actually a diffusion rate
+    flow_velocity: q.v (q vector dot v vector = q*v*cos(angle) )'''
+    
+    Diff_part=    np.exp(-2 * relaxation_rate* qr**2 * x)
+    Flow_part =  np.pi**2/(16*x*flow_velocity*qr* np.cos(q_ang) ) *  abs(  erf(  np.sqrt(   4/np.pi * 1j* x * flow_velocity * qr* np.cos(q_ang) ) ) )**2    
+    return  beta*Diff_part * Flow_part + baseline
+
+
+
 def get_flow_velocity( average_velocity, shape_factor):  
     
     return average_velocity * (1- shape_factor)/(1+  shape_factor)
@@ -2981,8 +3023,13 @@ def get_g2_fit_general_two_steps( g2, taus,  function='simple_exponential',
 
 
 def get_g2_fit_general( g2, taus,  function='simple_exponential', 
-                       sequential_fit=False, *argv,**kwargs):
+                       sequential_fit=False, qval_dict = None, 
+                       ang_init = 137.3, *argv,**kwargs):
     '''
+    Nov 9, 2017, give qval_dict for using function of flow_para_function_explicitq
+    qval_dict: a dict with qr and ang (in unit of degrees).")
+    
+    
     Dec 29,2016, Y.G.@CHX
     
     Fit one-time correlation function
@@ -3057,6 +3104,8 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
         mod = Model(stretched_auto_corr_scat_factor_with_vibration)#,  independent_vars=  _vars)        
     elif function=='flow_para_function' or  function=='flow_para':         
         mod = Model(flow_para_function)#,  independent_vars=  _vars) 
+    elif function=='flow_para_function_explicitq' or  function=='flow_para_qang':         
+        mod = Model(flow_para_function_explicitq)#,  independent_vars=  _vars)         
     elif function=='flow_para_function_with_vibration' or  function=='flow_vibration':            
         mod = Model( flow_para_function_with_vibration )
         
@@ -3073,7 +3122,9 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
         for k in list(  guess_limits.keys() ):
             mod.set_param_hint( k,   min=   guess_limits[k][0], max= guess_limits[k][1] )           
     
-    if function=='flow_para_function' or  function=='flow_para' or function=='flow_vibration': 
+    if function=='flow_para_function' or  function=='flow_para' or function=='flow_vibration':
+        mod.set_param_hint( 'flow_velocity', min=0)  
+    if function=='flow_para_function_explicitq' or  function=='flow_para_qang': 
         mod.set_param_hint( 'flow_velocity', min=0)        
     if function=='stretched_vibration' or function=='flow_vibration':     
         mod.set_param_hint( 'freq', min=0)
@@ -3089,10 +3140,20 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
     _relaxation_rate = _guess_val['relaxation_rate']
     _baseline= _guess_val['baseline']    
     pars  = mod.make_params( beta=_beta, alpha=_alpha, relaxation_rate =_relaxation_rate, baseline= _baseline)
+    
     if function=='flow_para_function' or  function=='flow_para':
         _flow_velocity =_guess_val['flow_velocity']    
         pars  = mod.make_params( beta=_beta, alpha=_alpha, flow_velocity=_flow_velocity,
                                 relaxation_rate =_relaxation_rate, baseline= _baseline)
+
+    if function=='flow_para_function_explicitq' or  function=='flow_para_qang':
+        _flow_velocity =_guess_val['flow_velocity']   
+        _guess_val['qr']   = 1
+        _guess_val['q_ang']  = 0
+        pars  = mod.make_params( beta=_beta, alpha=_alpha, flow_velocity=_flow_velocity,
+                                relaxation_rate =_relaxation_rate, baseline= _baseline,
+                               qr=1, q_ang=0
+                               )
         
     if function=='stretched_vibration':
         _freq =_guess_val['freq'] 
@@ -3105,7 +3166,9 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
         _freq =_guess_val['freq'] 
         _amp = _guess_val['amp'] 
         pars  = mod.make_params( beta=_beta,  freq=_freq, amp = _amp,flow_velocity=_flow_velocity,
-                                relaxation_rate =_relaxation_rate, baseline= _baseline)        
+                                relaxation_rate =_relaxation_rate, baseline= _baseline)       
+ 
+        
         
     for v in _vars:
         pars['%s'%v].vary = False
@@ -3138,8 +3201,21 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
             #for k in list(pars.keys()):
                 #print(k, _guess_val[k]  )
             # pars[k].value = _guess_val[k][i]        
-        
+        if function=='flow_para_function_explicitq' or  function=='flow_para_qang':  
+            if qval_dict is None:
+                print("Please provide qval_dict, a dict with qr and ang (in unit of degrees).")
+            else:
+                pars  = mod.make_params(  
+                    beta=_beta, alpha=_alpha, flow_velocity=_flow_velocity,
+                                relaxation_rate =_relaxation_rate, baseline= _baseline, 
+                    qr = qval_dict[i][0], q_ang = abs(np.radians( qval_dict[i][1] - ang_init) )  )
+                pars['qr'].vary = False
+                pars['q_ang'].vary = False
+                #if i==20:
+                #    print(pars)
+        #print( pars  )
         result1 = mod.fit(y, pars, x =lags ) 
+        #print(qval_dict[i][0], qval_dict[i][1],  y)
         if sequential_fit:
             for k in list(pars.keys()):
                 #print( pars )
@@ -3170,12 +3246,14 @@ def get_short_long_labels_from_qval_dict(qval_dict, geometry='saxs'):
 
     Nqs = len( qval_dict.keys())
     len_qrz = len( list( qval_dict.values() )[0] )
-    qr_label = sorted( np.array( list( qval_dict.values() ) )[:,0] )
+    #qr_label = sorted( np.array( list( qval_dict.values() ) )[:,0] )
+    qr_label =  np.array( list( qval_dict.values() ) )[:,0] 
     if geometry=='gi_saxs' or geometry=='ang_saxs':# or geometry=='gi_waxs':
         if len_qrz < 2:
             print( "please give qz or qang for the q-label")
         else:
-            qz_label = sorted( np.array( list( qval_dict.values() ) )[:,1]  )
+            #qz_label = sorted( np.array( list( qval_dict.values() ) )[:,1]  )
+            qz_label =   np.array( list( qval_dict.values() ) )[:,1]  
     else:
         qz_label = np.array(   [0]    ) 
         
@@ -3366,6 +3444,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
         til = '%s:--->%s'%(filename,  title_short )
         if num_long_i <=4:            
             plt.title( til,fontsize= 14, y =1.15)  
+            #plt.title( til,fontsize=20, y =1.06) 
         else:
             plt.title( til,fontsize=20, y =1.06) 
         #print( num_long )        
@@ -3378,8 +3457,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
             #fig.set_size_inches(10, fig_ysize )
         else: 
             sy =1
-            #fig.set_size_inches(8,6)
-            
+            #fig.set_size_inches(8,6)            
             #plt.axis('off') 
         sx = min(4, int( np.ceil( min(max_plotnum_fig,num_long_i)/float(sy) ) ))
         
@@ -3393,9 +3471,13 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
         
         for i, l_ind in enumerate( ind_long_i ):            
             if num_long_i <= max_plotnum_fig:
-                #print('Here')
-                #print(i, l_ind,long_label[l_ind] )                
+                #if  s_ind ==2:
+                #    print('Here')
+                #    print(i, l_ind, short_label[s_ind], long_label[l_ind], sx, sy, i+1 )                
                 ax = fig.add_subplot(sx,sy, i + 1 ) 
+                if sx==1:
+                    if sy==1:
+                        plt.axis('on')    
             else:
                 #fig_subnum = l_ind//max_plotnum_fig
                 #ax = fig[fig_subnum].add_subplot(sx,sy, i + 1 - fig_subnum*max_plotnum_fig) 
@@ -3504,7 +3586,13 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                 elif function=='flow_vibration': 
                     freq = result1.best_values['freq'] 
                 if function=='flow_para_function' or  function=='flow_para' or  function=='flow_vibration': 
-                    flow = result1.best_values['flow_velocity']                          
+                    flow = result1.best_values['flow_velocity']    
+                if function=='flow_para_function_explicitq' or  function=='flow_para_qang':  
+                    flow = result1.best_values['flow_velocity'] 
+                    if qval_dict_ is None:
+                        print("Please provide qval_dict, a dict with qr and ang (in unit of degrees).")
+                    else:  
+                        pass    
 
                 if rate!=0:
                     txts = r'$\tau_0$' + r'$ = %.3f$'%(1/rate) +  r'$ s$'
@@ -3516,7 +3604,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                 ax.text(x =x, y= y0, s=txts, fontsize=fontsize, transform=ax.transAxes) 
                 #print(function)
                 dt=0
-                if function!='flow_para_function' and  function!='flow_para' and function!='flow_vibration':
+                if function!='flow_para_function' and  function!='flow_para' and function!='flow_vibration' and function!='flow_para_qang':
                     txts = r'$\alpha$' + r'$ = %.3f$'%(alpha)  
                     dt +=0.1
                     #txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
@@ -3526,7 +3614,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                 dt +=0.1
                 ax.text(x =x, y= y0- dt, s=txts, fontsize=fontsize, transform=ax.transAxes)
                 
-                if function=='flow_para_function' or  function=='flow_para' or  function=='flow_vibration': 
+                if function=='flow_para_function' or  function=='flow_para' or  function=='flow_vibration' or function=='flow_para_qang': 
                     txts = r'$flow_v$' + r'$ = %.3f$'%( flow) 
                     dt += 0.1
                     ax.text(x =x, y= y0- dt, s=txts, fontsize=fontsize, transform=ax.transAxes)                        
