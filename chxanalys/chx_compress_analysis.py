@@ -1,5 +1,3 @@
-
-
 from __future__ import absolute_import, division, print_function
 
 from tqdm import tqdm
@@ -28,6 +26,43 @@ from chxanalys.chx_compress import   (compress_eigerdata, read_compressed_eigerd
 
 from modest_image import ModestImage, imshow                                      
 #from chxanalys.chx_compress import *
+
+
+def get_time_edge_avg_img(FD, frame_edge,show_progress =True):
+    '''YG Dev Nov 14, 2017@CHX
+    Get averaged img by giving FD and frame edges
+    Parameters
+    ----------
+    FD: Multifile class
+        compressed file
+    frame_edge: np.array, can be created by create_time_slice( Nimg, slice_num= 3, 
+        slice_width= 1, edges = None )
+        e.g., np.array([[   5,    6],
+           [2502, 2503],
+           [4999, 5000]])
+    Return:
+        array: (N of frame_edge,  averaged image) , i.e., d[0] gives the first averaged image
+    '''
+    
+    Nt = len( frame_edge )  
+    d = np.zeros(Nt, dtype=object)
+    for i in range(Nt):
+        t1,t2 = frame_edge[i]              
+        d[i] = get_avg_imgc( FD, beg=t1,end=t2, sampling = 1, plot_ = False,show_progress=show_progress )
+        
+    return d
+
+
+def plot_imgs( imgs, image_name=None, *argv, **kwargs):
+    #NOT WORKing NOW....
+    N = len(imgs)
+    sx = np.ceil( np.sqrt(N) )
+    pass
+
+
+
+
+
 def cal_waterfallc(FD, labeled_array,   qindex=1, 
                    bin_waterfall = False, waterfall_roi_size = None, save=False, *argv,**kwargs):   
     """Compute the mean intensity for each ROI in the compressed file (FD)
