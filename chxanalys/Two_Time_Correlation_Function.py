@@ -1065,7 +1065,7 @@ def masked_g12( g12, badframes_list):
         g12m[:,:,i] = g12[:,:,i] * g12_mask
     return g12m
 
-def show_one_C12( C12,   return_fig=False,interpolation = 'none',cmap='viridis',
+def show_one_C12( C12,  fig_ax=None,  return_fig=False,interpolation = 'none',cmap='viridis',
                  *argv,**kwargs):  
  
     '''
@@ -1124,11 +1124,14 @@ def show_one_C12( C12,   return_fig=False,interpolation = 'none',cmap='viridis',
         title=True        
 
     data = C12[N1:N2,N1:N2]
-    if RUN_GUI:
-        fig = Figure()
-        ax = fig.add_subplot(111)
+    if fig_ax is None:
+        if RUN_GUI:
+            fig = Figure()
+            ax = fig.add_subplot(111)
+        else:
+            fig, ax = plt.subplots()
     else:
-        fig, ax = plt.subplots()
+        fig,ax=fig_ax
     im = imshow(ax,  data, origin='lower' , cmap=cmap, 
                  norm= LogNorm( vmin, vmax ),  
             extent=[0, data.shape[0]*timeperframe, 0, data.shape[0]*timeperframe ],
@@ -1160,7 +1163,7 @@ def show_one_C12( C12,   return_fig=False,interpolation = 'none',cmap='viridis',
 
     
 
-def show_C12(C12,  q_ind=1, return_fig=False, interpolation = 'none', cmap='viridis',
+def show_C12(C12,  fig_ax=None, q_ind=1, return_fig=False, interpolation = 'none', cmap='viridis',
              logs=True, qlabel=None, *argv,**kwargs):  
  
     '''
@@ -1230,11 +1233,14 @@ def show_C12(C12,  q_ind=1, return_fig=False, interpolation = 'none', cmap='viri
         title=True        
 
     data = C12[N1:N2,N1:N2,C12_num]
-    if RUN_GUI:
-        fig = Figure()
-        ax = fig.add_subplot(111)
+    if fig_ax is None:
+        if RUN_GUI:
+            fig = Figure()
+            ax = fig.add_subplot(111)
+        else:
+            fig, ax = plt.subplots()
     else:
-        fig, ax = plt.subplots()
+        fig,ax=fig_ax
 
     #extent=[0, data.shape[0]*timeperframe, 0, data.shape[0]*timeperframe ]
     extent= np.array( [N1, N2, N1, N2]) *timeperframe 
