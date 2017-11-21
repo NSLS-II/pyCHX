@@ -59,7 +59,11 @@ def convert_Qmap( img, qx_map, qy_map=None, bins=None, rangeq=None,  origin=None
 
 def qphiavg(image, q_map=None, phi_map=None, mask=None, bins= None,
             origin=None, range=None, statistic='mean'):
-    ''' quick qphi average calculator.
+    ''' Octo 20, 2017 Yugang According to Julien's Suggestion
+        Get from https://github.com/CFN-softbio/SciStreams/blob/master/SciStreams/processing/qphiavg.py
+        With a small revision --> return three array rather than dict
+    
+        quick qphi average calculator.
         ignores bins for now
     '''
     # TODO : replace with method that takes qphi maps
