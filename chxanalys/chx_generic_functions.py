@@ -206,14 +206,29 @@ def linear_fit( x,y, xrange=None):
     return D0, gmfit
 
 
-
 def find_index( x,x0,tolerance= None):
     '''YG Octo 16,2017 copied from SAXS
     find index of x0 in x
     #find the position of P in a list (plist) with tolerance
     '''
     
+    N=len(x)
+    i=0
+    if x0 > max(x):
+        position= len(x) -1
+    elif x0<min(x):
+        position=0
+    else:
+        position = np.argmin( np.abs( x - x0 ) ) 
+    return position
 
+def find_index_old( x,x0,tolerance= None):
+    '''YG Octo 16,2017 copied from SAXS
+    find index of x0 in x
+    #find the position of P in a list (plist) with tolerance
+    '''
+    
+    
     N=len(x)
     i=0
     position=None
@@ -230,6 +245,8 @@ def find_index( x,x0,tolerance= None):
                 #print 'Found Index!!!'
                 break
             i+=1
+            
+            
     return position
 
 
@@ -2631,7 +2648,32 @@ def save_arrays( data, label=None, dtype='array', filename=None, path=None, retu
     #print( 'The g2 of uid= %s is saved in %s with filename as g2-%s-%s.csv'%(uid, path, uid, CurTime))
     if return_res:
         return df
-        
+
+def cal_particle_g2( radius, viscosity, qr,  taus, beta=0.2, T=298):
+    '''YG Dev Nov 20, 2017@CHX
+    calculate particle g2 fucntion by giving particle radius, Q , and solution viscosity using a simple 
+    exponetional model
+    Input:
+        radius: m
+        qr, list, in A-1
+        visocity: N*s/m^2  (water at 25K = 8.9*10^(-4) )        
+        T: temperture, in K 
+            e.g., for a 250 nm sphere in glycerol/water (90:10) at RT (298K) gives:
+           1.38064852*10**(−23) *298  / ( 6*np.pi* 0.20871 * 250 *10**(-9)) * 10**20 /1e5 = 4.18*10^5 A2/s       
+        taus: time 
+        beta: contrast
+       
+       cal_particle_g2( radius=125 *10**(-9), qr=[0.01,0.015], viscosity= 8.9*1e-4)  
+       
+    '''
+    D0 = get_diffusion_coefficient( viscosity, radius, T=T)
+    g2_q1 = np.zeros(len(qr), dtype = object)
+    for i, q1 in enumerate(qr):
+        relaxation_rate = D0 * q1**2
+        g2_q1[i] = simple_exponential( taus, beta=beta, relaxation_rate = relaxation_rate,  baseline=1)
+    return g2_q1
+    
+    
 
 def get_diffusion_coefficient( visocity, radius, T=298):
     '''July 10, 2016, Y.G.@CHX
