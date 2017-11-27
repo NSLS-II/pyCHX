@@ -901,7 +901,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
     #print(  inc_x0, inc_y0 )
     
     center = [  int(md['beam_center_y']),int( md['beam_center_x'] ) ]  #beam center [y,x] for python image    
-    print( 'The beam center is: %s'%center )
+    
     
     pixel_mask =  1- np.int_( np.array( imgs.md['pixel_mask'], dtype= bool)  )
     print( 'The data are: %s' %imgs )
@@ -909,11 +909,12 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
     if False:
         print_dict( md,  ['suid', 'number of images', 'uid', 'scan_id', 'start_time', 'stop_time', 'sample', 'Measurement',
                   'acquire period', 'exposure time', 
-         'det_distanc', 'beam_center_x', 'beam_center_y', ] )
-        
+         'det_distanc', 'beam_center_x', 'beam_center_y', ] )        
     ## Overwrite Some Metadata if Wrong Input    
     dpix, lambda_, Ldet,  exposuretime, timeperframe, center = check_lost_metadata(
                 md, Nimg, inc_x0 = inc_x0, inc_y0=   inc_y0, pixelsize = 7.5*10*(-5) )
+    
+    print( 'The beam center is: %s'%center )
     
     timeperframe  *=  bin_frame_number
     
