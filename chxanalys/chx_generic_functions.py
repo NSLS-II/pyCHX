@@ -89,13 +89,18 @@ def load_pilatus(filename):
     return np.array(  PIL.Image.open(filename).convert('I') )
     
     
-def ls_dir(inDir):
+def ls_dir(inDir, string=None):
     '''Y.G. Nov 1, 2017
     List all filenames in a filefolder (not include hidden files and subfolders)
+    inDir: fullpath of the inDir
+    string: if not None, only retrun filename containing the string
     '''
     from os import listdir
     from os.path import isfile, join
-    tifs = np.array( [f for f in listdir(inDir) if isfile(join(inDir, f))] )
+    if string is   None:
+        tifs = np.array( [f for f in listdir(inDir) if isfile(join(inDir, f))] )
+    else:
+        tifs = np.array( [f for f in listdir(inDir) if (isfile(join(inDir, f)))&(string in f)       ] ) 
     return tifs
     
 
@@ -1987,7 +1992,7 @@ def show_img( image, ax=None,label_array=None, alpha=0.5, interpolation='nearest
 
     
     
-def plot1D( y,x=None, yerr=None, ax=None,return_fig=False, ls='-', figsize=None,
+def plot1D( y,x=None, yerr=None, ax=None,return_fig=False, ls='-', figsize=None,legend=None,
            legend_size=None, lw=None, markersize=None, tick_size=8, *argv,**kwargs):    
     """a simple function to plot two-column data by using matplotlib.plot
     pass *argv,**kwargs to plot
@@ -1996,6 +2001,7 @@ def plot1D( y,x=None, yerr=None, ax=None,return_fig=False, ls='-', figsize=None,
     ----------
     y: column-y
     x: column-x, by default x=None, the plot will use index of y as x-axis
+    the other paramaters are defined same as plt.plot
     Returns
     -------
     None
@@ -2010,11 +2016,8 @@ def plot1D( y,x=None, yerr=None, ax=None,return_fig=False, ls='-', figsize=None,
             else:
                 fig, ax = plt.subplots()
         
-    if 'legend' in kwargs.keys():
-        legend =  kwargs['legend']  
-    else:
+    if legend is None:
         legend = ' '
-
     try:
          logx = kwargs['logx']
     except:
@@ -3427,7 +3430,10 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
             #    taus_dict_[k] = taus_dict[k][:,[i for i in qth_interest]]  
             taus_dict_ = taus_dict
             qval_dict_ = {k:qval_dict[k] for k in  qth_interest}            
-            fit_res_ = [ fit_res[k] for k in   qth_interest ]            
+            if fit_res is not None:
+                fit_res_ = [ fit_res[k] for k in   qth_interest ]   
+            else:
+                fit_res_ = None
     else:
         g2_dict_, taus_dict_, qval_dict_, fit_res_ = g2_dict, taus_dict, qval_dict, fit_res        
             
@@ -3691,8 +3697,13 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
         #if num_long_i <= 16:
         if num_long_i <= max_plotnum_fig:            
             fig.set_tight_layout(True)    
-            #fig.tight_layout()
-            plt.savefig( fp + '.png', dpi=fig.dpi) 
+            #fig.tight_layout() 
+            #print(fig)
+            try:
+                plt.savefig( fp + '.png', dpi=fig.dpi) 
+            except:
+                print('Can not save figure here.')
+            
         else:
             fps=[]
             for fn, f in enumerate(fig):
