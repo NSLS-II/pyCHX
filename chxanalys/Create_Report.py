@@ -118,10 +118,10 @@ class create_pdf_report( object ):
     '''       
     
     def __init__( self, data_dir, uid,  out_dir=None, filename=None, load=True, user=None,
-                 report_type='saxs',md=None,  ):
+                 report_type='saxs',md=None ):
         self.data_dir = data_dir
         self.uid = uid
-        self.md = md
+        self.md = md        
         #print(md)
         if user is None:
             user = 'chx'
@@ -163,7 +163,14 @@ class create_pdf_report( object ):
             md = self.md
             #print('Get md from giving md')
             #print(md)
-        self.sub_title_num = 0        
+        self.sub_title_num = 0 
+        uid_g2 = None
+        uid_c12 = None
+        if 'uid_g2' in list(md.keys()):
+            uid_g2 = md['uid_g2']        
+        if 'uid_c12' in list(md.keys()):
+            uid_c12 = md['uid_c12']             
+        
         '''global definition'''        
         try:
             beg = md['beg']
@@ -179,9 +186,7 @@ class create_pdf_report( object ):
         
         self.qiq_file = 'uid=%s_q_Iq.png'%uid  
         self.qiq_fit_file = 'uid=%s_form_factor_fit.png'%uid 
-        #self.qr_1d_file = 'uid=%s_Qr_ROI.png'%uid
-
-        
+        #self.qr_1d_file = 'uid=%s_Qr_ROI.png'%uid        
         if self.report_type =='saxs' or self.report_type =='ang_saxs':
             self.ROI_on_Iq_file = 'uid=%s_ROI_on_Iq.png'%uid 
             
@@ -193,31 +198,30 @@ class create_pdf_report( object ):
         self.wat_file= 'uid=%s_waterfall.png'%uid
         self.Mean_inten_t_file= 'uid=%s_t_ROIs.png'%uid       
 
-
-        self.g2_file = 'uid=%s_g2.png'%uid_
-        self.g2_fit_file = 'uid=%s_g2_fit.png'%uid_
-        
+        if uid_g2 is None: 
+            uid_g2 = uid_        
+        self.g2_file = 'uid=%s_g2.png'%uid_g2
+        self.g2_fit_file = 'uid=%s_g2_fit.png'%uid_g2 
+        #print(  self.g2_fit_file )
         self.g2_new_page = False
         self.g2_fit_new_page = False
-        jfn = 'uid=%s_g2__joint.png'%uid_
+        jfn = 'uid=%s_g2__joint.png'%uid_g2
         if os.path.exists( data_dir + jfn):
             self.g2_file = jfn
             self.g2_new_page = True   
-        jfn = 'uid=%s_g2_fit__joint.png'%uid_
+        jfn = 'uid=%s_g2_fit__joint.png'%uid_g2
         if os.path.exists(data_dir + jfn ):
             self.g2_fit_file = jfn
-            self.g2_fit_new_page = True              
-            
-        #print( self.g2_fit_file )
-        
-        self.q_rate_file = 'uid=%s_Q_Rate_fit.png'%uid_ 
-        self.q_rate_two_time_fit_file = 'uid=%s_two_time_Q_Rate_fit.png'%uid_ 
+            self.g2_fit_new_page = True                 
+        self.q_rate_file = 'uid=%s_Q_Rate_fit.png'%uid_g2 
+        #print( self.q_rate_file )
+        if uid_c12 is None:
+            uid_c12 = uid_ 
+        self.q_rate_two_time_fit_file = 'uid=%s_two_time_Q_Rate_fit.png'%uid_c12 
         #print(  self.q_rate_two_time_fit_file )
-
-        self.two_time_file = 'uid=%s_Two_time.png'%uid_
-        self.two_g2_file = 'uid=%s_g2_two_g2.png'%uid_
-        
-        jfn = 'uid=%s_g2_two_g2__joint.png'%uid_  
+        self.two_time_file = 'uid=%s_Two_time.png'%uid_c12
+        self.two_g2_file = 'uid=%s_g2_two_g2.png'%uid_c12        
+        jfn = 'uid=%s_g2_two_g2__joint.png'%uid_c12  
         self.two_g2_new_page = False
         if os.path.exists(  data_dir + jfn ):
             self.two_g2_file = jfn
@@ -241,9 +245,7 @@ class create_pdf_report( object ):
             self.flow_g2v_rate_fit = 'uid=%s_v_fit_rate_Q_Rate_fit.png'%uid_
             self.flow_g2p_rate_fit = 'uid=%s_p_fit_rate_Q_Rate_fit.png'%uid_ 
         
-        if True:
-
-            
+        if True:            
             self.two_time = 'uid=%s_pv_two_time.png'%uid_
             #self.two_time_v = 'uid=%s_pv_two_time.png'%uid_
             
@@ -476,6 +478,7 @@ class create_pdf_report( object ):
         #add q_Iq
         if self.report_type == 'saxs':
             imgf = self.qiq_file 
+            #print(imgf)
             if iq_fit:
                 imgf = self.qiq_fit_file  
             label = 'Circular Average'  
@@ -672,13 +675,11 @@ class create_pdf_report( object ):
             str2_left, str2_top = 80, top  - 0             
             img_left,img_top = 60, top
             
-        str1_left, str1_top,str1= 150, top + img_height,  'g2 fit plot'
-        
-        #print( imgf )
+        str1_left, str1_top,str1= 150, top + img_height,  'g2 fit plot'        
         img_width = add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
-                     str2_left, str2_top, return_=True ) 
-
+                     str2_left, str2_top, return_=True )         
+        #print( imgf,self.data_dir )        
         #add g2 plot fit
         top = top + 70 #
         if q_rate_file is None:
@@ -827,10 +828,10 @@ class create_pdf_report( object ):
             img_width = add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                          str1_left, str1_top,str1,
                          str2_left, str2_top,return_=True )            
-
+            #print(imgf)
             top = top + 50   
             imgf = self.q_rate_two_time_fit_file
-
+            
             if img_width < 400:
                 img_height= 140 
                 img_left,img_top = 350, top + 30
@@ -1306,7 +1307,7 @@ def load_res_h5( full_uid, data_dir   ):
 
     
 def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username, 
-                    run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs, run_dose=None, report_type='saxs', md=None,report_invariant=False
+                    run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs, run_dose=None, report_type='saxs', md=None,report_invariant=False, return_class=False
                    ):
     
     if uid.startswith("uid=") or uid.startswith("Uid="):
@@ -1377,7 +1378,8 @@ def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username,
 
     c.save_page()
     c.done() 
-    
+    if return_class:
+        return c
     
     
 ######################################
