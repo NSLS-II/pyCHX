@@ -709,7 +709,7 @@ def get_t_iqc( FD, frame_edge, mask, pargs, nx=1500, plot_ = False , save=False,
             
             save_arrays(  np.vstack( [q, np.array(iqs)]).T, 
                         label=  ['q_A-1']+ ['Fram-%s-%s'%(t[0],t[1]) for t in frame_edge],
-                        filename='uid=%s-q-Iqt'%uid, path= path  )
+                        filename='uid=%s-q-Iqt.csv'%uid, path= path  )
             
         #plt.show()        
     
