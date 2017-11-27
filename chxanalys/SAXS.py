@@ -11,9 +11,8 @@ This module is for the static SAXS analysis, such as fit form factor
 #import matplotlib.pyplot as plt
 #from matplotlib.colors import LogNorm
 from chxanalys.chx_libs import *
-from chxanalys.chx_generic_functions import show_img, plot1D
+from chxanalys.chx_generic_functions import show_img, plot1D, find_index
 from scipy.special import gamma, gammaln
-
 from scipy.optimize import leastsq
 
 
@@ -110,7 +109,7 @@ def poly_sphere_form_factor_intensity_q2( x, radius, sigma=0.1, delta_rho=1, fit
     return poly_sphere_form_factor_intensity( x, radius, sigma, delta_rho, fit_func)*x**2 #* scale + baseline
     
 
-def find_index( x,x0,tolerance= None):
+def find_index_old( x,x0,tolerance= None):
     #find the position of P in a list (plist) with tolerance
 
     N=len(x)
