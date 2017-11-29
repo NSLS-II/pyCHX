@@ -10,6 +10,17 @@ from modest_image import ModestImage, imshow
 import matplotlib.cm as mcm
 import copy, scipy 
 import PIL    
+
+
+markers =  ['o', 'D', 'v',   '^', '<',  '>', 'p', 's', 'H',
+                  'h',   '*', 'd',             
+            '8', '1', '3', '2', '4',     '+',   'x',  '_',   '|', ',',  '1',] 
+markers = np.array(   markers *100 )
+
+
+
+    
+    
     
     
 def get_diff_fv(  g2_fit_paras, qval_dict, ang_init=137.2):
@@ -102,6 +113,41 @@ def ls_dir(inDir, string=None):
     else:
         tifs = np.array( [f for f in listdir(inDir) if (isfile(join(inDir, f)))&(string in f)       ] ) 
     return tifs
+    
+def re_filename( old_filename, new_filename, inDir=None, verbose=True  ):
+    '''Y.G. Nov 28, 2017
+    Rename  old_filename with new_filename  in a inDir 
+    inDir: fullpath of the inDir, if None, the filename should have the fullpath
+    old_filename/ new_filename: string 
+    an example:
+    re_filename( 'uid=run20_pos1_fra_5_20000_tbins=0.010_ms_g2_two_g2.png', 
+            'uid=run17_pos1_fra_5_20000_tbins=0.010_ms_g2_two_g2.png',
+            '/home/yuzhang/Analysis/Timepix/2017_3/Results/run17/run17_pos1/'
+           )
+    '''
+    if inDir is not None:
+        os.rename(inDir + old_filename, inDir+new_filename)
+    else:
+        os.rename( old_filename, new_filename)
+    print('The file: %s is changed to: %s.'%(old_filename, new_filename))
+        
+      
+def re_filename_dir( old_pattern, new_pattern, inDir,verbose=True  ):
+    '''Y.G. Nov 28, 2017
+    Rename all filenames with old_pattern with new_pattern in a inDir 
+    inDir: fullpath of the inDir, if None, the filename should have the fullpath
+    old_pattern, new_pattern
+    an example,
+     re_filename_dir('20_', '17_', inDir )
+    '''
+    fps = ls_dir(inDir)
+    for fp in fps:
+        if old_pattern in fp:
+            old_filename = fp
+            new_filename = fp.replace(old_pattern, new_pattern)
+            re_filename( old_filename, new_filename, inDir,verbose= verbose   )    
+    
+    
     
 
 def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False, silent=True):
