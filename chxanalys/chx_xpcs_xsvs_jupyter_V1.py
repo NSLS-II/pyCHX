@@ -353,7 +353,7 @@ def do_compress_on_line( start_time, stop_time, mask_dict=None, mask=None,
 
 
 def realtime_xpcs_analysis( start_time, stop_time,  run_pargs, md_update=None,
-                        wait_time = 2,  max_try_num = 3, emulation=False  ):
+                        wait_time = 2,  max_try_num = 3, emulation=False,clear_plot=False  ):
     '''Y.G. Mar 10, 2017
         Do on-line xpcs by giving start time and stop time
         Parameters:
@@ -397,7 +397,7 @@ def realtime_xpcs_analysis( start_time, stop_time,  run_pargs, md_update=None,
                         if not emulation:
                             #suid=uid[:6]
                             run_xpcs_xsvs_single( uid, run_pargs= run_pargs, md_cor = None,
-                                             return_res= False )                        
+                                             return_res= False, clear_plot=clear_plot )                        
                         #update_olog_uid( uid= md['uid'], text='Data are on-line sparsified!',attachments=None)              
                     except:
                         print('There are something wrong with this data: %s...'%uid)
@@ -736,7 +736,7 @@ def plot_dose_g2( taus_uids, g2_uids, qval_dict, qth_interest = None, ylim=[0.95
  
 
 
-def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=True ):
+def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=True, clear_plot=False ):
     '''Y.G. Dec 22, 2016
        Run XPCS XSVS analysis for a single uid
        Parameters:
@@ -1077,7 +1077,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
         ring_avg = None  
         
         if run_t_ROI_Inten:
-            times_roi, mean_int_sets = cal_each_ring_mean_intensityc(FD, roi_mask, timeperframe = None,  ) 
+            times_roi, mean_int_sets = cal_each_ring_mean_intensityc(FD, roi_mask, timeperframe = None, multi_cor=True  ) 
             plot_each_ring_mean_intensityc( times_roi, mean_int_sets,  uid = uidstr, save=True, path=data_dir )
             roi_avg = np.average( mean_int_sets, axis=0)
 
@@ -1478,7 +1478,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
             plt.show()   
         #else:
         #    plt.close('all')
-
+        if clear_plot:
+            plt.close('all')
         if return_res:
             res = {}
             if scat_geometry == 'saxs': 
