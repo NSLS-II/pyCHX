@@ -18,9 +18,20 @@ markers =  ['o', 'D', 'v',   '^', '<',  '>', 'p', 's', 'H',
 markers = np.array(   markers *100 )
 
 
-
-    
-    
+ 
+def shrink_image(img, bins ):
+    '''YG Dec 12, 2017 dev@CHX shrink a two-d image by factor as bins, i.e., bins_x, bins_y
+    input:
+        img: 2d array, 
+        bins: integer list, eg. [2,2]
+    output:
+        imgb: binned img
+    '''
+    m,n = img.shape
+    bx, by = bins
+    Nx, Ny = m//bx, n//by
+    #print(Nx*bx,  Ny*by)
+    return img[:Nx*bx, :Ny*by].reshape( Nx,bx, Ny, by).mean(axis=(1,3) )
     
     
 def get_diff_fv(  g2_fit_paras, qval_dict, ang_init=137.2):
