@@ -55,7 +55,7 @@ from chxanalys.chx_compress import (combine_binary_files,
 from chxanalys.chx_compress_analysis import ( compress_eigerdata, read_compressed_eigerdata,
                                          Multifile,get_avg_imgc, get_each_frame_intensityc,
             get_each_ring_mean_intensityc, mean_intensityc,cal_waterfallc,plot_waterfallc, 
-                    cal_each_ring_mean_intensityc,plot_each_ring_mean_intensityc
+                    cal_each_ring_mean_intensityc,plot_each_ring_mean_intensityc, get_time_edge_avg_img
 )
 
 from chxanalys.SAXS import fit_form_factor,show_saxs_qmap
@@ -80,6 +80,6 @@ from chxanalys.chx_specklecp import  ( xsvsc, xsvsp, get_xsvs_fit,plot_xsvs_fit,
                                       get_binned_his_std, get_contrast, save_bin_his_std, get_his_std_from_pds )
 
 
-
+from chxanalys.DataGonio import (qphiavg)
 
 
