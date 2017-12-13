@@ -104,8 +104,15 @@ markers =  ['o', 'D', 'v',   '^', '<',  '>', 'p', 's', 'H',
             '$I$','$L$', '$O$','$V$','$E$', 
             '$c$', '$h$','$x$','$b$','$e$','$a$','$m$','$l$','$i$','$n$', '$e$',
             '8', '1', '3', '2', '4',     '+',   'x',  '_',   '|', ',',  '1',] 
-
 markers = np.array(   markers *100 )
+
+
+markers =  ['o', 'D', 'v',   '^', '<',  '>', 'p', 's', 'H',
+                  'h',   '*', 'd',             
+            '8', '1', '3', '2', '4',     '+',   'x',  '_',   '|', ',',  '1',] 
+markers = np.array(   markers *100 )
+
+
 colors = np.array( ['darkorange', 'mediumturquoise', 'seashell', 'mediumaquamarine', 'darkblue', 
            'yellowgreen',  'mintcream', 'royalblue', 'springgreen', 'slategray',
            'yellow', 'slateblue', 'darkslateblue', 'papayawhip', 'bisque', 'firebrick', 
