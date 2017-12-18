@@ -1963,6 +1963,7 @@ def show_img( image, ax=None,label_array=None, alpha=0.5, interpolation='nearest
              show_time= False, file_name =None, ylabel=None, xlabel=None, extent=None,
              show_colorbar=True, tight=True, show_ticks=True, save_format = 'png', dpi= None,
              center=None,origin='lower', lab_fontsize = 16,  tick_size = 12, colorbar_fontsize = 8, 
+             title_size =12,
              *argv,**kwargs ):    
     """YG. Sep26, 2017 Add label_array/alpha option to show a mask on top of image
     
@@ -1998,7 +1999,7 @@ def show_img( image, ax=None,label_array=None, alpha=0.5, interpolation='nearest
     if label_array is not None:
         im2=show_label_array(ax, label_array, alpha= alpha, cmap=cmap, interpolation=interpolation )  
         
-    ax.set_title( image_name )
+    ax.set_title( image_name, fontsize=title_size )
     if xlim is not None:
         ax.set_xlim(   xlim  )        
     if ylim is not None:
