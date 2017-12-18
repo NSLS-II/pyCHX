@@ -20,7 +20,124 @@ from chxanalys.chx_libs import multi_tau_lags
 from chxanalys.chx_compress import Multifile,  go_through_FD, pass_FD
 
 
+def shrink_image(img, bins, return_integer=True, method='sum' ):
+    '''YG Dec 12, 2017 dev@CHX shrink a two-d image by factor as bins, i.e., bins_x, bins_y, by summing up 
+    input:
+        img: 2d array, 
+        bins: integer list, eg. [2,2]
+        return_integer: if True, convert the output as integer
+        method: support sum/avg
+    output:
+        imgb: binned img
+    '''
+    m,n = img.shape
+    bx, by = bins
+    Nx, Ny = m//bx, n//by
+    #print(Nx*bx,  Ny*by)
+    if method == 'sum':
+        d = img[:Nx*bx, :Ny*by].reshape( Nx,bx, Ny, by).sum(axis=(1,3) )
+    elif method == 'avg':
+        d = img[:Nx*bx, :Ny*by].reshape( Nx,bx, Ny, by).mean(axis=(1,3) )
+    if return_integer:
+        return np.int_(  d  )
+    else:
+        return d
 
+
+def create_shrinked_FD(FD, shrink_factor, filename=None, md=None,force_compress=False, 
+                       nobytes=2, with_pickle=True ):
+    
+        
+    ''' YG.Dev@CHX Dec 12, 2017
+        Shrink a commpressed data giving by FD by a factor of shrink_factor 
+        Input:
+            FD: the handler of the compressed data 
+            shrink_factor: integer list, eg. [2,2]
+            filename: the output filename
+            md: a dict to describle the data info   
+            force_compress: if False, 
+                              if already compressed, just it 
+                              else: compress 
+                          if True, compress and, if exist, overwrite the already-coompress data
+        Return:
+          avg_img, imgsum, N (frame number)
+            
+    '''     
+    if filename is None:
+        filename=  '/XF11ID/analysis/Compressed_Data' +'/uid_%s_bins_%sX%s.cmp'%(
+            md['uid'],shrink_factor[0], shrink_factor[1])
+        
+    if force_compress:
+        print ("Create a new shrinked compress file with filename as :%s."%filename)
+        return init_shrinked_FD(  FD, shrink_factor, filename=filename, md=md, nobytes= nobytes,
+                                         with_pickle=with_pickle )        
+    else:
+        if not os.path.exists( filename ):
+            print ("Create a new shrinked compress file with filename as :%s."%filename)
+            return init_shrinked_FD(  FD, shrink_factor, filename=filename, md=md, nobytes= nobytes,
+                                         with_pickle=with_pickle )  
+        else:      
+            print ("Using already created shrinked compressed file with filename as :%s."%filename)
+            return    pkl.load( open(filename + '.pkl', 'rb' ) )        
+        
+def init_shrinked_FD(FD, shrink_factor, filename=None, md=None,
+                       nobytes=2, with_pickle=True ):        
+    ''' YG.Dev@CHX Dec 12, 2017
+        Shrink a commpressed data giving by FD by a factor of shrink_factor 
+        Input:
+            FD: the handler of the compressed data 
+            shrink_factor: integer list, eg. [2,2]
+            filename: the output filename
+            md: a dict to describle the data info  
+        Return:
+          avg_img, imgsum, N (frame number)
+            
+    '''      
+    if md is None:
+        md = FD.md 
+    img = FD.rdframe(FD.beg)
+    m,n = img.shape
+    bx, by = shrink_factor
+    Nx, Ny = m//bx, n//by
+    #print(Nx, Ny)  
+    fp = open( filename,'wb' )
+    Header = struct.pack('@16s8d7I916x',b'Version-COMPshrk',
+                    md['beam_center_x'],md['beam_center_y'], md['count_time'], md['detector_distance'],
+                    md['frame_time'],md['incident_wavelength'], md['x_pixel_size'],md['y_pixel_size'],                         
+            nobytes, Ny, Nx, # md['sy'], md['sx'],
+            0,Ny,
+            0,Nx
+        )     
+    fp.write( Header) 
+    N = FD.end - FD.beg 
+    avg_img = np.zeros(  [ Ny, Nx ], dtype= np.float ) 
+    imgsum  =  np.zeros(   N   )      
+    good_count = 0
+    dtype=np.int32
+    for i in tqdm( range(FD.beg, FD.end  )): 
+        #print(i)
+        good_count +=1 
+        img = shrink_image( FD.rdframe(i), bins= shrink_factor,return_integer=True  ) 
+        p = np.where( (np.ravel(img)>0)  )[0] 
+        v = np.ravel( np.array( img, dtype= dtype )) [p] 
+        dlen = len(p)   
+        #print(dlen)
+        imgsum[i] = v.sum()             
+        np.ravel( avg_img )[p] +=   v
+        fp.write(  struct.pack( '@I', dlen   ))
+        fp.write(  struct.pack( '@{}i'.format( dlen), *p))         
+        #fp.write(  struct.pack( '@{}{}'.format( dlen,'dd'[nobytes==2]  ), *v))        #n +=1
+        fp.write(  struct.pack( '@{}{}'.format( dlen,'ih'[nobytes==2]), *v)) 
+        del  p,v, img 
+        #fp.flush()         
+    fp.close()      
+    avg_img /= good_count     
+    sys.stdout.write('#')    
+    sys.stdout.flush() 
+    if  with_pickle:
+        pkl.dump( [  avg_img, imgsum, N ], open(filename + '.pkl', 'wb' ) )      
+    return   avg_img, imgsum, N-1   
+ 
 
 def get_timepixel_data( data_dir, filename, time_unit= 1 ):
     '''give a csv file of a timepixel data, return x,y,t  
@@ -232,7 +349,6 @@ def init_compress_timepix_data( pos, t, binstep, filename, mask=None,
     Header = struct.pack('@16s8d7I916x',b'Version-COMPtpx1',
                     md['beam_center_x'],md['beam_center_y'], md['count_time'], md['detector_distance'],
                     md['frame_time'],md['incident_wavelength'], md['x_pixel_size'],md['y_pixel_size'],
-                         
             nobytes, md['sy'], md['sx'],
             0,256,
             0,256
