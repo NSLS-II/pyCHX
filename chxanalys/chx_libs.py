@@ -15,7 +15,9 @@ from modest_image import ModestImage, imshow
 from databroker import DataBroker as db, get_images, get_table, get_events, get_fields
 from filestore.api import register_handler, deregister_handler
 #from filestore.retrieve import _h_registry, _HANDLER_CACHE, HandlerBase
-from eiger_io.pims_reader import EigerImages
+# load both EigerImages and EigerImagesDask
+from eiger_io.fs_handler_dask import EigerImagesDask
+from eiger_io.fs_handler import EigerImages
 from chxtools import handlers
 from filestore.path_only_handlers import RawHandler 
 ## Import all the required packages for  Data Analysis
