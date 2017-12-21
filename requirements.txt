@@ -1,4 +1,5 @@
 numpy
+cython
 matplotlib
 scipy
 lmfit
@@ -6,9 +7,9 @@ pillow
 tifffile
 pyyaml
 pandas
-scikit-beam
 databroker
 
+git+https://github.com/scikit-beam/scikit-beam.git#egg=scikit-beam
 git+https://github.com/yugangzhang/eiger-io.git#eiger-io
 git+https://github.com/NSLS-II-CHX/chxtools.git#egg=chxtools
 git+https://github.com/Nikea/xray-vision.git#Xray-vision
