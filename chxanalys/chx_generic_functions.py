@@ -1381,10 +1381,8 @@ def get_meta_data( uid,*argv,**kwargs ):
     '''
 
     import time   
-    header = db[uid]
-    # print(header.start)
     md ={}
-    md['detector'] = get_detector(header)
+    md['detector'] = get_detector( db[uid] )
     md['suid'] = uid  #short uid
     md['filename'] = get_sid_filenames(db[uid])[2][0]
 
