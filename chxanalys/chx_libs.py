@@ -10,15 +10,13 @@ from IPython.core.magics.display import Javascript
 from skbeam.core.utils import multi_tau_lags
 
 from skimage.draw import line_aa, line, polygon, ellipse, circle
-from modest_image import ModestImage, imshow
+from modest_image import imshow
+
+# edit handlers here to switch to PIMS or dask
+# this does the databroker import
+from chxtools.handlers import EigerHandler
 
 from databroker import DataBroker as db, get_images, get_table, get_events, get_fields
-from filestore.api import register_handler, deregister_handler
-#from filestore.retrieve import _h_registry, _HANDLER_CACHE, HandlerBase
-# load both EigerImages and EigerImagesDask
-from eiger_io.fs_handler_dask import EigerImagesDask
-from eiger_io.fs_handler import EigerImages
-from chxtools import handlers
 from filestore.path_only_handlers import RawHandler 
 ## Import all the required packages for  Data Analysis
 
@@ -71,17 +69,6 @@ from PIL import Image
 
 
 import warnings
-
-
-from eiger_io.fs_handler2 import EigerHandler2
-from eiger_io.fs_handler import LazyEigerHandler
-
-fs = db.event_sources[0].fs
-fs.deregister_handler('AD_EIGER')
-fs.register_handler('AD_EIGER', LazyEigerHandler)
-fs.deregister_handler('AD_EIGER2')
-fs.register_handler('AD_EIGER2', EigerHandler2)
-
 
 
 

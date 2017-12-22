@@ -8,6 +8,10 @@ tifffile
 pyyaml
 pandas
 databroker
+attrs
+sip
+tables
+#pyqt4
 
 git+https://github.com/scikit-beam/scikit-beam.git#egg=scikit-beam
 git+https://github.com/yugangzhang/eiger-io.git#eiger-io

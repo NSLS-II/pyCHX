@@ -17,7 +17,9 @@ import dill
 import sys
 import gc
 import pickle as pkl
-from eiger_io.pims_reader import EigerImages
+# imports handler from CHX
+# this is where the decision is made whether or not to use dask
+from chxtools.handlers import EigerImages, EigerHandler
 
 
 def run_dill_encoded(what):    
@@ -64,6 +66,9 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
     if force_compress:
         print ("Create a new compress file with filename as :%s."%filename)
         if para_compress:
+            # stop connection to be before forking... (let it reset again)
+            db.reg.disconnect()
+            db.mds.reset_connection()
             print( 'Using a multiprocess to compress the data.')
             return para_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
@@ -250,6 +255,7 @@ def para_segment_compress_eigerdata( images, mask,  md, filename, num_sub=100,
         N_runs= 1        
     result = {}   
     #print( mask_filename )# + '*'* 10 + 'here' )
+    print("start")
     for nr in range( N_runs ):
         if (nr+1)*num_max_para_process > Nf:
             inputs= range( num_max_para_process*nr, Nf )
@@ -267,6 +273,7 @@ def para_segment_compress_eigerdata( images, mask,  md, filename, num_sub=100,
         pool.close()
         pool.join()
         pool.terminate() 
+    print("done")
     return result     
 
 def segment_compress_eigerdata( images,  mask, md, filename, 
@@ -277,6 +284,9 @@ def segment_compress_eigerdata( images,  mask, md, filename,
     Create a compressed eiger data without header, this function is for parallel compress
     for parallel compress don't pass any non-scalar parameters
     '''     
+    # TODO : move this hack elsewhere
+    #from databroker import Broker
+    #db = Broker.named('chx')
     
     if dtypes=='uid':
         uid= md['uid'] #images

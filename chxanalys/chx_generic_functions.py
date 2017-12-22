@@ -6,7 +6,7 @@ from scipy.special import erf
 from skimage.filters import  prewitt
 from skimage.draw import line_aa, line, polygon, ellipse, circle
 
-from modest_image import ModestImage, imshow
+from modest_image import imshow
 import matplotlib.cm as mcm
 import copy, scipy 
 import PIL    
@@ -1356,50 +1356,73 @@ def print_dict( dicts, keys=None):
         except:
             pass
         
-        
+
 def get_meta_data( uid,*argv,**kwargs ):
     '''
     Y.G. Dev Dec 8, 2016
-    
+   
     Get metadata from a uid
+   
+    - Adds detector key with detector name
+   
     Parameters:
         uid: the unique data acquisition id
-        kwargs: overwrite the meta data, for example 
+        kwargs: overwrite the meta data, for example
             get_meta_data( uid = uid, sample = 'test') --> will overwrtie the meta's sample to test
     return:
         meta data of the uid: a dictionay
         with keys:
-            detector            
+            detector           
             suid: the simple given uid
             uid: full uid
             filename: the full path of the data
             start_time: the data acquisition starting time in a human readable manner
         And all the input metadata
-        
-            
-    
     '''
-    import time    
+
+    import time   
+    header = db[uid]
+    # print(header.start)
     md ={}
-    md['detector'] = get_detector( db[uid ] )    
+    md['detector'] = get_detector(header)
     md['suid'] = uid  #short uid
     md['filename'] = get_sid_filenames(db[uid])[2][0]
-    #print( md )        
-    ev, = get_events(db[uid], [md['detector']], fill= False) 
-    dec =  list( ev['descriptor']['configuration'].keys() )[0]
-    for k,v in ev['descriptor']['configuration'][dec]['data'].items():
-        md[ k[len(dec)+1:] ]= v
-    for k,v in ev['descriptor']['run_start'].items():
-        if k!= 'plan_args':
-            md[k]= v 
-    md['start_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(md['time']))    
-    md['stop_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime( ev['time']   ))  
-    md['img_shape'] = ev['descriptor']['data_keys'][md['detector']]['shape'][:2][::-1]
-    for k,v in kwargs.items():
-        md[k] =v  
+
+    devices = list(header.devices())
+    if len(devices) > 1:
+        raise ValueError("More than one device. This would have unintented consequences.")
+    dec = devices[0]
+
+    detector_names = header.start['detectors']
+    if len(detector_names) > 1:
+        raise ValueError("More than one det. This would have unintented consequences.")
+       
+    detector_name = detector_names[0]
+
+    new_dict = header.config_data(dec)['primary'][0]
+    for key, val in new_dict.items():
+        newkey = key.replace(detector_name+"_", "")
+        md[newkey] = val
+   
+    # for k,v in ev['descriptor']['configuration'][dec]['data'].items():
+    #     md[ k[len(dec)+1:] ]= v
+   
+    md.update(header.start['plan_args'].items())
+    md.update(header.start.items())
+    md.pop('plan_args')
+   
+    # print(header.start.time)
+    md['start_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(header.start['time']))
+    md['stop_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime( header.stop['time'])) 
+    md['img_shape'] = header['descriptors'][0]['data_keys'][md['detector']]['shape'][:2][::-1]
+    md.update(kwargs)
+
+    #for k, v in sorted(md.items()):
+        # ...
+    #    print(f'{k}: {v}')
+   
     return md
-
-
+        
 
 def get_max_countc(FD, labeled_array ):
     """YG. 2016, Nov 18
@@ -1685,7 +1708,7 @@ def get_detector( header ):
     return keys[0]
 
     
-def get_sid_filenames(header, fill=True):
+def get_sid_filenames(header):
     """get a bluesky scan_id, unique_id, filename by giveing uid and detector
         
     Parameters
@@ -1702,21 +1725,18 @@ def get_sid_filenames(header, fill=True):
     sid,uid, filenames   = get_sid_filenames(db[uid])
     
     """   
-    
-    keys = [k for k, v in header.descriptors[0]['data_keys'].items()     if 'external' in v]
-    events = get_events( header, keys, handler_overrides={key: RawHandler for key in keys}, fill=fill)
-    key, = keys   
-    try:
-        filenames =  [  str( ev['data'][key][0]) + '_'+ str(ev['data'][key][2]['seq_id']) for ev in events]     
-    except:
-        filenames='unknown'
-    sid = header['start']['scan_id']
-    uid= header['start']['uid']
-    
-    return sid,uid, filenames   
+    filepaths = []
+    db = header.db
+    # get files from assets
+    res_uids = db.get_resource_uids(header)
+    for uid in res_uids:
+        datum_gen = db.reg.datum_gen_given_resource(uid)
+        datum_kwarg_gen = (datum['datum_kwargs'] for datum in
+                           datum_gen)
+        filepaths.extend(db.reg.get_file_list(uid, datum_kwarg_gen))
+    return header.start['scan_id'],  header.start['uid'], filepaths
 
-
-def load_data( uid , detector = 'eiger4m_single_image', fill=True, reverse=False):
+def load_data(uid, detector='eiger4m_single_image', fill=True, reverse=False):
     """load bluesky scan data by giveing uid and detector
         
     Parameters
@@ -1736,36 +1756,35 @@ def load_data( uid , detector = 'eiger4m_single_image', fill=True, reverse=False
     md = imgs.md
     """   
     hdr = db[uid]
-    flag =1
-    while flag<2 and flag !=0:    
+    ATTEMPTS = 2
+    for attempt in range(ATTEMPTS):
         try:
-            ev, = get_events(hdr, [detector], fill=fill) 
-            flag = 0 
+            ev, = hdr.events(fields=[detector], fill=fill) 
+            break
             
-        except:
-            flag += 1        
+        except Exception:     
             print ('Trying again ...!')
-    if flag:
-        try:
-            imgs = get_images( hdr, detector)
-            #print( 'here')
-            print('This should be dscan data.')
-            print('You also can use get_images( hdr, detector) function to retrive data.')
-            if len(imgs[0])>=1:
-                md = imgs[0].md
-                imgs = pims.pipeline(lambda img:  img[0])(imgs)
-                imgs.md = md
-        except:            
-            print ("Can't Load Data!")
-            uid = '00000'  #in case of failling load data
-            imgs = 0
+            if attempt == ATTEMPTS - 1:
+                # We're out of attempts. Raise the exception to help with debugging.
+                raise
     else:
-        imgs = ev['data'][detector]
-    #print (imgs)
-    if reverse:
-        md=imgs.md
-        imgs = reverse_updown( imgs )
+        # We didn't succeed
+        raise Exception("Failed after {} repeated attempts".format(ATTEMPTS))
+        
+    # TODO(mrakitin): replace with the lazy loader (when it's implemented):
+    imgs = db.get_images(hdr, detector)    
+    # imgs = list(hdr.data( detector ) )
+    
+    if len(imgs[0])>=1:
+        md = imgs[0].md
+        imgs = pims.pipeline(lambda img: img)(imgs[0])
         imgs.md = md
+
+    if reverse:
+        md = imgs.md
+        imgs = reverse_updown( imgs )  # Why not np.flipud?
+        imgs.md = md
+
     return imgs
 
 
