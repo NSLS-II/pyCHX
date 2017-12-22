@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 from chxanalys.chx_compress import   (compress_eigerdata, read_compressed_eigerdata,init_compress_eigerdata, 
                                       Multifile,pass_FD,get_avg_imgc,mean_intensityc, get_each_frame_intensityc)
 
-from modest_image import ModestImage, imshow                                      
+from modest_image import imshow                                      
 #from chxanalys.chx_compress import *
 
 

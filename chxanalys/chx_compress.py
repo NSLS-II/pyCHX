@@ -17,7 +17,9 @@ import dill
 import sys
 import gc
 import pickle as pkl
-from eiger_io.pims_reader import EigerImages
+# imports handler from CHX
+# this is where the decision is made whether or not to use dask
+from chxtools.handlers import EigerImages, EigerHandler
 
 
 def run_dill_encoded(what):    
@@ -64,6 +66,9 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
     if force_compress:
         print ("Create a new compress file with filename as :%s."%filename)
         if para_compress:
+            # stop connection to be before forking... (let it reset again)
+            db.reg.disconnect()
+            db.mds.reset_connection()
             print( 'Using a multiprocess to compress the data.')
             return para_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
@@ -277,7 +282,6 @@ def segment_compress_eigerdata( images,  mask, md, filename,
     Create a compressed eiger data without header, this function is for parallel compress
     for parallel compress don't pass any non-scalar parameters
     '''     
-    
     if dtypes=='uid':
         uid= md['uid'] #images
         if not direct_load_data:

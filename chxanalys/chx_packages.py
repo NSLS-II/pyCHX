@@ -5,7 +5,8 @@ from skimage.draw import line_aa, line, polygon
 from chxanalys.chx_libs import (np, roi, time, datetime, os, get_events, 
                             getpass, db, get_images,LogNorm, plt,tqdm, utils, Model,
                            multi_tau_lags,  random,  warnings)
-from chxanalys.chx_libs import cmap_vge, cmap_albula, Javascript
+from chxanalys.chx_libs import (cmap_vge, cmap_albula, Javascript, EigerHandler, EigerHandler, pims,
+                                h5py)
 
 
 
