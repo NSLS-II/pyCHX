@@ -255,7 +255,6 @@ def para_segment_compress_eigerdata( images, mask,  md, filename, num_sub=100,
         N_runs= 1        
     result = {}   
     #print( mask_filename )# + '*'* 10 + 'here' )
-    print("start")
     for nr in range( N_runs ):
         if (nr+1)*num_max_para_process > Nf:
             inputs= range( num_max_para_process*nr, Nf )
@@ -273,7 +272,6 @@ def para_segment_compress_eigerdata( images, mask,  md, filename, num_sub=100,
         pool.close()
         pool.join()
         pool.terminate() 
-    print("done")
     return result     
 
 def segment_compress_eigerdata( images,  mask, md, filename, 
@@ -284,10 +282,6 @@ def segment_compress_eigerdata( images,  mask, md, filename,
     Create a compressed eiger data without header, this function is for parallel compress
     for parallel compress don't pass any non-scalar parameters
     '''     
-    # TODO : move this hack elsewhere
-    #from databroker import Broker
-    #db = Broker.named('chx')
-    
     if dtypes=='uid':
         uid= md['uid'] #images
         if not direct_load_data:
