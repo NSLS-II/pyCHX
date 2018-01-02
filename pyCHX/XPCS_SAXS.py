@@ -4,20 +4,20 @@ yuzhang@bnl.gov
 This module is for the SAXS XPCS analysis 
 """
 
-from chxanalys.chx_libs import  ( colors, colors_copy, markers, markers_copy,
+from pyCHX.chx_libs import  ( colors, colors_copy, markers, markers_copy,
                                  colors_,  markers_, )
 
-from chxanalys.chx_libs import  ( Figure, RUN_GUI )
+from pyCHX.chx_libs import  ( Figure, RUN_GUI )
 
-from chxanalys.chx_generic_functions import *
+from pyCHX.chx_generic_functions import *
 from scipy.special import erf
 
-from chxanalys.chx_compress_analysis import ( compress_eigerdata, read_compressed_eigerdata,
+from pyCHX.chx_compress_analysis import ( compress_eigerdata, read_compressed_eigerdata,
                                              init_compress_eigerdata,
                                              Multifile,get_each_ring_mean_intensityc,get_avg_imgc, mean_intensityc )
 
-from chxanalys.chx_correlationc import ( cal_g2c,Get_Pixel_Arrayc,auto_two_Arrayc,get_pixelist_interp_iq,)
-from chxanalys.chx_correlationp import ( cal_g2p)
+from pyCHX.chx_correlationc import ( cal_g2c,Get_Pixel_Arrayc,auto_two_Arrayc,get_pixelist_interp_iq,)
+from pyCHX.chx_correlationp import ( cal_g2p)
 
 
 from pandas import DataFrame 

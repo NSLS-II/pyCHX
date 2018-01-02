@@ -1,6 +1,6 @@
-from chxanalys.chx_libs import *
+from pyCHX.chx_libs import *
 #from tqdm import *
-from chxanalys.chx_libs import  ( colors,  markers )
+from pyCHX.chx_libs import  ( colors,  markers )
 from scipy.special import erf
 
 from skimage.filters import  prewitt
@@ -1663,7 +1663,7 @@ def export_scan_scalar( uid, x='dcm_b', y= ['xray_eye1_stats1_total'],
         
     '''
     from databroker import DataBroker as db, get_images, get_table, get_events, get_fields 
-    from chxanalys.chx_generic_functions import  trans_data_to_pd
+    from pyCHX.chx_generic_functions import  trans_data_to_pd
     
     hdr = db[uid]
     print( get_fields( hdr ) )

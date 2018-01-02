@@ -15,10 +15,10 @@ with open('requirements.txt') as f:
             no_git_reqs.append(r)
 
 setup(
-    name='chxanalys',
+    name='pyCHX',
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
-    author='Brookhaven National Laboratory_CHX',
+    author='Brookhaven National Laboratory CHX',
     packages=find_packages(),
     install_requires=no_git_reqs,
 )

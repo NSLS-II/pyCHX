@@ -1,8 +1,8 @@
 #python XPCS_XSVS_SAXS_Multi_2017_V4.py 
 
 
-from chxanalys.chx_packages import *
-from chxanalys.chx_xpcs_xsvs_jupyter import run_xpcs_xsvs_single
+from pyCHX.chx_packages import *
+from pyCHX.chx_xpcs_xsvs_jupyter import run_xpcs_xsvs_single
   
 def XPCS_XSVS_SAXS_Multi(  start_time, stop_time, run_pargs,  suf_ids = None, 
                          uid_average=  'Au50_7p5PEGX1_vs_slow_120116',

@@ -2,8 +2,8 @@ import sys, os, re, PIL
 import numpy as np   
 from scipy.signal import savgol_filter as sf
 import matplotlib.pyplot as plt
-from chxanalys.chx_generic_functions import show_img, plot1D
-from chxanalys.DataGonio import convert_Qmap
+from pyCHX.chx_generic_functions import show_img, plot1D
+from pyCHX.DataGonio import convert_Qmap
 
             
 def get_base_all_filenames( inDir, base_filename_cut_length = -7  ):
@@ -227,8 +227,8 @@ def plot_qmap_in_folder( inDir ):
     '''YG. Sep 27@SMI
     Plot Qmap data from inDir, which contains qmap data and extent data
     '''
-    from chxanalys.chx_generic_functions import show_img
-    from chxanalys.chx_libs import cmap_vge_hdr, plt
+    from pyCHX.chx_generic_functions import show_img
+    from pyCHX.chx_libs import cmap_vge_hdr, plt
     import pickle as cpl
     fp = get_base_all_filenames(inDir,base_filename_cut_length=-10)
     print('There will %s samples and totally %s files to be analyzed.'%( len(fp.keys()),  len( np.concatenate(  list(fp.values()) ))))
