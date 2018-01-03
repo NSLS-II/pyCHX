@@ -1,4 +1,4 @@
-Steps for releasing a version of chxanalys
+Steps for releasing a version of pyCHX
 
 
 * Make sure that you have an up-to-date copy of the master branch.

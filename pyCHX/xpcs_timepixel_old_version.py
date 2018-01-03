@@ -16,101 +16,8 @@ import struct
 import numpy as np    
 from tqdm import tqdm    
 import pandas as pds
-from chxanalys.chx_libs import multi_tau_lags
-from chxanalys.chx_compress import Multifile,  go_through_FD, pass_FD
-
-
-
-
-def get_timepixel_data( data_dir, filename, time_unit= 1 ):
-    '''give a csv file of a timepixel data, return x,y,t  
-    x, pos_x in pixel
-    y, pos_y in pixel
-    t, arrival time
-    time_unit, t*time_unit will convert to second,  in reality, this value is 6.1e-12    
-    return x,y,t (in second, starting from zero)       
-    
-    '''
-    data =  pds.read_csv( data_dir + filename )
-    #'#Col', ' #Row', ' #ToA',
-    #return np.array( data['Col'] ), np.array(data['Row']), np.array(data['GlobalTimeFine']) #*6.1  #in ps
-    if time_unit !=1:
-        x,y,t=np.array( data['#Col'] ), np.array(data[' #Row']), np.array(data[' #ToA'] )  * time_unit
-    else:
-        x,y,t=np.array( data['#Col'] ), np.array(data[' #Row']), np.array(data[' #ToA'] )
-    return x,y,  t-t.min() #* 25/4096.  #in ns  
-
-
-def get_pvlist_from_post( p, t, binstep=100, detx=256, dety=256  ):
-    '''YG.DEV@CHX Nov, 2017 to get a pos, val list of phonton hitting detector by giving
-       p (photon hit pos_x * detx +  y (photon hit pos_y), t  (photon hit time), and the time bin
-       The most important function for timepix
-       Input:
-           p: array, int64, coordinate-x * det_x +  coordinate-y
-           t: list, int64, photon hit time       
-           binstep: int,  binstep (in t unit) period
-           detx,dety: int/int, the detector size in x and y
-       Output:
-           positions: int array, (x*detx +y)
-           vals: int array, counts of that positions
-           counts: int array, counts of that positions in each binstep
-    '''    
-    v = ( t - t[0])//binstep
-    L= np.max( v ) + 1
-    arr = np.ravel_multi_index( [ p, v ], [detx * dety,L ]    )
-    uval, ind, count = np.unique( arr, return_counts=True, return_index=True)
-    ind2 = np.lexsort(  ( p[ind], v[ind] ) )
-    ps = (p[ind])[ind2]
-    vs = count[ind2]
-    cs = np.bincount(v[ind])
-    return ps,vs,cs
-
-
- 
-def histogram_pt( p, t, binstep=100, detx=256, dety=256  ):
-    '''YG.DEV@CHX Nov, 2017 to get a histogram of phonton counts by giving
-       p (photon hit pos_x * detx +  y (photon hit pos_y), t  (photon hit time), and the time bin
-       The most important function for timepix
-       Input:
-           p: coordinate-x * det_x +  coordinate-y
-           t: photon hit time       
-           bin t in binstep (in t unit) period
-           detx,dety: the detector size in x and y
-       Output:
-           the hitorgram of photons with bins as binstep (in time unit)
-    '''    
-    L= np.max( (t-t[0])//binstep ) + 1
-    #print(L,x,y, (t-t[0])//binstep)
-    arr = np.ravel_multi_index( [ p, (t-t[0])//binstep ], [detx * dety,L ]    )
-    M,N = arr.max(),arr.min()
-    da = np.zeros( [detx * dety, L ]  )
-    da.flat[np.arange(N,  M  ) ] = np.bincount( arr- N  )
-    return da    
-    
-def histogram_xyt( x, y, t, binstep=100, detx=256, dety=256  ):
-    '''YG.DEV@CHX Mar, 2017 to get a histogram of phonton counts by giving
-       x (photon hit pos_x), y (photon hit pos_y), t  (photon hit time), and the time bin
-       The most important function for timepix
-       Input:
-           x: coordinate-x
-           y: coordinate-y
-           t: photon hit time       
-           bin t in binstep (in t unit) period
-           detx,dety: the detector size in x and y
-       Output:
-           the hitorgram of photons with bins as binstep (in time unit)
-       
-    
-    '''    
-    L= np.max( (t-t[0])//binstep ) + 1
-    #print(L,x,y, (t-t[0])//binstep)
-    arr = np.ravel_multi_index( [x, y, (t-t[0])//binstep ], [detx, dety,L ]    )
-    M,N = arr.max(),arr.min()
-    da = np.zeros( [detx, dety, L ]  )
-    da.flat[np.arange(N,  M  ) ] = np.bincount( arr- N  )
-    return da
-
-
+from pyCHX.chx_libs import multi_tau_lags
+from pyCHX.chx_compress import Multifile,  go_through_FD, pass_FD
 
 def get_FD_end_num(FD, maxend=1e10):
     N = maxend
@@ -142,7 +49,7 @@ def compress_timepix_data( pos, t, tbins, filename=None, md=None, force_compress
                               else: compress 
                           if True, compress and, if exist, overwrite the already-coompress data
         Return:
-          avg_img, imgsum, N (frame number)
+          N (frame number)
             
     '''     
     if filename is None:
@@ -189,96 +96,12 @@ def create_timepix_compress_header( md, filename, nobytes=2, bins=1  ):
     fp.close()     
         
             
-def init_compress_timepix_data( pos, t, binstep, filename, mask=None,
-                           md = None, nobytes=2,with_pickle=True   ):    
-    ''' YG.Dev@CHX Nov 19, 2017 with optimal algorithm by using complex index techniques
-    
-        Compress the timepixeldata, in a format of x, y, t
-        x: pos_x in pixel
-        y: pos_y in pixel
-        timepix3 det size 256, 256
-        TODOLIST: mask is not working now
-        Input:
-          pos: 256 * x + y   #can't be 256*x + y        
-          t: arrival time in sec   
-          binstep: int,  binstep (in t unit) period
-          filename: the output filename
-          md: a dict to describle the data info    
-        Return:
-          N (frame number)
             
-    ''' 
-    fp = open( filename,'wb' ) 
-    if md is None:
-        md={}
-        md['beam_center_x'] = 0
-        md['beam_center_y'] = 0
-        md['count_time'] = 0
-        md['detector_distance'] = 0
-        md['frame_time'] = 0
-        md['incident_wavelength'] =0
-        md['x_pixel_size'] = 45
-        md['y_pixel_size'] = 45
-        #nobytes = 2
-        md['sx'] = 256
-        md['sy'] = 256    
- 
-     
-    #TODList: for different detector using different md structure, March 2, 2017,
-    
-    #8d include, 
-    #'bytes', 'nrows', 'ncols', (detsize)
-    #'rows_begin', 'rows_end', 'cols_begin', 'cols_end'  (roi)                        
-    Header = struct.pack('@16s8d7I916x',b'Version-COMPtpx1',
-                    md['beam_center_x'],md['beam_center_y'], md['count_time'], md['detector_distance'],
-                    md['frame_time'],md['incident_wavelength'], md['x_pixel_size'],md['y_pixel_size'],
-                         
-            nobytes, md['sy'], md['sx'],
-            0,256,
-            0,256
-        )     
-    fp.write( Header)
-    
-    N_ =   np.int( np.ceil( (t.max() -t.min()) / binstep    ) )     
-    print('There are %s frames to be compressed...'%(N_-1))   
-    
-    ps,vs,cs = get_pvlist_from_post( pos, t, binstep, detx= md['sx'], dety= md['sy']  )
-    N = len(cs) - 1  #the last one might don't have full number for bings, so kick off 
-    css = np.cumsum(cs)
-    imgsum  =  np.zeros(   N   )      
-    good_count = 0
-    avg_img = np.zeros(  [ md['sy'], md['sx'] ], dtype= np.float ) 
-    
-    for i in tqdm( range(0,N) ):
-        if i ==0:
-            ind1 = 0
-            ind2 = css[i]
-        else:
-            ind1 = css[i-1]
-            ind2 = css[i]  
-        #print( ind1, ind2 )
-        good_count +=1
-        psi = ps[ ind1:ind2  ]
-        vsi = vs[ ind1:ind2  ]           
-        dlen = cs[i]  
-        imgsum[i] = vsi.sum()  
-        np.ravel(avg_img )[psi] +=   vsi
-        #print(vs.sum())
-        fp.write(  struct.pack( '@I', dlen   ))
-        fp.write(  struct.pack( '@{}i'.format( dlen), *psi))
-        fp.write(  struct.pack( '@{}{}'.format( dlen,'ih'[nobytes==2]), *vsi)) 
-    fp.close()
-    avg_img /= good_count
-    #return N -1
-    if  with_pickle:
-        pkl.dump( [  avg_img, imgsum, N ], open(filename + '.pkl', 'wb' ) )      
-    return   avg_img, imgsum, N
-          
             
             
         
         
-def init_compress_timepix_data_light_duty( pos, t,  binstep, filename, mask=None,
+def init_compress_timepix_data( pos, t,  tbins, filename, mask=None,
                            md = None, nobytes=2,with_pickle=True   ):    
     ''' YG.Dev@CHX Nov 19, 2017
         Compress the timepixeldata, in a format of x, y, t
@@ -326,10 +149,10 @@ def init_compress_timepix_data_light_duty( pos, t,  binstep, filename, mask=None
         )     
     fp.write( Header)
     
-    tx = np.arange(  t.min(), t.max(), binstep   )      
-    N = len(tx)  
+    tx = np.arange(  t.min(), t.max(),  tbins   )      
+    N = len(tx)
     imgsum  =  np.zeros(   N-1   ) 
-    print('There are %s frames to be compressed...'%(N-1))
+    print('There are %s frames to be compressed...'%N)
     good_count = 0
     avg_img = np.zeros(  [ md['sy'], md['sx'] ], dtype= np.float ) 
     for i in tqdm( range(N-1) ):
@@ -497,7 +320,20 @@ def apply_timepix_mask( x,y,t, roi ):
 
 
 
- 
+def get_timepixel_data( data_dir, filename, time_unit=6.1e-12):
+    '''give a csv file of a timepixel data, return x,y,t (in ps/6.1)
+    x, pos_x in pixel
+    y, pos_y in pixel
+    t, arrival time
+    time_unit, t*time_unit will convert to second, by default is 6.1e-12
+    
+    return x,y,t (in second, starting from zero)       
+    '''
+    data =  pds.read_csv( data_dir + filename )
+    #'#Col', ' #Row', ' #ToA',
+    #return np.array( data['Col'] ), np.array(data['Row']), np.array(data['GlobalTimeFine']) #*6.1  #in ps
+    x,y,t=np.array( data['#Col'] ), np.array(data[' #Row']), np.array(data[' #ToA'] )  * time_unit
+    return x,y,  t-t.min() #* 25/4096.  #in ns   
 
 
 def get_timepixel_data_from_series( data_dir, filename_prefix, 
@@ -807,7 +643,21 @@ class xpcs( object):
         plt.savefig( RES_DIR + title +'.png' )       
         plt.show()
     
-
+ 
+def histogram_xyt( x, y, t, binstep=100, detx=256, dety=256  ):
+    '''x: coordinate-x
+       y: coordinate-y
+       t: photon hit time
+       
+       bin t in binstep (in t unit) period
+    
+    '''    
+    L= np.max( (t-t[0])//binstep ) + 1
+    arr = np.ravel_multi_index( [x, y, (t-t[0])//binstep ], [detx, dety,L ]    )
+    M,N = arr.max(),arr.min()
+    da = np.zeros( [detx, dety, L ]  )
+    da.flat[np.arange(N,  M  ) ] = np.bincount( arr- N  )
+    return da
 
 ######################################################
  

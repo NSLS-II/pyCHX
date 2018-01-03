@@ -4,10 +4,10 @@ yuzhang@bnl.gov
 This module is for the GiSAXS XPCS analysis 
 """
 
-from chxanalys.chx_generic_functions import *
-from chxanalys.chx_compress import ( compress_eigerdata, read_compressed_eigerdata,init_compress_eigerdata, get_avg_imgc,Multifile) 
-from chxanalys.chx_correlationc import ( cal_g2c )
-from chxanalys.chx_libs import  ( colors, markers, colors_,  markers_)
+from pyCHX.chx_generic_functions import *
+from pyCHX.chx_compress import ( compress_eigerdata, read_compressed_eigerdata,init_compress_eigerdata, get_avg_imgc,Multifile) 
+from pyCHX.chx_correlationc import ( cal_g2c )
+from pyCHX.chx_libs import  ( colors, markers, colors_,  markers_)
 
 
 def get_gisaxs_roi( Qr, Qz, qr_map, qz_map, mask=None, qval_dict=None ):

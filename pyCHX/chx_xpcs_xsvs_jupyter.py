@@ -1,425 +1,8 @@
-from chxanalys.chx_packages import *
-from chxanalys.chx_libs import markers, colors
-#from chxanalys.chx_generic_functions import get_short_long_labels_from_qval_dict
+from pyCHX.chx_packages import *
+
+#from pyCHX.chx_generic_functions import get_short_long_labels_from_qval_dict
 #RUN_GUI = False
-#from chxanalys.chx_libs import markers
-
-
-
-
-def get_t_iqc_uids( uid_list, setup_pargs, slice_num= 10, slice_width= 1):
-    '''Get Iq at different time edge (difined by slice_num and slice_width) for a list of uids
-    Input:
-        uid_list: list of string (uid)
-        setup_pargs: dict, for caculation of Iq, the key of this dict should include
-                        'center': beam center
-                        'dpix': pixel size
-                        'lambda_': X-ray wavelength
-                        'Ldet':  distance between detector and sample
-        slice_num: slice number of the time edge
-        slice_edge: the width of the time_edge
-    Output:
-        qs: dict, with uid as key, with value as q values
-        iqsts:dict, with uid as key, with value as iq values
-        tstamp:dict, with uid as key, with value as time values                   
-    
-    '''
-    iqsts = {}
-    tstamp = {}
-    qs = {}
-    label = []
-    for uid in uid_list:
-        md = get_meta_data( uid )
-        luid = md['uid']
-        timeperframe = md['cam_acquire_period']
-        N = md['cam_num_images']
-        filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%luid        
-        good_start = 5
-        FD = Multifile(filename, good_start,  N )        
-        Nimg = FD.end - FD.beg 
-        time_edge = create_time_slice( Nimg, slice_num= slice_num, slice_width= slice_width, edges = None )
-        time_edge =  np.array( time_edge ) + good_start
-        #print( time_edge )
-        tstamp[uid] = time_edge[:,0] * timeperframe
-        qpt, iqsts[uid], qt = get_t_iqc( FD, time_edge, None, pargs=setup_pargs, nx=1500 )
-        qs[uid] = qt        
-    
-    return qs, iqsts, tstamp
-
-
-
-
-def plot_t_iqtMq2(qt, iqst, tstamp, ax=None, perf='' ):
-    '''plot q2~Iq at differnt time'''
-    if ax is None:
-        fig, ax = plt.subplots()
-    q = qt
-    for i in range(iqst.shape[0]):
-        yi = iqst[i] * q**2
-        time_labeli = perf+'time_%s s'%( round(  tstamp[i], 3) )
-        plot1D( x = q, y = yi, legend= time_labeli, xlabel='Q (A-1)', ylabel='I(q)*Q^2', title='I(q)*Q^2 ~ time',
-               m=markers[i], c = colors[i], ax=ax, ylim=[ -0.001, 0.005]) #, xlim=[0.007,0.1] )
-        
-        
-def plot_t_iqc_uids( qs, iqsts, tstamps  ):
-    '''plot q2~Iq at differnt time for a uid list 
-    '''
-    keys = list(qs.keys())
-    fig, ax = plt.subplots()
-    for uid in keys:
-        qt = qs[uid]
-        iqst = iqsts[uid]
-        tstamp =  tstamps[uid]
-        plot_t_iqtMq2(qt, iqst, tstamp, ax=ax, perf=uid + '_' ) 
-        
-    
-    
-def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1,  legend_size=8,
-                           yshift=0.01, ymulti=1, xlim=None, ylim=None,legend=None, uid_length = None):#,title=''  ):
-    
-    '''YG June 9, 2017@CHX
-     YG Sep 29, 2017@CHX.
-    plot enteries for a list uids
-    Input:
-        uid_list: list, a list of uid (string)
-        inDir: string, imported folder for saved analysis results
-        key: string, plot entry, surport 
-            'g2' for one-time, 
-            'iq' for q~iq
-            'mean_int_sets' for mean intensity of each roi as a function of frame            
-            TODOLIST:#also can plot the following
-                dict_keys(['qt', 'imgsum', 'qval_dict_v', 'bad_frame_list', 'iqst', 
-                'times_roi', 'iq_saxs', 'g2', 'mask', 'g2_uids', 'taus_uids', 
-                'g2_fit_paras', 'mean_int_sets', 'roi_mask', 'qval_dict', 'taus', 
-                'pixel_mask', 'avg_img', 'qval_dict_p', 'q_saxs', 'md'])            
-        qth: integer, the intesrest q number
-        yshift: float, values of shift in y direction
-        xlim: [x1,x2], for plot x limit
-        ylim: [y1,y2], for plot y limit
-    Output:
-        show the plot
-    Example:
-    uid_list = ['5492b9', '54c5e0']
-    plot_entries_from_uids( uid_list, inDir, yshift = 0.01, key= 'g2', ylim=[1, 1.2])
-    '''
-        
-        
- 
-    
-    uid_dict = {}
-    fig, ax =plt.subplots() 
-    for uid in uid_list:
-        if uid_length is not None:
-            uid_ = uid[:uid_length]
-        else:
-            uid_=uid
-        #print(uid_)
-        uid_dict[uid_] =  get_meta_data( uid )['uid']
-    #for i, u in enumerate( list( uid_dict.keys() )):
-    for i,u in enumerate( list(uid_list)): 
-        #print(u)
-        if uid_length is not None:
-            u = u[:uid_length]                         
-        inDiru =  inDir + u + '/'        
-        total_res  = extract_xpcs_results_from_h5( filename = 'uid=%s_Res.h5'%uid_dict[u], 
-                                    import_dir = inDiru, exclude_keys = ['g12b'] )
-        if key=='g2':
-            d = total_res[key][1:,qth]
-            taus = total_res['taus'][1:]
-            if legend is None:
-                leg=u
-            else:
-                leg='uid=%s-->'%u+legend[i]
-            plot1D(  x = taus, y=d + yshift*i, c=colors[i], m = markers[i], ax=ax, logx=True, legend= leg,
-                  xlabel='t (sec)', ylabel='g2', legend_size=legend_size,) 
-            title='Q = %s'%(total_res['qval_dict'][qth])
-            ax.set_title(title)
-        elif key=='imgsum':
-            d = total_res[key]            
-            plot1D(  y=d + yshift*i, c=colors[i], m = markers[i], ax=ax, logx=False, legend= u,
-                  xlabel='Frame', ylabel='imgsum',)  
-            
-        elif key == 'iq':
-            x= total_res['q_saxs']   
-            y= total_res['iq_saxs']
-            plot1D(  x=x, y= y* ymulti[i] + yshift*i, c=colors[i], m = markers[i], ax=ax, logx= False, logy=True,
-                   legend= u,   xlabel ='Q 'r'($\AA^{-1}$)', ylabel = "I(q)"  )             
-
-        else:
-            d = total_res[key][:,qth]             
-            plot1D(  x = np.arange(len(d)), y= d + yshift*i, c=colors[i], m = markers[i], ax=ax, logx=False, legend= u,
-                  xlabel= 'xx', ylabel=key ) 
-    if key=='mean_int_sets':ax.set_xlabel( 'frame ')            
-    if xlim is not None:ax.set_xlim(xlim)        
-    if ylim is not None:ax.set_ylim(ylim)  
-
-
-
-            
-
-
-
-
-####################################################################################################
-##For real time analysis##
-#################################################################################################
-
-
-
-
-
-def get_iq_from_uids(  uids, mask, setup_pargs ):
-    ''' Y.G. developed July 17, 2017 @CHX
-    Get q-Iq of a uids dict, each uid could corrrespond one frame or a time seriers
-    uids: dict, val: meaningful decription, key: a list of uids
-    mask: bool-type 2D array
-    setup_pargs: dict, at least should contains, the following paramters for calculation of I(q)
-
-         'Ldet': 4917.50495,
-         'center': [988, 1120],
-         'dpix': 0.075000003562308848,
-         'exposuretime': 0.99998999,
-         'lambda_': 1.2845441,
-         'path': '/XF11ID/analysis/2017_2/yuzhang/Results/Yang_Pressure/',
- 
-    '''
-    Nuid = len( np.concatenate( np.array( list(uids.values()) ) ) )
-    label = np.zeros( [  Nuid+1], dtype=object)
-    img_data = {} #np.zeros( [ Nuid, avg_img.shape[0], avg_img.shape[1]])
-    
-    n = 0 
-    for k in list(uids.keys()):
-        for uid in uids[k]:
-            
-            uidstr = 'uid=%s'%uid
-            sud = get_sid_filenames(db[uid])
-            #print(sud)
-            md = get_meta_data( uid )
-            imgs = load_data( uid, md['detector'], reverse= True  )
-            md.update( imgs.md );
-            Nimg = len(imgs);
-            if Nimg !=1:
-                filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%sud[1]
-                mask0, avg_img, imgsum, bad_frame_list = compress_eigerdata(imgs, mask, md, filename, 
-                     force_compress= False,  para_compress= True,  bad_pixel_threshold = 1e14,
-                                    bins=1, num_sub= 100, num_max_para_process= 500, with_pickle=True  )
-            else:
-                avg_img = imgs[0]
-            show_img( avg_img,  vmin=0.00001, vmax= 1e1, logs=True, aspect=1, #save_format='tif',
-                    image_name= uidstr + '_img_avg',  save=True,
-                     path=setup_pargs['path'],  cmap = cmap_albula )
-            
-            setup_pargs['uid'] = uidstr           
-            
-            qp_saxs, iq_saxs, q_saxs = get_circular_average( avg_img, mask,
-                                                            pargs= setup_pargs, save=True  )
-            if n ==0:
-                iqs = np.zeros( [ len(q_saxs), Nuid+1])
-                iqs[:,0] = q_saxs
-                label[0] = 'q'                
-            img_data[ k + '_'+  uid ] = avg_img    
-            iqs[:,n+1] = iq_saxs   
-            label[n+1] = k + '_'+  uid   
-            n +=1
-            plot_circular_average( qp_saxs, iq_saxs, q_saxs,  pargs= setup_pargs, 
-                        xlim=[q_saxs.min(), q_saxs.max()*0.9], ylim = [iq_saxs.min(), iq_saxs.max()] )
-    if 'filename' in list(setup_pargs.keys()):
-        filename = setup_pargs['filename']
-    else:
-        filename = 'qIq.csv'
-    pd = save_arrays( iqs, label=label, dtype='array', filename=  filename, 
-                        path= setup_pargs['path'], return_res=True)
-    return pd, img_data
-    
-    
-    
-def wait_func( wait_time = 2 ):
-    print( 'Waiting %s secdons for upcoming data...'%wait_time)
-    time.sleep(  wait_time)
-    #print( 'Starting to do something here...')
-
-def wait_data_acquistion_finish( uid, wait_time = 2,  max_try_num = 3  ):
-    '''check the completion of a data uid acquistion
-       Parameter:
-          uid:
-          wait_time:  the waiting step in unit of second
-          check_func: the function to check the completion
-          max_try_num: the maximum number for waiting 
-       Return:
-          True: completion
-          False: not completion (include waiting time exceeds the max_wait_time) 
-    
-    '''
-    FINISH = False
-    Fake_FINISH = True
-    w = 0    
-    sleep_time = 0 
-    while( not FINISH):
-        try:
-            get_meta_data( uid )
-            FINISH = True
-            print( 'The data acquistion finished.')
-            print( 'Starting to do something here...') 
-        except: 
-            wait_func( wait_time = wait_time  )
-            w += 1
-            print('Try number: %s'%w)
-            if w>  max_try_num:
-                print( 'There could be something going wrong with data acquistion.')
-                print(  'Force to terminate after %s tries.'%w)
-                FINISH = True
-                Fake_FINISH = False
-            sleep_time += wait_time 
-    return FINISH * Fake_FINISH  #, sleep_time
-
-def get_uids_by_range(  start_uidth=-1, end_uidth = 0 ):
-    '''Y.G. Dec 22, 2016
-        A wrap funciton to find uids by giving start and end uid number, i.e. -10, -1
-        Return:        
-        uids: list, uid with 8 character length
-        fuids: list, uid with full length
-    
-    '''
-    hdrs = list([ db[n] for n in range(start_uidth, end_uidth)] )
-    if len(hdrs)!=0:
-        print ('Totally %s uids are found.'%(len(hdrs)))
-    
-    uids=[]  #short uid
-    fuids=[]  #full uid
-    for hdr in hdrs: 
-        fuid = hdr['start']['uid'] 
-        uids.append( fuid[:8] )
-        fuids.append( fuid )    
-    uids=uids[::-1]
-    fuids=fuids[::-1]
-    return  np.array(uids), np.array(fuids)
-
-
-def get_uids_in_time_period( start_time, stop_time ):
-    '''Y.G. Dec 22, 2016
-        A wrap funciton to find uids by giving start and end time
-        Return:        
-        uids: list, uid with 8 character length
-        fuids: list, uid with full length
-    
-    '''
-    hdrs = list( db(start_time= start_time, stop_time = stop_time) )
-    if len(hdrs)!=0:
-        print ('Totally %s uids are found.'%(len(hdrs)))
-    
-    uids=[]  #short uid
-    fuids=[]  #full uid
-    for hdr in hdrs: 
-        fuid = hdr['start']['uid'] 
-        uids.append( fuid[:8] )
-        fuids.append( fuid )    
-    uids=uids[::-1]
-    fuids=fuids[::-1]
-    return  np.array(uids), np.array(fuids)
-
-def do_compress_on_line( start_time, stop_time, mask_dict=None, mask=None,
-                        wait_time = 2,  max_try_num = 3  ): 
-    '''Y.G. Mar 10, 2017
-        Do on-line compress by giving start time and stop time
-        Parameters:
-            mask_dict: a dict, e.g., {mask1: mask_array1, mask2:mask_array2}
-            wait_time: search interval time
-            max_try_num: for each found uid, will try max_try_num*wait_time seconds
-        Return:
-            running time     
-    '''    
-    
-    t0 = time.time()     
-    uids, fuids  = get_uids_in_time_period(start_time, stop_time) 
-    print( fuids )
-    if len(fuids):
-        for uid in fuids:
-            print('*'*50)
-            print('Do compress for %s now...'%uid)
-            if db[uid]['start']['plan_name'] == 'count':
-                finish = wait_data_acquistion_finish( uid, wait_time,max_try_num )
-                if finish: 
-                    try:
-                        md = get_meta_data( uid )    
-                        compress_multi_uids( [ uid ], mask=mask, mask_dict = mask_dict,
-                            force_compress=False,  para_compress= True, bin_frame_number=1 )
-                        
-                        update_olog_uid( uid= md['uid'], text='Data are on-line sparsified!',attachments=None)              
-                    except:
-                        print('There are something wrong with this data: %s...'%uid)
-            print('*'*50) 
-    return time.time() - t0
-
-
-
-def realtime_xpcs_analysis( start_time, stop_time,  run_pargs, md_update=None,
-                        wait_time = 2,  max_try_num = 3, emulation=False,clear_plot=False  ):
-    '''Y.G. Mar 10, 2017
-        Do on-line xpcs by giving start time and stop time
-        Parameters:
-            run_pargs: all the run control parameters, including giving roi_mask
-            md_update: if not None, a dict, will update all the found uid metadata by this md_update 
-                        e.g,                         
-                            md['beam_center_x'] = 1012
-                            md['beam_center_y']= 1020
-                            md['det_distance']= 16718.0
-            wait_time: search interval time
-            max_try_num: for each found uid, will try max_try_num*wait_time seconds
-            emulation: if True, it will only check dataset and not do real analysis
-        Return:
-            running time     
-    '''
-    
-    t0 = time.time()     
-    uids, fuids  = get_uids_in_time_period(start_time, stop_time) 
-    #print( fuids )
-    if len(fuids):
-        for uid in fuids:
-            print('*'*50)
-            #print('Do compress for %s now...'%uid)
-            print('Starting analysis for %s now...'%uid)
-            if db[uid]['start']['plan_name'] == 'count' or db[uid]['start']['plan_name'] == 'manual_count':  
-            #if db[uid]['start']['dtype'] =='xpcs':
-                finish = wait_data_acquistion_finish( uid, wait_time,max_try_num )
-                if finish: 
-                    try:
-                        md = get_meta_data( uid )  
-                        ##corect some metadata
-                        if md_update is not None:
-                            md.update( md_update )                            
-                            #if 'username' in list(md.keys()):
-                            #try:
-                            #    md_cor['username'] = md_update['username']
-                            #except:
-                            #    md_cor = None
-                        #uid = uid[:8]
-                        #print(md_cor)
-                        if not emulation:
-                            #suid=uid[:6]
-                            run_xpcs_xsvs_single( uid, run_pargs= run_pargs, md_cor = None,
-                                             return_res= False, clear_plot=clear_plot )                        
-                        #update_olog_uid( uid= md['uid'], text='Data are on-line sparsified!',attachments=None)              
-                    except:
-                        print('There are something wrong with this data: %s...'%uid)
-            else:
-                print('\nThis is not a XPCS series. We will simiply ignore it.')
-            print('*'*50) 
-            
-    #print( 'Sleep 10 sec here!!!')
-    #time.sleep(10)
-        
-    return time.time() - t0
-
-
-
-
-
-
-
-
-
-
-
+#from pyCHX.chx_libs import markers
 
 ####################################################################################################
 ##compress multi uids, sequential compress for uids, but for each uid, can apply parallel compress##
@@ -465,8 +48,7 @@ def compress_multi_uids( uids, mask, mask_dict = None, force_compress=False,  pa
 ##get_two_time_mulit_uids, sequential cal for uids, but apply parallel for each uid ##
 #################################################################################################
 
-def get_two_time_mulit_uids( uids, roi_mask,  norm= None, bin_frame_number=1, path=None, force_generate=False,
-                           md=None,  imgs=None,direct_load_data=False ): 
+def get_two_time_mulit_uids( uids, roi_mask,  norm= None, bin_frame_number=1, path=None, force_generate=False ): 
     
     ''' Calculate two time correlation by using auto_two_Arrayc func for a set of uids, 
         if the two-time resutls are already created, by default (force_generate=False), just pass
@@ -490,11 +72,8 @@ def get_two_time_mulit_uids( uids, roi_mask,  norm= None, bin_frame_number=1, pa
     qind, pixelist = roi.extract_label_indices(roi_mask)
     for uid in uids:
         print('UID: %s is in processing...'%uid)
-        if not direct_load_data:
-            md = get_meta_data( uid )        
-            imgs = load_data( uid, md['detector'], reverse= True  )
-        else:
-            pass
+        md = get_meta_data( uid )        
+        imgs = load_data( uid, md['detector'], reverse= True  )
         N = len(imgs)
         #print( N )
         if bin_frame_number==1:
@@ -557,7 +136,9 @@ def get_series_g2_from_g12( g12b, fra_num_by_dose = None, dose_label = None,
         key = round(dose_label[i] ,3) 
         #print( good_end )
         if good_end>L:
-            warnings.warn("Warning: the dose value is too large, and please check the maxium dose in this data set and give a smaller dose value. We will use the maxium dose of the data.") 
+            warnings.warn("Warning: the dose value is too large, and please" 
+                          "check the maxium dose in this data set and give a smaller dose value."
+                          "We will use the maxium dose of the data.") 
             good_end = L            
         if not log_taus:            
             g2[ key ] = get_one_time_from_two_time(g12b[good_start:good_end,good_start:good_end,:] )
@@ -572,38 +153,17 @@ def get_series_g2_from_g12( g12b, fra_num_by_dose = None, dose_label = None,
     return lag_steps, g2
                                            
 
-def get_fra_num_by_dose( exp_dose, exp_time, att=1, dead_time =2 ):
-    '''
-    Calculate the frame number to be correlated by giving a X-ray exposure dose
     
-    Paramters:
-        exp_dose: a list, the exposed dose, e.g., in unit of exp_time(ms)*N(fram num)*att( attenuation)
-        exp_time: float, the exposure time for a xpcs time sereies
-        dead_time: dead time for the fast shutter reponse time, CHX = 2ms
-    Return:
-        noframes: the frame number to be correlated, exp_dose/( exp_time + dead_time )  
-    e.g.,
     
-    no_dose_fra = get_fra_num_by_dose(  exp_dose = [ 3.34* 20, 3.34*50, 3.34*100, 3.34*502, 3.34*505 ],
-                                   exp_time = 1.34, dead_time = 2)
-                                   
-    --> no_dose_fra  will be array([ 20,  50, 100, 502, 504])     
-    '''
-    return np.int_(    np.array( exp_dose )/( exp_time + dead_time)/ att )
-
-
-    
-def get_series_one_time_mulit_uids( uids,  qval_dict,  trans = None, good_start=0,  path=None, 
-                                exposure_dose = None, dead_time = 0, 
-                                   num_bufs =8, save_g2=True,
-                                  md = None, imgs=None, direct_load_data= False ):
+def get_series_one_time_mulit_uids( uids,  qval_dict,  good_start=0,  path=None, 
+                                exposure_dose = None, dead_time = 2, 
+                                   num_bufs =8, save_g2=True,   ):
     ''' Calculate a dose depedent series of one time correlations from two time 
     Parameters:
         uids: list, a list of uid
-        trans: list, same length as uids, the transmission list
         exposure_dose: list, a list x-ray exposure dose;
                 by default is None, namely,  = [ max_frame_number ], 
-                can be [3.34  334, 3340] in unit of ms,  in unit of exp_time(ms)*N(fram num)*att( attenuation)
+                can be [3.34  334, 3340] in unit of ms, 
         path: string, where to load the two time, if None, ask for it
                     the real g12 path is two_time_path + uid + '/'
         qval_dict: the dictionary for q values
@@ -622,11 +182,8 @@ def get_series_one_time_mulit_uids( uids,  qval_dict,  trans = None, good_start=
         g2_uids = {}
         for i, uid in enumerate(uids):
             print('UID: %s is in processing...'%uid)
-            if not direct_load_data:
-                md = get_meta_data( uid )
-                imgs = load_data( uid, md['detector'], reverse= True  )
-            else:
-                pass
+            md = get_meta_data( uid )
+            imgs = load_data( uid, md['detector'], reverse= True  )
             N = len(imgs)
             if exposure_dose is None:
                 exposure_dose = [N]
@@ -636,17 +193,11 @@ def get_series_one_time_mulit_uids( uids,  qval_dict,  trans = None, good_start=
                 exp_time = float( md['cam_acquire_time']) #*1000 #from second to ms
             except:                
                 exp_time = float( md['exposure time']) #* 1000  #from second to ms
-            if trans is  None:
-                try:
-                    transi = md['transmission']
-                except:
-                    transi = [1] 
-            else:
-                transi = trans[i]
+                
             fra_num_by_dose = get_fra_num_by_dose(  exp_dose = exposure_dose,
-                                   exp_time =exp_time, dead_time = dead_time, att = transi )
+                                   exp_time =exp_time, dead_time = dead_time)
             
-            print( 'uid: %s--> fra_num_by_dose: %s'%(uid, fra_num_by_dose ) )
+            #print( fra_num_by_dose,exposure_dose,  exp_time ) 
             
             taus_uid, g2_uid = get_series_g2_from_g12( g12b, fra_num_by_dose=fra_num_by_dose, 
                                     dose_label = exposure_dose,
@@ -665,10 +216,9 @@ def get_series_one_time_mulit_uids( uids,  qval_dict,  trans = None, good_start=
  
     
     
-def plot_dose_g2( taus_uids, g2_uids, qval_dict, qth_interest = None, ylim=[0.95, 1.05], vshift=0.1,
-                   fit_res= None,  geometry= 'saxs',filename= 'dose'+'_g2', legend_size=None,
-            path= None, function= None,  g2_labels=None, ylabel= 'g2_dose', append_name=  '_dose',
-                return_fig=False):
+def plot_dose_g2( taus_uids, g2_uids, qval_dict, ylim=[0.95, 1.05], vshift=0.1,
+                   fit_res= None,  geometry= 'saxs',filename= 'dose'+'_g2', 
+            path= None, function= None,  g2_labels=None, ylabel= 'g2_dose', append_name=  '_dose' ):
     '''Plot a does-dependent g2 
     taus_uids, dict, with format as {uid1: { dose1: tau_1, dose2: tau_2...}, uid2: ...}
     g2_uids, dict, with format as {uid1: { dose1: g2_1, dose2: g2_2...}, uid2: ...}
@@ -680,69 +230,38 @@ def plot_dose_g2( taus_uids, g2_uids, qval_dict, qth_interest = None, ylim=[0.95
     uids = sorted( list( taus_uids.keys() ) )
     #print( uids )
     dose = sorted( list( taus_uids[ uids[0] ].keys() ) )
-    if qth_interest is  None:
-        g2_dict= {}
-        taus_dict = {}
-        if g2_labels is None:
-            g2_labels = []        
-        for i in range(   len( dose )):
-            g2_dict[i + 1] = []
-            taus_dict[i +1 ] = []
-            #print ( i )
-            for j in range( len( uids )):
-                #print( uids[i] , dose[j])
-                g2_dict[i +1 ].append(   g2_uids[ uids[j] ][  dose[i] ]  +  vshift*i  )
-                taus_dict[i +1 ].append(   taus_uids[ uids[j] ][ dose[i]  ]   )
-                if j ==0:
-                    g2_labels.append( 'Dose_%s'%dose[i] ) 
-            
+    g2_dict= {}
+    taus_dict = {}
+    if g2_labels is None:
+        g2_labels = []        
+    for i in range(   len( dose )):
+        g2_dict[i + 1] = []
+        taus_dict[i +1 ] = []
+        #print ( i )
+        for j in range( len( uids )):
+            #print( uids[i] , dose[j])
+            g2_dict[i +1 ].append(   g2_uids[ uids[j] ][  dose[i] ]  +  vshift*i  )
+            taus_dict[i +1 ].append(   taus_uids[ uids[j] ][ dose[i]  ]   )
+            if j ==0:
+                g2_labels.append( 'Dose_%s'%dose[i] )
+    #print( g2_labels)
+    if True: #False:
         plot_g2_general( g2_dict, taus_dict,
-                    ylim=[ylim[0], ylim[1] + vshift * len(dose)],
-                    qval_dict = qval_dict, fit_res= None,  geometry=  geometry,filename= filename, 
-            path= path, function= function,  ylabel= ylabel, g2_labels=g2_labels, append_name=  append_name )
-        
-    else:
-        fig,ax= plt.subplots()        
-        q =   qval_dict[qth_interest-1][0] 
-        j = 0 
-        for uid in uids:
-            #uid = uids[0]
-            #print( uid )
-            dose_list = sorted( list(taus_uids['%s'%uid].keys()) )
-            #print( dose_list )
-            for i, dose in enumerate(dose_list):
-                dose = float(dose)
-                if j ==0:
-                    legend= 'dose_%s'%round(dose,2)
-                else:
-                    legend = ''
-                    
-                #print( markers[i], colors[i] )
-                
-                plot1D(x= taus_uids['%s'%uid][dose_list[i]], 
-                       y =g2_uids['%s'%uid][dose_list[i]][:,qth_interest] + i*vshift, 
-                       logx=True, ax=ax, legend= legend,   m = markers[i], c= colors[i],
-                       lw=3, title='%s_Q=%s'%(uid, q) + r'$\AA^{-1}$',  legend_size=legend_size  )
-                ylabel='g2--Dose (trans*exptime_sec)' 
-            j +=1
-                
-        ax.set_ylabel( r"$%s$"%ylabel + '(' + r'$\tau$' + ')' )         
-        ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16) 
-        ax.set_ylim ( ylim )
-        if return_fig:
-            return fig, ax
+                ylim=[ylim[0], ylim[1] + vshift * len(dose)],
+                qval_dict = qval_dict, fit_res= None,  geometry=  geometry,filename= filename, 
+        path= path, function= function,  ylabel= ylabel, g2_labels=g2_labels, append_name=  append_name )
+    
     #return taus_dict, g2_dict
     
  
 
 
-def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=True, clear_plot=False ):
+def run_xpcs_xsvs_single( uid, run_pargs, return_res=False):
     '''Y.G. Dec 22, 2016
        Run XPCS XSVS analysis for a single uid
        Parameters:
            uid: unique id
            run_pargs: dict, control run type and setup parameters, such as q range et.al.
-           reverse:,True, revserse the image upside down
        Return:
        save analysis result to csv/png/h5 files
        return_res: if true, return a dict, containing g2,g4,g12,contrast et.al. depending on the run type
@@ -783,8 +302,6 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
 
                     pdf_version = '_1' #for pdf report name    
                   )
-                  
-    md_cor: if not None, will update the metadata with md_cor
            
     '''
     
@@ -794,17 +311,12 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
     run_fit_form = run_pargs['run_fit_form']
     run_waterfall = run_pargs['run_waterfall'] 
     run_t_ROI_Inten = run_pargs['run_t_ROI_Inten'] 
-     
     #run_fit_g2 = run_pargs['run_fit_g2'], 
     fit_g2_func = run_pargs['fit_g2_func']
     run_one_time = run_pargs['run_one_time'] 
     run_two_time = run_pargs['run_two_time'] 
     run_four_time = run_pargs['run_four_time']
     run_xsvs=run_pargs['run_xsvs']
-    try:
-        run_dose =   run_pargs['run_dose']
-    except:
-        run_dose= False
     ###############################################################
     if scat_geometry =='gi_saxs': #to be done for other types
         run_xsvs = False;
@@ -839,7 +351,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
     except:
         inc_x0 = None
         inc_y0=  None 
-     
+        
     #for different scattering geogmetry, we only need to change roi_mask
     #and qval_dict
     qval_dict = run_pargs['qval_dict'] 
@@ -866,11 +378,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
     pdf_version = run_pargs['pdf_version']    
     
     
-    try:
-        username = run_pargs['username']
-    except:
-        username = getpass.getuser()
-    
+    username = getpass.getuser()
     data_dir0 = os.path.join('/XF11ID/analysis/', CYCLE, username, 'Results/')
     os.makedirs(data_dir0, exist_ok=True)
     print('Results from this analysis will be stashed in the directory %s' % data_dir0)
@@ -878,43 +386,30 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
     print ('*'*40)
     print  ( '*'*5 + 'The processing uid is: %s'%uid + '*'*5)
     print ('*'*40)
-    suid = uid[:6]
-    data_dir = os.path.join(data_dir0, '%s/'%suid)
+    data_dir = os.path.join(data_dir0, '%s/'%uid)
     os.makedirs(data_dir, exist_ok=True)
     print('Results from this analysis will be stashed in the directory %s' % data_dir)
     md = get_meta_data( uid )
-    uidstr = 'uid=%s'%uid[:6]
-    imgs = load_data( uid, md['detector'], reverse= reverse  )
-    md.update( imgs.md )
-    Nimg = len(imgs)
-    if md_cor is not None:
-        md.update( md_cor )
-    
+    uidstr = 'uid=%s'%uid
+    imgs = load_data( uid, md['detector'], reverse= True  )
+    md.update( imgs.md );Nimg = len(imgs);
     
     if inc_x0 is not None:
         md['beam_center_x']= inc_x0
     if inc_y0 is not None:
-        md['beam_center_y']= inc_y0      
-        
-    #print( run_pargs )   
-    #print( run_pargs['inc_x0'],run_pargs['inc_y0'] )
-    #print(  inc_x0, inc_y0 )
-    
-    center = [  int(md['beam_center_y']),int( md['beam_center_x'] ) ]  #beam center [y,x] for python image    
-    
-    
+        md['beam_center_y']= inc_y0         
+    center = [  int(md['beam_center_y']),int( md['beam_center_x'] ) ]  #beam center [y,x] for python image
     pixel_mask =  1- np.int_( np.array( imgs.md['pixel_mask'], dtype= bool)  )
     print( 'The data are: %s' %imgs )
     
     if False:
         print_dict( md,  ['suid', 'number of images', 'uid', 'scan_id', 'start_time', 'stop_time', 'sample', 'Measurement',
                   'acquire period', 'exposure time', 
-         'det_distanc', 'beam_center_x', 'beam_center_y', ] )        
+         'det_distanc', 'beam_center_x', 'beam_center_y', ] )
+        
     ## Overwrite Some Metadata if Wrong Input    
     dpix, lambda_, Ldet,  exposuretime, timeperframe, center = check_lost_metadata(
                 md, Nimg, inc_x0 = inc_x0, inc_y0=   inc_y0, pixelsize = 7.5*10*(-5) )
-    
-    print( 'The beam center is: %s'%center )
     
     timeperframe  *=  bin_frame_number
     
@@ -922,7 +417,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
         timeperframe=timeperframe, center=center, path= data_dir)
     #print_dict( setup_pargs )
     
-    mask = load_mask(mask_path, mask_name, plot_ =  False, image_name = uidstr + '_mask', reverse=reverse ) 
+    mask = load_mask(mask_path, mask_name, plot_ =  False, image_name = uidstr + '_mask', reverse=True ) 
     mask *= pixel_mask
     if md['detector'] =='eiger4m_single_image':
         mask[:,2069] =0 # False  #Concluded from the previous results
@@ -931,8 +426,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
     imgsa = apply_mask( imgs, mask )
 
 
-    img_choice_N = 2
-    img_samp_index = random.sample( range(len(imgs)), img_choice_N)    
+    img_choice_N = 3
+    img_samp_index = random.sample( range(len(imgs)), img_choice_N) 
     avg_img =  get_avg_img( imgsa, img_samp_index, plot_ = False, uid =uidstr)
     
     if avg_img.max() == 0:
@@ -957,7 +452,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
         filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%md['uid']
         mask, avg_img, imgsum, bad_frame_list = compress_eigerdata(imgs, mask, md, filename, 
                  force_compress= force_compress,  para_compress= para_compress,  bad_pixel_threshold= 1e14,
-                                bins=bin_frame_number, num_sub= 100, num_max_para_process= 500, with_pickle=True    )
+                                bins=bin_frame_number, num_sub= 100, num_max_para_process= 500  )
         min_inten = 10    
         good_start = max(good_start, np.where( np.array(imgsum) > min_inten )[0][0] )    
         print ('The good_start frame number is: %s '%good_start)
@@ -975,14 +470,16 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
                         scale= 5.5,  good_start = good_start, uid= uidstr, path=data_dir)
         print( 'The bad frame list length is: %s'%len(bad_frame_list) )
         
+        #### For beamline to find the bad pixels
+        #bp = find_bad_pixels( FD, bad_frame_list, md['uid'] )
+        #bp
+        #bp.to_csv('/XF11ID/analysis/Commissioning/eiger4M_badpixel.csv', mode='a'  )
+        
         ### Creat new mask by masking the bad pixels and get new avg_img
         if False:
             mask = mask_exclude_badpixel( bp, mask, md['uid'])
             avg_img = get_avg_imgc( FD,  sampling = 1, bad_frame_list=bad_frame_list )
 
-        show_img( avg_img,  vmin=.001, vmax= np.max(avg_img), logs=True, aspect=1, #save_format='tif',
-             image_name= uidstr + '_img_avg',  save=True, path=data_dir,  cmap = cmap_albula )
-            
         imgsum_y = imgsum[ np.array( [i for i in np.arange( len(imgsum)) if i not in bad_frame_list])]
         imgsum_x = np.arange( len( imgsum_y))
         save_lists(  [imgsum_x, imgsum_y], label=['Frame', 'Total_Intensity'],
@@ -994,26 +491,22 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
         ############for SAXS and ANG_SAXS (Flow_SAXS)
         if scat_geometry =='saxs' or scat_geometry =='ang_saxs':
         
-            #show_saxs_qmap( avg_img, setup_pargs, width=600, vmin=.1, vmax=np.max(avg_img*.1), logs=True,
-            #   image_name= uidstr + '_img_avg',  save=True)  
+            show_saxs_qmap( avg_img, setup_pargs, width=600, vmin=.1, vmax=np.max(avg_img*.1), logs=True,
+               image_name= uidstr + '_img_avg',  save=True)  
             #np.save(  data_dir + 'uid=%s--img-avg'%uid, avg_img)
 
-            #try:                 
-            #    hmask = create_hot_pixel_mask( avg_img, threshold = 1000, center=center, center_radius= 600)
-            #except:
-            #    hmask=1
-            hmask=1
-            qp_saxs, iq_saxs, q_saxs = get_circular_average( avg_img, mask * hmask, pargs=setup_pargs, save=True  )
+            hmask = create_hot_pixel_mask( avg_img, threshold = 100, center=center, center_radius= 60)
+            qp_saxs, iq_saxs, q_saxs = get_circular_average( avg_img, mask * hmask, pargs=setup_pargs  )
         
             plot_circular_average( qp_saxs, iq_saxs, q_saxs,  pargs= setup_pargs, 
                               xlim=[q_saxs.min(), q_saxs.max()], ylim = [iq_saxs.min(), iq_saxs.max()] )
 
-            #pd = trans_data_to_pd( np.where( hmask !=1), 
-            #        label=[md['uid']+'_hmask'+'x', md['uid']+'_hmask'+'y' ], dtype='list')
+            pd = trans_data_to_pd( np.where( hmask !=1), 
+                    label=[md['uid']+'_hmask'+'x', md['uid']+'_hmask'+'y' ], dtype='list')
             
             #pd.to_csv('/XF11ID/analysis/Commissioning/eiger4M_badpixel.csv', mode='a'  )
             
-            #mask =np.array( mask * hmask, dtype=bool) 
+            mask =np.array( mask * hmask, dtype=bool) 
             #show_img( mask )
          
             if run_fit_form:
@@ -1068,16 +561,15 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
             roi_inten = check_ROI_intensity( avg_img, roi_mask, ring_number= qth_interest, uid =uidstr, save=True, path=data_dir ) 
         if scat_geometry =='saxs' or scat_geometry =='gi_saxs' or scat_geometry =='gi_waxs':
             if run_waterfall:
-                wat = cal_waterfallc( FD, roi_mask, 
-                                     qindex= qth_interest, save = True, path=data_dir,uid=uidstr)
-            if run_waterfall:                 
-                plot_waterfallc( wat, qindex=qth_interest, aspect=None, 
+                qindex = qth_interest
+                wat = cal_waterfallc( FD, roi_mask, qindex= qindex, save =True, path=data_dir,uid=uidstr)
+            if run_waterfall: 
+                plot_waterfallc( wat, qindex, aspect=None, 
                                 vmax=  np.max(wat), uid=uidstr, save =True, 
                                 path=data_dir, beg= FD.beg)
-        ring_avg = None  
-        
+        ring_avg = None    
         if run_t_ROI_Inten:
-            times_roi, mean_int_sets = cal_each_ring_mean_intensityc(FD, roi_mask, timeperframe = None, multi_cor=True  ) 
+            times_roi, mean_int_sets = cal_each_ring_mean_intensityc(FD, roi_mask, timeperframe = None,  ) 
             plot_each_ring_mean_intensityc( times_roi, mean_int_sets,  uid = uidstr, save=True, path=data_dir )
             roi_avg = np.average( mean_int_sets, axis=0)
 
@@ -1095,21 +587,6 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
             uid_ = uidstr + '_fra_%s_%s'%(FD.beg, FD.end)
             print( uid_ )
     
-        if 'g2_fit_variables' in list( run_pargs.keys() ):
-            g2_fit_variables  = run_pargs['g2_fit_variables']
-        else:
-            g2_fit_variables  = {'baseline':True, 'beta':True, 'alpha':False,'relaxation_rate':True}
-
-        if 'g2_guess_values' in list( run_pargs.keys() ):    
-            g2_guess_values  = run_pargs['g2_guess_values']
-        else:
-            g2_guess_values=  {'baseline':1.0,'beta':0.05,'alpha':1.0,'relaxation_rate':0.01,}
-            
-        if 'g2_guess_limits' in list( run_pargs.keys()):
-            g2_guess_limits = run_pargs['g2_guess_limits']
-        else:
-            g2_guess_limits = dict( baseline =[1, 2], alpha=[0, 2],  beta = [0, 1], relaxation_rate= [0.001, 5000])    
-        
         if run_one_time: 
             if use_imgsum_norm:
                 imgsum_ = imgsum
@@ -1123,12 +600,11 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
                 taus = lag_steps * timeperframe    
                 g2_pds = save_g2_general( g2, taus=taus,qr=np.array( list( qval_dict.values() ) )[:,0],
                                      uid=uid_+'_g2.csv', path= data_dir, return_res=True )
+                
                 g2_fit_result, taus_fit, g2_fit = get_g2_fit_general( g2,  taus, 
                         function = fit_g2_func,  vlim=[0.95, 1.05], fit_range= None,  
-                    fit_variables= g2_fit_variables,
-                    guess_values=  g2_guess_values,
-                    guess_limits = g2_guess_limits) 
-                
+                    fit_variables={'baseline':True, 'beta':True, 'alpha':False,'relaxation_rate':True},                                  
+                    guess_values={'baseline':1.0,'beta':0.05,'alpha':1.0,'relaxation_rate':0.01,}) 
                 g2_fit_paras = save_g2_fit_para_tocsv(g2_fit_result,  filename= uid_  +'_g2_fit_paras.csv', path=data_dir ) 
                 
                 #if run_one_time:
@@ -1201,63 +677,41 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
 
         # For two-time
         data_pixel = None
-        if run_two_time: 
-            
+        if run_two_time:    
             data_pixel =   Get_Pixel_Arrayc( FD, pixelist,  norm=norm ).get_data()
             t0=time.time()    
             g12b = auto_two_Arrayc(  data_pixel,  roi_mask, index = None   )
-            if run_dose:
-                np.save( data_dir + 'uid=%s_g12b'%uid, g12b)
-            
-            
             if lag_steps is None:
                 num_bufs=8
                 noframes = FD.end - FD.beg
                 num_levels = int(np.log( noframes/(num_bufs-1))/np.log(2) +1) +1
                 tot_channels, lag_steps, dict_lag = multi_tau_lags(num_levels, num_bufs)
                 max_taus= lag_steps.max()
-                lag_steps = lag_steps[ lag_steps < Nimg - good_start ]
-             
             run_time( t0 )    
 
-            show_C12(g12b, q_ind= qth_interest, N1= FD.beg, N2=min( FD.end,5000), vmin= 0.99, vmax=1.3,
-                     timeperframe=timeperframe,save=True, cmap=cmap_albula,
-                     path= data_dir, uid = uid_ )
+            show_C12(g12b, q_ind= qth_interest, N1= FD.beg, N2=min( FD.end,1000), vmin=1.1, vmax=1.25,
+                     timeperframe=timeperframe,save=True,
+                     path= data_dir, uid = uid_ ) 
             
-            #print('here')
-            #show_C12(g12b, q_ind= 3, N1= 5, N2=min(5000,5000), vmin=.8, vmax=1.31, cmap=cmap_albula,
-            # timeperframe= timeperframe,save=False, path= data_dir,  uid  =  uid_ +'_' + k)  
             max_taus = Nimg    
-            t0=time.time()             
+            t0=time.time()            
             #g2b = get_one_time_from_two_time(g12b)[:max_taus]
             g2b = get_one_time_from_two_time(g12b)[lag_steps]
-            
             tausb = lag_steps *timeperframe
-            run_time(t0) 
-            
-            
+            run_time(t0)            
             #tausb = np.arange( g2b.shape[0])[:max_taus] *timeperframe            
             g2b_pds = save_g2_general( g2b, taus=tausb, qr= np.array( list( qval_dict.values() ) )[:,0],
-                                      qz=None, uid=uid_ +'_g2b.csv', path= data_dir, return_res=True )
-            
+                                      qz=None, uid=uid_ +'_g2b.csv', path= data_dir, return_res=True ) 
             
             g2_fit_resultb, taus_fitb, g2_fitb = get_g2_fit_general( g2b,  tausb, 
                 function = fit_g2_func,  vlim=[0.95, 1.05], fit_range= None,  
-                fit_variables=g2_fit_variables, guess_values=g2_guess_values,  guess_limits =g2_guess_limits) 
+                fit_variables={'baseline':True, 'beta':True, 'alpha':False,'relaxation_rate':True},
+                guess_values={'baseline':1.0,'beta':0.05,'alpha':1.0,'relaxation_rate':0.01,}) 
     
             g2b_fit_paras = save_g2_fit_para_tocsv(g2_fit_resultb, 
                     filename= uid_  + '_g2b_fit_paras.csv', path=data_dir )
-                
-            D0b, qrate_fit_resb = get_q_rate_fit_general(  qval_dict, g2b_fit_paras['relaxation_rate'],
-                                    fit_range=None,  geometry= scat_geometry )
+    
             
-
-            #print( qval_dict,   g2b_fit_paras['relaxation_rate'],  qrate_fit_resb )
-            plot_q_rate_fit_general( qval_dict, g2b_fit_paras['relaxation_rate'],  qrate_fit_resb,   
-                      geometry= scat_geometry,uid=uid_ +'_two_time' , path= data_dir )
-            
-       
-        
             plot_g2_general( g2_dict={1:g2b, 2:g2_fitb}, taus_dict={1:tausb, 2:taus_fitb},vlim=[0.95, 1.05],
                 qval_dict=qval_dict, fit_res= g2_fit_resultb,  geometry=scat_geometry,filename=uid_+'_g2', 
                     path= data_dir, function= fit_g2_func,  ylabel='g2', append_name=  '_b_fit')
@@ -1267,8 +721,6 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
                 qval_dict=qval_dict, g2_labels=['from_one_time', 'from_two_time'],
             geometry=scat_geometry,filename=uid_+'_g2_two_g2', path= data_dir, ylabel='g2', )
 
-                
-                
         # Four Time Correlation
 
         if run_four_time: #have to run one and two first
@@ -1282,30 +734,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
             plot_g2_general( g2_dict={1:g4}, taus_dict={1:taus4},vlim=[0.95, 1.05], qval_dict=qval_dict, fit_res= None, 
                         geometry=scat_geometry,filename=uid_+'_g4',path= data_dir,   ylabel='g4')
 
-        if run_dose:
-            get_two_time_mulit_uids( [uid], roi_mask,  norm= norm,  bin_frame_number=bin_frame_number, 
-                        path= data_dir0, force_generate=False )        
-            N = len(imgs)
-            try:
-                tr = md['transmission']
-            except:
-                tr = 1
-            if 'dose_frame' in list(run_pargs.keys()):
-                dose_frame = run_pargs['dose_frame']
-            else:
-                dose_frame =  np.int_([    N/8, N/4 ,N/2, 3*N/4, N*0.99 ] )
-                 #N/32, N/16, N/8, N/4 ,N/2, 3*N/4, N*0.99
-            exposure_dose = tr * exposuretime * dose_frame
-            taus_uids, g2_uids = get_series_one_time_mulit_uids( [ uid ],  qval_dict, good_start=good_start,  
-                    path= data_dir0, exposure_dose = exposure_dose,  num_bufs =8, save_g2= False,
-                                                   dead_time = 0, trans = [ tr ] )
-            
-            plot_dose_g2( taus_uids, g2_uids, ylim=[0.95, 1.2], vshift= 0.00,
-                 qval_dict = qval_dict, fit_res= None,  geometry= scat_geometry,
-                 filename= '%s_dose_analysis'%uid_, 
-                path= data_dir, function= None,  ylabel='g2_Dose', g2_labels= None, append_name=  '' )
-            
-        # Speckel Visiblity
+        # Speckel Visiblity   
         if run_xsvs:    
             max_cts = get_max_countc(FD, roi_mask )
             qind, pixelist = roi.extract_label_indices(   roi_mask  )
@@ -1372,8 +801,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
    
 
         
-        
-        
+    
         md['mask_file']= mask_path + mask_name
         md['mask'] = mask
         md['NOTEBOOK_FULL_PATH'] = None
@@ -1408,7 +836,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
         md['beg'] = FD.beg
         md['end'] = FD.end
         md['metadata_file'] = data_dir + 'md.csv-&-md.pkl'
-        psave_obj(  md, data_dir + 'uid=%s_md'%uid[:6] ) #save the setup parameters
+        psave_obj(  md, data_dir + 'uid=%s_md'%uid ) #save the setup parameters
         save_dict_csv( md,  data_dir + 'uid=%s_md.csv'%uid, 'w')
 
         Exdt = {} 
@@ -1456,12 +884,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
         if run_xsvs:
             pdf_filename = "XPCS_XSVS_Analysis_Report_for_uid=%s%s.pdf"%(uid,pdf_version)
         #pdf_filename
-        
-        print(  data_dir, uid[:6], pdf_out_dir, pdf_filename, username )
-        
-        make_pdf_report( data_dir, uid[:6], pdf_out_dir, pdf_filename, username, 
-                        run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs, run_dose=run_dose,
-                        report_type= scat_geometry
+        make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username, 
+                        run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs, report_type= scat_geometry
                        ) 
         ## Attach the PDF report to Olog 
         if att_pdf_report:
@@ -1478,8 +902,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
             plt.show()   
         #else:
         #    plt.close('all')
-        if clear_plot:
-            plt.close('all')
+
         if return_res:
             res = {}
             if scat_geometry == 'saxs': 

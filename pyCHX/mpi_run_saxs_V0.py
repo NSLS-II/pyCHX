@@ -1,8 +1,8 @@
 #mpiexec -n 4 python mpi_run_saxs_V0.py
 
 
-from chxanalys.chx_packages import *
-from chxanalys.chx_xpcs_xsvs_jupyter import run_xpcs_xsvs_single
+from pyCHX.chx_packages import *
+from pyCHX.chx_xpcs_xsvs_jupyter import run_xpcs_xsvs_single
 
 
 

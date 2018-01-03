@@ -30,7 +30,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 #from reportlab.platypus import Image, Paragraph, Table
 
 from reportlab.lib.pagesizes import letter, A4
-from chxanalys.chx_generic_functions import (pload_obj )
+from pyCHX.chx_generic_functions import (pload_obj )
 
 
 from PIL import Image

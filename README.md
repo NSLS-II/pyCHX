@@ -1,14 +1,15 @@
-chxanalys--CHX XPCS Data Analysis Packages
+pyCHX -- CHX XPCS Data Analysis Packages
 ========
 
 Repository for data collection and analysis scripts that are useful at the
-CHX beamline at NSLS-II (11-id).
+CHX beamline at NSLS-II (11-ID).
 
 Installation instructions on Linux:
 
-Install miniconda from https://conda.io/miniconda.html. Then create the environment for chxanalys:
+Install miniconda from https://conda.io/miniconda.html. Then create the environment for pyCHX:
 
-conda create --name chxanalys python=3.6 numpy scipy matplotlib
-source activate databroker
-pip install -r https://raw.githubusercontent.com/yugangzhang/chxanalys/master/requirements.txt
-pip install git+https://github.com/yugangzhang/chxanalys
+conda create --name pyCHX python=3.6 numpy scipy matplotlib
+source activate pyCHX
+pip install -r https://raw.githubusercontent.com/NSLS-II-CHX/pyCHX/master/requirements.txt
+pip install git+https://github.com/NSLS-II/pyCHX
+

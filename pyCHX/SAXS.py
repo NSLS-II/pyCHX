@@ -10,8 +10,8 @@ This module is for the static SAXS analysis, such as fit form factor
 #import matplotlib as mpl
 #import matplotlib.pyplot as plt
 #from matplotlib.colors import LogNorm
-from chxanalys.chx_libs import *
-from chxanalys.chx_generic_functions import show_img, plot1D, find_index
+from pyCHX.chx_libs import *
+from pyCHX.chx_generic_functions import show_img, plot1D, find_index
 from scipy.special import gamma, gammaln
 from scipy.optimize import leastsq
 
@@ -592,6 +592,6 @@ def exm_plot():
     #plot1D( iq, q, logy=True, xlim=[0.0001, .01], ylim=[1E-3,1E4], ax=ax, legend='data')
     #plot1D( ff, q, logy=True, xlim=[0.0001, .01], ax=ax, legend='cal')
 
-    #%run /XF11ID/analysis/Analysis_Pipelines/Develop/chxanalys/chxanalys/XPCS_SAXS.py
-    #%run /XF11ID/analysis/Analysis_Pipelines/Develop/chxanalys/chxanalys/chx_generic_functions.py
-    #%run /XF11ID/analysis/Analysis_Pipelines/Develop/chxanalys/chxanalys/SAXS.py
+    #%run /XF11ID/analysis/Analysis_Pipelines/Develop/pyCHX/pyCHX/XPCS_SAXS.py
+    #%run /XF11ID/analysis/Analysis_Pipelines/Develop/pyCHX/pyCHX/chx_generic_functions.py
+    #%run /XF11ID/analysis/Analysis_Pipelines/Develop/pyCHX/pyCHX/SAXS.py
