@@ -1,2 +1,4 @@
 def test_import():
-    from chx_libs import *
+    # test handler import
+    # this is mainly an example
+    from pyCHX.chx_libs import EigerHandler
