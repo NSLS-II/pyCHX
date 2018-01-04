@@ -1,12 +1,12 @@
-cython
+numpy
 databroker
 lmfit
 matplotlib
-numpy
 pandas
 pillow
 pyyaml
 scipy
+cython
 tifffile
 
 git+https://github.com/scikit-beam/scikit-beam.git#egg=scikit-beam

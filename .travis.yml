@@ -6,8 +6,10 @@ matrix:
 
 install:
   - pip install .
+    # need this because some requirements are pulled from git
+    # which is ignored in the setup.py file
+  - pip install -r requirements.txt
   - pip install -r test-requirements.txt
-  - pip install codecov
 
 script:
   - coverage run run_tests.py
