@@ -1,0 +1,16 @@
+# dummy file
+metadatastore:
+    module: databroker.headersource.mongo
+    class: MDS
+    config:
+        host: localhost
+        database: datastore
+        port: 27017
+        timezone: 'US/Eastern'
+assets:
+    module: databroker.assets.mongo
+    class: Registry
+    config:
+        host: localhost
+        database: filestore
+        port: 27017

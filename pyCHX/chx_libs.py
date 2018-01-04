@@ -17,7 +17,7 @@ from modest_image import imshow
 from chxtools.handlers import EigerHandler
 
 from databroker import DataBroker as db, get_images, get_table, get_events, get_fields
-from filestore.path_only_handlers import RawHandler 
+from databroker.assets.path_only_handlers import RawHandler
 ## Import all the required packages for  Data Analysis
 
 #* scikit-beam - data analysis tools for X-ray science 
