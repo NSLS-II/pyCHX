@@ -13,6 +13,8 @@ install:
     # make a fake instance of databroker (so imports work)
   - mkdir -p ~/.config/databroker
   - cp extra/_legacy_config.yml ~/.config/databroker/_legacy_config.yml
+    # copy this dummy file to chx.yml as well (this should be correct usage)
+  - cp extra/_legacy_config.yml ~/.config/databroker/chx.yml
 
 script:
   - coverage run run_tests.py
