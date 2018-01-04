@@ -13,3 +13,5 @@ git+https://github.com/scikit-beam/scikit-beam.git#egg=scikit-beam
 git+https://github.com/NSLS-II-CHX/eiger-io.git#eiger-io
 git+https://github.com/NSLS-II-CHX/chxtools.git#egg=chxtools
 git+https://github.com/Nikea/xray-vision.git#Xray-vision
+git+https://github.com/ChrisBeaumont/mpl-modest-image
+
