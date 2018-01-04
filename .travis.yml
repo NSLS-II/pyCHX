@@ -1,0 +1,17 @@
+language: python
+
+matrix:
+  include:
+    - python: 3.6
+
+install:
+  - pip install .
+  - pip install -r test-requirements.txt
+  - pip install codecov
+
+script:
+  - coverage run run_tests.py
+  - coverage report -m
+
+after_success:
+  - codecov
