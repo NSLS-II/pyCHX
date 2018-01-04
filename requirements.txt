@@ -9,6 +9,7 @@ scipy
 cython
 tifffile
 tqdm
+ipython
 
 git+https://github.com/scikit-beam/scikit-beam.git#egg=scikit-beam
 git+https://github.com/NSLS-II-CHX/eiger-io.git#eiger-io

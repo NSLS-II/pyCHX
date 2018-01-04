@@ -12,7 +12,7 @@ install:
   - pip install -r test-requirements.txt
     # make a fake instance of databroker (so imports work)
   - mkdir -p ~/.config/databroker
-  - cp extras/_legacy_config.yml ~/.config/databroker/_legacy_config.yml
+  - cp extra/_legacy_config.yml ~/.config/databroker/_legacy_config.yml
 
 script:
   - coverage run run_tests.py
