@@ -1,6 +1,4 @@
 from databroker import DataBroker as db, get_images, get_table, get_events, get_fields
-from filestore.api import register_handler, deregister_handler
-#from filestore.retrieve import _h_registry, _HANDLER_CACHE, HandlerBase
 from eiger_io.pims_reader import EigerImages
 from chxtools import handlers
 
