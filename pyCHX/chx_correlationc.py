@@ -89,9 +89,93 @@ def _one_time_process(buf, G, past_intensity_norm, future_intensity_norm,
                 binned = np.bincount(label_array, weights=w)[1:]
                 #nonz = np.where(w)[0]
                 #binned = np.bincount(label_array[nonz], weights=w[nonz], minlength=maxqind+1 )[1:] 
-                
                 arr[t_index] += ((binned / num_pixels -
                                   arr[t_index]) / normalize)
+    return None  # modifies arguments in place!
+
+
+
+def _one_time_process_error(buf, G, past_intensity_norm, future_intensity_norm,
+                      label_array, num_bufs, num_pixels, img_per_level,
+                      level, buf_no, norm, lev_len,
+                      G_err, past_intensity_norm_err, future_intensity_norm_err ):
+    """Reference implementation of the inner loop of multi-tau one time
+    correlation with the calculation of errorbar (statistical error due to multipixel measurements ) 
+    The statistical error: var( g2(Q) ) =  sum( [g2(Qi)- g2(Q)]^2 )/N(N-1), Lumma, RSI, 2000
+    This helper function calculates G, past_intensity_norm and
+    future_intensity_norm at each level, symmetric normalization is used.
+    .. warning :: This modifies inputs in place.
+    Parameters
+    ----------
+    buf : array
+        image data array to use for correlation
+    G : array
+        matrix of auto-correlation function without normalizations
+    past_intensity_norm : array
+        matrix of past intensity normalizations
+    future_intensity_norm : array
+        matrix of future intensity normalizations
+    label_array : array
+        labeled array where all nonzero values are ROIs
+    num_bufs : int, even
+        number of buffers(channels)
+    num_pixels : array
+        number of pixels in certain ROI's
+        ROI's, dimensions are : [number of ROI's]X1
+    img_per_level : array
+        to track how many images processed in each level
+    level : int
+        the current multi-tau level
+    buf_no : int
+        the current buffer number
+    norm : dict
+        to track bad images
+    lev_len : array
+        length of each level
+    Notes
+    -----
+    .. math::
+        G = <I(\tau)I(\tau + delay)>
+    .. math::
+        past_intensity_norm = <I(\tau)>
+    .. math::
+        future_intensity_norm = <I(\tau + delay)>
+    """
+    img_per_level[level] += 1
+    # in multi-tau correlation, the subsequent levels have half as many
+    # buffers as the first
+    i_min = num_bufs // 2 if level else 0
+    #maxqind=G.shape[1]
+    for i in range(i_min, min(img_per_level[level], num_bufs)):
+        # compute the index into the autocorrelation matrix
+        t_index = int( level * num_bufs / 2 + i )
+        delay_no = (buf_no - i) % num_bufs
+        # get the images for correlating
+        past_img = buf[level, delay_no]
+        future_img = buf[level, buf_no]
+        # find the normalization that can work both for bad_images
+        #  and good_images
+        ind = int(t_index - lev_len[:level].sum())
+        normalize = img_per_level[level] - i - norm[level+1][ind]
+        # take out the past_ing and future_img created using bad images
+        # (bad images are converted to np.nan array)
+        if np.isnan(past_img).any() or np.isnan(future_img).any():
+            norm[level + 1][ind] += 1
+        else:
+               
+            #for w, arr in zip([past_img*future_img, past_img, future_img],
+            #                  [G, past_intensity_norm, future_intensity_norm,                               
+            #                  ]):
+            #    binned = np.bincount(label_array, weights=w)[1:]
+            #    #nonz = np.where(w)[0]
+            #    #binned = np.bincount(label_array[nonz], weights=w[nonz], minlength=maxqind+1 )[1:] 
+            #    arr[t_index] += ((binned / num_pixels -
+            #                      arr[t_index]) / normalize)
+            for w, arr in zip([past_img*future_img, past_img, future_img],
+                              [
+                                  G_err, past_intensity_norm_err, future_intensity_norm_err,
+                              ]):  
+                arr[t_index] +=  ( w - arr[t_index]) / normalize                
     return None  # modifies arguments in place!
 
 
@@ -116,6 +200,28 @@ _internal_state = namedtuple(
      'norm',
      'lev_len']
 )
+
+_internal_state_err = namedtuple(
+    'correlation_state',
+    ['buf',
+     'G',
+     'past_intensity',
+     'future_intensity',     
+     'img_per_level',
+     'label_array',
+     'track_level',
+     'cur',
+     'pixel_list',
+     'num_pixels',
+     'lag_steps',
+     'norm',
+     'lev_len',
+     'G_all',
+     'past_intensity_all',
+     'future_intensity_all'  
+    ]
+)
+
 
 _two_time_internal_state = namedtuple(
     'two_time_correlation_state',
@@ -215,7 +321,7 @@ def _validate_and_transform_inputs(num_bufs, num_levels, labels):
             lag_steps, buf, img_per_level, track_level, cur,
             norm, lev_len)
 
-def _init_state_one_time(num_levels, num_bufs, labels):
+def _init_state_one_time(num_levels, num_bufs, labels, cal_error = False):
     """Initialize a stateful namedtuple for the generator-based multi-tau
      for one time correlation
     Parameters
@@ -245,22 +351,48 @@ def _init_state_one_time(num_levels, num_bufs, labels):
     past_intensity = np.zeros_like(G)
     # matrix for normalizing G into g2
     future_intensity = np.zeros_like(G)
-
-    return _internal_state(
-        buf,
-        G,
-        past_intensity,
-        future_intensity,
-        img_per_level,
-        label_array,
-        track_level,
-        cur,
-        pixel_list,
-        num_pixels,
-        lag_steps,
-        norm,
-        lev_len,
-    )
+    if cal_error:
+        G_all = np.zeros(( int( (num_levels + 1) * num_bufs / 2), len(pixel_list)),
+                 dtype=np.float64)
+        
+        # matrix for normalizing G into g2
+        past_intensity_all = np.zeros_like(G_all)
+        # matrix for normalizing G into g2
+        future_intensity_all = np.zeros_like(G_all)         
+        return _internal_state_err(
+            buf,
+            G,
+            past_intensity,
+            future_intensity,
+            img_per_level,
+            label_array,
+            track_level,
+            cur,
+            pixel_list,
+            num_pixels,
+            lag_steps,
+            norm,
+            lev_len,
+            G_all,
+            past_intensity_all,
+            future_intensity_all            
+            )
+    else:
+        return _internal_state(
+            buf,
+            G,
+            past_intensity,
+            future_intensity,
+            img_per_level,
+            label_array,
+            track_level,
+            cur,
+            pixel_list,
+            num_pixels,
+            lag_steps,
+            norm,
+            lev_len,
+        )
 
 
 def fill_pixel( p, v, pixelist):    
@@ -273,7 +405,7 @@ def fill_pixel( p, v, pixelist):
     
     
 def lazy_one_time(FD, num_levels, num_bufs, labels,
-                  internal_state=None, bad_frame_list=None, imgsum=None, norm = None ):
+                  internal_state=None, bad_frame_list=None, imgsum=None, norm = None, cal_error=False ):
     
     """Generator implementation of 1-time multi-tau correlation
     If you do not want multi-tau correlation, set num_levels to 1 and
@@ -287,6 +419,7 @@ If `weights` is specified the input array is weighted by it, i.e. if a
 value ``n`` is found at position ``i``, ``out[n] += weight[i]`` instead
 of ``out[n] += 1``.
 
+    Jan 2, 2018 YG. Add error bar calculation
 
     Parameters
     ----------
@@ -346,7 +479,7 @@ Returns
     """
 
     if internal_state is None:
-        internal_state = _init_state_one_time(num_levels, num_bufs, labels)
+        internal_state = _init_state_one_time(num_levels, num_bufs, labels, cal_error)
     # create a shorthand reference to the results and state named tuple
     s = internal_state
 
@@ -396,7 +529,13 @@ Returns
         # (undownsampled) frames. This modifies G,
         # past_intensity, future_intensity,
         # and img_per_level in place!
-        _one_time_process(s.buf, s.G, s.past_intensity, s.future_intensity,
+        if cal_error:
+            _one_time_process_error(s.buf, s.G, s.past_intensity, s.future_intensity,
+                          s.label_array, num_bufs, s.num_pixels,
+                          s.img_per_level, level, buf_no, s.norm, s.lev_len,
+                                   s.G_all, s.past_intensity_all, s.future_intensity_all)            
+        else:            
+            _one_time_process(s.buf, s.G, s.past_intensity, s.future_intensity,
                           s.label_array, num_bufs, s.num_pixels,
                           s.img_per_level, level, buf_no, s.norm, s.lev_len)
 
@@ -425,10 +564,16 @@ Returns
                 # than one. This is modifying things in place. See comment
                 # on previous call above.
                 buf_no = s.cur[level] - 1
-                _one_time_process(s.buf, s.G, s.past_intensity,
-                                  s.future_intensity, s.label_array, num_bufs,
-                                  s.num_pixels, s.img_per_level, level, buf_no,
-                                  s.norm, s.lev_len)
+                if cal_error:
+                    _one_time_process_error(s.buf, s.G, s.past_intensity, s.future_intensity,
+                                  s.label_array, num_bufs, s.num_pixels,
+                                  s.img_per_level, level, buf_no, s.norm, s.lev_len,
+                                           s.G_all, s.past_intensity_all, s.future_intensity_all)            
+                else:            
+                    _one_time_process(s.buf, s.G, s.past_intensity, s.future_intensity,
+                                  s.label_array, num_bufs, s.num_pixels,
+                                  s.img_per_level, level, buf_no, s.norm, s.lev_len)
+
                 level += 1
 
                 # Checking whether there is next level for processing
@@ -437,14 +582,21 @@ Returns
         # If any past intensities are zero, then g2 cannot be normalized at
         # those levels. This if/else code block is basically preventing
         # divide-by-zero errors.
-        if len(np.where(s.past_intensity == 0)[0]) != 0:
-            g_max = np.where(s.past_intensity == 0)[0][0]
+        if not cal_error: 
+            if len(np.where(s.past_intensity == 0)[0]) != 0:
+                g_max1 = np.where(s.past_intensity == 0)[0][0]
+            else:
+                g_max1 = s.past_intensity.shape[0]    
+            if len(np.where(s.future_intensity == 0)[0]) != 0:
+                g_max2 = np.where(s.future_intensity == 0)[0][0]
+            else:
+                g_max2 = s.future_intensity.shape[0]    
+            g_max = min( g_max1, g_max2)     
+            g2 = (s.G[:g_max] / (s.past_intensity[:g_max] *
+                                 s.future_intensity[:g_max]))
+            yield results(g2, s.lag_steps[:g_max], s)   
         else:
-            g_max = s.past_intensity.shape[0]
-
-        g2 = (s.G[:g_max] / (s.past_intensity[:g_max] *
-                             s.future_intensity[:g_max]))
-        yield results(g2, s.lag_steps[:g_max], s)
+            yield results(None,s.lag_steps, s)
 
 
 
@@ -492,7 +644,7 @@ def auto_corr_scat_factor(lags, beta, relaxation_rate, baseline=1):
  
 
 def multi_tau_auto_corr(num_levels, num_bufs, labels, images, bad_frame_list=None, 
-                        imgsum=None, norm=None ):
+                        imgsum=None, norm=None,cal_error=False ):
     """Wraps generator implementation of multi-tau
     Original code(in Yorick) for multi tau auto correlation
     author: Mark Sutton
@@ -504,11 +656,13 @@ def multi_tau_auto_corr(num_levels, num_bufs, labels, images, bad_frame_list=Non
     unchanged.
     """
     gen = lazy_one_time(images, num_levels, num_bufs, labels,bad_frame_list=bad_frame_list, imgsum=imgsum,
-                       norm=norm )
+                       norm=norm,cal_error=cal_error )
     for result in gen:
         pass
-    return result.g2, result.lag_steps
-
+    if cal_error:
+        return result.g2, result.lag_steps, result.internal_state
+    else:    
+        return result.g2, result.lag_steps
 
 def  multi_tau_two_time_auto_corr(num_lev, num_buf, ring_mask, FD, bad_frame_list =None, 
                                          imgsum= None, norm = None ):
@@ -879,7 +1033,7 @@ def cal_c12c( FD, ring_mask,
 
 
 def cal_g2c( FD, ring_mask, 
-           bad_frame_list=None,good_start=0, num_buf = 8, num_lev = None, imgsum=None, norm=None ):
+           bad_frame_list=None,good_start=0, num_buf = 8, num_lev = None, imgsum=None, norm=None,cal_error=False ):
     '''calculation g2 by using a multi-tau algorithm'''
     
     #noframes = FD.end - good_start   # number of frames, not "no frames"    
@@ -898,13 +1052,56 @@ def cal_g2c( FD, ring_mask,
                                               range(good_start, FD.end)))[0]) 
             
     print ('%s frames will be processed...'%(noframes))
+    if cal_error:
+        g2, lag_steps, s =  multi_tau_auto_corr(num_lev, num_buf,   ring_mask, FD, bad_frame_list, 
+                                         imgsum=imgsum, norm = norm,cal_error=cal_error ) 
+        
+        g2 = np.zeros_like( s.G )
+        g2_err = np.zeros_like(g2)         
+        qind, pixelist = extract_label_indices(ring_mask)  
+        noqs = len(np.unique(qind))
+        nopr = np.bincount(qind, minlength=(noqs+1))[1:]
+        Ntau, Nq = s.G.shape    
+        g_max = 1e30
+        for qi in range(1,1+Nq):              
+            pixelist_qi =  np.where( qind == qi)[0] 
+            s_Gall_qi =    s.G_all[:,pixelist_qi] 
+            s_Pall_qi =    s.past_intensity_all[:,pixelist_qi] 
+            s_Fall_qi =    s.future_intensity_all[:,pixelist_qi] 
+            avgGi = (np.average( s_Gall_qi, axis=1)) 
+            devGi = (np.std( s_Gall_qi, axis=1))
+            avgPi = (np.average( s_Pall_qi, axis=1)) 
+            devPi = (np.std( s_Pall_qi, axis=1))
+            avgFi = (np.average( s_Fall_qi, axis=1)) 
+            devFi = (np.std( s_Fall_qi, axis=1))
+            
+            if len(np.where(avgPi == 0)[0]) != 0:
+                g_max1 = np.where(avgPi == 0)[0][0]
+            else:
+                g_max1 = avgPi.shape[0]    
+            if len(np.where(avgFi == 0)[0]) != 0:
+                g_max2 = np.where(avgFi == 0)[0][0]
+            else:
+                g_max2 = avgFi.shape[0]    
+            g_max = min( g_max1, g_max2)   
+            #print(g_max)                
+            #g2_ = (s.G[:g_max] / (s.past_intensity[:g_max] *
+            #                             s.future_intensity[:g_max]))
+            g2[:g_max,qi-1] =   avgGi[:g_max]/( avgPi[:g_max] * avgFi[:g_max] )           
+            g2_err[:g_max,qi-1] = np.sqrt( 
+                ( 1/ ( avgFi[:g_max] * avgPi[:g_max] ))**2 * devGi[:g_max] ** 2 +
+                ( avgGi[:g_max]/ ( avgFi[:g_max]**2 * avgPi[:g_max] ))**2 * devFi[:g_max] ** 2 +
+                ( avgGi[:g_max]/ ( avgFi[:g_max] * avgPi[:g_max]**2 ))**2 * devPi[:g_max] ** 2 
+                            )      
+          
+        print( 'G2 with error bar calculation DONE!')
+        return g2[:g_max,:], lag_steps[:g_max], g2_err[:g_max,:]/np.sqrt(nopr), s
+    else:        
+        g2, lag_steps =  multi_tau_auto_corr(num_lev, num_buf,   ring_mask, FD, bad_frame_list, 
+                                         imgsum=imgsum, norm = norm,cal_error=cal_error )
 
-    g2, lag_steps =  multi_tau_auto_corr(num_lev, num_buf,   ring_mask, FD, bad_frame_list, 
-                                         imgsum=imgsum, norm = norm )
-
-    print( 'G2 calculation DONE!')
-
-    return g2, lag_steps
+        print( 'G2 calculation DONE!')
+        return g2, lag_steps
 
 
 
