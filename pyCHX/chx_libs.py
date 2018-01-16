@@ -1,7 +1,7 @@
 """
-Dec 10, 2015 Developed by Y.G.@CHX 
+Dec 10, 2015 Developed by Y.G.@CHX
 yuzhang@bnl.gov
-This module is for the necessary packages for the XPCS analysis 
+This module is for the necessary packages for the XPCS analysis
 """
 
 from IPython.core.magics.display import Javascript
@@ -11,16 +11,15 @@ from skbeam.core.utils import multi_tau_lags
 
 from skimage.draw import line_aa, line, polygon, ellipse, circle
 from modest_image import imshow
-
 # edit handlers here to switch to PIMS or dask
 # this does the databroker import
-from chxtools.handlers import EigerHandler
-
+#from chxtools.handlers import EigerHandler
+from eiger_io.fs_handler import EigerHandler 
 from databroker import DataBroker as db, get_images, get_table, get_events, get_fields
 from databroker.assets.path_only_handlers import RawHandler
 ## Import all the required packages for  Data Analysis
 
-#* scikit-beam - data analysis tools for X-ray science 
+#* scikit-beam - data analysis tools for X-ray science
 #    - https://github.com/scikit-beam/scikit-beam
 #* xray-vision - plotting helper functions for X-ray science
 #    - https://github.com/Nikea/xray-vision
@@ -30,7 +29,7 @@ import xray_vision
 import matplotlib.cm as mcm
 import copy
 
-import xray_vision.mpl_plotting as mpl_plot  
+import xray_vision.mpl_plotting as mpl_plot
 from xray_vision.mpl_plotting import speckle
 from xray_vision.mask.manual_mask import ManualMask
 
@@ -127,7 +126,7 @@ colors = np.array( ['darkorange', 'mediumturquoise', 'seashell', 'mediumaquamari
            'mediumpurple', 'lightslategrey',   'seagreen', 
            'silver', 'darkmagenta', 'darkslategrey', 'darkgoldenrod', 'rosybrown', 
            'goldenrod',   'darkturquoise', 'plum',
-                 'purple',   'olive', 'gold','powderblue',  'peachpuff','violet', 'lime',  'greenyellow', 'tan',    'skyblue',
+                 'purple', 'olive', 'gold', 'powderblue',  'peachpuff','violet', 'lime',  'greenyellow', 'tan',    'skyblue',
                     'magenta',   'black', 'brown',   'green', 'cyan', 'red','blue'] *100 )
 
 colors = colors[::-1]
