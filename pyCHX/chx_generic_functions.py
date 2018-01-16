@@ -3428,7 +3428,8 @@ def get_short_long_labels_from_qval_dict(qval_dict, geometry='saxs'):
     
     
 
-def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='saxs',filename='g2', 
+def plot_g2_general( g2_dict, taus_dict, qval_dict, g2_err_dict = None, 
+                    fit_res=None,  geometry='saxs',filename='g2', 
                     path=None, function='simple_exponential',  g2_labels=None, 
                     fig_ysize= 12, qth_interest = None,
                     ylabel='g2',  return_fig=False, append_name='', outsize=(2000, 2400), 
@@ -3436,6 +3437,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                     qphi_analysis = False,
                     *argv,**kwargs):    
     '''
+    Jan 10, 2018 add g2_err_dict option to plot g2 with error bar  
     Oct31, 2017 add qth_interest option  
     
     Dec 26,2016, Y.G.@CHX
@@ -3667,15 +3669,26 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                         x = taus_dict_[k][nlst]
                         if ki==0:
                             ymin,ymax = min(y), max(y[1:])
-                        if g2_labels is None:                             
-                            ax.semilogx(x, y, m, color=c,  markersize=6) 
-                        else:
-                            #print('here ki ={} nlst = {}'.format( ki, nlst ))
-                            if nlst==0:
-                                ax.semilogx(x, y, m,  color=c,markersize=6, label=g2_labels[ki]) 
+                        if g2_err_dict is None:    
+                            if g2_labels is None:                             
+                                ax.semilogx(x, y, m, color=c,  markersize=6) 
                             else:
-                                ax.semilogx(x, y, m,  color=c,markersize=6)
-                                
+                                #print('here ki ={} nlst = {}'.format( ki, nlst ))
+                                if nlst==0:
+                                    ax.semilogx(x, y, m,  color=c,markersize=6, label=g2_labels[ki]) 
+                                else:
+                                    ax.semilogx(x, y, m,  color=c,markersize=6)
+                        else:
+                            yerr= g2_err_dict[k][nlst][:, l_ind ]
+                            if g2_labels is None:
+                                ax.errorbar(x, y, yerr=yerr, fmt=m,color=c,  markersize=6) 
+                            else:
+                                if nlst==0:
+                                    ax.errorbar(x, y, yerr=yerr, fmt=m,
+                                                color=c,markersize=6, label=g2_labels[ki]) 
+                                else:
+                                    ax.errorbar(x, y, yerr=yerr, fmt=m, color=c,markersize=6) 
+                            ax.set_xscale("log", nonposx='clip') 
                         if nlst==0:
                             if l_ind==0:
                                 ax.legend(loc='best', fontsize = 8, fancybox=True, framealpha=0.5)             
@@ -3684,13 +3697,23 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
                     y=g2_dict_[k][:, l_ind ]    
                     x = taus_dict_[k]
                     if ki==0:
-                        ymin,ymax = min(y), max(y[1:])
-                    if g2_labels is None:    
-                        ax.semilogx(x, y, m, color=c,  markersize=6) 
+                        ymin,ymax = min(y), max(y[1:])                        
+                    if g2_err_dict is None:       
+                        if g2_labels is None:    
+                            ax.semilogx(x, y, m, color=c,  markersize=6) 
+                        else:
+                            ax.semilogx(x, y, m,  color=c,markersize=6, label=g2_labels[ki])    
                     else:
-                        ax.semilogx(x, y, m,  color=c,markersize=6, label=g2_labels[ki]) 
-                        if l_ind==0:
-                            ax.legend(loc='best', fontsize = 8, fancybox=True, framealpha=0.5)                   
+                        yerr= g2_err_dict[k][:, l_ind ]
+                        #print(x.shape, y.shape, yerr.shape)
+                        #print(yerr)
+                        if g2_labels is None: 
+                            ax.errorbar(x, y, yerr=yerr, fmt=m,color=c,  markersize=6)
+                        else:
+                            ax.errorbar(x, y, yerr=yerr, fmt=m,color=c,  markersize=6,label=g2_labels[ki] )
+                        ax.set_xscale("log", nonposx='clip') 
+                    if l_ind==0:
+                        ax.legend(loc='best', fontsize = 8, fancybox=True, framealpha=0.5) 
 
             if fit_res_ is not None:
                 result1 = fit_res_[l_ind]    
@@ -3799,6 +3822,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, fit_res=None,  geometry='sax
         combine_images( fps, outputfile, outsize= outsize )    
     if return_fig:
         return fig   
+    
     
 
 def power_func(x, D0, power=2):
