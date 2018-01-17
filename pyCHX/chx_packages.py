@@ -9,7 +9,8 @@ from pyCHX.chx_libs import (cmap_vge, cmap_albula, Javascript, EigerHandler, Eig
                                 h5py)
 
 
-
+from pyCHX.chx_handlers import use_pims, use_dask
+use_pims(db)  #use pims for importing eiger data, register_handler 'AD_EIGER2' and 'AD_EIGER'
 
 from pyCHX.chx_generic_functions import (get_detector, get_fields, get_sid_filenames,  
     load_data, load_mask,get_fields, reverse_updown, ring_edges,get_avg_img,check_shutter_open,
@@ -61,7 +62,7 @@ from pyCHX.chx_compress_analysis import ( compress_eigerdata, read_compressed_ei
 
 from pyCHX.SAXS import fit_form_factor,show_saxs_qmap
 from pyCHX.chx_correlationc import ( cal_g2c,Get_Pixel_Arrayc,auto_two_Arrayc,get_pixelist_interp_iq,)
-from pyCHX.chx_correlationp import (cal_g2p, auto_two_Arrayp)
+from pyCHX.chx_correlationp import (cal_g2p, auto_two_Arrayp,_one_time_process_errorp)
 
 from pyCHX.Create_Report import (create_pdf_report, 
                             create_multi_pdf_reports_for_uids,create_one_pdf_reports_for_uids,
