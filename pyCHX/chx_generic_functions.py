@@ -1381,10 +1381,11 @@ def get_meta_data( uid,*argv,**kwargs ):
     '''
 
     import time   
+    header = db[uid]
     md ={}
-    md['detector'] = get_detector( db[uid] )
+    md['detector'] = get_detector( header )
     md['suid'] = uid  #short uid
-    md['filename'] = get_sid_filenames(db[uid])[2][0]
+    md['filename'] = get_sid_filenames(header)[2][0]
 
     devices = list(header.devices())
     if len(devices) > 1:
@@ -1770,8 +1771,8 @@ def load_data(uid, detector='eiger4m_single_image', fill=True, reverse=False):
         raise Exception("Failed after {} repeated attempts".format(ATTEMPTS))
         
     # TODO(mrakitin): replace with the lazy loader (when it's implemented):
-    imgs = db.get_images(hdr, detector)    
-    # imgs = list(hdr.data( detector ) )
+    #imgs = db.get_images(hdr, detector)
+    imgs = list(hdr.data( detector ) )
     
     if len(imgs[0])>=1:
         md = imgs[0].md
