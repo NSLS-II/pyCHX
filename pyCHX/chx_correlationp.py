@@ -4,31 +4,21 @@ yuzhang@bnl.gov
 This module is for parallel computation of time correlation
 """
 from __future__ import absolute_import, division, print_function
-
 from skbeam.core.utils import multi_tau_lags
 from skbeam.core.roi import extract_label_indices
-
 from pyCHX.chx_libs import tqdm
 from pyCHX.chx_correlationc import (  get_pixelist_interp_iq, _validate_and_transform_inputs,
-                 _one_time_process as _one_time_processp,   
+                 _one_time_process as _one_time_processp,   _one_time_process_error as _one_time_process_errorp,
                 _two_time_process  as _two_time_processp )
-
-
-
 from pyCHX.chx_compress import ( run_dill_encoded,apply_async, map_async,pass_FD, go_through_FD  ) 
-
-
 from multiprocessing import Pool
 import dill
 from collections import namedtuple
-
 import numpy as np
 import skbeam.core.roi as roi
 import sys
-
 import logging
 logger = logging.getLogger(__name__)
-
 
 
     
@@ -302,8 +292,13 @@ def cal_c12p( FD, ring_mask, bad_frame_list=None,
 
 class _internal_statep():
     
-    def __init__(self, num_levels, num_bufs, labels):
+    def __init__(self, num_levels, num_bufs, labels, cal_error = False):
+        '''YG. DEV Nov, 2016, Initialize class for the generator-based multi-tau
+     for one time correlation
+     
+          Jan 1, 2018, Add cal_error option to calculate signal to noise to one time correaltion
         
+        '''
         (label_array, pixel_list, num_rois, num_pixels, lag_steps, buf,
      img_per_level, track_level, cur, norm,
      lev_len) = _validate_and_transform_inputs(num_bufs, num_levels, labels)
@@ -313,8 +308,7 @@ class _internal_statep():
         # matrix for normalizing G into g2
         past_intensity = np.zeros_like(G)
         # matrix for normalizing G into g2
-        future_intensity = np.zeros_like(G)
-
+        future_intensity = np.zeros_like(G)        
         (self.buf,
         self.G,
         self.past_intensity,
@@ -340,6 +334,14 @@ class _internal_statep():
         lag_steps,
         norm,
         lev_len )
+        if cal_error:
+            self.G_all = np.zeros(( int( (num_levels + 1) * num_bufs / 2), len(pixel_list)),
+                 dtype=np.float64)        
+            # matrix for normalizing G into g2
+            self.past_intensity_all = np.zeros_like(self.G_all)
+            # matrix for normalizing G into g2
+            self.future_intensity_all = np.zeros_like(self.G_all)
+            
 
     def __getstate__(self):
         """ This is called before pickling. """
@@ -350,13 +352,14 @@ class _internal_statep():
         """ This is called while unpickling. """
         self.__dict__.update(state)  
         
-
+ 
+        
 
 def lazy_one_timep(FD, num_levels, num_bufs, labels,
             internal_state=None, bad_frame_list=None, imgsum=None, 
-                  norm = None ):
+                  norm = None, cal_error=False   ):
     if internal_state is None:
-        internal_state = _internal_statep(num_levels, num_bufs, labels)    
+        internal_state = _internal_statep(num_levels, num_bufs, labels,cal_error)    
     # create a shorthand reference to the results and state named tuple    
     s = internal_state
     qind, pixelist = roi.extract_label_indices(  labels  )    
@@ -401,7 +404,13 @@ def lazy_one_timep(FD, num_levels, num_bufs, labels,
         # past_intensity, future_intensity,
         # and img_per_level in place!        
         #print (s.G)
-        _one_time_processp(s.buf, s.G, s.past_intensity, s.future_intensity,
+        if cal_error:
+            _one_time_process_errorp(s.buf, s.G, s.past_intensity, s.future_intensity,
+                          s.label_array, num_bufs, s.num_pixels,
+                          s.img_per_level, level, buf_no, s.norm, s.lev_len,
+                              s.G_all, s.past_intensity_all, s.future_intensity_all)         
+        else:
+            _one_time_processp(s.buf, s.G, s.past_intensity, s.future_intensity,
                           s.label_array, num_bufs, s.num_pixels,
                           s.img_per_level, level, buf_no, s.norm, s.lev_len)
 
@@ -430,10 +439,16 @@ def lazy_one_timep(FD, num_levels, num_bufs, labels,
                 # than one. This is modifying things in place. See comment
                 # on previous call above.
                 buf_no = s.cur[level] - 1
-                _one_time_processp(s.buf, s.G, s.past_intensity,
-                                  s.future_intensity, s.label_array, num_bufs,
-                                  s.num_pixels, s.img_per_level, level, buf_no,
-                                  s.norm, s.lev_len)
+                if cal_error:
+                    _one_time_process_errorp(s.buf, s.G, s.past_intensity, s.future_intensity,
+                                  s.label_array, num_bufs, s.num_pixels,
+                                  s.img_per_level, level, buf_no, s.norm, s.lev_len,
+                                      s.G_all, s.past_intensity_all, s.future_intensity_all)         
+                else:
+                    _one_time_processp(s.buf, s.G, s.past_intensity, s.future_intensity,
+                                  s.label_array, num_bufs, s.num_pixels,
+                                  s.img_per_level, level, buf_no, s.norm, s.lev_len)
+ 
                 level += 1
                 # Checking whether there is next level for processing
                 processing = level < num_levels               
@@ -441,28 +456,37 @@ def lazy_one_timep(FD, num_levels, num_bufs, labels,
     # If any past intensities are zero, then g2 cannot be normalized at
     # those levels. This if/else code block is basically preventing
     # divide-by-zero errors.
-    if len(np.where(s.past_intensity == 0)[0]) != 0:
-        g_max = np.where(s.past_intensity == 0)[0][0]
-    else:
-        g_max = s.past_intensity.shape[0]
-
-    g2 = (s.G[:g_max] / (s.past_intensity[:g_max] *
-                         s.future_intensity[:g_max]))
-    
-    #print (FD)
-
+    if not cal_error: 
+        if len(np.where(s.past_intensity == 0)[0]) != 0:
+            g_max1 = np.where(s.past_intensity == 0)[0][0]
+        else:
+            g_max1 = s.past_intensity.shape[0]    
+        if len(np.where(s.future_intensity == 0)[0]) != 0:
+            g_max2 = np.where(s.future_intensity == 0)[0][0]
+        else:
+            g_max2 = s.future_intensity.shape[0]    
+        g_max = min( g_max1, g_max2)     
+        g2 = (s.G[:g_max] / (s.past_intensity[:g_max] *
+                             s.future_intensity[:g_max]))
     #sys.stdout.write('#')
     #del FD
     #sys.stdout.flush()
     #print (g2)
     #return results(g2, s.lag_steps[:g_max], s)
-    return g2, s.lag_steps[:g_max] #, s
+    if cal_error:
+        #return g2, s.lag_steps[:g_max], s.G[:g_max],s.past_intensity[:g_max], s.future_intensity[:g_max] #, s
+        return ( None, s.lag_steps,
+                 s.G_all,s.past_intensity_all, s.future_intensity_all ) #, s )
+    else:        
+        return g2, s.lag_steps[:g_max] #, s
    
 
 def cal_g2p( FD, ring_mask, bad_frame_list=None, 
-            good_start=0, num_buf = 8, num_lev = None, imgsum=None, norm=None ):
+            good_start=0, num_buf = 8, num_lev = None, imgsum=None, norm=None,
+           cal_error=False ):
     '''calculation g2 by using a multi-tau algorithm
        for a compressed file with parallel calculation
+       if return_g2_details: return g2 with g2_denomitor, g2_past, g2_future
     '''
     FD.beg = max(FD.beg, good_start)
     noframes = FD.end - FD.beg +1   # number of frames, not "no frames"
@@ -479,7 +503,9 @@ def cal_g2p( FD, ring_mask, bad_frame_list=None,
     print ('%s frames will be processed...'%(noframes-1))      
     ring_masks = [   np.array(ring_mask==i, dtype = np.int64) 
               for i in np.unique( ring_mask )[1:] ]    
-    qind, pixelist = roi.extract_label_indices(  ring_mask  )    
+    qind, pixelist = roi.extract_label_indices(  ring_mask  )   
+    noqs = len(np.unique(qind))
+    nopr = np.bincount(qind, minlength=(noqs+1))[1:]
     if norm is not None:
         norms = [ norm[ np.in1d(  pixelist, 
             extract_label_indices( np.array(ring_mask==i, dtype = np.int64))[1])]
@@ -495,32 +521,81 @@ def cal_g2p( FD, ring_mask, bad_frame_list=None,
         for i in  tqdm( inputs ): 
             results[i] =  apply_async( pool, lazy_one_timep, ( FD, num_lev, num_buf, ring_masks[i],
                         internal_state,  bad_frame_list, imgsum,
-                                    norms[i], ) ) 
+                                    norms[i], cal_error  ) ) 
     else:
         #print ('for norm is None')    
         for i in tqdm ( inputs ): 
             results[i] = apply_async( pool, lazy_one_timep, ( FD, num_lev, num_buf, ring_masks[i], 
-                        internal_state,   bad_frame_list,imgsum, None,
+                        internal_state,   bad_frame_list,imgsum, None, cal_error 
                                      ) )             
     pool.close()    
     print( 'Starting running the tasks...')    
     res =   [ results[k].get() for k in   tqdm( list(sorted(results.keys())) )   ] 
     len_lag = 10**10
-    for i in inputs:  #to get the smallest length of lag_step
+    for i in inputs:  #to get the smallest length of lag_step, 
+        ##*****************************
+        ##Here could result in problem for significantly cut useful data if some Q have very short tau list
+        ##****************************
         if len_lag > len(  res[i][1]  ):
             lag_steps  = res[i][1]  
-            len_lag  =   len(  lag_steps   )            
+            len_lag  =   len(  lag_steps   )     
+            
     #lag_steps  = res[0][1]  
-    g2 = np.zeros( [len( lag_steps),len(ring_masks)] )
-    
+    if not cal_error:
+        g2 = np.zeros( [len( lag_steps),len(ring_masks)] )
+    else:        
+        g2 =   np.zeros( [ int( (num_lev + 1) * num_buf / 2),  len(ring_masks)] )
+        g2_err = np.zeros_like(g2)         
+        #g2_G = np.zeros((  int( (num_lev + 1) * num_buf / 2),  len(pixelist)) )  
+        #g2_P = np.zeros_like(  g2_G )
+        #g2_F = np.zeros_like(  g2_G )         
+    Gmax = 0
+    lag_steps_err  = res[0][1]     
     for i in inputs:
         #print( res[i][0][:,0].shape, g2.shape )
-        g2[:,i] = res[i][0][:,0][:len_lag]  
-        
-    print( 'G2 calculation DONE!')
+        if not cal_error:
+            g2[:,i] = res[i][0][:,0][:len_lag]         
+        else:
+            
+            s_Gall_qi = res[i][2]#[:len_lag]   
+            s_Pall_qi = res[i][3]#[:len_lag]  
+            s_Fall_qi = res[i][4]#[:len_lag]               
+            #print( s_Gall_qi.shape,s_Pall_qi.shape,s_Fall_qi.shape )
+            avgGi = (np.average( s_Gall_qi, axis=1)) 
+            devGi = (np.std( s_Gall_qi, axis=1))
+            avgPi = (np.average( s_Pall_qi, axis=1)) 
+            devPi = (np.std( s_Pall_qi, axis=1))
+            avgFi = (np.average( s_Fall_qi, axis=1)) 
+            devFi = (np.std( s_Fall_qi, axis=1))
+
+            if len(np.where(avgPi == 0)[0]) != 0:
+                g_max1 = np.where(avgPi == 0)[0][0]
+            else:
+                g_max1 = avgPi.shape[0]    
+            if len(np.where(avgFi == 0)[0]) != 0:
+                g_max2 = np.where(avgFi == 0)[0][0]
+            else:
+                g_max2 = avgFi.shape[0]    
+            g_max = min( g_max1, g_max2)              
+            g2[:g_max,i] =   avgGi[:g_max]/( avgPi[:g_max] * avgFi[:g_max] )           
+            g2_err[:g_max,i] = np.sqrt( 
+                ( 1/ ( avgFi[:g_max] * avgPi[:g_max] ))**2 * devGi[:g_max] ** 2 +
+                ( avgGi[:g_max]/ ( avgFi[:g_max]**2 * avgPi[:g_max] ))**2 * devFi[:g_max] ** 2 +
+                ( avgGi[:g_max]/ ( avgFi[:g_max] * avgPi[:g_max]**2 ))**2 * devPi[:g_max] ** 2 
+                            )             
+            Gmax =  max(g_max, Gmax) 
+            lag_stepsi  = res[i][1] 
+            if len(lag_steps_err ) < len( lag_stepsi ):
+                lag_steps_err  = lag_stepsi 
+            
     del results
     del res
-    return  g2, lag_steps  
+    if cal_error:
+        print( 'G2 with error bar calculation DONE!')
+        return  g2[:Gmax,:],lag_steps_err[:Gmax], g2_err[:Gmax,:]/np.sqrt(nopr)
+    else:
+        print( 'G2 calculation DONE!')
+        return  g2, lag_steps 
 
 
 
