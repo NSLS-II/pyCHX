@@ -33,7 +33,7 @@ from pyCHX.chx_generic_functions import (get_detector, get_fields, get_sid_filen
     get_roi_nr, get_mass_center_one_roi,  
     get_echos,  pad_length,    save_array_to_tiff,  load_pilatus, ls_dir,
     get_fit_by_two_linear,get_cross_point,get_curve_turning_points, plot_fit_two_linear_fit,linear_fit,
-    find_index,                                    
+    find_index,  get_detectors,                               
                                             
                                             )
  
