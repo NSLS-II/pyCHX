@@ -1383,21 +1383,23 @@ def get_meta_data( uid,*argv,**kwargs ):
     import time   
     header = db[uid]
     md ={}
-    md['detector'] = get_detector( header )
+    
     md['suid'] = uid  #short uid
     md['filename'] = get_sid_filenames(header)[2][0]
 
-    devices = list(header.devices())
+    devices = sorted( list(header.devices()) )
     if len(devices) > 1:
-        raise ValueError("More than one device. This would have unintented consequences.")
+        print( "More than one device. This would have unintented consequences.Currently, only use the first device.")
+        #raise ValueError("More than one device. This would have unintented consequences.")
     dec = devices[0]
-
-    detector_names = header.start['detectors']
-    if len(detector_names) > 1:
-        raise ValueError("More than one det. This would have unintented consequences.")
-       
+    #print(dec)
+    detector_names = sorted( header.start['detectors'] )
+    #if len(detector_names) > 1:
+    #    raise ValueError("More than one det. This would have unintented consequences.")       
     detector_name = detector_names[0]
-
+    #md['detector'] = detector_name
+    md['detector'] = get_detector( header )
+    #print( md['detector'] )
     new_dict = header.config_data(dec)['primary'][0]
     for key, val in new_dict.items():
         newkey = key.replace(detector_name+"_", "")
@@ -1703,8 +1705,14 @@ def get_flatfield( uid, reverse=False ):
 
 
 def get_detector( header ):
+    '''Get the first detector image string by giving header '''
     keys = [k for k, v in header.descriptors[0]['data_keys'].items()     if 'external' in v]
     return keys[0]
+
+def get_detectors( header ):
+    '''Get all the detector image strings by giving header '''
+    keys = [k for k, v in header.descriptors[0]['data_keys'].items()     if 'external' in v]
+    return sorted(keys)
 
     
 def get_sid_filenames(header):
@@ -1755,20 +1763,22 @@ def load_data(uid, detector='eiger4m_single_image', fill=True, reverse=False):
     md = imgs.md
     """   
     hdr = db[uid]
-    ATTEMPTS = 2
-    for attempt in range(ATTEMPTS):
-        try:
-            ev, = hdr.events(fields=[detector], fill=fill) 
-            break
-            
-        except Exception:     
-            print ('Trying again ...!')
-            if attempt == ATTEMPTS - 1:
-                # We're out of attempts. Raise the exception to help with debugging.
-                raise
-    else:
-        # We didn't succeed
-        raise Exception("Failed after {} repeated attempts".format(ATTEMPTS))
+    
+    if False:
+        ATTEMPTS = 0
+        for attempt in range(ATTEMPTS):
+            try:
+                ev, = hdr.events(fields=[detector], fill=fill) 
+                break
+
+            except Exception:     
+                print ('Trying again ...!')
+                if attempt == ATTEMPTS - 1:
+                    # We're out of attempts. Raise the exception to help with debugging.
+                    raise
+        else:
+            # We didn't succeed
+            raise Exception("Failed after {} repeated attempts".format(ATTEMPTS))
         
     # TODO(mrakitin): replace with the lazy loader (when it's implemented):
     #imgs = db.get_images(hdr, detector)
