@@ -18,6 +18,27 @@ markers =  ['o', 'D', 'v',   '^', '<',  '>', 'p', 's', 'H',
 markers = np.array(   markers *100 )
 
 
+def refine_roi_mask( roi_mask, pixel_num_thres=10):
+    '''YG Dev Jan20,2018
+    remove bad roi which pixel numbe is lower pixel_num_thres    
+    roi_mask: array, 
+    pixel_num_thres: integer, the low limit pixel number in each roi of the combined mask, 
+                        i.e., if the pixel number in one roi of the combined mask smaller than pixel_num_thres,
+                        that roi will be considered as bad one and be removed.    
+    '''    
+    new_mask = np.zeros_like( roi_mask )
+    qind, pixelist = roi.extract_label_indices(roi_mask)
+    noqs = len(np.unique(qind))
+    nopr = np.bincount(qind, minlength=(noqs+1))[1:]    
+    good_ind = np.where( nopr >= pixel_num_thres)[0] +1    
+    l = len(good_ind) 
+    new_ind = np.arange( 1, l+1 )
+    for i, gi in enumerate( good_ind ):
+        new_mask.ravel()[ 
+            np.where(  roi_mask.ravel()  == gi)[0]  ] = new_ind[i]    
+    return new_mask, good_ind -1
+
+
  
 def shrink_image(img, bins ):
     '''YG Dec 12, 2017 dev@CHX shrink a two-d image by factor as bins, i.e., bins_x, bins_y
