@@ -18,6 +18,46 @@ markers =  ['o', 'D', 'v',   '^', '<',  '>', 'p', 's', 'H',
 markers = np.array(   markers *100 )
 
 
+def get_img_from_iq( qp, iq, img_shape, center):
+    '''YG Jan 24, 2018
+    Get image from circular average 
+    Input:
+        qp: q in pixel unit
+        iq: circular average
+        image_shape, e.g., [256,256]
+        center: [center_y, center_x] e.g., [120, 200]
+    Output:
+        img: recovered image
+    '''
+    pixelist = np.arange( img_shape[0] * img_shape[1] )
+    pixely = pixelist%img_shape[1] -center[1]  
+    pixelx = pixelist//img_shape[1]  - center[0]    
+    r= np.hypot(pixelx, pixely)              #leave as float.
+    #r= np.int_( np.hypot(pixelx, pixely)  +0.5  ) + 0.5 
+    return (np.interp( r, qp, iq )).reshape( img_shape )
+
+
+def average_array_withNan( array,  axis=0, mask=None):
+    '''YG. Jan 23, 2018
+       Average array invovling np.nan along axis       
+        
+       Input:
+           array: ND array
+           axis: the average axis
+           mask: bool, same shape as array, if None, will mask all the nan values 
+       Output:
+           avg: averaged array along axis
+    '''
+    shape = array.shape
+    if mask is None:
+        mask = np.ma.masked_invalid(array).mask 
+    array_ = np.ma.masked_array(array, mask=mask) 
+    sums = np.array( np.ma.sum( array_[:,:], axis= axis ) )
+    cts = np.sum(~mask,axis=axis)
+    return sums/cts
+
+
+
 def refine_roi_mask( roi_mask, pixel_num_thres=10):
     '''YG Dev Jan20,2018
     remove bad roi which pixel numbe is lower pixel_num_thres    
@@ -1377,9 +1417,11 @@ def print_dict( dicts, keys=None):
         except:
             pass
         
-
-def get_meta_data( uid,*argv,**kwargs ):
+        
+def get_meta_data( uid, default_dec = 'eiger', *argv,**kwargs ):
     '''
+    Jan 25, 2018 add default_dec opt
+    
     Y.G. Dev Dec 8, 2016
    
     Get metadata from a uid
@@ -1412,7 +1454,11 @@ def get_meta_data( uid,*argv,**kwargs ):
     if len(devices) > 1:
         print( "More than one device. This would have unintented consequences.Currently, only use the first device.")
         #raise ValueError("More than one device. This would have unintented consequences.")
-    dec = devices[0]
+    dec = devices[0]    
+    for dec_ in devices:        
+        if default_dec in dec_:
+            dec = dec_
+         
     #print(dec)
     detector_names = sorted( header.start['detectors'] )
     #if len(detector_names) > 1:
@@ -1444,7 +1490,8 @@ def get_meta_data( uid,*argv,**kwargs ):
     #    print(f'{k}: {v}')
    
     return md
-        
+
+
 
 def get_max_countc(FD, labeled_array ):
     """YG. 2016, Nov 18
@@ -1737,7 +1784,8 @@ def get_detectors( header ):
 
     
 def get_sid_filenames(header):
-    """get a bluesky scan_id, unique_id, filename by giveing uid and detector
+    """YG. Dev Jan, 2016
+    Get a bluesky scan_id, unique_id, filename by giveing uid
         
     Parameters
     ----------
