@@ -74,10 +74,13 @@ def plot_t_iqc_uids( qs, iqsts, tstamps  ):
         
     
     
-def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1,  legend_size=8,
-                           yshift=0.01, ymulti=1, xlim=None, ylim=None,legend=None, uid_length = None):#,title=''  ):
+def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1,  legend_size=8, 
+                           yshift= 0.01, ymulti=1, xlim=None, ylim=None,legend=None, uid_length = None):#,title=''  ):
     
-    '''YG June 9, 2017@CHX
+    '''
+    YG Feb2, 2018, make yshift be also a list
+    
+    YG June 9, 2017@CHX
      YG Sep 29, 2017@CHX.
     plot enteries for a list uids
     Input:
@@ -130,24 +133,31 @@ def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1,  legend_size=8
                 leg=u
             else:
                 leg='uid=%s-->'%u+legend[i]
-            plot1D(  x = taus, y=d + yshift*i, c=colors[i], m = markers[i], ax=ax, logx=True, legend= leg,
+            
+            if isinstance(yshift,list):
+                yshift_ = yshift[i]
+                ii = i + 1
+            else:
+                yshift_ = yshift
+                ii = i
+            plot1D(  x = taus, y=d + yshift_*ii, c=colors[i], m = markers[i], ax=ax, logx=True, legend= leg,
                   xlabel='t (sec)', ylabel='g2', legend_size=legend_size,) 
             title='Q = %s'%(total_res['qval_dict'][qth])
             ax.set_title(title)
         elif key=='imgsum':
             d = total_res[key]            
-            plot1D(  y=d + yshift*i, c=colors[i], m = markers[i], ax=ax, logx=False, legend= u,
+            plot1D(  y=d + yshift_*ii, c=colors[i], m = markers[i], ax=ax, logx=False, legend= u,
                   xlabel='Frame', ylabel='imgsum',)  
             
         elif key == 'iq':
             x= total_res['q_saxs']   
             y= total_res['iq_saxs']
-            plot1D(  x=x, y= y* ymulti[i] + yshift*i, c=colors[i], m = markers[i], ax=ax, logx= False, logy=True,
+            plot1D(  x=x, y= y* ymulti[i] + yshift_*ii, c=colors[i], m = markers[i], ax=ax, logx= False, logy=True,
                    legend= u,   xlabel ='Q 'r'($\AA^{-1}$)', ylabel = "I(q)"  )             
 
         else:
             d = total_res[key][:,qth]             
-            plot1D(  x = np.arange(len(d)), y= d + yshift*i, c=colors[i], m = markers[i], ax=ax, logx=False, legend= u,
+            plot1D(  x = np.arange(len(d)), y= d + yshift_*ii, c=colors[i], m = markers[i], ax=ax, logx=False, legend= u,
                   xlabel= 'xx', ylabel=key ) 
     if key=='mean_int_sets':ax.set_xlabel( 'frame ')            
     if xlim is not None:ax.set_xlim(xlim)        
@@ -878,7 +888,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
     print ('*'*40)
     print  ( '*'*5 + 'The processing uid is: %s'%uid + '*'*5)
     print ('*'*40)
-    suid = uid[:6]
+    suid = uid     #[:6]
     data_dir = os.path.join(data_dir0, '%s/'%suid)
     os.makedirs(data_dir, exist_ok=True)
     print('Results from this analysis will be stashed in the directory %s' % data_dir)
@@ -1408,7 +1418,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
         md['beg'] = FD.beg
         md['end'] = FD.end
         md['metadata_file'] = data_dir + 'md.csv-&-md.pkl'
-        psave_obj(  md, data_dir + 'uid=%s_md'%uid[:6] ) #save the setup parameters
+        psave_obj(  md, data_dir + 'uid=%s_md'%uid[:] ) #save the setup parameters
         save_dict_csv( md,  data_dir + 'uid=%s_md.csv'%uid, 'w')
 
         Exdt = {} 
@@ -1457,9 +1467,9 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
             pdf_filename = "XPCS_XSVS_Analysis_Report_for_uid=%s%s.pdf"%(uid,pdf_version)
         #pdf_filename
         
-        print(  data_dir, uid[:6], pdf_out_dir, pdf_filename, username )
+        print(  data_dir, uid[:], pdf_out_dir, pdf_filename, username )
         
-        make_pdf_report( data_dir, uid[:6], pdf_out_dir, pdf_filename, username, 
+        make_pdf_report( data_dir, uid[:], pdf_out_dir, pdf_filename, username, 
                         run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs, run_dose=run_dose,
                         report_type= scat_geometry
                        ) 
