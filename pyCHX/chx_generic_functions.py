@@ -3023,7 +3023,8 @@ def trans_td_to_tf(td, dtype = 'dframe'):
 
 
 
-def get_averaged_data_from_multi_res( multi_res, keystr='g2', different_length= True  ):
+def get_averaged_data_from_multi_res( multi_res, keystr='g2', different_length= True, verbose=False,
+                                    cal_errorbar=False):
     '''Y.G. Dec 22, 2016
         get average data from multi-run analysis result
         Parameters:
@@ -3050,9 +3051,10 @@ def get_averaged_data_from_multi_res( multi_res, keystr='g2', different_length= 
     
     else:
         length_dict = {}  
-        D= 1
-        
+        D= 1        
         for i, key in enumerate( list( mkeys) ):
+            if verbose:
+                print(i,key)
             shapes = multi_res[key][keystr].shape
             M=shapes[0]    
             if i ==0:                         
@@ -3074,6 +3076,7 @@ def get_averaged_data_from_multi_res( multi_res, keystr='g2', different_length= 
             avg_count[k] = np.sum(  np.array( [ length_dict[k] for k in sk[i:] ] )   )            
         #print(length_dict, avg_count)        
         if D==2:
+            #print('here')
             keystr_average = np.zeros( [maxM, maxN] )
         elif D==3:
             keystr_average = np.zeros( [maxM, maxM, maxN ] )           
@@ -3082,7 +3085,7 @@ def get_averaged_data_from_multi_res( multi_res, keystr='g2', different_length= 
         for i, key in enumerate( list( mkeys) ):
             keystri = multi_res[key][keystr]
             Mi = keystri.shape[0]   
-            if D!=3:
+            if D!=3:                
                 keystr_average[:Mi] +=   keystri
             else:
                 keystr_average[:Mi,:Mi,:] +=   keystri
