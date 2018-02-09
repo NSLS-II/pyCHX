@@ -1056,7 +1056,7 @@ def get_qzr_map(  qr, qz, inc_x0, Nzline=10,Nrline=10,  interp = True,
     
 
 def plot_qzr_map( qr, qz, inc_x0, ticks = None, data=None,
-                  uid='uid', path ='', *argv,**kwargs):  
+                  uid='uid', path ='', vmin=0.001, vmax=1e1, *argv,**kwargs):  
     
     ''' 
     Dec 31, 2016, Y.G.@CHX
@@ -1108,7 +1108,7 @@ def plot_qzr_map( qr, qz, inc_x0, ticks = None, data=None,
         data=qr+qz        
         im = ax.imshow(data, cmap='viridis',origin='lower') 
     else:
-        im = ax.imshow(data, cmap='viridis',origin='lower',  norm= LogNorm(vmin=0.001, vmax=1e1)) 
+        im = ax.imshow(data, cmap='viridis',origin='lower',  norm= LogNorm(vmin=vmin, vmax=vmax)) 
 
     imr=ax.imshow(label_array_qr, origin='lower' ,cmap='viridis', vmin=0.5,vmax= None  )#,interpolation='nearest',) 
     imz=ax.imshow(label_array_qz, origin='lower' ,cmap='viridis', vmin=0.5,vmax= None )#,interpolation='nearest',) 
@@ -1262,7 +1262,8 @@ def show_qzr_map(  qr, qz, inc_x0, data=None, Nzline=10,Nrline=10 ,
 
 
  
-def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, uid='uid', path = '', save=False, return_fig=False, *argv,**kwargs):  
+def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, vmin=0.01, vmax=30. ,
+                 uid='uid', path = '', save=False, return_fig=False, *argv,**kwargs):  
         
     ''' 
     Dec 16, 2015, Y.G.@CHX
@@ -1299,7 +1300,7 @@ def show_qzr_roi( data, rois, inc_x0, ticks, alpha=0.3, uid='uid', path = '', sa
     ax.set_title("%s_ROI--Labeled Array on Data"%uid)
     im,im_label = show_label_array_on_image(ax, avg_imgr, box_maskr, imshow_cmap='viridis',
                             cmap='Paired', alpha=alpha,
-                             vmin=0.01, vmax=30. ,  origin="lower")
+                             vmin=vmin, vmax=vmax,  origin="lower")
 
 
     for i in range( 1, num_qzr+1 ):
