@@ -1418,7 +1418,8 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
         md['beg'] = FD.beg
         md['end'] = FD.end
         md['metadata_file'] = data_dir + 'md.csv-&-md.pkl'
-        psave_obj(  md, data_dir + 'uid=%s_md'%uid[:] ) #save the setup parameters
+        psave_obj(  md, data_dir + 'uid=%s_md'%uid[:6] ) #save the setup parameters
+        #psave_obj(  md, data_dir + 'uid=%s_md'%uid ) #save the setup parameters
         save_dict_csv( md,  data_dir + 'uid=%s_md.csv'%uid, 'w')
 
         Exdt = {} 
@@ -1467,9 +1468,9 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
             pdf_filename = "XPCS_XSVS_Analysis_Report_for_uid=%s%s.pdf"%(uid,pdf_version)
         #pdf_filename
         
-        print(  data_dir, uid[:], pdf_out_dir, pdf_filename, username )
+        print(  data_dir, uid[:6], pdf_out_dir, pdf_filename, username )
         
-        make_pdf_report( data_dir, uid[:], pdf_out_dir, pdf_filename, username, 
+        make_pdf_report( data_dir, uid[:6], pdf_out_dir, pdf_filename, username, 
                         run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs, run_dose=run_dose,
                         report_type= scat_geometry
                        ) 
