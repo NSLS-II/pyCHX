@@ -881,6 +881,7 @@ def get_xsvs_fit(spe_cts_all, spec_sum,  K_mean, spec_std = None, spec_bins=None
                 
             if not varyK:
                 fit_func = nbinomlog1  
+                #print(i,j,m0,)
                 resultL = leastsq(fit_func, [ m0 ], args=(y*N, x_, N, kmean_guess ),
                                   ftol=1.49012e-38, xtol=1.49012e-38, factor=100,
                                   full_output=1)                
@@ -1154,11 +1155,17 @@ def plot_g2_contrast( contrast_factorL, g2, times, taus, q_ring_center=None,
     if qth is not None:
         fig = plt.figure()
     else:
-        fig = plt.figure( figsize=figsize  )
+        if len(contrast_factorL) ==1:
+            fig = plt.figure()
+        else:
+            fig = plt.figure( figsize=figsize  )
+            #print('here')
     title = '%s_'%uid + "Contrast"
     plt.title(title, fontsize=14, y =1.08)  
     if qth is None:
-        plt.axis('off')
+        if len(contrast_factorL)!=1:
+            plt.axis('off')
+      
     n=1    
     for sn in range_:
         #print( sn )
