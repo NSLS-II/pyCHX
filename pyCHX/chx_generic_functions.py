@@ -948,7 +948,7 @@ def create_folder( base_folder, sub_folder ):
 
     
     
-def create_user_folder( CYCLE, username = None ):
+def create_user_folder( CYCLE, default_dir= '/XF11ID/analysis/', username = None ):
     '''
     Crate a folder for saving user data analysis result
     Input:
@@ -957,9 +957,12 @@ def create_user_folder( CYCLE, username = None ):
     Return:
         Created folder name
     '''
-    if username is None:
-        username = getpass.getuser() 
-    data_dir0 = os.path.join('/XF11ID/analysis/', CYCLE, username, 'Results/')
+    if username !='Default':
+        if username is None:
+            username = getpass.getuser()         
+            data_dir0 = os.path.join(default_dir, CYCLE, username, 'Results/')
+    else:
+        data_dir0 = os.path.join(default_dir, CYCLE +'/')
     ##Or define data_dir here, e.g.,#data_dir = '/XF11ID/analysis/2016_2/rheadric/test/'
     os.makedirs(data_dir0, exist_ok=True)
     print('Results from this analysis will be stashed in the directory %s' % data_dir0) 
@@ -1075,7 +1078,10 @@ def check_lost_metadata(md, Nimg=None, inc_x0 =None, inc_y0= None, pixelsize=7.5
     if 'x_pixel_size' not in list(md.keys()):
         md['x_pixel_size'] = 7.5000004e-05
     dpix = md['x_pixel_size'] * 1000.  #in mm, eiger 4m is 0.075 mm
-    lambda_ =md['incident_wavelength']    # wavelegth of the X-rays in Angstroms
+    try:
+        lambda_ =md['incident_wavelength']    # wavelegth of the X-rays in Angstroms
+    except:
+        lambda_ =md['wavelength']
     try:
         Ldet = md['det_distance']
         if Ldet<=1000:
