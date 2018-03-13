@@ -166,8 +166,8 @@ class CrossCorrelator2:
             maskcor = _centered(maskcor, self.sizes[reg,:]) #make smaller??
             # choose some small value to threshold
             maskcor *= maskcor > .5
-            tmpimg=np.zeros(self.sizes[reg,:])
-            tmpimg[i,j]=img1[ii,jj]
+            tmpimg=np.zeros(self.sizes[reg,:])            
+            tmpimg[i,j]=img1[ii,jj]            
             im1=np.fft.rfftn(tmpimg, fshape) #image 1
             if self_correlation:
                 #ccorr = np.real(np.fft.ifftn(im1 * im1.conj(), fshape)[fslice])
@@ -184,7 +184,6 @@ class CrossCorrelator2:
                 ccorr = _centered(ccorr, self.sizes[reg,:])
             # now handle the normalizations
             if 'symavg' in normalization:
-
                 mim1=np.fft.rfftn(tmpimg*submask, fshape)
                 Icorr = np.fft.irfftn(mim1 * mma1.conj(),fshape)#[fslice])
                 #Icorr = _centered(np.fft.fftshift(Icorr), self.sizes[reg,:])

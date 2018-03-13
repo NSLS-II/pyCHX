@@ -18,6 +18,30 @@ markers =  ['o', 'D', 'v',   '^', '<',  '>', 'p', 's', 'H',
 markers = np.array(   markers *100 )
 
 
+
+
+flatten_nestlist = lambda l: [item for sublist in l for item in sublist]
+"""a function to flatten a nest list
+e.g., flatten( [ ['sg','tt'],'ll' ]   )
+gives ['sg', 'tt', 'l', 'l']
+"""
+
+
+def get_waxs_beam_center(  gamma, origin = [432, 363],  Ldet = 1495, pixel_size = 75 * 1e-3 ):
+    '''YG Feb 10, 2018
+        Calculate beam center for WAXS geometry by giving beam center at gamma=0 and the target gamma
+       Input:
+           gamma: angle in degree
+           Ldet: sample to detector distance, 1495 mm for CHX WAXS
+           origin: beam center for gamma = 0, (python x,y coordinate in pixel)
+           pxiel size: 75 * 1e-3 mm for Eiger 1M
+       output:
+           beam center: for the target gamma, in pixel           
+    '''
+    return [ np.int( origin[0] + np.tan( np.radians(gamma)) * Ldet/pixel_size) ,origin[1]   ] 
+
+
+
 def get_img_from_iq( qp, iq, img_shape, center):
     '''YG Jan 24, 2018
     Get image from circular average 
@@ -42,7 +66,7 @@ def average_array_withNan( array,  axis=0, mask=None):
        Average array invovling np.nan along axis       
         
        Input:
-           array: ND array
+           array: ND array, actually should be oneD or twoD at this stage..TODOLIST for ND
            axis: the average axis
            mask: bool, same shape as array, if None, will mask all the nan values 
        Output:
@@ -50,11 +74,32 @@ def average_array_withNan( array,  axis=0, mask=None):
     '''
     shape = array.shape
     if mask is None:
-        mask = np.ma.masked_invalid(array).mask 
+        mask = np.isnan(array)
+        #mask = np.ma.masked_invalid(array).mask 
     array_ = np.ma.masked_array(array, mask=mask) 
-    sums = np.array( np.ma.sum( array_[:,:], axis= axis ) )
+    try:
+        sums = np.array( np.ma.sum( array_[:,:], axis= axis ) )
+    except:
+        sums = np.array( np.ma.sum( array_[:], axis= axis ) )
+        
     cts = np.sum(~mask,axis=axis)
+    #print(cts)
     return sums/cts
+
+def deviation_array_withNan( array,  axis=0, mask=None):
+    '''YG. Jan 23, 2018
+       Get the deviation of array invovling np.nan along axis       
+        
+       Input:
+           array: ND array
+           axis: the average axis
+           mask: bool, same shape as array, if None, will mask all the nan values 
+       Output:
+           dev: the deviation of array along axis
+    '''
+    avg2 = average_array_withNan( array**2, axis = axis, mask = mask )
+    avg = average_array_withNan( array, axis = axis, mask = mask )
+    return  np.sqrt( avg2 - avg**2 )
 
 
 
@@ -482,13 +527,16 @@ def sgolay2d( z, window_size, order, derivative=None):
     
     
     
-def extract_data_from_file(  filename, filepath, good_line_pattern, good_cols=None, labels=None,):
-    '''YG Develop Octo 17, 2018 
+def extract_data_from_file(  filename, filepath, good_line_pattern=None, start_row=None, good_cols=None, labels=None,):
+    '''YG Develop Octo 17, 2017 
+       Add start_row option at March 5, 2018 
+        
         Extract data from a file
     Input:
         filename: str, filename of the data
         filepath: str, path of the data
         good_line_pattern: str, data will be extract below this good_line_pattern
+        Or giving start_row: int
         good_cols: list of integer, good index of cols
         lables: the label of the good_cols
         #save: False, if True will save the data into a csv file with filename appending csv ??
@@ -507,8 +555,13 @@ def extract_data_from_file(  filename, filepath, good_line_pattern, good_cols=No
         p=fin.readlines()
         di = 1e20                
         for i, line in enumerate(p):
-            if good_line_pattern in line:                
-                di = i
+            if start_row is not None:
+                di = start_row
+            elif good_line_patter is not None:
+                if good_line_pattern in line:                
+                    di = i
+            else:
+                di = 0                        
             if i == di+1:
                 els = line.split()  
                 if good_cols is  None:
@@ -532,30 +585,41 @@ def extract_data_from_file(  filename, filepath, good_line_pattern, good_cols=No
     
     
     
-def get_print_uids( start_time, stop_time):
-    '''YG. Octo 3, 2017@CHX
+def get_print_uids( start_time, stop_time, return_all_info=False):
+    '''Update Feb 20, 2018 also return full uids
+    YG. Octo 3, 2017@CHX
     Get full uids and print uid plus Measurement contents by giving start_time, stop_time
     
-    
-    '''
-    
+    '''  
     hdrs = list( db(start_time= start_time, stop_time = stop_time) )
+    fuids = np.zeros( len(hdrs),dtype=object)
     uids = np.zeros( len(hdrs),dtype=object)
     sids = np.zeros( len(hdrs), dtype=object)
     n=0
+    all_info = np.zeros( len(hdrs), dtype=object)
     for  i in range(len(hdrs)):
-        uid = hdrs[i]['start']['uid'][:6]
-        sid = hdrs[i]['start']['scan_id']
+        fuid = hdrs[-i-1]['start']['uid'] #reverse order
+        uid = fuid[:6] #reverse order
+        sid = hdrs[-i-1]['start']['scan_id']
+        fuids[n]=fuid
         uids[n]=uid
-        sids[n]=sid
-        n +=1
+        sids[n]=sid        
+        date = time.ctime(hdrs[-i-1]['start']['time'])
         try:
-            m = hdrs[i]['start']['Measurement']
+            m = hdrs[-i-1]['start']['Measurement']
         except:
             m=''
-        print( "   uid = '%s' #(scan num: %s (Measurement: %s        "%(uid,sid,m) )
-    return uids, sids
-    
+        info =     "%3d: uid = '%s' ##%s #%s: %s--  %s "%(i,uid,date,sid,m, fuid)
+        print( info )
+        if return_all_info:
+            all_info[n]=info
+        n +=1    
+    if not return_all_info:
+        return fuids, uids, sids   
+    else:         
+        return fuids, uids, sids, all_info   
+        
+ 
     
 def get_last_uids( n=-1 ):
     '''YG Sep 26, 2017
@@ -3517,7 +3581,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, g2_err_dict = None,
                     fig_ysize= 12, qth_interest = None,
                     ylabel='g2',  return_fig=False, append_name='', outsize=(2000, 2400), 
                     max_plotnum_fig=16, figsize=(10, 12), show_average_ang_saxs=True,
-                    qphi_analysis = False,
+                    qphi_analysis = False, fontsize_sublabel = 12,
                     *argv,**kwargs):    
     '''
     Jan 10, 2018 add g2_err_dict option to plot g2 with error bar  
@@ -3652,6 +3716,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, g2_err_dict = None,
         if num_long_i <=4:            
             plt.title( til,fontsize= 14, y =1.15)  
             #plt.title( til,fontsize=20, y =1.06) 
+            #print('here')
         else:
             plt.title( til,fontsize=20, y =1.06) 
         #print( num_long )        
@@ -3708,15 +3773,13 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, g2_err_dict = None,
                     title_long = ''    
 
             if master_plot != 'qz':
-                ax.set_title(title_long + ' (%s  )'%(1+l_ind), y =1.1, fontsize=12) 
+                ax.set_title(title_long + ' (%s  )'%(1+l_ind), y =1.1, fontsize=12)                 
             else:                  
-                ax.set_title(title_long + ' (%s  )'%(1+l_ind), y =1.05, fontsize=12)
+                ax.set_title(title_long + ' (%s  )'%(1+l_ind), y =1.05, fontsize= fontsize_sublabel)                
                 if qth_interest is not None:#it might have a bug here, todolist!!!
                     lab = sorted(list(qval_dict_.keys()))
                     #print( lab, l_ind)
-                    ax.set_title(title_long + ' (%s  )'%( lab[l_ind] +1), y =1.05, fontsize=12)    
-                
-            
+                    ax.set_title(title_long + ' (%s  )'%( lab[l_ind] +1), y =1.05, fontsize=   12)            
             for ki, k in enumerate( list(g2_dict_.keys()) ): 
                 if ki==0:
                     c='b'
