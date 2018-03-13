@@ -1,5 +1,6 @@
 import pickle as cpk
 from skimage.draw import line_aa, line, polygon
+import historydict
 
 
 from pyCHX.chx_libs import (np, roi, time, datetime, os, get_events, 
@@ -34,7 +35,7 @@ from pyCHX.chx_generic_functions import (get_detector, get_fields, get_sid_filen
     get_echos,  pad_length,    save_array_to_tiff,  load_pilatus, ls_dir,
     get_fit_by_two_linear,get_cross_point,get_curve_turning_points, plot_fit_two_linear_fit,linear_fit,
     find_index,  get_detectors,                               
-                                            
+    get_img_from_iq,average_array_withNan,refine_roi_mask,shrink_image,   get_waxs_beam_center,                                     
                                             )
  
 

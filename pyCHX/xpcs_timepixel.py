@@ -35,9 +35,15 @@ def get_timepixel_data( data_dir, filename, time_unit= 1 ):
     #'#Col', ' #Row', ' #ToA',
     #return np.array( data['Col'] ), np.array(data['Row']), np.array(data['GlobalTimeFine']) #*6.1  #in ps
     if time_unit !=1:
-        x,y,t=np.array( data['#Col'] ), np.array(data[' #Row']), np.array(data[' #ToA'] )  * time_unit
+        try:
+            x,y,t=np.array( data['#Col'] ), np.array(data['#Row']), np.array(data['#ToA'] )  * time_unit
+        except:
+            x,y,t=np.array( data['#Col'] ), np.array(data[' #Row']), np.array(data[' #ToA'] )  * time_unit
     else:
-        x,y,t=np.array( data['#Col'] ), np.array(data[' #Row']), np.array(data[' #ToA'] )
+        try:
+            x,y,t=np.array( data['#Col'] ), np.array(data['#Row']), np.array(data['#ToA'] )
+        except:
+            x,y,t=np.array( data['#Col'] ), np.array(data[' #Row']), np.array(data[' #ToA'] )            
     return x,y,  t-t.min() #* 25/4096.  #in ns  
 
 

@@ -180,8 +180,8 @@ def movie_maker( imgs, num_frames=None, ROI=None,interval=20, fps=15, real_inter
         im=ax.imshow(i0, origin='lower' ,cmap=cmap,
                         interpolation="nearest" , norm=LogNorm(vmin,  vmax))     
 
-    ttl = ax.text(.75, .2, '', transform = ax.transAxes, va='center', color='white', fontsize=18)
-    
+    #ttl = ax.text(.75, .2, '', transform = ax.transAxes, va='center', color='white', fontsize=18)
+    ttl = ax.text(.75, .2, '', transform = ax.transAxes, va='center', color='black', fontsize=18)
     #print asp
     #fig.set_size_inches( [5., 5 * asp] )
  
