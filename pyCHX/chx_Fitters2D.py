@@ -198,13 +198,13 @@ class Gauss2DFitter(LineShape2DFitter):
     def init_parameters(self, **kwargs):
         params = Parameters()
         params.add('baseline', value=0)
-        params.add('amp', value=.1,min=0,max=.2)
+        params.add('amp', value=.15,min=0,max=.5)
 
-        params.add('xc', value=11.,min=.0,max=20.0)
-        params.add('yc', value=11.,min=.0,max=20.0)
+        params.add('xc', value=11.,min=.0,max= 100.0)
+        params.add('yc', value=11.,min=.0,max= 100.0)
 
-        params.add('sigmax', value=1., min=1e-6, max=2.0)
-        params.add('sigmay', value=1., min=1e-6, max=2.0)
+        params.add('sigmax', value=1., min=1e-6, max=50.0)
+        params.add('sigmay', value=1., min=1e-6, max=50.0)
 
         for key in kwargs.keys():
             if key in params:
