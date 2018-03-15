@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from pyCHX.chx_libs import (np, roi, time, datetime, os,  getpass, db, 
                                       get_images,LogNorm, RUN_GUI)
 from pyCHX.chx_generic_functions import (create_time_slice,get_detector, get_fields, get_sid_filenames,  
-     load_data)
+     load_data,reverse_updown)
 
 
 import struct    
@@ -45,24 +45,20 @@ def go_through_FD(FD):
     
 def compress_eigerdata( images, mask, md, filename=None,  force_compress=False, 
                         bad_pixel_threshold=1e15, bad_pixel_low_threshold=0, 
-                       hot_pixel_threshold=2**30, nobytes=4,bins=1, bad_frame_list=None,
+                       hot_pixel_threshold=2**30, nobytes=2,bins=1, bad_frame_list=None,
                        para_compress= False, num_sub=100, dtypes='uid',reverse =True,
-                      num_max_para_process=500, with_pickle=False, direct_load_data=False, data_path=None):   
+                      num_max_para_process=500, with_pickle=False, direct_load_data=False, data_path=None,images_per_file=100):   
     
-    end= len(images)//bins
-    
+    end= len(images)//bins    
     if filename is None:
-        filename=  '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%md['uid']
-        
+        filename=  '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%md['uid']        
     if dtypes!= 'uid':
         para_compress= False  
     else:
         if para_compress:
             images='foo'
-            #para_compress=   True
-    
-    #print( dtypes )
-        
+            #para_compress=   True   
+    #print( dtypes )        
     if force_compress:
         print ("Create a new compress file with filename as :%s."%filename)
         if para_compress:
@@ -72,15 +68,17 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
             print( 'Using a multiprocess to compress the data.')
             return para_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
-                                    bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes= nobytes, bins=bins,
-                                     num_sub=num_sub, dtypes=dtypes, reverse=reverse,
-                                          num_max_para_process=num_max_para_process, with_pickle= with_pickle,
-                                           direct_load_data= direct_load_data,data_path=data_path) 
+                        bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes= nobytes, 
+                        bins=bins, num_sub=num_sub, dtypes=dtypes, 
+                        reverse=reverse, num_max_para_process=num_max_para_process,
+                        with_pickle= with_pickle, direct_load_data= direct_load_data,
+                        data_path=data_path,images_per_file=images_per_file) 
                     
         else:
             return init_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
-                                    bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes= nobytes, bins=bins,with_pickle= with_pickle, direct_load_data= direct_load_data,data_path=data_path )        
+                                    bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes= nobytes, bins=bins,with_pickle= with_pickle, direct_load_data= direct_load_data,data_path=data_path,
+                                          images_per_file=images_per_file)        
     else:
         if not os.path.exists( filename ):
             print ("Create a new compress file with filename as :%s."%filename)
@@ -90,24 +88,24 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
                         bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
                                     bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes= nobytes, bins=bins,
                                      num_sub=num_sub, dtypes=dtypes, reverse=reverse,
-                                              num_max_para_process=num_max_para_process,with_pickle= with_pickle, direct_load_data= direct_load_data,data_path=data_path)
+                                              num_max_para_process=num_max_para_process,with_pickle= with_pickle, direct_load_data= direct_load_data,data_path=data_path,images_per_file=images_per_file) 
             else:
                 return init_compress_eigerdata( images, mask, md, filename, 
                        bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
-                      bad_pixel_low_threshold=bad_pixel_low_threshold,    nobytes= nobytes, bins=bins,with_pickle= with_pickle, direct_load_data= direct_load_data,data_path=data_path  )  
+                      bad_pixel_low_threshold=bad_pixel_low_threshold,    nobytes= nobytes, bins=bins,with_pickle= with_pickle, direct_load_data= direct_load_data,data_path=data_path, images_per_file=images_per_file) 
         else:      
             print ("Using already created compressed file with filename as :%s."%filename)
             beg=0            
             return read_compressed_eigerdata( mask, filename, beg, end, 
                             bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
-                       bad_pixel_low_threshold=bad_pixel_low_threshold ,bad_frame_list=bad_frame_list,with_pickle= with_pickle, direct_load_data= direct_load_data,data_path=data_path    )  
+                       bad_pixel_low_threshold=bad_pixel_low_threshold ,bad_frame_list=bad_frame_list,with_pickle= with_pickle, direct_load_data= direct_load_data,data_path=data_path, images_per_file=images_per_file) 
 
 
         
 def read_compressed_eigerdata( mask, filename, beg, end,
                               bad_pixel_threshold=1e15, hot_pixel_threshold=2**30,
                              bad_pixel_low_threshold=0,bad_frame_list=None,with_pickle= False,
-                             direct_load_data=False,data_path=None):   
+                           direct_load_data=False,data_path=None,images_per_file=100):
     '''
         Read already compress eiger data           
         Return 
@@ -143,7 +141,7 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
                             bad_pixel_low_threshold=0, nobytes=4, bins=1, dtypes='uid',reverse =True,
                            num_max_para_process=500, cpu_core_number=72, with_pickle=True,
-                           direct_load_data=False, data_path=None):
+                           direct_load_data=False, data_path=None,images_per_file=100):
     
     if dtypes=='uid':
         uid= md['uid'] #images
@@ -151,7 +149,9 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
             detector = get_detector( db[uid ] )
             images_ = load_data( uid, detector, reverse= reverse    )
         else:
-            images_ = EigerImages(data_path, md)
+            images_ = EigerImages(data_path,images_per_file, md)
+            if reverse:
+                images_ = reverse_updown( images_ )
         N= len(images_)
     
     else:
@@ -170,7 +170,8 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
                     num_sub=num_sub, bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
                     bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes=nobytes, bins=bins, dtypes=dtypes,
                                              num_max_para_process=num_max_para_process,
-                                            direct_load_data=direct_load_data, data_path=data_path)
+                                            direct_load_data=direct_load_data, data_path=data_path,
+                                             images_per_file=images_per_file)
     
     res_ = np.array( [ results[k].get() for k in   list(sorted(results.keys()))   ]     ) 
     imgsum = np.zeros( N )
@@ -222,7 +223,8 @@ def  combine_binary_files(filename, old_files, del_old = False):
 def para_segment_compress_eigerdata( images, mask,  md, filename, num_sub=100,
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
                             bad_pixel_low_threshold=0, nobytes=4, bins=1,  dtypes='images',reverse =True,
-                                   num_max_para_process=50,direct_load_data=False, data_path=None):    
+                                   num_max_para_process=50,direct_load_data=False, data_path=None,
+                                   images_per_file=100):    
     '''
     parallelly compressed eiger data without header, this function is for parallel compress
     ''' 
@@ -232,7 +234,9 @@ def para_segment_compress_eigerdata( images, mask,  md, filename, num_sub=100,
             detector = get_detector( db[uid ] )
             images_ = load_data( uid, detector, reverse= reverse    )
         else:
-            images_ = EigerImages(data_path, md)
+            images_ = EigerImages(data_path, images_per_file, md)
+            if reverse:
+                images_ = reverse_updown( images_ )
         N= len(images_)
     
     else:
@@ -277,7 +281,7 @@ def para_segment_compress_eigerdata( images, mask,  md, filename, num_sub=100,
 def segment_compress_eigerdata( images,  mask, md, filename, 
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
                             bad_pixel_low_threshold=0, nobytes=4, bins=1, 
-                               N1=None, N2=None, dtypes='images',reverse =True,direct_load_data=False, data_path=None    ):     
+                               N1=None, N2=None, dtypes='images',reverse =True,direct_load_data=False, data_path=None,images_per_file=100  ):     
     '''
     Create a compressed eiger data without header, this function is for parallel compress
     for parallel compress don't pass any non-scalar parameters
@@ -287,8 +291,11 @@ def segment_compress_eigerdata( images,  mask, md, filename,
         if not direct_load_data:
             detector = get_detector( db[uid ] )
             images = load_data( uid, detector, reverse= reverse    )[N1:N2] 
-        else:
-            images = EigerImages(data_path, md)[N1:N2] 
+        else:            
+            images = EigerImages(data_path, images_per_file, md)[N1:N2] 
+            if reverse:
+                images = reverse_updown( EigerImages(data_path, images_per_file, md) )[N1:N2] 
+                
     Nimg_ = len( images)     
     M,N = images[0].shape
     avg_img = np.zeros( [M,N], dtype= np.float )    
@@ -363,14 +370,27 @@ def create_compress_header( md, filename, nobytes=4, bins=1  ):
     #md = images.md
     if bins!=1:
         nobytes=8
-        
-    Header = struct.pack('@16s8d7I916x',b'Version-COMP0001',
-                        md['beam_center_x'],md['beam_center_y'], md['count_time'], md['detector_distance'],
-                        md['frame_time'],md['incident_wavelength'], md['x_pixel_size'],md['y_pixel_size'],
+    flag = True   
+    #print(   list(md.keys())   )
+    #print(md)
+    if 'pixel_mask' not in list(md.keys()):
+        flag=False
+    #print(flag)    
+    if flag:    
+        Header = struct.pack('@16s8d7I916x',b'Version-COMP0001',
+md['beam_center_x'],md['beam_center_y'], md['count_time'], md['detector_distance'], md['frame_time'],md['incident_wavelength'], md['x_pixel_size'],md['y_pixel_size'],
                         nobytes, md['pixel_mask'].shape[1], md['pixel_mask'].shape[0],
                          0, md['pixel_mask'].shape[1],
                          0, md['pixel_mask'].shape[0]                
                     )
+    else:
+        Header = struct.pack('@16s8d7I916x',b'Version-COMP0001',
+md['beam_center_x'],md['beam_center_y'], 1, 1, 1,1, 1,1,
+                        nobytes, md['img_shape'][1],md['img_shape'][0],
+                         0, md['img_shape'][1],
+                         0, md['img_shape'][0]              
+                    )
+        
       
     fp.write( Header)       
     fp.close()     
@@ -380,7 +400,8 @@ def create_compress_header( md, filename, nobytes=4, bins=1  ):
 def init_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
                             bad_pixel_low_threshold=0,nobytes=4, bins=1, with_pickle=True,
-                           direct_load_data=False, data_path=None):    
+                           direct_load_data=False, data_path=None,images_per_file=100,
+                           ):    
     '''
         Compress the eiger data 
         

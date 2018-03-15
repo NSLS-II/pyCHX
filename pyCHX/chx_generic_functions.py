@@ -525,7 +525,20 @@ def sgolay2d( z, window_size, order, derivative=None):
         return scipy.signal.fftconvolve(Z, -r, mode='valid'), scipy.signal.fftconvolve(Z, -c, mode='valid')
     
     
-    
+def load_filelines(  fullpath ):
+    '''YG Develop March 10, 2018 
+       Load all content from a file 
+    basepath, fname =  os.path.split(os.path.abspath( fullpath ))   
+    Input:
+        fullpath: str, full path of the file     
+    Return:
+        list: str
+    '''    
+    with open( fullpath, 'r' ) as fin:
+        p=fin.readlines() 
+    return p
+
+
     
 def extract_data_from_file(  filename, filepath, good_line_pattern=None, start_row=None, good_cols=None, labels=None,):
     '''YG Develop Octo 17, 2017 
@@ -557,7 +570,7 @@ def extract_data_from_file(  filename, filepath, good_line_pattern=None, start_r
         for i, line in enumerate(p):
             if start_row is not None:
                 di = start_row
-            elif good_line_patter is not None:
+            elif good_line_pattern is not None:
                 if good_line_pattern in line:                
                     di = i
             else:

@@ -1,6 +1,7 @@
 import pickle as cpk
 from skimage.draw import line_aa, line, polygon
 import historydict
+from eiger_io.fs_handler import EigerImages
 
 
 from pyCHX.chx_libs import (np, roi, time, datetime, os, get_events, 
