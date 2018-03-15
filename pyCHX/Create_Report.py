@@ -398,7 +398,11 @@ class create_pdf_report( object ):
         s.append('Sample: %s'%md['sample'] )   ####line 2 sample   
         s.append('Data Acquisition From: %s To: %s'%(md['start_time'], md['stop_time']))####line 3 Data Acquisition time
         s.append(    'Measurement: %s'%md['Measurement']  ) ####line 4 'Measurement
+        
+        #print(  md['incident_wavelength'],  int(md['number of images']),              md['detector_distance'], md['feedback_x'], md['feedback_y'], md['shutter mode']  )
+        #print(acquisition_period)
         s.append( 'Wavelength: %s A | Num of Image: %d | Exposure time: %s ms | Acquire period: %s ms'%( md['incident_wavelength'],  int(md['number of images']),round(float(exposuretime)*1000,4), round(float( acquisition_period  )*1000,4) ) )   ####line 5 'lamda...        
+        
         s.append( 'Detector-Sample Distance: %s m| FeedBack Mode: x -> %s & y -> %s| Shutter Mode: %s'%(
                 md['detector_distance'], md['feedback_x'], md['feedback_y'], md['shutter mode']  ) )  ####line 6 'Detector-Sample Distance..
         if self.report_type == 'saxs':
