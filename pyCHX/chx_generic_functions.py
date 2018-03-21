@@ -10,6 +10,8 @@ from modest_image import imshow
 import matplotlib.cm as mcm
 import copy, scipy 
 import PIL    
+from shutil import copyfile
+
 
 
 markers =  ['o', 'D', 'v',   '^', '<',  '>', 'p', 's', 'H',
@@ -2799,7 +2801,7 @@ def trans_data_to_pd(data, label=None,dtype='array'):
     return df
 
 
-def save_lists( data, label=None,  filename=None, path=None, return_res = False):    
+def save_lists( data, label=None,  filename=None, path=None, return_res = False, verbose=False):    
     '''
     save_lists( data, label=None,  filename=None, path=None)
     
@@ -2827,6 +2829,8 @@ def save_lists( data, label=None,  filename=None, path=None, return_res = False)
         filename = 'data'
     filename = os.path.join(path, filename )#+'.csv')
     df.to_csv(filename)
+    if verbose:
+        print('The data was saved in: %s.'%filename)
     if return_res:
         return df
 
@@ -2858,7 +2862,7 @@ def get_pos_val_overlap( p1, v1, p2,v2, Nl):
     
     
     
-def save_arrays( data, label=None, dtype='array', filename=None, path=None, return_res = False):      
+def save_arrays( data, label=None, dtype='array', filename=None, path=None, return_res = False,verbose=False):      
     '''
     July 10, 2016, Y.G.@CHX
     save_arrays( data, label=None, dtype='array', filename=None, path=None): 
@@ -2884,7 +2888,8 @@ def save_arrays( data, label=None, dtype='array', filename=None, path=None, retu
         filename = 'data'
     filename_ = os.path.join(path, filename)# +'.csv')
     df.to_csv(filename_)
-    print( 'The file: %s is saved in %s'%(filename, path) )
+    if verbose:
+        print( 'The file: %s is saved in %s'%(filename, path) )
     #print( 'The g2 of uid= %s is saved in %s with filename as g2-%s-%s.csv'%(uid, path, uid, CurTime))
     if return_res:
         return df
@@ -3232,6 +3237,7 @@ def stretched_auto_corr_scat_factor(x, beta, relaxation_rate, alpha=1.0, baselin
     return beta * np.exp(-2 * (relaxation_rate * x)**alpha ) + baseline
 
 def simple_exponential(x, beta, relaxation_rate,  baseline=1):
+    '''relation_rate: unit 1/s '''
     return beta * np.exp(-2 * relaxation_rate * x) + baseline
 
 
