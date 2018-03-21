@@ -67,7 +67,7 @@ def distribution_func( radius=1.0, sigma=0.1, num_points=20, spread=3, func='G')
         
     return x, rs, func( x, radius, radius*sigma)
    
-def poly_sphere_form_factor_intensity( x, radius, sigma=0.1, delta_rho=100, background=0, num_points=20, spread=5,
+def poly_sphere_form_factor_intensity( x, radius, sigma=0.1, delta_rho=1.00, background=0, num_points=20, spread=5,
                                       fit_func='G'):
     '''
     Input:
@@ -209,10 +209,10 @@ def get_form_factor_fit( q, iq, guess_values, fit_range=None, fit_variables = No
     #scale =  result.best_values['scale']
     #baseline = result.best_values['baseline']
     delta_rho= result.best_values['delta_rho'] 
-    
+    print( result.best_values )
     return result, q_
 
-def plot_form_factor_with_fit(q, iq, q_, result,  fit_power=2,  res_pargs=None, return_fig=False,
+def plot_form_factor_with_fit(q, iq, q_, result,  fit_power=0,  res_pargs=None, return_fig=False,
                          *argv,**kwargs):
     
     if res_pargs is not None:
