@@ -1190,14 +1190,14 @@ def show_C12(C12,  fig_ax=None, q_ind=1, return_fig=False, interpolation = 'none
     else:
         uid='uid'
     shape = C12.shape   
-    if (q_ind<0) or (q_ind>shape[2]-1):
-        raise Exceptions("Error: qind starts from 0 (corresponding to python array index 0, but in the plot it will show as 1) to the max Q-length of two time funcs-1 %s."%shape[2]-1) 
+    if (q_ind<1) or (q_ind>shape[2]):
+        raise Exceptions("Error: qind starts from 1 (corresponding to python array index 0, but in the plot it will show as 1) to the max Q-length of two time funcs %s."%shape[2]) 
  
                  
     if isinstance(q_ind, int):
-        C12_num = q_ind #-1
+        C12_num = q_ind -1
     else:
-        qz_ind, qr_ind = q_ind #-1
+        qz_ind, qr_ind = q_ind -1
         C12_num =  qz_ind * num_qr + qr_ind 
     
     if 'timeperframe' in kwargs.keys():
