@@ -227,7 +227,13 @@ class create_pdf_report( object ):
             self.two_g2_file = jfn
             self.two_g2_new_page = True  
             
-        self.four_time_file = 'uid=%s_g4.png'%uid_        
+        self.four_time_file = 'uid=%s_g4.png'%uid_                
+        jfn = 'uid=%s_g4__joint.png'%uid_  
+        self.g4_new_page = False
+        if os.path.exists(  data_dir + jfn ):
+            self.four_time_file = jfn
+            self.g4_new_page = True          
+        
         self.xsvs_fit_file = 'uid=%s_xsvs_fit.png'%uid_
         self.contrast_file = 'uid=%s_contrast.png'%uid_
         self.dose_file =  'uid=%s_dose_analysis.png'%uid_
@@ -683,7 +689,7 @@ class create_pdf_report( object ):
         img_width = add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
                      str2_left, str2_top, return_=True )         
-        #print( imgf,self.data_dir )        
+        print( imgf,self.data_dir )        
         #add g2 plot fit
         top = top + 70 #
         if q_rate_file is None:
@@ -693,7 +699,7 @@ class create_pdf_report( object ):
             
         
         if self.report_type != 'ang_saxs':
-            #print(img_width)
+            print(img_width)
             if img_width > 400:
                 img_height =  90
             else:
@@ -883,10 +889,18 @@ class create_pdf_report( object ):
         #add q_Iq_t
         imgf = self.four_time_file
         
-        img_height= 300
-        img_left,img_top = 80, top
-        str1_left, str1_top,str1= 180, top + 300,  'four time correlation function'
-        str2_left, str2_top = 180, top - 10
+        if not self.g4_new_page:
+            img_height= 300
+            img_left,img_top = 80, top        
+            str1_left, str1_top,str1= 180, top + 300,  'four time correlation function'
+            str2_left, str2_top = 180, top - 10        
+        else:
+            img_height= 600
+            top -= 300
+            img_left,img_top = 80, top       
+            str1_left, str1_top,str1= 180, top + 300-250,  'four time correlation function'
+            str2_left, str2_top = 180, top - 10              
+            
         add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
                      str2_left, str2_top )
