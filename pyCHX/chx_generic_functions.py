@@ -29,6 +29,23 @@ gives ['sg', 'tt', 'l', 'l']
 """
 
 
+def find_bad_pixels_FD(  bad_frame_list, FD, img_shape = [514, 1030], threshold=20 ):
+    '''Designed to find bad pixel list in 500K
+       threshold: the max intensity in 5K 
+    '''
+    bad = np.zeros(  img_shape, dtype=bool )
+    
+    for i in tqdm(bad_frame_list[ bad_frame_list>FD.beg]):
+        p,v = FD.rdrawframe(i)
+        w =  np.where( v > threshold)[0]
+        bad.ravel()[ p[w] ] = 1
+        # x,y = np.where( imgsa[i] > threshold)
+        # bad[x[0],y[0]]  = 1       
+    return ~bad
+
+
+
+
 def get_waxs_beam_center(  gamma, origin = [432, 363],  Ldet = 1495, pixel_size = 75 * 1e-3 ):
     '''YG Feb 10, 2018
         Calculate beam center for WAXS geometry by giving beam center at gamma=0 and the target gamma
@@ -2074,7 +2091,7 @@ def load_mask( path, mask_name, plot_ = False, reverse=False, *argv,**kwargs):
 
 
 
-def create_hot_pixel_mask(img, threshold, center=None, center_radius=300 ):
+def create_hot_pixel_mask(img, threshold, center=None, center_radius=300, outer_radius=0 ):
     '''create a hot pixel mask by giving threshold
        Input:
            img: the image to create hot pixel mask
@@ -2092,9 +2109,13 @@ def create_hot_pixel_mask(img, threshold, center=None, center_radius=300 ):
         from skimage.draw import  circle    
         imy, imx = img.shape   
         cy,cx = center        
-        rr, cc = circle( cy, cx, center_radius)
+        rr, cc = circle( cy, cx, center_radius,shape=img.shape )
         bst_mask[rr,cc] =0 
-    
+        if outer_radius:
+            bst_mask = np.zeros_like( img , dtype = bool)   
+            rr2, cc2 = circle( cy, cx, outer_radius,shape=img.shape )
+            bst_mask[rr2,cc2] =1
+            bst_mask[rr,cc] =0 
     hmask = np.ones_like( img )
     hmask[np.where( img * bst_mask  > threshold)]=0
     return hmask
