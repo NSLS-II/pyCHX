@@ -992,7 +992,7 @@ def create_user_folder( CYCLE, default_dir= '/XF11ID/analysis/', username = None
     if username !='Default':
         if username is None:
             username = getpass.getuser()         
-            data_dir0 = os.path.join(default_dir, CYCLE, username, 'Results/')
+        data_dir0 = os.path.join(default_dir, CYCLE, username, 'Results/')
     else:
         data_dir0 = os.path.join(default_dir, CYCLE +'/')
     ##Or define data_dir here, e.g.,#data_dir = '/XF11ID/analysis/2016_2/rheadric/test/'
