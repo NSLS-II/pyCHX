@@ -514,9 +514,9 @@ def get_two_time_mulit_uids( uids, roi_mask,  norm= None, bin_frame_number=1, pa
         
         FD = Multifile(filename, 0, N//bin_frame_number)
         #print( FD.beg, FD.end)
-        
-        os.makedirs(path + uid + '/', exist_ok=True)
-        filename =  path + uid + '/' + 'uid=%s_g12b'%uid
+        uid_ = md['uid']
+        os.makedirs(path + uid_ + '/', exist_ok=True)
+        filename =  path + uid_ + '/' + 'uid=%s_g12b'%uid
         doit = True
         if not force_generate:
             if os.path.exists( filename + '.npy'):
@@ -640,8 +640,12 @@ def get_series_one_time_mulit_uids( uids,  qval_dict,  trans = None, good_start=
             N = len(imgs)
             if exposure_dose is None:
                 exposure_dose = [N]
-            g2_path =  path + uid + '/'
-            g12b = np.load( g2_path + 'uid=%s_g12b.npy'%uid)
+            try:
+                g2_path =  path + uid + '/'
+                g12b = np.load( g2_path + 'uid=%s_g12b.npy'%uid)
+            except:
+                g2_path =  path + md['uid'] + '/'
+                g12b = np.load( g2_path + 'uid=%s_g12b.npy'%uid)
             try:
                 exp_time = float( md['cam_acquire_time']) #*1000 #from second to ms
             except:                
