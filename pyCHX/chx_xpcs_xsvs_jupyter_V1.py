@@ -914,6 +914,18 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
     #print( run_pargs['inc_x0'],run_pargs['inc_y0'] )
     #print(  inc_x0, inc_y0 )
     
+    if md['detector'] =='eiger1m_single_image':
+        Chip_Mask=np.load( '/XF11ID/analysis/2017_1/masks/Eiger1M_Chip_Mask.npy')
+    elif md['detector'] =='eiger4m_single_image' or md['detector'] == 'image':    
+        Chip_Mask= np.array(np.load( '/XF11ID/analysis/2017_1/masks/Eiger4M_chip_mask.npy'), dtype=bool)
+        BadPix =     np.load('/XF11ID/analysis/2018_1/BadPix_4M.npy'  )  
+        Chip_Mask.ravel()[BadPix] = 0
+    elif md['detector'] =='eiger500K_single_image':
+        Chip_Mask= 1  #to be defined the chip mask
+    else:
+        Chip_Mask = 1
+    #show_img(Chip_Mask)
+    
     center = [  int(md['beam_center_y']),int( md['beam_center_x'] ) ]  #beam center [y,x] for python image    
     
     
@@ -982,7 +994,9 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
         plot1D( y = imgsum[ np.array( [i for i in np.arange(good_start, len(imgsum)) if i not in bad_frame_list])],
                title =uidstr + '_imgsum', xlabel='Frame', ylabel='Total_Intensity', legend='imgsum'   )
         run_time(t0)
-
+        
+        mask =  mask *  Chip_Mask       
+        
         #%system   free && sync && echo 3 > /proc/sys/vm/drop_caches && free
         ## Get bad frame list by a polynominal fit
         bad_frame_list =  get_bad_frame_list( imgsum, fit=True, plot=True,polyfit_order = 30, 
@@ -1017,7 +1031,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
             #except:
             #    hmask=1
             hmask=1
-            qp_saxs, iq_saxs, q_saxs = get_circular_average( avg_img, mask * hmask, pargs=setup_pargs, save=True  )
+            qp_saxs, iq_saxs, q_saxs = get_circular_average( avg_img * Chip_Mask, mask * hmask * Chip_Mask, pargs=setup_pargs, save=True  )
         
             plot_circular_average( qp_saxs, iq_saxs, q_saxs,  pargs= setup_pargs, 
                               xlim=[q_saxs.min(), q_saxs.max()], ylim = [iq_saxs.min(), iq_saxs.max()] )
@@ -1047,7 +1061,7 @@ def run_xpcs_xsvs_single( uid, run_pargs, md_cor=None, return_res=False,reverse=
                 time_edge = create_time_slice( N= Nimg, slice_num= 3, slice_width= 1, edges = None )
                 time_edge =  np.array( time_edge ) + good_start
                 #print( time_edge )
-                qpt, iqst, qt = get_t_iqc( FD, time_edge, mask, pargs=setup_pargs, nx=1500 )
+                qpt, iqst, qt = get_t_iqc( FD, time_edge, mask* Chip_Mask, pargs=setup_pargs, nx=1500 )
                 plot_t_iqc( qt, iqst, time_edge, pargs=setup_pargs, xlim=[qt.min(), qt.max()],
                        ylim = [iqst.min(), iqst.max()], save=True )   
                 
