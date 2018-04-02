@@ -980,7 +980,7 @@ def create_folder( base_folder, sub_folder ):
 
     
     
-def create_user_folder( CYCLE, default_dir= '/XF11ID/analysis/', username = None ):
+def create_user_folder( CYCLE, username=None, default_dir= '/XF11ID/analysis/' ):
     '''
     Crate a folder for saving user data analysis result
     Input:
