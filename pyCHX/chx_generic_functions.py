@@ -29,6 +29,47 @@ gives ['sg', 'tt', 'l', 'l']
 """
 
 
+def create_seg_ring( ring_edges, ang_edges, mask, setup_pargs  ):
+    '''YG Dev April 6, 2018
+    Create segment ring mask
+    Input:
+        ring_edges:  edges of rings (in pixel), e.g., [  [320,340], [450, 460],   ]
+        ang_edges:   edges of angles, e.g.,    [  [20,40], [50, 60],   ]
+        mask: bool type 2D array
+        set_pargs: dict, should at least contains, center
+                   e.g., 
+                   {'Ldet': 1495.0,   abs            #essential
+                     'center': [-4469, 363],         #essential
+                     'dpix': 0.075000003562308848,   #essential
+                     'exposuretime': 0.99999702,
+                     'lambda_': 0.9686265,           #essential
+                     'path': '/XF11ID/analysis/2018_1/jianheng/Results/b85dad/',
+                     'timeperframe': 1.0,
+                     'uid': 'uid=b85dad'}
+    Return:
+        roi_mask: segmented ring mask: two-D array
+        qval_dict: dict, key as q-number, val: q val
+        
+    '''
+    
+    roi_mask_qr, qr, qr_edge = get_ring_mask(mask, inner_radius= None, outer_radius = None, 
+            width = None, num_rings = None, edges= np.array( ring_edges), unit='pixel',
+                                    pargs= setup_pargs)     
+   
+    roi_mask_ang, ang_center, ang_edge = get_angular_mask( mask,  inner_angle= None, 
+            outer_angle = None, width = None, edges = np.array( ang_edges ),
+            num_angles = None, center = center, flow_geometry= False )
+    
+ 
+    roi_mask, good_ind = combine_two_roi_mask( roi_mask_qr, roi_mask_ang,pixel_num_thres=100)   
+    qval_dict_ = get_qval_dict(  qr_center = qr, qz_center = ang_center,one_qz_multi_qr=False)
+    qval_dict = {  i:qval_dict_[k] for (i,k) in enumerate( good_ind) }    
+    return roi_mask, qval_dict
+
+
+
+
+
 def find_bad_pixels_FD(  bad_frame_list, FD, img_shape = [514, 1030], threshold=20 ):
     '''Designed to find bad pixel list in 500K
        threshold: the max intensity in 5K 
