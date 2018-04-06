@@ -29,6 +29,7 @@ gives ['sg', 'tt', 'l', 'l']
 """
 
 
+
 def create_seg_ring( ring_edges, ang_edges, mask, setup_pargs  ):
     '''YG Dev April 6, 2018
     Create segment ring mask
@@ -65,7 +66,6 @@ def create_seg_ring( ring_edges, ang_edges, mask, setup_pargs  ):
     qval_dict_ = get_qval_dict(  qr_center = qr, qz_center = ang_center,one_qz_multi_qr=False)
     qval_dict = {  i:qval_dict_[k] for (i,k) in enumerate( good_ind) }    
     return roi_mask, qval_dict
-
 
 
 
