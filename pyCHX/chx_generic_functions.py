@@ -29,6 +29,116 @@ gives ['sg', 'tt', 'l', 'l']
 """
 
 
+from scipy.special import erf
+def ps( y,shift=.5, replot=True, logplot='off', x= None):
+    '''
+    Dev 16, 2018
+    Modified ps() function in 95-utilities.py
+    function to determine statistic on line profile (assumes either peak or erf-profile)
+    Input:
+        y: 1D array, the data for analysis
+        shift: scale for peak presence (0.5 -> peak has to be taller factor 2 above background)
+        replot: if True, will plot data (if error func) with the fit and peak/cen/com position
+        logplot: if on, will plot in log scale
+        x: if not None, give x-data
+        
+    
+    '''
+    if x is None:
+        x = np.arange( len(y) )
+    x=np.array(x)
+    y=np.array(y)
+    
+    PEAK=x[np.argmax(y)]
+    PEAK_y=np.max(y)
+    COM=np.sum(x * y) / np.sum(y)    
+    ### from Maksim: assume this is a peak profile:
+    def is_positive(num):
+        return True if num > 0 else False
+    # Normalize values first:
+    ym = (y - np.min(y)) / (np.max(y) - np.min(y)) - shift  # roots are at Y=0
+    positive = is_positive(ym[0])
+    list_of_roots = []
+    for i in range(len(y)):
+        current_positive = is_positive(ym[i])
+        if current_positive != positive:
+            list_of_roots.append(x[i - 1] + (x[i] - x[i - 1]) / (abs(ym[i]) + abs(ym[i - 1])) * abs(ym[i - 1]))
+            positive = not positive
+    if len(list_of_roots) >= 2:
+        FWHM=abs(list_of_roots[-1] - list_of_roots[0])
+        CEN=list_of_roots[0]+0.5*(list_of_roots[1]-list_of_roots[0])
+        ps.fwhm=FWHM
+        ps.cen=CEN
+        yf=ym
+        #return {
+        #    'fwhm': abs(list_of_roots[-1] - list_of_roots[0]),
+        #    'x_range': list_of_roots,
+        #}
+    else:    # ok, maybe it's a step function..
+        #print('no peak...trying step function...')  
+        ym = ym + shift
+        def err_func(x, x0, k=2, A=1,  base=0 ):     #### erf fit from Yugang
+            return base - A * erf(k*(x-x0))
+        mod = Model(  err_func )
+        ### estimate starting values:
+        x0=np.mean(x)
+        #k=0.1*(np.max(x)-np.min(x))
+        pars  = mod.make_params( x0=x0, k=2,  A = 1., base = 0. ) 
+        result = mod.fit(ym, pars, x = x )
+        CEN=result.best_values['x0']
+        FWHM = result.best_values['k']
+        A = result.best_values['A']
+        b = result.best_values['base']        
+        yf_ =  err_func(x, CEN, k=FWHM, A=A,  base=b )  #result.best_fit
+        yf = (yf_ ) * (np.max(y) - np.min(y)) + np.min(y)
+        
+        #(y - np.min(y)) / (np.max(y) - np.min(y)) - shift
+        
+        
+        ps.cen = CEN
+        ps.fwhm = FWHM
+        
+    if replot:
+        ### re-plot results:   
+        if logplot=='on':
+            fig, ax = plt.subplots() #plt.figure()            
+            ax.semilogy([PEAK,PEAK],[np.min(y),np.max(y)],'k--',label='PEAK')
+            ax.hold(True)
+            ax.semilogy([CEN,CEN],[np.min(y),np.max(y)],'r-.',label='CEN')
+            ax.semilogy([COM,COM],[np.min(y),np.max(y)],'g.-.',label='COM')
+            ax.semilogy(x,y,'bo-')
+            #plt.xlabel(field);plt.ylabel(intensity_field)
+            ax.legend()
+            #plt.title('uid: '+str(uid)+' @ '+str(t)+'\nPEAK: '+str(PEAK_y)[:8]+' @ '+str(PEAK)[:8]+'   COM @ '+str(COM)[:8]+ '\n FWHM: '+str(FWHM)[:8]+' @ CEN: '+str(CEN)[:8],size=9)
+            #plt.show()    
+        else:
+            #plt.close(999)
+            fig, ax = plt.subplots() #plt.figure()
+            ax.plot([PEAK,PEAK],[np.min(y),np.max(y)],'k--',label='PEAK')
+            
+            #ax.hold(True)
+            ax.plot([CEN,CEN],[np.min(y),np.max(y)],'m-.',label='CEN')
+            ax.plot([COM,COM],[np.min(y),np.max(y)],'g.-.',label='COM')
+            ax.plot(x,y,'bo--')
+            ax.plot(x,yf,'r-', label='Fit')
+            
+            #plt.xlabel(field);plt.ylabel(intensity_field)
+            ax.legend()
+            #plt.title('uid: '+str(uid)+' @ '+str(t)+'\nPEAK: '+str(PEAK_y)[:8]+' @ '+str(PEAK)[:8]+'   COM @ '+str(COM)[:8]+ '\n FWHM: '+str(FWHM)[:8]+' @ CEN: '+str(CEN)[:8],size=9)
+            #plt.show()
+
+        ### assign values of interest as function attributes:
+        ps.peak=PEAK
+        ps.com=COM
+    return ps.cen
+
+
+
+
+
+
+
+
 
 def create_seg_ring( ring_edges, ang_edges, mask, setup_pargs  ):
     '''YG Dev April 6, 2018
@@ -2207,6 +2317,7 @@ def show_img( image, ax=None,label_array=None, alpha=0.5, interpolation='nearest
              show_time= False, file_name =None, ylabel=None, xlabel=None, extent=None,
              show_colorbar=True, tight=True, show_ticks=True, save_format = 'png', dpi= None,
              center=None,origin='lower', lab_fontsize = 16,  tick_size = 12, colorbar_fontsize = 8, 
+             use_mat_imshow=False,
              *argv,**kwargs ):    
     """YG. Sep26, 2017 Add label_array/alpha option to show a mask on top of image
     
@@ -2234,11 +2345,19 @@ def show_img( image, ax=None,label_array=None, alpha=0.5, interpolation='nearest
     if center is not None:
         plot1D(center[1],center[0],ax=ax, c='b', m='o', legend='')
     if not logs:
-        im=imshow(ax, image, origin=origin,cmap=cmap,interpolation=interpolation, vmin=vmin,vmax=vmax,
+        if not use_mat_imshow:
+            im=imshow(ax, image, origin=origin,cmap=cmap,interpolation=interpolation, vmin=vmin,vmax=vmax,
                     extent=extent)  #vmin=0,vmax=1,
+        else:
+            im=ax.imshow(  image, origin=origin,cmap=cmap,interpolation=interpolation, vmin=vmin,vmax=vmax,
+                    extent=extent)  #vmin=0,vmax=1,            
     else:
-        im=imshow(ax, image, origin=origin,cmap=cmap,
+        if not use_mat_imshow:
+            im=imshow(ax, image, origin=origin,cmap=cmap,
                 interpolation=interpolation, norm=LogNorm(vmin,  vmax),extent=extent)   
+        else:
+            im=ax.imshow(image, origin=origin,cmap=cmap,
+                interpolation=interpolation, norm=LogNorm(vmin,  vmax),extent=extent)             
     if label_array is not None:
         im2=show_label_array(ax, label_array, alpha= alpha, cmap=cmap, interpolation=interpolation )  
         
