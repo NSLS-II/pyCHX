@@ -2073,7 +2073,10 @@ def get_flatfield( uid, reverse=False ):
 def get_detector( header ):
     '''Get the first detector image string by giving header '''
     keys = [k for k, v in header.descriptors[0]['data_keys'].items()     if 'external' in v]
-    return keys[0]
+    for k in keys:
+        if 'eiger' in k:
+            return k
+    #return keys[0]
 
 def get_detectors( header ):
     '''Get all the detector image strings by giving header '''
