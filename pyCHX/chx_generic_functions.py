@@ -8,6 +8,7 @@ from skimage.draw import line_aa, line, polygon, ellipse, circle
 
 from modest_image import imshow
 import matplotlib.cm as mcm
+from matplotlib import cm
 import copy, scipy 
 import PIL    
 from shutil import copyfile
@@ -27,6 +28,50 @@ flatten_nestlist = lambda l: [item for sublist in l for item in sublist]
 e.g., flatten( [ ['sg','tt'],'ll' ]   )
 gives ['sg', 'tt', 'l', 'l']
 """
+
+
+
+
+
+def show_tif_series(  tif_series, Nx=None, center=None, w= 50, vmin=None, vmax= None, cmap = cmap_vge_hdr,
+                    logs=False, figsize=[10,16]     ):
+    '''
+    tif_series: list of 2D tiff images
+    Nx: the number in the row for dispalying
+    center: the center of iamge (or direct beam pixel)
+    w: the ROI half size in pixel
+    vmin: the min intensity value for plot
+    vmax: if None, will be max intensity value of the ROI  
+    figsize: size of the plot (in inch)
+    
+    '''
+    
+    if center is not None:
+        cy,cx = center
+    #infs = sorted(sample_list)
+    N = len( tif_series )
+    if Nx is  None:
+        sy = int( np.sqrt(N))    
+    else:
+        sy = Nx
+    sx = int( np.ceil( N/sy ) )    
+    fig = plt.figure(   figsize =figsize  ) 
+    for i in range( N ):
+        #print(i)
+        ax = fig.add_subplot( sx, sy, i+1)
+        #d = (np.array(  PIL.Image.open( infs[i] ).convert('I') ))[ cy-w:cy+w, cx-w:cx+w   ]
+        d = tif_series[i][::-1]
+        #vmax= np.max(d)
+        #pritn(vmax)
+        #vmin= 10#np.min(d)
+        show_img( d, logs = logs, show_colorbar= False,show_ticks =False,
+                 ax= [fig, ax], image_name= '%02d'%(i+1), cmap = cmap, 
+                 vmin= vmin, vmax= vmax,              
+                aspect=1, save=False, path=None)
+    return fig, ax
+        
+
+
 
 
 from scipy.special import erf
