@@ -25,7 +25,7 @@ def use_pims(db):
     EigerHandler = EigerHandlerPIMS
     db.reg.register_handler('AD_EIGER2', EigerHandler, overwrite=True)
     db.reg.register_handler('AD_EIGER', EigerHandler, overwrite=True)
-
+    db.reg.register_handler('AD_EIGER_SLICE', EigerHandler, overwrite=True)
 
 def use_dask(db):
     global EigerImages, EigerHandler
@@ -34,7 +34,7 @@ def use_dask(db):
     EigerHandler = EigerHandlerDask
     db.reg.register_handler('AD_EIGER2', EigerHandler, overwrite=True)
     db.reg.register_handler('AD_EIGER', EigerHandler, overwrite=True)
-
+    db.reg.register_handler('AD_EIGER_SLICE', EigerHandler, overwrite=True)
 # call use_pims or use_dask
 # default is use_dask()
 # TODO : This is hard coded
