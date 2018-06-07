@@ -149,7 +149,11 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
             detector = get_detector( db[uid ] )
             images_ = load_data( uid, detector, reverse= reverse    )
         else:
+            #print('Here for images_per_file: %s'%images_per_file)
+            #images_ = EigerImages( data_path, images_per_file=images_per_file)
+            #print('here')
             images_ = EigerImages(data_path,images_per_file, md)
+            #print(md)
             if reverse:
                 images_ = reverse_updown( images_ )
         N= len(images_)
@@ -430,7 +434,24 @@ def init_compress_eigerdata( images, mask, md, filename,
     #md = images.md
     if bins!=1:
         nobytes=8
+    if 'count_time' not in list( md.keys()    ):
+        md['count_time']=0
+    if 'detector_distance' not in list( md.keys()    ):
+        md['detector_distance']=0        
+    if 'frame_time' not in list( md.keys()    ):
+        md['frame_time']=0
+    if 'incident_wavelength' not in list( md.keys()    ):
+        md['incident_wavelength']=0     
+    if 'y_pixel_size' not in list( md.keys()    ):
+        md['y_pixel_size']=0  
+    if 'x_pixel_size' not in list( md.keys()    ):
+        md['x_pixel_size']=0        
+    if 'beam_center_x' not in list( md.keys()    ):
+        md['beam_center_x']=0 
+    if 'beam_center_y' not in list( md.keys()    ):
+        md['beam_center_y']=0         
         
+    
     Header = struct.pack('@16s8d7I916x',b'Version-COMP0001',
                         md['beam_center_x'],md['beam_center_y'], md['count_time'], md['detector_distance'],
                         md['frame_time'],md['incident_wavelength'], md['x_pixel_size'],md['y_pixel_size'],
@@ -486,7 +507,10 @@ def init_compress_eigerdata( images, mask, md, filename,
             fp.write(  struct.pack( '@I', dlen   ))
             fp.write(  struct.pack( '@{}i'.format( dlen), *p))
             if bins==1:
-                fp.write(  struct.pack( '@{}{}'.format( dlen,'ih'[nobytes==2]), *v)) 
+                if nobytes!=8:
+                    fp.write(  struct.pack( '@{}{}'.format( dlen,'ih'[nobytes==2]), *v)) 
+                else:
+                    fp.write(  struct.pack( '@{}{}'.format( dlen,'dd'[nobytes==2]  ), *v))                    
             else:
                 fp.write(  struct.pack( '@{}{}'.format( dlen,'dd'[nobytes==2]  ), *v)) 
         #n +=1     
