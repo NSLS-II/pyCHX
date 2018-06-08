@@ -882,6 +882,7 @@ def get_xsvs_fit(spe_cts_all, spec_sum,  K_mean, spec_std = None, spec_bins=None
             if not varyK:
                 fit_func = nbinomlog1  
                 #print(i,j,m0,)
+                #print(y,N, x_, kmean_guess)
                 resultL = leastsq(fit_func, [ m0 ], args=(y*N, x_, N, kmean_guess ),
                                   ftol=1.49012e-38, xtol=1.49012e-38, factor=100,
                                   full_output=1)                
@@ -1092,17 +1093,18 @@ def save_KM( K_mean, KL_val, ML_val, qs=None, level_time=None, uid=None, path=No
     ml = 1/get_contrast( ML_val)
     L,n = kl.shape
     m2,m1=K_mean.shape    
-     
+    #print(L,n,m2,m1) 
     if level_time is None:
-        l = ['K_mean_%d'%i for i in range(m2)] + ['K_fit_Bin_%i'%s for s in range(1,n+1)] + ['Contrast_Fit_Bin_%i'%s for s in range(1,n+1)]
+        l = ['K_mean_%d'%i for i in range(m2)] + ['K_fit_Bin_%i'%s for s in range(1,n+1)] + ['M_Fit_Bin_%i'%s for s in range(1,n+1)] + ['Contrast_Fit_Bin_%i'%s for s in range(1,n+1)  ]
     else:
-        l = ['K_mean_%s'%i for i in level_time] + ['K_fit_%s'%s for s in level_time] + ['Contrast_Fit_%s'%s for s in level_time]
-    data = np.hstack( [ (K_mean).T, kl.reshape( L,n), ml.reshape(L,n)  ] )         
+        l = ['K_mean_%s'%i for i in level_time] + ['K_fit_%s'%s for s in level_time] + ['M_Fit_%s'%s for s in level_time] + ['Contrast_Fit_%s'%s for s in level_time]
+    data = np.hstack( [ (K_mean).T, kl.reshape( L,n), ml.reshape(L,n), (1/ml).reshape(L,n)   ] )         
     if qs is  not None:
         qs = np.array( qs )
         l =  ['q'] + l
         #print(   (K_mean).T,  (K_mean).T.shape )
-        data =  np.hstack( [ qs.reshape( L,1), (K_mean).T, kl.reshape( L,n),ml.reshape(L,n)   ] )
+        #print(  qs )
+        data =  np.hstack( [ qs.reshape( L,1), (K_mean).T, kl.reshape( L,n),ml.reshape(L,n),(1/ml).reshape(L,n)   ] )
         
     df = DataFrame(      data   )         
     df.columns = (x for x in l)  
