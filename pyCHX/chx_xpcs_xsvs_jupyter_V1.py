@@ -166,7 +166,7 @@ def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1,  legend_size=8
     if key=='mean_int_sets':ax.set_xlabel( 'frame ')            
     if xlim is not None:ax.set_xlim(xlim)        
     if ylim is not None:ax.set_ylim(ylim)  
-
+    return fig,ax
 
 
             
