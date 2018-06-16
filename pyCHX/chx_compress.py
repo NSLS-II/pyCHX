@@ -36,11 +36,17 @@ def map_async(pool, fun, args ):
  
 def pass_FD(FD,n):
     #FD.rdframe(n)
-    FD.seekimg(n)
-
-def go_through_FD(FD):    
-    for i in range(FD.beg, FD.end):
-        pass_FD(FD,i)
+    try:
+        FD.seekimg(n)
+    except:
+        pass
+        return False
+def go_through_FD(FD): 
+    if not pass_FD(FD,FD.beg):   
+        for i in range(FD.beg, FD.end):
+            pass_FD(FD,i)
+    else:
+        pass
         
     
 def compress_eigerdata( images, mask, md, filename=None,  force_compress=False, 
@@ -680,15 +686,7 @@ class Multifile:
         if self.seekimg(n)!=-1:
              return(self._readImageRaw())
 
-
-
-            
-def pass_FD(FD,n):
-    #FD.rdframe(n)
-    FD.seekimg(n)            
-  
-
-
+ 
 
 class Multifile_Bins( object  ):
     '''
