@@ -75,7 +75,7 @@ def plot_t_iqc_uids( qs, iqsts, tstamps  ):
     
     
 def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1,  legend_size=8, 
-                           yshift= 0.01, ymulti=1, xlim=None, ylim=None,legend=None, uid_length = None):#,title=''  ):
+                           yshift= 0.01, ymulti=1, xlim=None, ylim=None,legend=None, uid_length = None, filename_list=None):#,title=''  ):
     
     '''
     YG Feb2, 2018, make yshift be also a list
@@ -124,7 +124,11 @@ def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1,  legend_size=8
         if uid_length is not None:
             u = u[:uid_length]                         
         inDiru =  inDir + u + '/'        
-        total_res  = extract_xpcs_results_from_h5( filename = 'uid=%s_Res.h5'%uid_dict[u], 
+        if filename_list is None:
+           filename = 'uid=%s_Res.h5'%uid_dict[u]
+        else:
+           filename = filename_list[i]
+        total_res  = extract_xpcs_results_from_h5( filename = filename, 
                                     import_dir = inDiru, exclude_keys = ['g12b'] )
         if key=='g2':
             d = total_res[key][1:,qth]
@@ -476,7 +480,7 @@ def compress_multi_uids( uids, mask, mask_dict = None, force_compress=False,  pa
 #################################################################################################
 
 def get_two_time_mulit_uids( uids, roi_mask,  norm= None, bin_frame_number=1, path=None, force_generate=False,
-                           md=None,  imgs=None,direct_load_data=False ): 
+                           md=None,  imgs=None,direct_load_data=False,compress_path=None ): 
     
     ''' Calculate two time correlation by using auto_two_Arrayc func for a set of uids, 
         if the two-time resutls are already created, by default (force_generate=False), just pass
@@ -507,10 +511,12 @@ def get_two_time_mulit_uids( uids, roi_mask,  norm= None, bin_frame_number=1, pa
             pass
         N = len(imgs)
         #print( N )
+        if compress_path is None:
+            compress_path = '/XF11ID/analysis/Compressed_Data/'
         if bin_frame_number==1:
-            filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%md['uid']
+            filename = '%s'%compress_path +'uid_%s.cmp'%md['uid']
         else:
-            filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s_bined--%s.cmp'%(md['uid'],bin_frame_number)
+            filename = '%s'%compress_path +'uid_%s_bined--%s.cmp'%(md['uid'],bin_frame_number)
         
         FD = Multifile(filename, 0, N//bin_frame_number)
         #print( FD.beg, FD.end)
