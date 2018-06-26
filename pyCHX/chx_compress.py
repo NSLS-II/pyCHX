@@ -833,10 +833,10 @@ def mean_intensityc(FD, labeled_array,  sampling=1, index=None, multi_cor = Fals
     """
     
     qind, pixelist = roi.extract_label_indices(  labeled_array  ) 
-    
-    if labeled_array.shape != ( FD.md['ncols'],FD.md['nrows']):
+    sx,sy = (  FD.rdframe(FD.beg)    ).shape
+    if labeled_array.shape != ( sx,sy ):
         raise ValueError(
-            " `image` shape (%d, %d) in FD is not equal to the labeled_array shape (%d, %d)" %( FD.md['ncols'],FD.md['nrows'], labeled_array.shape[0], labeled_array.shape[1]) )
+            " `image` shape (%d, %d) in FD is not equal to the labeled_array shape (%d, %d)" %( sx,sy, labeled_array.shape[0], labeled_array.shape[1]) )
     # handle various input for `index`
     if index is None:
         index = list(np.unique(labeled_array))
