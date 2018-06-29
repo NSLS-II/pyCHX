@@ -31,6 +31,14 @@ gives ['sg', 'tt', 'l', 'l']
 
 
 
+def get_eigerImage_per_file( data_fullpath ):
+    f= h5py.File(data_fullpath)       
+    dset_keys = list(f['/entry/data'].keys())
+    dset_keys.sort()
+    dset_root="/entry/data"
+    dset_keys = [dset_root + "/" + dset_key for dset_key in dset_keys]
+    dset = f[dset_keys[0]]
+    return  len(dset)
 
 
 def show_tif_series(  tif_series, Nx=None, center=None, w= 50, vmin=None, vmax= None, cmap = cmap_vge_hdr,
