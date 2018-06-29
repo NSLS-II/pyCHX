@@ -47,13 +47,52 @@ def go_through_FD(FD):
             pass_FD(FD,i)
     else:
         pass
-        
+
+def get_eigerImage_per_file( data_fullpath ):
+    '''Will move to chx_generic_func
+    Get frame number for eiger data file
+    '''
+    f= h5py.File(data_fullpath)       
+    dset_keys = list(f['/entry/data'].keys())
+    dset_keys.sort()
+    dset_root="/entry/data"
+    dset_keys = [dset_root + "/" + dset_key for dset_key in dset_keys]
+    dset = f[dset_keys[0]]
+    return  len(dset)
+
+def copy_data( old_path, new_path = '/tmp_data/data/'  ): 
+    import shutil,glob
+    #old_path = sud[2][0]
+    #new_path = '/tmp_data/data/'
+    fps = glob.glob( old_path[:-10] + '*' )
+    for fp in tqdm(fps):
+        if not os.path.exists( new_path + os.path.basename(fp)):
+            shutil.copy( fp, new_path )
+    print('The files %s are transfered to: %s.'%(old_path[:-10] + '*' , new_path))
+    
+def delete_data(  old_path, new_path = '/tmp_data/data/'  ):
+    import shutil,glob
+    #old_path = sud[2][0]
+    #new_path = '/tmp_data/data/'
+    fps = glob.glob( old_path[:-10] + '*' )
+    for fp in tqdm(fps):        
+        nfp = new_path + os.path.basename(fp)
+        if os.path.exists( nfp ):
+            os.remove( nfp )   
+            
     
 def compress_eigerdata( images, mask, md, filename=None,  force_compress=False, 
                         bad_pixel_threshold=1e15, bad_pixel_low_threshold=0, 
                        hot_pixel_threshold=2**30, nobytes=2,bins=1, bad_frame_list=None,
                        para_compress= False, num_sub=100, dtypes='uid',reverse =True,
-                      num_max_para_process=500, with_pickle=False, direct_load_data=False, data_path=None,images_per_file=100):   
+                      num_max_para_process=500, with_pickle=False, direct_load_data=False, data_path=None,
+                       images_per_file=100, copy_rawdata=True,new_path = '/tmp_data/data/'):   
+    '''
+    Init 2016, YG@CHX
+    DEV 2018, June, make images_per_file a dummy, will be determined by get_eigerImage_per_file if direct_load_data
+                    Add copy_rawdata opt.
+    
+    '''
     
     end= len(images)//bins    
     if filename is None:
@@ -64,7 +103,9 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
         if para_compress:
             images='foo'
             #para_compress=   True   
-    #print( dtypes )        
+    #print( dtypes )      
+    if direct_load_data:
+        images_per_file = get_eigerImage_per_file( data_path )         
     if force_compress:
         print ("Create a new compress file with filename as :%s."%filename)
         if para_compress:
@@ -78,8 +119,9 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
                         bins=bins, num_sub=num_sub, dtypes=dtypes, 
                         reverse=reverse, num_max_para_process=num_max_para_process,
                         with_pickle= with_pickle, direct_load_data= direct_load_data,
-                        data_path=data_path,images_per_file=images_per_file) 
-                    
+                        data_path=data_path,images_per_file=images_per_file,copy_rawdata=copy_rawdata,new_path=new_path) 
+           if copy_rawdata:
+                delete_data(  data_path, new_path  )                    
         else:
             return init_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
@@ -94,7 +136,7 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
                         bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
                                     bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes= nobytes, bins=bins,
                                      num_sub=num_sub, dtypes=dtypes, reverse=reverse,
-                                              num_max_para_process=num_max_para_process,with_pickle= with_pickle, direct_load_data= direct_load_data,data_path=data_path,images_per_file=images_per_file) 
+                                              num_max_para_process=num_max_para_process,with_pickle= with_pickle, direct_load_data= direct_load_data,data_path=data_path,images_per_file=images_per_file,copy_rawdata=copy_rawdata) 
             else:
                 return init_compress_eigerdata( images, mask, md, filename, 
                        bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
@@ -147,7 +189,8 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
                             bad_pixel_low_threshold=0, nobytes=4, bins=1, dtypes='uid',reverse =True,
                            num_max_para_process=500, cpu_core_number=72, with_pickle=True,
-                           direct_load_data=False, data_path=None,images_per_file=100):
+                           direct_load_data=False, data_path=None,images_per_file=100,
+                            copy_rawdata=True,new_path = '/tmp_data/data/'):
     
     if dtypes=='uid':
         uid= md['uid'] #images
@@ -158,8 +201,14 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
             #print('Here for images_per_file: %s'%images_per_file)
             #images_ = EigerImages( data_path, images_per_file=images_per_file)
             #print('here')
-            images_ = EigerImages(data_path,images_per_file, md)
-            #print(md)
+            if not copy_rawdata:
+                images_ = EigerImages(data_path,images_per_file, md)
+            else:
+                print('Due to a IO problem running on GPFS. The raw data will be copied to /tmp_data/Data.')
+                print('Copying...')
+                copy_data( data_path, new_path    )            
+                images_ = EigerImages( new_path, images_per_file, md)            
+                #print(md)
             if reverse:
                 images_ = reverse_updown( images_ )
         N= len(images_)
