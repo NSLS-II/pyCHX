@@ -90,9 +90,7 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
                         bins=bins, num_sub=num_sub, dtypes=dtypes, 
                         reverse=reverse, num_max_para_process=num_max_para_process,
                         with_pickle= with_pickle, direct_load_data= direct_load_data,
-                        data_path=data_path,images_per_file=images_per_file,copy_rawdata=copy_rawdata,new_path=new_path) 
-           if copy_rawdata:
-                delete_data(  data_path, new_path  )                    
+                        data_path=data_path,images_per_file=images_per_file,copy_rawdata=copy_rawdata,new_path=new_path)                    
         else:
             return init_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
@@ -228,12 +226,13 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
     else:
         print ('No bad frames are involved.')    
     print( 'Combining the seperated compressed files together...')
-    combine_compressed( filename, Nf, del_old=True) 
-    
+    combine_compressed( filename, Nf, del_old=True)     
     del results
     del res_
     if  with_pickle:
-        pkl.dump( [mask, avg_img, imgsum, bad_frame_list], open(filename + '.pkl', 'wb' ) )
+        pkl.dump( [mask, avg_img, imgsum, bad_frame_list], open(filename + '.pkl', 'wb' ) )    
+    if copy_rawdata:
+        delete_data(  data_path, new_path  ) 
     return   mask, avg_img, imgsum, bad_frame_list
 
 def combine_compressed( filename,  Nf, del_old=True):
