@@ -40,7 +40,27 @@ def get_eigerImage_per_file( data_fullpath ):
     dset = f[dset_keys[0]]
     return  len(dset)
 
-
+def copy_data( old_path, new_path = '/tmp_data/data/'  ): 
+    import shutil,glob
+    #old_path = sud[2][0]
+    #new_path = '/tmp_data/data/'
+    fps = glob.glob( old_path[:-10] + '*' )
+    for fp in tqdm(fps):
+        if not os.path.exists( new_path + os.path.basename(fp)):
+            shutil.copy( fp, new_path )
+    print('The files %s are transfered to: %s.'%(old_path[:-10] + '*' , new_path))
+    
+def delete_data(  old_path, new_path = '/tmp_data/data/'  ):
+    import shutil,glob
+    #old_path = sud[2][0]
+    #new_path = '/tmp_data/data/'
+    fps = glob.glob( old_path[:-10] + '*' )
+    for fp in tqdm(fps):        
+        nfp = new_path + os.path.basename(fp)
+        if os.path.exists( nfp ):
+            os.remove( nfp )   
+            
+            
 def show_tif_series(  tif_series, Nx=None, center=None, w= 50, vmin=None, vmax= None, cmap = cmap_vge_hdr,
                     logs=False, figsize=[10,16]     ):
     '''
