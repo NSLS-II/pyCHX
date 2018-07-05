@@ -11,8 +11,6 @@ from modest_image import imshow
 # this does the databroker import
 #from chxtools.handlers import EigerHandler
 from eiger_io.fs_handler import EigerHandler 
-#from databroker import DataBroker as db, get_images, get_table, get_events, get_fields
-from databroker import  get_images, get_table, get_events, get_fields
 from databroker.assets.path_only_handlers import RawHandler
 ## Import all the required packages for  Data Analysis
 from databroker import Broker

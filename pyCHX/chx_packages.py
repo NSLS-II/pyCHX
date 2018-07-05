@@ -4,8 +4,8 @@ import historydict
 from eiger_io.fs_handler import EigerImages
 
 
-from pyCHX.chx_libs import (np, roi, time, datetime, os, get_events, 
-                            getpass, db, get_images,LogNorm, plt,tqdm, utils, Model,
+from pyCHX.chx_libs import (np, roi, time, datetime, os,
+                            getpass, db, LogNorm, plt,tqdm, utils, Model,
                            multi_tau_lags,  random,  warnings)
 from pyCHX.chx_libs import (cmap_vge, cmap_albula, Javascript, EigerHandler, EigerHandler, pims,
                                 h5py)
@@ -14,8 +14,8 @@ from pyCHX.chx_libs import (cmap_vge, cmap_albula, Javascript, EigerHandler, Eig
 from pyCHX.chx_handlers import use_pims, use_dask
 use_pims(db)  #use pims for importing eiger data, register_handler 'AD_EIGER2' and 'AD_EIGER'
 
-from pyCHX.chx_generic_functions import (get_detector, get_fields, get_sid_filenames,  
-    load_data, load_mask,get_fields, reverse_updown, ring_edges,get_avg_img,check_shutter_open,
+from pyCHX.chx_generic_functions import (get_detector, get_sid_filenames,  
+    load_data, load_mask, reverse_updown, ring_edges,get_avg_img,check_shutter_open,
     apply_mask, show_img,check_ROI_intensity,run_time, plot1D, get_each_frame_intensity, 
     create_hot_pixel_mask,show_ROI_on_image,create_time_slice,save_lists, 
     save_arrays, psave_obj,pload_obj, get_non_uniform_edges,

@@ -3,8 +3,8 @@ from glob import iglob
 
 import matplotlib.pyplot as plt
 from pyCHX.chx_libs import (np, roi, time, datetime, os,  getpass, db, 
-                                      get_images,LogNorm, RUN_GUI)
-from pyCHX.chx_generic_functions import (create_time_slice,get_detector, get_fields, get_sid_filenames,  
+                                      LogNorm, RUN_GUI)
+from pyCHX.chx_generic_functions import (create_time_slice,get_detector, get_sid_filenames,  
      load_data)
 
 

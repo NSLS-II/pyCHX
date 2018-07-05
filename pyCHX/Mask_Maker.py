@@ -1,11 +1,11 @@
 #from .chx_libs import *
-from .chx_libs import db, get_images, get_table, get_events, get_fields, np, plt , LogNorm
+from .chx_libs import db, np, plt , LogNorm
 from .chx_generic_functions import show_img
 
 
 
 def get_frames_from_dscan(  hdr, detector = 'eiger4m_single_image' ):
-    ev = get_events(hdr, [detector]) 
+    ev = hdr.events(fields=[detector])
     length = int( hdr['start']['plan_args']['num'] )
     shape = hdr['descriptors'][0]['data_keys'][detector]['shape'][:2]
     imgs = np.zeros( [  length, shape[1],shape[0]]  )
@@ -15,10 +15,10 @@ def get_frames_from_dscan(  hdr, detector = 'eiger4m_single_image' ):
     return np.array( imgs )
 
 def load_metadata(hdr, name):
-    seq_of_img_stacks = get_images(hdr, name)
+    seq_of_img_stacks = hdr.data(name)
     return seq_of_img_stacks[0].md
 def load_images(hdr, name):
-    seq_of_img_stacks = get_images(hdr, name)  # 1 x 21 x 2167 x 2070
+    seq_of_img_stacks = hdr.data(name)  # 1 x 21 x 2167 x 2070
     return np.squeeze(np.asarray(seq_of_img_stacks))
 
 def test():
