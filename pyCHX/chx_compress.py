@@ -56,7 +56,7 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
                         bad_pixel_threshold=1e15, bad_pixel_low_threshold=0, 
                        hot_pixel_threshold=2**30, nobytes=2,bins=1, bad_frame_list=None,
                        para_compress= False, num_sub=100, dtypes='uid',reverse =True,
-                      num_max_para_process=500, with_pickle=False, direct_load_data=False, data_path=None,
+                      num_max_para_process=500, with_pickle=False, direct_load_data=True, data_path=None,
                        images_per_file=100, copy_rawdata=True,new_path = '/tmp_data/data/'):   
     '''
     Init 2016, YG@CHX
@@ -75,8 +75,11 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
             images='foo'
             #para_compress=   True   
     #print( dtypes )      
-    if direct_load_data:
-        images_per_file = get_eigerImage_per_file( data_path )         
+    if direct_load_data:        
+        images_per_file = get_eigerImage_per_file( data_path ) 
+        if data_path is None:
+            sud = get_sid_filenames(db[uid])
+            data_path = sud[2][0]
     if force_compress:
         print ("Create a new compress file with filename as :%s."%filename)
         if para_compress:
@@ -161,6 +164,7 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
                            direct_load_data=False, data_path=None,images_per_file=100,
                             copy_rawdata=True,new_path = '/tmp_data/data/'):
     
+    data_path_ = data_path 
     if dtypes=='uid':
         uid= md['uid'] #images
         if not direct_load_data:
@@ -170,13 +174,16 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
             #print('Here for images_per_file: %s'%images_per_file)
             #images_ = EigerImages( data_path, images_per_file=images_per_file)
             #print('here')
-            if not copy_rawdata:
+            if not copy_rawdata:                
                 images_ = EigerImages(data_path,images_per_file, md)
             else:
                 print('Due to a IO problem running on GPFS. The raw data will be copied to /tmp_data/Data.')
                 print('Copying...')
-                copy_data( data_path, new_path    )            
-                images_ = EigerImages( new_path, images_per_file, md)            
+                copy_data( data_path, new_path    )  
+                #print(data_path, new_path)
+                new_master_file = new_path +  os.path.basename(data_path)
+                data_path_ =  new_master_file
+                images_ = EigerImages( new_master_file, images_per_file, md)            
                 #print(md)
             if reverse:
                 images_ = reverse_updown( images_ )
@@ -194,11 +201,12 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
         print ("The sub compressed file number was changed from %s to %s"%( num_sub_old, num_sub ))        
     create_compress_header( md, filename +'-header', nobytes, bins  )    
     #print( 'done for header here')    
+    #print(data_path_, images_per_file)
     results = para_segment_compress_eigerdata( images=images, mask=mask, md=md,filename=filename, 
                     num_sub=num_sub, bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
                     bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes=nobytes, bins=bins, dtypes=dtypes,
                                              num_max_para_process=num_max_para_process,
-                                            direct_load_data=direct_load_data, data_path=data_path,
+                                            direct_load_data=direct_load_data, data_path=data_path_,
                                              images_per_file=images_per_file)
     
     res_ = np.array( [ results[k].get() for k in   list(sorted(results.keys()))   ]     ) 
@@ -300,7 +308,7 @@ def para_segment_compress_eigerdata( images, mask,  md, filename, num_sub=100,
         for i in  inputs:
             if i*num_sub <= N:
                 result[i] = pool.apply_async(  segment_compress_eigerdata, [
-                    images,  mask,  md,  filename + '_temp-%i.tmp'%i,bad_pixel_threshold, hot_pixel_threshold,    bad_pixel_low_threshold, nobytes, bins, i*num_sub, (i+1)*num_sub, dtypes, reverse,direct_load_data, data_path  ]  )  
+                    images,  mask,  md,  filename + '_temp-%i.tmp'%i,bad_pixel_threshold, hot_pixel_threshold,    bad_pixel_low_threshold, nobytes, bins, i*num_sub, (i+1)*num_sub, dtypes, reverse,direct_load_data, data_path,images_per_file  ]  )  
        
         pool.close()
         pool.join()
