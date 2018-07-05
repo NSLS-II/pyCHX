@@ -5,7 +5,7 @@ import struct
 
 import matplotlib.pyplot as plt
 
-from pyCHX.chx_libs import (np, roi, time, datetime, os,  getpass, db, get_images,LogNorm,Figure, RUN_GUI)
+from pyCHX.chx_libs import (np, roi, time, datetime, os,  getpass, db, LogNorm,Figure, RUN_GUI)
 #from pyCHX.chx_generic_functions import (get_circular_average)
 #from pyCHX.XPCS_SAXS import (get_circular_average)
 from pyCHX.chx_libs import  ( colors, markers, colors_,  markers_)

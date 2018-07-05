@@ -2059,12 +2059,12 @@ def export_scan_scalar( uid, x='dcm_b', y= ['xray_eye1_stats1_total'],
         d.plot(x='dcm_b', y = 'xray_eye1_stats1_total', marker='o', ls='-', color='r')
         
     '''
-    from databroker import DataBroker as db, get_images, get_table, get_events, get_fields 
+    from databroker import DataBroker as db
     from pyCHX.chx_generic_functions import  trans_data_to_pd
     
     hdr = db[uid]
-    print( get_fields( hdr ) )
-    data = get_table( db[uid] )
+    print(hdr.fields())
+    data = db[uid].table()
     xp = data[x]
     datap = np.zeros(  [len(xp), len(y)+1])
     datap[:,0] = xp
@@ -2177,11 +2177,10 @@ def load_data(uid, detector='eiger4m_single_image', fill=True, reverse=False):
         else:
             # We didn't succeed
             raise Exception("Failed after {} repeated attempts".format(ATTEMPTS))
-        
+
     # TODO(mrakitin): replace with the lazy loader (when it's implemented):
-    #imgs = db.get_images(hdr, detector)
-    imgs = list(hdr.data( detector ) )
-    
+    imgs = list(hdr.data(detector))
+
     if len(imgs[0])>=1:
         md = imgs[0].md
         imgs = pims.pipeline(lambda img: img)(imgs[0])
@@ -2245,7 +2244,7 @@ def load_data2( uid , detector = 'eiger4m_single_image'  ):
     flag =1
     while flag<4 and flag !=0:    
         try:
-            ev, = get_events(hdr, [detector]) 
+            ev, = hdr.events(fields=[detector])
             flag =0 
         except:
             flag += 1        
