@@ -10,6 +10,8 @@ cython
 tifffile
 tqdm
 ipython
+dill
+reportlab
 #git+https://github.com/soft-matter/slicerator.git
 git+https://github.com/scikit-beam/scikit-beam.git#egg=scikit-beam
 git+https://github.com/NSLS-II-CHX/eiger-io.git#eiger-io
