@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from pyCHX.chx_libs import (np, roi, time, datetime, os,  getpass, db, 
                                       get_images,LogNorm, RUN_GUI)
 from pyCHX.chx_generic_functions import (create_time_slice,get_detector, get_fields, get_sid_filenames,  
-     load_data,reverse_updown)
+     load_data,reverse_updown,get_eigerImage_per_file,copy_data,delete_data)
 
 
 import struct    
@@ -47,38 +47,9 @@ def go_through_FD(FD):
             pass_FD(FD,i)
     else:
         pass
+ 
 
-def get_eigerImage_per_file( data_fullpath ):
-    '''Will move to chx_generic_func
-    Get frame number for eiger data file
-    '''
-    f= h5py.File(data_fullpath)       
-    dset_keys = list(f['/entry/data'].keys())
-    dset_keys.sort()
-    dset_root="/entry/data"
-    dset_keys = [dset_root + "/" + dset_key for dset_key in dset_keys]
-    dset = f[dset_keys[0]]
-    return  len(dset)
 
-def copy_data( old_path, new_path = '/tmp_data/data/'  ): 
-    import shutil,glob
-    #old_path = sud[2][0]
-    #new_path = '/tmp_data/data/'
-    fps = glob.glob( old_path[:-10] + '*' )
-    for fp in tqdm(fps):
-        if not os.path.exists( new_path + os.path.basename(fp)):
-            shutil.copy( fp, new_path )
-    print('The files %s are transfered to: %s.'%(old_path[:-10] + '*' , new_path))
-    
-def delete_data(  old_path, new_path = '/tmp_data/data/'  ):
-    import shutil,glob
-    #old_path = sud[2][0]
-    #new_path = '/tmp_data/data/'
-    fps = glob.glob( old_path[:-10] + '*' )
-    for fp in tqdm(fps):        
-        nfp = new_path + os.path.basename(fp)
-        if os.path.exists( nfp ):
-            os.remove( nfp )   
             
     
 def compress_eigerdata( images, mask, md, filename=None,  force_compress=False, 
