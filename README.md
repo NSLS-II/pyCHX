@@ -2,7 +2,7 @@ pyCHX -- CHX XPCS Data Analysis Packages
 ========
 
 Repository for data collection and analysis scripts that are useful at the
-CHX beamline at NSLS-II (11-ID).
+CHX beamline at NSLS-II (11-ID) developed by Dr. Yugang Zhang (yuzhang@bnl.gov).
 
 Installation instructions on Linux:
 
