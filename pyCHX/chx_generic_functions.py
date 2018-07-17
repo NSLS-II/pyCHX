@@ -30,6 +30,18 @@ gives ['sg', 'tt', 'l', 'l']
 """
 
 
+def get_refl_y0( inc_ang, inc_y0, Ldet,  pixel_size,  ): 
+    ''' Get reflection beam center y
+    Input:
+       inc_ang: incident angle in degree
+       inc_y0:  incident beam y center in pixel
+       Ldet:    sample to detector distance in meter
+       pixel_size: pixel size in meter
+    Return: reflection beam center y in pixel 
+    '''
+    return Ldet * np.tan( np.radians(inc_ang)) * 2 / pixel_size + inc_y0
+    
+    
 
 def get_eigerImage_per_file( data_fullpath ):
     f= h5py.File(data_fullpath)       
