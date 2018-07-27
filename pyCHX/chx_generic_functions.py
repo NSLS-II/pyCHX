@@ -1351,7 +1351,7 @@ def check_lost_metadata(md, Nimg=None, inc_x0 =None, inc_y0= None, pixelsize=7.5
         center:  list, [x,y], incident beam center in pixel
      Will also update md    
     '''
-    
+    mdn = md.copy()
     if 'number of images'  not in list(md.keys()):
         md['number of images']  = Nimg
     if 'x_pixel_size' not in list(md.keys()):
@@ -1387,12 +1387,12 @@ def check_lost_metadata(md, Nimg=None, inc_x0 =None, inc_y0= None, pixelsize=7.5
             acquisition_period = float( db[uid]['start']['acquire period'] )
     timeperframe = acquisition_period 
     if inc_x0 is not None:
-        md['beam_center_x']= inc_y0
-        print( 'The metadata: beam_center_x has been changed to %s.'%inc_y0)
+        mdn['beam_center_x']= inc_y0
+        print( 'Beam_center_x has been changed to %s. (no change in raw metadata): '%inc_y0)
     if inc_y0 is not None:
-        md['beam_center_y']= inc_x0         
-        print( 'The metadata: beam_center_y has been changed to %s.'%inc_x0)
-    center = [  int(md['beam_center_x']),int( md['beam_center_y'] ) ]  #beam center [y,x] for python image
+        mdn['beam_center_y']= inc_x0         
+        print( 'Beam_center_y has been changed to %s.  (no change in raw metadata): '%inc_x0)
+    center = [  int(mdn['beam_center_x']),int( mdn['beam_center_y'] ) ]  #beam center [y,x] for python image
     center=[center[1], center[0]]
     
     return dpix, lambda_, Ldet, exposuretime, timeperframe, center
@@ -2164,7 +2164,7 @@ def get_sid_filenames(header):
         filepaths.extend(db.reg.get_file_list(uid, datum_kwarg_gen))
     return header.start['scan_id'],  header.start['uid'], filepaths
 
-def load_data(uid, detector='eiger4m_single_image', fill=True, reverse=False):
+def load_data(uid, detector='eiger4m_single_image', fill=True, reverse=False, rot90=False):
     """load bluesky scan data by giveing uid and detector
         
     Parameters
@@ -2213,7 +2213,12 @@ def load_data(uid, detector='eiger4m_single_image', fill=True, reverse=False):
         md = imgs.md
         imgs = reverse_updown( imgs )  # Why not np.flipud?
         imgs.md = md
-
+        
+    if rot90:
+        md = imgs.md
+        imgs = rot90_clockwise( imgs )  # Why not np.flipud?
+        imgs.md = md       
+        
     return imgs
 
 
@@ -2310,7 +2315,7 @@ def pload_obj(filename ):
     
     
     
-def load_mask( path, mask_name, plot_ = False, reverse=False, *argv,**kwargs): 
+def load_mask( path, mask_name, plot_ = False, reverse=False, rot90=False, *argv,**kwargs): 
     
     """load a mask file
     the mask is a numpy binary file (.npy) 
@@ -2333,7 +2338,9 @@ def load_mask( path, mask_name, plot_ = False, reverse=False, *argv,**kwargs):
     mask = np.load(    path +   mask_name )
     mask = np.array(mask, dtype = np.int32)
     if reverse:
-        mask = mask[::-1,:]  
+        mask = mask[::-1,:] 
+    if rot90:
+        mask = np.rot90( mask )
     if plot_:
         show_img( mask, *argv,**kwargs)   
     return mask
@@ -2393,6 +2400,14 @@ def reverse_updown( imgs):
     '''
     return pims.pipeline(lambda img: img[::-1,:])(imgs)  # lazily apply mask
 
+def rot90_clockwise( imgs):
+    '''reverse imgs upside down to produce a generator
+    
+    Usuages:
+    imgsr = rot90_clockwise( imgs)     
+    
+    '''
+    return pims.pipeline(lambda img: np.rot90(img)  )(imgs)  # lazily apply mask
 
 def RemoveHot( img,threshold= 1E7, plot_=True ):
     '''Remove hot pixel from img'''
@@ -2803,7 +2818,7 @@ def show_label_array_on_image(ax, image, label_array, cmap=None,norm=None, log_i
     
 def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on = True,
                        save=False, return_fig = False, rect_reqion=None, log_img = True, vmin=0.01, vmax=5, 
-                      show_ang_cor = False,
+                      show_ang_cor = False,cmap = cmap_albula,
                       uid='uid', path='',  aspect = 1, show_colorbar=True, show_roi_edge=False, *argv,**kwargs):
     
     '''show ROI on an image
@@ -2831,8 +2846,9 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
     
     vmax = max(1, vmax ) 
     if not show_roi_edge:    
+        #print('here')
         im,im_label = show_label_array_on_image(axes, image, ROI, imshow_cmap='viridis',
-                            cmap='Paired',alpha=alpha, log_img=log_img,
+                            cmap=cmap,alpha=alpha, log_img=log_img,
                              vmin=vmin, vmax=vmax,  origin="lower")
     else:
         edg = get_image_edge( ROI )
@@ -2840,7 +2856,7 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
         #fig, axes = plt.subplots( )        
         show_img(  image_,  ax=[fig,axes], vmin=vmin, vmax=vmax,  
                   logs= log_img, image_name=  "%s_ROI_on_Image"%uid,
-                 cmap = cmap_albula )
+                 cmap = cmap )
     
     
     if rect_reqion is  None:
