@@ -55,7 +55,7 @@ def go_through_FD(FD):
 def compress_eigerdata( images, mask, md, filename=None,  force_compress=False, 
                         bad_pixel_threshold=1e15, bad_pixel_low_threshold=0, 
                        hot_pixel_threshold=2**30, nobytes=2,bins=1, bad_frame_list=None,
-                       para_compress= False, num_sub=100, dtypes='uid',reverse =True,
+                       para_compress= False, num_sub=100, dtypes='uid',reverse =True, rot90=False,
                       num_max_para_process=500, with_pickle=False, direct_load_data=True, data_path=None,
                        images_per_file=100, copy_rawdata=True,new_path = '/tmp_data/data/'):   
     '''
@@ -90,7 +90,7 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
             return para_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
                         bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes= nobytes, 
-                        bins=bins, num_sub=num_sub, dtypes=dtypes, 
+                        bins=bins, num_sub=num_sub, dtypes=dtypes, rot90=rot90,
                         reverse=reverse, num_max_para_process=num_max_para_process,
                         with_pickle= with_pickle, direct_load_data= direct_load_data,
                         data_path=data_path,images_per_file=images_per_file,copy_rawdata=copy_rawdata,new_path=new_path)                    
@@ -107,7 +107,7 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
                 return para_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
                                     bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes= nobytes, bins=bins,
-                                     num_sub=num_sub, dtypes=dtypes, reverse=reverse,
+                                     num_sub=num_sub, dtypes=dtypes, reverse=reverse,rot90=rot90,
                                               num_max_para_process=num_max_para_process,with_pickle= with_pickle, direct_load_data= direct_load_data,data_path=data_path,images_per_file=images_per_file,copy_rawdata=copy_rawdata) 
             else:
                 return init_compress_eigerdata( images, mask, md, filename, 
@@ -159,7 +159,7 @@ def read_compressed_eigerdata( mask, filename, beg, end,
 
 def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
-                            bad_pixel_low_threshold=0, nobytes=4, bins=1, dtypes='uid',reverse =True,
+                            bad_pixel_low_threshold=0, nobytes=4, bins=1, dtypes='uid',reverse =True,rot90=False,
                            num_max_para_process=500, cpu_core_number=72, with_pickle=True,
                            direct_load_data=False, data_path=None,images_per_file=100,
                             copy_rawdata=True,new_path = '/tmp_data/data/'):
@@ -169,7 +169,7 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
         uid= md['uid'] #images
         if not direct_load_data:
             detector = get_detector( db[uid ] )
-            images_ = load_data( uid, detector, reverse= reverse    )
+            images_ = load_data( uid, detector, reverse= reverse,rot90=rot90   )
         else:
             #print('Here for images_per_file: %s'%images_per_file)
             #images_ = EigerImages( data_path, images_per_file=images_per_file)
@@ -186,7 +186,10 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
                 images_ = EigerImages( new_master_file, images_per_file, md)            
                 #print(md)
             if reverse:
-                images_ = reverse_updown( images_ )
+                images_ = reverse_updown( images_ ) # Why not np.flipud?
+            if rot90:        
+                images_ = rot90_clockwise( images_ )  
+          
         N= len(images_)
     
     else:
