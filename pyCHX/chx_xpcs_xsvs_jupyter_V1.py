@@ -640,7 +640,18 @@ def get_series_one_time_mulit_uids( uids,  qval_dict,  trans = None, good_start=
             print('UID: %s is in processing...'%uid)
             if not direct_load_data:
                 md = get_meta_data( uid )
-                imgs = load_data( uid, md['detector'], reverse= True  )
+                imgs = load_data( uid, md['detector'], reverse= True  )               
+                #print(md)
+                detectors = md['detector']
+                if len(detectors)>1:
+                    if '_image' in md['detector']:
+                        pref = md['detector'][:-5]
+                    else:
+                        pref=md['detector']
+                    for k in [ 'beam_center_x', 'beam_center_y','cam_acquire_time','cam_acquire_period','cam_num_images',
+                             'wavelength', 'det_distance', 'photon_energy']:
+                        md[k] =  md[ pref + '%s'%k]     
+        
             else:
                 pass
             N = len(imgs)
@@ -671,7 +682,7 @@ def get_series_one_time_mulit_uids( uids,  qval_dict,  trans = None, good_start=
             taus_uid, g2_uid = get_series_g2_from_g12( g12b, fra_num_by_dose=fra_num_by_dose, 
                                     dose_label = exposure_dose,
                                             good_start=good_start,  num_bufs=num_bufs,
-                                                     time_step = md['cam_acquire_period'] )
+                                                     time_step = exp_time)#md['cam_acquire_period'] )
             g2_uids['uid_%03d=%s'%(i,uid)] = g2_uid             
             taus_uids['uid_%03d=%s'%(i,uid)] =  taus_uid  
             if save_g2:
