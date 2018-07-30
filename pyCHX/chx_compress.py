@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from pyCHX.chx_libs import (np, roi, time, datetime, os,  getpass, db, 
                                       LogNorm, RUN_GUI)
 from pyCHX.chx_generic_functions import (create_time_slice,get_detector, get_sid_filenames,  
-     load_data,reverse_updown,get_eigerImage_per_file,copy_data,delete_data)
+     load_data,reverse_updown,rot90_clockwise, get_eigerImage_per_file,copy_data,delete_data, )
 
 
 import struct    
@@ -209,6 +209,7 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
                     num_sub=num_sub, bad_pixel_threshold=bad_pixel_threshold, hot_pixel_threshold=hot_pixel_threshold, 
                     bad_pixel_low_threshold=bad_pixel_low_threshold,nobytes=nobytes, bins=bins, dtypes=dtypes,
                                              num_max_para_process=num_max_para_process,
+                                              reverse = reverse,rot90=rot90,
                                             direct_load_data=direct_load_data, data_path=data_path_,
                                              images_per_file=images_per_file)
     
@@ -262,7 +263,8 @@ def  combine_binary_files(filename, old_files, del_old = False):
     
 def para_segment_compress_eigerdata( images, mask,  md, filename, num_sub=100,
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
-                            bad_pixel_low_threshold=0, nobytes=4, bins=1,  dtypes='images',reverse =True,
+                            bad_pixel_low_threshold=0, nobytes=4, bins=1,  dtypes='images',
+                                    reverse =True, rot90=False,
                                    num_max_para_process=50,direct_load_data=False, data_path=None,
                                    images_per_file=100):    
     '''
@@ -277,6 +279,9 @@ def para_segment_compress_eigerdata( images, mask,  md, filename, num_sub=100,
             images_ = EigerImages(data_path, images_per_file, md)
             if reverse:
                 images_ = reverse_updown( images_ )
+            if rot90:        
+                images_ = rot90_clockwise( images_ )  
+                
         N= len(images_)
     
     else:
@@ -311,7 +316,7 @@ def para_segment_compress_eigerdata( images, mask,  md, filename, num_sub=100,
         for i in  inputs:
             if i*num_sub <= N:
                 result[i] = pool.apply_async(  segment_compress_eigerdata, [
-                    images,  mask,  md,  filename + '_temp-%i.tmp'%i,bad_pixel_threshold, hot_pixel_threshold,    bad_pixel_low_threshold, nobytes, bins, i*num_sub, (i+1)*num_sub, dtypes, reverse,direct_load_data, data_path,images_per_file  ]  )  
+                    images,  mask,  md,  filename + '_temp-%i.tmp'%i,bad_pixel_threshold, hot_pixel_threshold,    bad_pixel_low_threshold, nobytes, bins, i*num_sub, (i+1)*num_sub, dtypes, reverse,rot90, direct_load_data, data_path,images_per_file  ]  )  
        
         pool.close()
         pool.join()
@@ -321,7 +326,7 @@ def para_segment_compress_eigerdata( images, mask,  md, filename, num_sub=100,
 def segment_compress_eigerdata( images,  mask, md, filename, 
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
                             bad_pixel_low_threshold=0, nobytes=4, bins=1, 
-                               N1=None, N2=None, dtypes='images',reverse =True,direct_load_data=False, data_path=None,images_per_file=100  ):     
+                               N1=None, N2=None, dtypes='images',reverse =True, rot90=False,direct_load_data=False, data_path=None,images_per_file=100  ):     
     '''
     Create a compressed eiger data without header, this function is for parallel compress
     for parallel compress don't pass any non-scalar parameters
@@ -330,11 +335,13 @@ def segment_compress_eigerdata( images,  mask, md, filename,
         uid= md['uid'] #images
         if not direct_load_data:
             detector = get_detector( db[uid ] )
-            images = load_data( uid, detector, reverse= reverse    )[N1:N2] 
+            images = load_data( uid, detector, reverse= reverse, rot90=rot90    )[N1:N2] 
         else:            
             images = EigerImages(data_path, images_per_file, md)[N1:N2] 
             if reverse:
                 images = reverse_updown( EigerImages(data_path, images_per_file, md) )[N1:N2] 
+            if rot90:        
+                images = rot90_clockwise( images )              
                 
     Nimg_ = len( images)     
     M,N = images[0].shape
