@@ -1129,7 +1129,7 @@ class Get_Pixel_Arrayc_todo(object):
     '''
     
     def __init__(self, FD, pixelist,beg=None, end=None, norm=None, imgsum = None,
-                norm_inten = False, qind=None):
+                norm_inten = None, qind=None):
         '''
         indexable: a images sequences
         pixelist:  1-D array, interest pixel list
@@ -1157,7 +1157,7 @@ class Get_Pixel_Arrayc_todo(object):
         self.imgsum = imgsum
         self.norm_inten= norm_inten
         self.qind = qind
-        if self.norm_inten:
+        if self.norm_inten is not None:
             if self.qind is None:
                 print('Please give qind.')
                 
@@ -1172,7 +1172,7 @@ class Get_Pixel_Arrayc_todo(object):
         timg = np.zeros(    self.FD.md['ncols'] * self.FD.md['nrows']   , dtype=np.int32   ) 
         timg[self.pixelist] =   np.arange( 1, len(self.pixelist) + 1  ) 
         
-        if self.norm_inten:
+        if self.norm_inten is not None:
             #Mean_Int_Qind = np.array( self.qind.copy(), dtype=np.float)
             Mean_Int_Qind = np.ones( len( self.qind),  dtype = np.float)
             noqs = len(np.unique( self.qind ))
@@ -1190,7 +1190,7 @@ class Get_Pixel_Arrayc_todo(object):
             #np.bincount( qind[pxlist], weight=
             
             
-            if self.mean_int_sets is not None:#for normalization of each averaged ROI of each frame
+            if self.mean_int_sets is not None:#for each frame will normalize each ROI by it's averaged value
                 for j in range(noqs):
                     #if i ==100:
                     #    if j==0:
@@ -1239,7 +1239,7 @@ class Get_Pixel_Arrayc(object):
     '''
     
     def __init__(self, FD, pixelist,beg=None, end=None, norm=None, imgsum = None,
-                mean_int_sets = None, qind=None):
+                mean_int_sets = None, qind=None  ):
         '''
         indexable: a images sequences
         pixelist:  1-D array, interest pixel list
@@ -1320,7 +1320,10 @@ class Get_Pixel_Arrayc(object):
             else:
                 norm_imgsum = 1.0            
             if self.norm is not None:
-                norm_avgimg_roi = self.norm[pxlist] 
+                if len( (self.norm).shape )>1:
+                    norm_avgimg_roi = self.norm[i][pxlist] 
+                else:    
+                    norm_avgimg_roi = self.norm[pxlist] 
             else:
                 norm_avgimg_roi = 1.0 
                 
@@ -1333,7 +1336,7 @@ class Get_Pixel_Arrayc(object):
         return data_array  
 
 
-def auto_two_Arrayc(  data_pixel, rois, index=None):
+def auto_two_Arrayc(  data_pixel, rois,  index=None):
     
     ''' 
     Dec 16, 2015, Y.G.@CHX
@@ -1342,7 +1345,6 @@ def auto_two_Arrayc(  data_pixel, rois, index=None):
     Parameters:
         data:  images sequence, shape as [img[0], img[1], imgs_length]
         rois: 2-D array, the interested roi, has the same shape as image, can be rings for saxs, boxes for gisaxs
-    
     Options:
         
         data_pixel: if not None,    
@@ -1392,11 +1394,141 @@ def auto_two_Arrayc(  data_pixel, rois, index=None):
             sum2 = sum1.T 
             #print( qi, qlist, )
             #print( g12b[:,:,qi -1 ] )
-            g12b[:,:, i  ] = np.dot(   data_pixel_qi, data_pixel_qi.T)  /sum1  / sum2  / nopr[qi -1]
+            g12b[:,:, i  ] = np.dot(   data_pixel_qi, data_pixel_qi.T)  /sum1  / sum2  / nopr[qi -1]            
             i +=1
         return g12b
 
+def auto_two_Arrayc_ExplicitNorm(  data_pixel, rois, norm=None, index=None):
+    
+    ''' 
+    Dec 16, 2015, Y.G.@CHX
+    a numpy operation method to get two-time correlation function by giving explict normalization
         
+    Parameters:
+        data:  images sequence, shape as [img[0], img[1], imgs_length]
+        rois: 2-D array, the interested roi, has the same shape as image, can be rings for saxs, boxes for gisaxs
+        norm: if not None, shoud be the shape as data_pixel, will normalize two time by this norm
+              if None, will return two time without normalization
+    Options:
+        
+        data_pixel: if not None,    
+                    2-D array, shape as (len(images), len(qind)),
+                    use function Get_Pixel_Array( ).get_data(  ) to get 
+         
+   
+    Return:
+        g12: a 3-D array, shape as ( imgs_length, imgs_length, q)
+     
+    One example:        
+        g12 = auto_two_Array( imgsr, ring_mask, data_pixel = data_pixel ) 
+    '''
+     
+    qind, pixelist = roi.extract_label_indices(   rois  )
+    noqs = len( np.unique(qind) )
+    nopr = np.bincount(qind, minlength=(noqs+1))[1:] 
+    noframes = data_pixel.shape[0]    
+
+    if index is None:
+        index =  np.arange( 1, noqs + 1 )        
+    else:
+        try:
+            len(index)
+            index = np.array(  index  )
+        except TypeError:
+            index = np.array(  [index]  )
+        #print( index )
+    qlist = np.arange( 1, noqs + 1 )[ index -1  ]    
+    #print( qlist )    
+    try:
+        g12b = np.zeros(  [noframes, noframes, len(qlist) ] )
+        DO = True
+    except:
+        print("The array is too large. The Sever can't handle such big array. Will calulate different Q sequencely")  
+        '''TO be done here  '''
+        DO = False         
+    if DO:
+        i = 0
+        for  qi in tqdm(qlist ):            
+            pixelist_qi =  np.where( qind == qi)[0]             
+            data_pixel_qi =    data_pixel[:,pixelist_qi] 
+            if norm is not None:
+                norm1 =   norm[:,pixelist_qi] 
+                sum1 = (np.average( norm1, axis=1)).reshape( 1,  noframes ) 
+                sum2 = sum1.T 
+            else:
+                sum1=1
+                sum2=1 
+            g12b[:,:, i  ] = np.dot(   data_pixel_qi, data_pixel_qi.T)    /sum1  / sum2/  nopr[qi -1]  
+            i +=1
+        return g12b
+    
+    
+def two_time_norm(  data_pixel, rois, index=None):
+    
+    ''' 
+    Dec 16, 2015, Y.G.@CHX
+    a numpy operation method to get two-time correlation function 
+    
+    Parameters:
+        data:  images sequence, shape as [img[0], img[1], imgs_length]
+        rois: 2-D array, the interested roi, has the same shape as image, can be rings for saxs, boxes for gisaxs
+    
+    Options:
+        
+        data_pixel: if not None,    
+                    2-D array, shape as (len(images), len(qind)),
+                    use function Get_Pixel_Array( ).get_data(  ) to get 
+         
+   
+    Return:
+        g12: a 3-D array, shape as ( imgs_length, imgs_length, q)
+     
+    One example:        
+        g12 = auto_two_Array( imgsr, ring_mask, data_pixel = data_pixel ) 
+    '''
+     
+    qind, pixelist = roi.extract_label_indices(   rois  )
+    noqs = len( np.unique(qind) )
+    nopr = np.bincount(qind, minlength=(noqs+1))[1:] 
+    noframes = data_pixel.shape[0]    
+
+    if index is None:
+        index =  np.arange( 1, noqs + 1 )        
+    else:
+        try:
+            len(index)
+            index = np.array(  index  )
+        except TypeError:
+            index = np.array(  [index]  )
+        #print( index )
+    qlist = np.arange( 1, noqs + 1 )[ index -1  ]    
+    #print( qlist )    
+    try:
+        norm = np.zeros(    len(qlist)   )
+        DO = True
+    except:
+        print("The array is too large. The Sever can't handle such big array. Will calulate different Q sequencely")  
+        '''TO be done here  '''
+        DO = False 
+        
+    if DO:
+        i = 0
+        for  qi in tqdm(qlist ):
+            #print (qi-1)
+            pixelist_qi =  np.where( qind == qi)[0] 
+            #print (pixelist_qi.shape,  data_pixel[qi].shape)
+            data_pixel_qi =    data_pixel[:,pixelist_qi] 
+            sum1 = (np.average( data_pixel_qi, axis=1)).reshape( 1, noframes   )  
+            norm[i] =  np.average(sum1 ) 
+            #sum2 = sum1.T 
+            #print( qi, qlist, )
+            #print( g12b[:,:,qi -1 ] )
+            #g12b[:,:, i  ] = np.dot(   data_pixel_qi, data_pixel_qi.T)  /sum1  / sum2  / nopr[qi -1]  
+            i +=1
+        return norm
+
+    
+    
 
 def check_normalization( frame_num, q_list, imgsa, data_pixel ):
     '''check the ROI intensity before and after normalization
