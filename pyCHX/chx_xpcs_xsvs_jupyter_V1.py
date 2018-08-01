@@ -15,7 +15,6 @@ def get_t_iqc_uids( uid_list, setup_pargs, slice_num= 10, slice_width= 1):
                         'center': beam center
                         'dpix': pixel size
                         'lambda_': X-ray wavelength
-                        'Ldet':  distance between detector and sample
         slice_num: slice number of the time edge
         slice_edge: the width of the time_edge
     Output:
@@ -438,7 +437,8 @@ def realtime_xpcs_analysis( start_time, stop_time,  run_pargs, md_update=None,
 ####################################################################################################
 ##compress multi uids, sequential compress for uids, but for each uid, can apply parallel compress##
 #################################################################################################
-def compress_multi_uids( uids, mask, mask_dict = None, force_compress=False,  para_compress= True, bin_frame_number=1 ):
+def compress_multi_uids( uids, mask, mask_dict = None, force_compress=False,  para_compress= True, bin_frame_number=1,
+                       reverse=True, rot90=False,use_local_disk=True):
     ''' Compress time series data for a set of uids
     Parameters:
         uids: list, a list of uid
@@ -454,24 +454,36 @@ def compress_multi_uids( uids, mask, mask_dict = None, force_compress=False,  pa
     e.g.,  compress_multi_uids( uids, mask, force_compress= False,  bin_frame_number=1 )
     
     '''
-    for uid in uids:
+    for uid in uids:        
         print('UID: %s is in processing...'%uid)
-        md = get_meta_data( uid )
-        if bin_frame_number==1:
-            filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s.cmp'%md['uid']
-        else:
-            filename = '/XF11ID/analysis/Compressed_Data' +'/uid_%s_bined--%s.cmp'%(md['uid'],bin_frame_number)
-        
-        imgs = load_data( uid, md['detector'], reverse= True  )
-        print( imgs )
-        if mask_dict is not None:
-            mask = mask_dict[md['detector']]
-            print('The detecotr is: %s'% md['detector'])
-            
-        md.update( imgs.md )
-        mask, avg_img, imgsum, bad_frame_list = compress_eigerdata(imgs, mask, md, filename, 
-             force_compress= force_compress,  para_compress= para_compress,  bad_pixel_threshold= 1e14,
-                            bins=bin_frame_number, num_sub= 100, num_max_para_process= 500, with_pickle=True  )
+        if validate_uid( uid ):
+            md = get_meta_data( uid )        
+            imgs = load_data( uid, md['detector'],  reverse= reverse, rot90=rot90  )
+            sud = get_sid_filenames(db[uid])
+            for pa in sud[2]:
+                if 'master.h5' in pa:
+                    data_fullpath = pa 
+            print( imgs, data_fullpath )
+            if mask_dict is not None:
+                mask = mask_dict[md['detector']]
+                print('The detecotr is: %s'% md['detector'])            
+            md.update( imgs.md )        
+            if not use_local_disk:
+                cmp_path = '/nsls2/xf11id1/analysis/Compressed_Data'
+            else:
+                cmp_path = '/tmp_data/compressed'
+            cmp_path = '/nsls2/xf11id1/analysis/Compressed_Data'    
+            if bin_frame_number==1:   
+                cmp_file = '/uid_%s.cmp'%md['uid']
+            else:
+                cmp_file = '/uid_%s_bined--%s.cmp'%(md['uid'],bin_frame_number)
+            filename = cmp_path + cmp_file  
+            mask, avg_img, imgsum, bad_frame_list = compress_eigerdata(imgs, mask, md, filename, 
+                     force_compress= force_compress,  para_compress= para_compress,  bad_pixel_threshold = 1e14,
+                                                reverse=reverse, rot90=rot90,
+                                    bins=bin_frame_number, num_sub= 100, num_max_para_process= 500, with_pickle=True,
+                                    direct_load_data =use_local_disk, data_path = data_fullpath, ) 
+
     print('Done!')
     
 
@@ -643,14 +655,15 @@ def get_series_one_time_mulit_uids( uids,  qval_dict,  trans = None, good_start=
                 imgs = load_data( uid, md['detector'], reverse= True  )               
                 #print(md)
                 detectors = md['detector']
-                if len(detectors)>1:
-                    if '_image' in md['detector']:
-                        pref = md['detector'][:-5]
-                    else:
-                        pref=md['detector']
-                    for k in [ 'beam_center_x', 'beam_center_y','cam_acquire_time','cam_acquire_period','cam_num_images',
-                             'wavelength', 'det_distance', 'photon_energy']:
-                        md[k] =  md[ pref + '%s'%k]     
+                if isinstance( detectors,list):
+                    if len(detectors)>1:
+                        if '_image' in md['detector']:
+                            pref = md['detector'][:-5]
+                        else:
+                            pref=md['detector']
+                        for k in [ 'beam_center_x', 'beam_center_y','cam_acquire_time','cam_acquire_period','cam_num_images',
+                                 'wavelength', 'det_distance', 'photon_energy']:
+                            md[k] =  md[ pref + '%s'%k]     
         
             else:
                 pass

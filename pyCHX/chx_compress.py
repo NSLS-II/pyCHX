@@ -202,7 +202,7 @@ def para_compress_eigerdata(  images, mask, md, filename, num_sub=100,
         num_sub = int( np.ceil(N/cpu_core_number))
         Nf  =  int( np.ceil( N/ num_sub  ) )
         print ("The sub compressed file number was changed from %s to %s"%( num_sub_old, num_sub ))        
-    create_compress_header( md, filename +'-header', nobytes, bins  )    
+    create_compress_header( md, filename +'-header', nobytes, bins, rot90=rot90  )    
     #print( 'done for header here')    
     #print(data_path_, images_per_file)
     results = para_segment_compress_eigerdata( images=images, mask=mask, md=md,filename=filename, 
@@ -274,7 +274,7 @@ def para_segment_compress_eigerdata( images, mask,  md, filename, num_sub=100,
         uid= md['uid'] #images
         if not direct_load_data:
             detector = get_detector( db[uid ] )
-            images_ = load_data( uid, detector, reverse= reverse    )
+            images_ = load_data( uid, detector, reverse= reverse, rot90=rot90    )
         else:
             images_ = EigerImages(data_path, images_per_file, md)
             if reverse:
@@ -408,7 +408,7 @@ def segment_compress_eigerdata( images,  mask, md, filename,
         
     
         
-def create_compress_header( md, filename, nobytes=4, bins=1  ):
+def create_compress_header( md, filename, nobytes=4, bins=1, rot90=False  ):
     '''
     Create the head for a compressed eiger data, this function is for parallel compress
     '''    
@@ -424,19 +424,21 @@ def create_compress_header( md, filename, nobytes=4, bins=1  ):
         flag=False
     #print(flag)    
     if flag:    
-        Header = struct.pack('@16s8d7I916x',b'Version-COMP0001',
+        if rot90:
+            Header = struct.pack('@16s8d7I916x',b'Version-COMP0001',
+md['beam_center_x'],md['beam_center_y'], md['count_time'], md['detector_distance'], md['frame_time'],md['incident_wavelength'], md['x_pixel_size'],md['y_pixel_size'],
+                        nobytes, md['pixel_mask'].shape[0], md['pixel_mask'].shape[1],
+                         0, md['pixel_mask'].shape[0],
+                         0, md['pixel_mask'].shape[1] )
+            
+        else:
+            Header = struct.pack('@16s8d7I916x',b'Version-COMP0001',
 md['beam_center_x'],md['beam_center_y'], md['count_time'], md['detector_distance'], md['frame_time'],md['incident_wavelength'], md['x_pixel_size'],md['y_pixel_size'],
                         nobytes, md['pixel_mask'].shape[1], md['pixel_mask'].shape[0],
                          0, md['pixel_mask'].shape[1],
                          0, md['pixel_mask'].shape[0]                
                     )
-    else:
-        Header = struct.pack('@16s8d7I916x',b'Version-COMP0001',
-md['beam_center_x'],md['beam_center_y'], 1, 1, 1,1, 1,1,
-                        nobytes, md['img_shape'][1],md['img_shape'][0],
-                         0, md['img_shape'][1],
-                         0, md['img_shape'][0]              
-                    )
+ 
         
       
     fp.write( Header)       
@@ -447,6 +449,7 @@ md['beam_center_x'],md['beam_center_y'], 1, 1, 1,1, 1,1,
 def init_compress_eigerdata( images, mask, md, filename, 
                         bad_pixel_threshold=1e15, hot_pixel_threshold=2**30, 
                             bad_pixel_low_threshold=0,nobytes=4, bins=1, with_pickle=True,
+                            reverse =True, rot90=False,
                            direct_load_data=False, data_path=None,images_per_file=100,
                            ):    
     '''
@@ -494,15 +497,23 @@ def init_compress_eigerdata( images, mask, md, filename,
     if 'beam_center_y' not in list( md.keys()    ):
         md['beam_center_y']=0         
         
-    
-    Header = struct.pack('@16s8d7I916x',b'Version-COMP0001',
+    if not rot90:
+        Header = struct.pack('@16s8d7I916x',b'Version-COMP0001',
                         md['beam_center_x'],md['beam_center_y'], md['count_time'], md['detector_distance'],
                         md['frame_time'],md['incident_wavelength'], md['x_pixel_size'],md['y_pixel_size'],
                         nobytes, md['pixel_mask'].shape[1], md['pixel_mask'].shape[0],
                          0, md['pixel_mask'].shape[1],
                          0, md['pixel_mask'].shape[0]                
                     )
-      
+    else:
+        Header = struct.pack('@16s8d7I916x',b'Version-COMP0001',
+                        md['beam_center_x'],md['beam_center_y'], md['count_time'], md['detector_distance'],
+                        md['frame_time'],md['incident_wavelength'], md['x_pixel_size'],md['y_pixel_size'],
+                        nobytes, md['pixel_mask'].shape[0], md['pixel_mask'].shape[1],
+                         0, md['pixel_mask'].shape[0],
+                         0, md['pixel_mask'].shape[1]                
+                    )      
+                                 
     fp.write( Header)  
     
     Nimg_ = len( images)
@@ -620,7 +631,7 @@ class Multifile:
 	numbered image and means the program starts for the beginning again. 
  
     '''
-    def __init__(self,filename,beg,end, reverse=False):
+    def __init__(self,filename,beg,end, reverse=False ):
         '''Multifile initialization. Open the file.
             Here I use the read routine which returns byte objects
             (everything is an object in python). I use struct.unpack
@@ -662,6 +673,8 @@ class Multifile:
             self.md['rows_end']=cend
             self.md['cols_begin']=rbeg
             self.md['cols_end']=rend
+                                 
+                               
 
         # some initialization stuff        
         self.byts = self.md['bytes']
