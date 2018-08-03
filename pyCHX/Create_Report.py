@@ -118,7 +118,7 @@ class create_pdf_report( object ):
     '''       
     
     def __init__( self, data_dir, uid,  out_dir=None, filename=None, load=True, user=None,
-                 report_type='saxs',md=None ):
+                 report_type='saxs',md=None, res_h5_filename=None ):
         self.data_dir = data_dir
         self.uid = uid
         self.md = md        
@@ -144,6 +144,7 @@ class create_pdf_report( object ):
         filename=out_dir + filename
         c = canvas.Canvas( filename, pagesize=letter)
         self.filename= filename
+        self.res_h5_filename = res_h5_filename
         #c.setTitle("XPCS Analysis Report for uid=%s"%uid)
         c.setTitle(filename)
         self.c = c
@@ -219,11 +220,14 @@ class create_pdf_report( object ):
             uid_c12 = uid_ 
         self.q_rate_two_time_fit_file = 'uid=%s_two_time_Q_Rate_fit.png'%uid_c12 
         #print(  self.q_rate_two_time_fit_file )
-        self.two_time_file = 'uid=%s_Two_time.png'%uid_c12
+        
+        self.two_time_file = 'uid=%s_Two_time.png'%uid_c12        
         self.two_g2_file = 'uid=%s_g2_two_g2.png'%uid_c12        
-        jfn = 'uid=%s_g2_two_g2__joint.png'%uid_c12  
+        jfn = 'uid=%s_g2_two_g2__joint.png'%uid_c12         
+        
         self.two_g2_new_page = False
         if os.path.exists(  data_dir + jfn ):
+            #print( 'Here we go') 
             self.two_g2_file = jfn
             self.two_g2_new_page = True  
             
@@ -429,7 +433,14 @@ class create_pdf_report( object ):
         #s.append(   'Mask file: %s'%md['mask_file'] )  ####line 8 mask filename
         #s.append(    )  ####line 8 mask filename
         s.append(m)
-        s.append(    'Analysis Results Dir: %s'%self.data_dir    )  ####line 9 results folder
+        
+        if self.res_h5_filename is not None:
+            self.data_dir_ = self.data_dir + self.res_h5_filename
+        else:
+            self.data_dir_ = self.data_dir 
+        s.append(    'Analysis Results Dir: %s'%self.data_dir_    )  ####line 9 results folder
+        
+        
         s.append(   'Metadata Dir: %s.csv-&.pkl'%self.metafile   )  ####line 10 metadata folder
         try:
             s.append(  'Pipeline notebook: %s'%md['NOTEBOOK_FULL_PATH']    )  ####line 11 notebook folder        
@@ -834,14 +845,14 @@ class create_pdf_report( object ):
             
             if self.two_g2_new_page:
                 img_left,img_top = 100, top       
-                
+            print(imgf )    
             img_width = add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                          str1_left, str1_top,str1,
                          str2_left, str2_top,return_=True )            
             #print(imgf)
             top = top + 50   
             imgf = self.q_rate_two_time_fit_file
-            
+            #print(imgf, img_width, top)
             if img_width < 400:
                 img_height= 140 
                 img_left,img_top = 350, top + 30
