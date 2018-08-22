@@ -1336,12 +1336,12 @@ def load_res_h5( full_uid, data_dir   ):
 
     
 def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username, 
-                    run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs, run_dose=None, report_type='saxs', md=None,report_invariant=False, return_class=False
+                    run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs, run_dose=None, report_type='saxs', md=None,report_invariant=False, return_class=False, res_h5_filename=None
                    ):
     
     if uid.startswith("uid=") or uid.startswith("Uid="):
         uid = uid[4:]
-    c= create_pdf_report(  data_dir, uid, pdf_out_dir, filename= pdf_filename, user= username, report_type=report_type, md = md )  
+    c= create_pdf_report(  data_dir, uid, pdf_out_dir, filename= pdf_filename, user= username, report_type=report_type, md = md, res_h5_filename=res_h5_filename )  
     #print( c.md)
     #Page one: Meta-data/Iq-Q/ROI
     c.report_header(page=1)
