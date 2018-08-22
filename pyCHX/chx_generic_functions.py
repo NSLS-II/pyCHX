@@ -531,18 +531,19 @@ def re_filename_dir( old_pattern, new_pattern, inDir,verbose=True  ):
             re_filename( old_filename, new_filename, inDir,verbose= verbose   )    
     
     
-    
-
-def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False, silent=True):
+def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False,q_thresh=0, p_thresh=0, silent=True):
     """
     function to return roi number from qval_dict, corresponding  Q and phi, lists (sets) of all available Qs and phis
     [roi_nr,Q,phi,Q_list,phi_list]=get_roi_nr(..)
     calling sequence: get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False, verbose=True)
     qdict: qval_dict from analysis pipeline/hdf5 result file
     q: q of interest, can be either value (q_nr=False) or q-number (q_nr=True)
+    q_thresh: threshold for comparing Q-values, set to 0 for exact comparison
     phi: phi of interest, can be either value (phi_nr=False) or q-number (phi_nr=True)
+    p_thresh: threshold for comparing phi values, set to 0 for exact comparison
     silent=True/False: Don't/Do print lists of available qs and phis, q and phi of interest
-    by LW 20/21/2017
+    by LW 10/21/2017
+    update by LW 08/22/2018: introduced thresholds for comparison of Q and phi values (before: exact match required)
     """
     qs=[]
     phis=[]
@@ -554,12 +555,18 @@ def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False, silent=True):
     phislist=list(OrderedDict.fromkeys(phis))
     if q_nr:
         qinterest=qslist[q]
-    else: qinterest=q
+        qindices = [i for i,x in enumerate(qs) if x == qinterest]
+    else: 
+        qinterest=q
+        qindices = [i for i,x in enumerate(qs) if np.abs(x-qinterest) < q_thresh] # new
     if phi_nr:
         phiinterest=phislist[phi]
-    else: phiinterest=phi
-    qindices = [i for i,x in enumerate(qs) if x == qinterest]
-    phiindices = [i for i,x in enumerate(phis) if x == phiinterest]
+        phiindices = [i for i,x in enumerate(phis) if x == phiinterest]
+    else:
+        phiinterest=phi
+        phiindices = [i for i,x in enumerate(phis) if np.abs(x-phiinterest) < p_thresh] # new
+    #qindices = [i for i,x in enumerate(qs) if x == qinterest]
+    #phiindices = [i for i,x in enumerate(phis) if x == phiinterest]
     ret_list=[list(set(qindices).intersection(phiindices))[0],qinterest,phiinterest,qslist,phislist]
     if silent == False:
         print('list of available Qs:')
@@ -568,6 +575,7 @@ def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False, silent=True):
         print(phislist)
         print('Roi number for Q= '+str(ret_list[1])+' and phi= '+str(ret_list[2])+': '+str(ret_list[0]))
     return ret_list
+    
 
 
     
