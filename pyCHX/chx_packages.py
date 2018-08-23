@@ -28,7 +28,7 @@ from pyCHX.chx_generic_functions import (get_detector, get_sid_filenames,
     get_current_pipeline_filename, get_current_pipeline_fullpath,save_current_pipeline,
     filter_roi_mask, mask_badpixels, validate_uid, move_beamstop, get_today_date,  get_print_uids, get_last_uids,get_base_all_filenames,create_ring_mask,
     get_image_edge, get_image_with_roi,extract_data_from_file, sgolay2d,get_roi_nr, get_mass_center_one_roi,  
-    get_echos,  pad_length, save_array_to_tiff,  load_pilatus, ls_dir,get_fit_by_two_linear,get_cross_point,get_curve_turning_points, plot_fit_two_linear_fit,linear_fit,find_index, get_detectors, get_img_from_iq, average_array_withNan,refine_roi_mask, shrink_image, get_waxs_beam_center, get_eigerImage_per_file,copy_data,delete_data, find_bad_pixels_FD,
+    get_echos,  pad_length, save_array_to_tiff,  load_pilatus, ls_dir,get_fit_by_two_linear,get_cross_point,get_curve_turning_points, plot_fit_two_linear_fit,linear_fit,find_index, get_detectors, get_img_from_iq, average_array_withNan,refine_roi_mask, shrink_image, get_waxs_beam_center, get_eigerImage_per_file,copy_data,delete_data, find_bad_pixels_FD, lin2log_g2,
                                             )
  
 

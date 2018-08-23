@@ -42,6 +42,49 @@ def get_refl_y0( inc_ang, inc_y0, Ldet,  pixel_size,  ):
     return Ldet * np.tan( np.radians(inc_ang)) * 2 / pixel_size + inc_y0
     
     
+def lin2log_g2(lin_tau,lin_g2,num_points=False):
+    """
+    Lutz developed at Aug,2018
+    function to resample g2 with linear time steps into logarithmics
+    g2 values between consecutive logarthmic time steps are averaged to increase statistics
+    calling sequence: lin2log_g2(lin_tau,lin_g2,num_points=False)
+    num_points=False -> determine number of logortihmically sampled time points automatically (8 pts./decade)
+    num_points=18 -> use 18 logarithmically spaced time points
+    """
+    #prep taus and g2s: remove nan and first data point at tau=0
+    rem = lin_tau==0
+    #print('lin_tau: '+str(lin_tau.size))
+    #print('lin_g2: '+str(lin_g2.size))
+    lin_tau[rem]=np.nan
+    #lin_tau[0]=np.nan;#lin_g2[0]=np.nan
+    lin_g2 = lin_g2[np.isfinite(lin_tau)]
+    lin_tau = lin_tau[np.isfinite(lin_tau)]
+    #print('from lin-to-log-g2_sampling: ',lin_tau)
+    if num_points == False:
+        # automatically decide how many log-points (8/decade)
+        dec=np.ceil((np.log10(lin_tau.max())-np.log10(lin_tau.min()))*8)
+    else:
+        dec=num_points
+    log_tau=np.logspace(np.log10(lin_tau[0]),np.log10(lin_tau.max()),dec)
+    # re-sample correlation function:
+    log_g2=[]
+    for i in range(log_tau.size-1):
+        y=[i,log_tau[i]-(log_tau[i+1]-log_tau[i])/2,log_tau[i]+(log_tau[i+1]-log_tau[i])/2]
+        #x=lin_tau[lin_tau>y[1]]
+        x1=lin_tau>y[1]; x2=lin_tau<y[2];  x=x1*x2
+        #print(np.average(lin_g2[x]))
+        if np.isfinite(np.average(lin_g2[x])):
+            log_g2.append(np.average(lin_g2[x]))
+        else:
+            log_g2.append(np.interp(log_tau[i],lin_tau,lin_g2))
+        if i == log_tau.size-2:
+            #print(log_tau[i+1])
+            y=[i+1,log_tau[i+1]-(log_tau[i+1]-log_tau[i])/2,log_tau[i+1]]
+            x1=lin_tau>y[1]; x2=lin_tau<y[2];  x=x1*x2
+            log_g2.append(np.average(lin_g2[x]))
+    return [log_tau,log_g2]
+
+
 
 def get_eigerImage_per_file( data_fullpath ):
     f= h5py.File(data_fullpath)       
