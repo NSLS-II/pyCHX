@@ -420,23 +420,37 @@ def create_compress_header( md, filename, nobytes=4, bins=1, rot90=False  ):
     flag = True   
     #print(   list(md.keys())   )
     #print(md)
-    if 'pixel_mask' not in list(md.keys()):
-        flag=False
+    if 'pixel_mask'  in list(md.keys()):
+        sx,sy = md['pixel_mask'].shape[0], md['pixel_mask'].shape[1]
+    elif 'img_shape' in list(md.keys()):
+        sx,sy = md['img_shape'][0], md['img_shape'][1]
+    else:
+        sx,sy= 2167, 2070 #by default for 4M        
     #print(flag)    
+    klst =  [  'beam_center_x','beam_center_y', 'count_time','detector_distance',
+             'frame_time','incident_wavelength', 'x_pixel_size','y_pixel_size']
+    vs = [ 0 ,0, 0, 0,
+          0, 0, 75, 75]
+    for i, k in enumerate(klst):
+        if k in list(md.keys()):
+            vs[i] = md[k]            
     if flag:    
         if rot90:
             Header = struct.pack('@16s8d7I916x',b'Version-COMP0001',
-md['beam_center_x'],md['beam_center_y'], md['count_time'], md['detector_distance'], md['frame_time'],md['incident_wavelength'], md['x_pixel_size'],md['y_pixel_size'],
-                        nobytes, md['pixel_mask'].shape[0], md['pixel_mask'].shape[1],
-                         0, md['pixel_mask'].shape[0],
-                         0, md['pixel_mask'].shape[1] )
+                                 vs[0], vs[1], vs[2], vs[3],
+                                 vs[4], vs[5], vs[6], vs[7], 
+                        nobytes,sx, sy,
+                         0, sx,
+                         0,sy )
             
         else:
             Header = struct.pack('@16s8d7I916x',b'Version-COMP0001',
-md['beam_center_x'],md['beam_center_y'], md['count_time'], md['detector_distance'], md['frame_time'],md['incident_wavelength'], md['x_pixel_size'],md['y_pixel_size'],
-                        nobytes, md['pixel_mask'].shape[1], md['pixel_mask'].shape[0],
-                         0, md['pixel_mask'].shape[1],
-                         0, md['pixel_mask'].shape[0]                
+                                vs[0], vs[1], vs[2], vs[3],
+                                 vs[4], vs[5], vs[6], vs[7], 
+#md['beam_center_x'],md['beam_center_y'], md['count_time'], md['detector_distance'], #md['frame_time'],md['incident_wavelength'], md['x_pixel_size'],md['y_pixel_size'],
+                        nobytes, sy,sx,
+                         0, sy,
+                         0, sx                
                     )
  
         
