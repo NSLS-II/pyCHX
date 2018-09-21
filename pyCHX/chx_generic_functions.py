@@ -3608,12 +3608,17 @@ def flow_para_function( x, beta, relaxation_rate, flow_velocity, baseline=1):
     return  beta*Diff_part * Flow_part + baseline
 
 
-def flow_para_function_explicitq( x, beta, relaxation_rate, flow_velocity, baseline=1, qr=1, q_ang=0 ):
-    '''Nov 9, 2017 Basically, make q vector to (qr, angle),  relaxation_rate is actually a diffusion rate
-    flow_velocity: q.v (q vector dot v vector = q*v*cos(angle) )'''
+def flow_para_function_explicitq( x, beta, diffusion, flow_velocity, baseline=1, qr=1, q_ang=0 ):
+    '''Nov 9, 2017 Basically, make q vector to (qr, angle),  
+    ###relaxation_rate is actually a diffusion rate
+    flow_velocity: q.v (q vector dot v vector = q*v*cos(angle) )
+    Diffusion part: np.exp( -2*D q^2 *tau )
+    q_ang: would be    np.radians( ang - 90 )  
     
-    Diff_part=    np.exp(-2 * relaxation_rate* qr**2 * x)
-    Flow_part =  np.pi**2/(16*x*flow_velocity*qr* np.cos(q_ang) ) *  abs(  erf(  np.sqrt(   4/np.pi * 1j* x * flow_velocity * qr* np.cos(q_ang) ) ) )**2    
+    '''
+    
+    Diff_part=    np.exp(-2 * diffusion* qr**2 * x)  
+    Flow_part =  np.pi**2/(16*x*flow_velocity*qr* abs(np.cos(q_ang)) ) *  abs(  erf(  np.sqrt(   4/np.pi * 1j* x * flow_velocity * qr* abs(np.cos(q_ang)) ) ) )**2    
     return  beta*Diff_part * Flow_part + baseline
 
 
@@ -3661,7 +3666,7 @@ def get_g2_fit_general_two_steps( g2, taus,  function='simple_exponential',
 
 def get_g2_fit_general( g2, taus,  function='simple_exponential', 
                        sequential_fit=False, qval_dict = None, 
-                       ang_init = 137.3, *argv,**kwargs):
+                       ang_init = 90, *argv,**kwargs):
     '''
     Nov 9, 2017, give qval_dict for using function of flow_para_function_explicitq
     qval_dict: a dict with qr and ang (in unit of degrees).")
@@ -3742,7 +3747,7 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
     elif function=='flow_para_function' or  function=='flow_para':         
         mod = Model(flow_para_function)#,  independent_vars=  _vars) 
     elif function=='flow_para_function_explicitq' or  function=='flow_para_qang':         
-        mod = Model(flow_para_function_explicitq)#,  independent_vars=  _vars)         
+        mod = Model(flow_para_function_explicitq)#,  independent_vars=  _vars)           
     elif function=='flow_para_function_with_vibration' or  function=='flow_vibration':            
         mod = Model( flow_para_function_with_vibration )
         
@@ -3762,7 +3767,8 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
     if function=='flow_para_function' or  function=='flow_para' or function=='flow_vibration':
         mod.set_param_hint( 'flow_velocity', min=0)  
     if function=='flow_para_function_explicitq' or  function=='flow_para_qang': 
-        mod.set_param_hint( 'flow_velocity', min=0)        
+        mod.set_param_hint( 'flow_velocity', min=0)   
+        mod.set_param_hint( 'diffusion',   min=0.0,  max= 2e8  )  
     if function=='stretched_vibration' or function=='flow_vibration':     
         mod.set_param_hint( 'freq', min=0)
         mod.set_param_hint( 'amp', min=0)
@@ -3785,10 +3791,11 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
 
     if function=='flow_para_function_explicitq' or  function=='flow_para_qang':
         _flow_velocity =_guess_val['flow_velocity']   
+        _diffusion =_guess_val['diffusion']   
         _guess_val['qr']   = 1
         _guess_val['q_ang']  = 0
         pars  = mod.make_params( beta=_beta, alpha=_alpha, flow_velocity=_flow_velocity,
-                                relaxation_rate =_relaxation_rate, baseline= _baseline,
+                                diffusion =_diffusion, baseline= _baseline,
                                qr=1, q_ang=0
                                )
         
@@ -3844,7 +3851,7 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
             else:
                 pars  = mod.make_params(  
                     beta=_beta, alpha=_alpha, flow_velocity=_flow_velocity,
-                                relaxation_rate =_relaxation_rate, baseline= _baseline, 
+                                diffusion =_diffusion, baseline= _baseline, 
                     qr = qval_dict[i][0], q_ang = abs(np.radians( qval_dict[i][1] - ang_init) )  )
                 pars['qr'].vary = False
                 pars['q_ang'].vary = False
@@ -4006,10 +4013,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, g2_err_dict = None,
         
     if geometry =='saxs':
         if qphi_analysis:
-            geometry = 'ang_saxs'
-            
-    
-            
+            geometry = 'ang_saxs'             
     if qth_interest is not None:
         if not isinstance(qth_interest, list):
             print('Please give a list for qth_interest') 
@@ -4235,21 +4239,30 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, g2_err_dict = None,
             if fit_res_ is not None:
                 result1 = fit_res_[l_ind]    
                 #print (result1.best_values)
-                rate = result1.best_values['relaxation_rate']
+                
                 beta = result1.best_values['beta'] 
                 baseline =  result1.best_values['baseline'] 
                 if function=='simple_exponential' or function=='simple':
+                    rate = result1.best_values['relaxation_rate']
                     alpha =1.0 
                 elif function=='stretched_exponential' or function=='stretched':
+                    rate = result1.best_values['relaxation_rate']
                     alpha = result1.best_values['alpha']
                 elif function=='stretched_vibration': 
+                    rate = result1.best_values['relaxation_rate']
                     alpha = result1.best_values['alpha']
                     freq = result1.best_values['freq'] 
                 elif function=='flow_vibration': 
+                    rate = result1.best_values['relaxation_rate']
                     freq = result1.best_values['freq'] 
                 if function=='flow_para_function' or  function=='flow_para' or  function=='flow_vibration': 
+                    rate = result1.best_values['relaxation_rate']
                     flow = result1.best_values['flow_velocity']    
                 if function=='flow_para_function_explicitq' or  function=='flow_para_qang':  
+                    diff = result1.best_values['diffusion']
+                    qrr = short_ulabel[s_ind]
+                    #print(qrr)
+                    rate = diff * qrr**2
                     flow = result1.best_values['flow_velocity'] 
                     if qval_dict_ is None:
                         print("Please provide qval_dict, a dict with qr and ang (in unit of degrees).")
