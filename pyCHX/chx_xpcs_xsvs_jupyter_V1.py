@@ -3,7 +3,7 @@ from pyCHX.chx_libs import markers, colors
 #from pyCHX.chx_generic_functions import get_short_long_labels_from_qval_dict
 #RUN_GUI = False
 #from pyCHX.chx_libs import markers
-
+import pandas as pds
 
 
 
@@ -72,9 +72,102 @@ def plot_t_iqc_uids( qs, iqsts, tstamps  ):
         plot_t_iqtMq2(qt, iqst, tstamp, ax=ax, perf=uid + '_' ) 
         
     
+def plot_entries_from_csvlist( csv_list, uid_list, inDir, key =  'g2', qth = 1,  legend_size=8, 
+                           yshift= 0.01, ymulti=1, xlim=None, ylim=None,uid_length=None,
+                              legend=None,  fp_fulluid=True ): 
     
+    '''
+    YG Feb2, 2018, make yshift be also a list
+    
+    YG June 9, 2017@CHX
+     YG Sep 29, 2017@CHX.
+    plot enteries for a list csvs
+    Input:
+        csv_list: list, a list of uid (string)
+        inDir: string, imported folder for saved analysis results
+        key: string, plot entry, surport 
+            'g2' for one-time, 
+            'iq' for q~iq
+            'mean_int_sets' for mean intensity of each roi as a function of frame            
+            TODOLIST:#also can plot the following
+                dict_keys(['qt', 'imgsum', 'qval_dict_v', 'bad_frame_list', 'iqst', 
+                'times_roi', 'iq_saxs', 'g2', 'mask', 'g2_uids', 'taus_uids', 
+                'g2_fit_paras', 'mean_int_sets', 'roi_mask', 'qval_dict', 'taus', 
+                'pixel_mask', 'avg_img', 'qval_dict_p', 'q_saxs', 'md'])            
+        qth: integer, the intesrest q number
+        yshift: float, values of shift in y direction
+        xlim: [x1,x2], for plot x limit
+        ylim: [y1,y2], for plot y limit
+    Output:
+        show the plot
+    Example:
+    uid_list = ['5492b9', '54c5e0']
+    plot_entries_from_uids( uid_list, inDir, yshift = 0.01, key= 'g2', ylim=[1, 1.2])
+    '''
+    
+    uid_dict = {}
+    fig, ax =plt.subplots() 
+    for uid in uid_list:
+        if uid_length is not None:
+            uid_ = uid[:uid_length]
+        else:
+            uid_=uid
+        #print(uid_)
+        uid_dict[uid_] =  get_meta_data( uid )['uid']
+    #for i, u in enumerate( list( uid_dict.keys() )):
+    
+    for i,fp in enumerate( list(csv_list)): 
+        u = uid_list[i]  #print(u)
+        inDiru =  inDir + u + '/'
+        if fp_fulluid:
+            inDiru =  inDir +  uid_dict[u] + '/'
+        else:
+            inDiru =  inDir + u + '/'
+        d =  pds.read_csv( inDiru + fp )
+        #print(d)
+        
+        if key == 'g2':             
+            taus = d['tau'][1:]
+            col = d.columns[qth +1]
+            #print( qth+1, col )
+            y= d[col][1:]
+            if legend is None:
+                leg=u
+            else:
+                leg='uid=%s-->'%u+legend[i]            
+            if isinstance(yshift,list):
+                yshift_ = yshift[i]
+                ii = i + 1
+            else:
+                yshift_ = yshift
+                ii = i
+            plot1D(  x = taus, y=y + yshift_*ii, c=colors[i], m = markers[i], ax=ax, logx=True, legend= leg,
+                  xlabel='t (sec)', ylabel='g2', legend_size=legend_size,) 
+            title='Q = %s'%(col)
+            ax.set_title(title)
+        elif key=='imgsum':
+            y = total_res[key]            
+            plot1D(  y=d + yshift_*ii, c=colors[i], m = markers[i], ax=ax, logx=False, legend= u,
+                  xlabel='Frame', ylabel='imgsum',)  
+            
+        elif key == 'iq':
+            x= total_res['q_saxs']   
+            y= total_res['iq_saxs']
+            plot1D(  x=x, y= y* ymulti[i] + yshift_*ii, c=colors[i], m = markers[i], ax=ax, logx= False, logy=True,
+                   legend= u,   xlabel ='Q 'r'($\AA^{-1}$)', ylabel = "I(q)"  )             
+
+        else:
+            d = total_res[key][:,qth]             
+            plot1D(  x = np.arange(len(d)), y= d + yshift_*ii, c=colors[i], m = markers[i], ax=ax, logx=False, legend= u,
+                  xlabel= 'xx', ylabel=key ) 
+    if key=='mean_int_sets':ax.set_xlabel( 'frame ')            
+    if xlim is not None:ax.set_xlim(xlim)        
+    if ylim is not None:ax.set_ylim(ylim)  
+    return fig,ax
+
+
 def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1,  legend_size=8, 
-                           yshift= 0.01, ymulti=1, xlim=None, ylim=None,legend=None, uid_length = None, filename_list=None):#,title=''  ):
+                           yshift= 0.01, ymulti=1, xlim=None, ylim=None,legend=None, uid_length = None, filename_list=None, fp_fulluid=False, fp_append = None ):#,title=''  ):
     
     '''
     YG Feb2, 2018, make yshift be also a list
@@ -104,9 +197,6 @@ def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1,  legend_size=8
     uid_list = ['5492b9', '54c5e0']
     plot_entries_from_uids( uid_list, inDir, yshift = 0.01, key= 'g2', ylim=[1, 1.2])
     '''
-        
-        
- 
     
     uid_dict = {}
     fig, ax =plt.subplots() 
@@ -121,10 +211,17 @@ def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1,  legend_size=8
     for i,u in enumerate( list(uid_list)): 
         #print(u)
         if uid_length is not None:
-            u = u[:uid_length]                         
-        inDiru =  inDir + u + '/'        
+            u = u[:uid_length]  
+        inDiru =  inDir + u + '/'
+        if fp_fulluid:
+            inDiru =  inDir +  uid_dict[u] + '/'
+        else:
+            inDiru =  inDir + u + '/'
         if filename_list is None:
-           filename = 'uid=%s_Res.h5'%uid_dict[u]
+           if fp_append is not None:
+               filename = 'uid=%s%s_Res.h5'%(uid_dict[u],fp_append )
+           else:
+               filename = 'uid=%s_Res.h5'%uid_dict[u]
         else:
            filename = filename_list[i]
         total_res  = extract_xpcs_results_from_h5( filename = filename, 
