@@ -197,7 +197,8 @@ class create_pdf_report( object ):
         self.Iq_t_file = 'uid=%s_q_Iqt.png'%uid
         self.img_sum_t_file = 'uid=%s_img_sum_t.png'%uid
         self.wat_file= 'uid=%s_waterfall.png'%uid
-        self.Mean_inten_t_file= 'uid=%s_t_ROIs.png'%uid       
+        self.Mean_inten_t_file= 'uid=%s_t_ROIs.png'%uid      
+        self.oavs_file = 'uid=%s_OAVS.png'%uid
 
         if uid_g2 is None: 
             uid_g2 = uid_        
@@ -655,7 +656,56 @@ class create_pdf_report( object ):
         if new_page:
             c.showPage()
             c.save()
+            
+    def report_oavs( self, top= 350, oavs_file=None, new_page=False):
+        '''create the oavs images report
+ 
+        '''   
+        
+        c= self.c
+        uid=self.uid
+        #add sub-title, One Time Correlation Function
+        c.setFillColor(black)
+        c.setFont("Helvetica", 20)
+        ds = 20
+        self.sub_title_num +=1
+        c.drawString(10, top, "%s. OAVS Images"%self.sub_title_num  )  #add title
+        c.setFont("Helvetica", 14)
+        #add g2 plot                      
+        if oavs_file is None:
+            imgf = self.oavs_file
+        else:
+            imgf = oavs_file          
+        #print(self.data_dir + imgf)
 
+        if os.path.exists(self.data_dir + imgf):
+            im = Image.open( self.data_dir+imgf )
+            ratio = float(im.size[1])/im.size[0]
+            img_width = 600            
+            img_height= img_width * ratio #img_height
+            #width = height/ratio
+        
+        if not new_page:
+            #img_height= 550
+            top = top - 600
+            str2_left, str2_top = 80, top  - 400        
+            img_left,img_top = 1, top
+        
+        if new_page:            
+            #img_height= 150
+            top = top - img_height - 50
+            str2_left, str2_top = 80, top  -  50             
+            img_left,img_top = 10, top
+            
+        str1_left, str1_top, str1= 150, top + img_height,  'OAVS images'        
+        img_width = add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                     str1_left, str1_top,str1,
+                     str2_left, str2_top, return_=True )         
+        #print( imgf,self.data_dir )
+        print(img_width, img_height)
+ 
+            
+            
     def report_one_time( self, top= 350, g2_fit_file=None, q_rate_file=None, new_page=False):
         '''create the one time correlation function report
            Two images:
@@ -700,7 +750,7 @@ class create_pdf_report( object ):
         img_width = add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
                      str1_left, str1_top,str1,
                      str2_left, str2_top, return_=True )         
-        print( imgf,self.data_dir )        
+        #print( imgf,self.data_dir )        
         #add g2 plot fit
         top = top + 70 #
         if q_rate_file is None:
@@ -710,7 +760,7 @@ class create_pdf_report( object ):
             
         
         if self.report_type != 'ang_saxs':
-            print(img_width)
+            #print(img_width)
             if img_width > 400:
                 img_height =  90
             else:
@@ -1336,7 +1386,8 @@ def load_res_h5( full_uid, data_dir   ):
 
     
 def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username, 
-                    run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs, run_dose=None, report_type='saxs', md=None,report_invariant=False, return_class=False, res_h5_filename=None
+                    run_fit_form, run_one_time, run_two_time, run_four_time, run_xsvs, run_dose=None,  
+                    oavs_report = False,report_type='saxs', md=None,report_invariant=False, return_class=False, res_h5_filename=None
                    ):
     
     if uid.startswith("uid=") or uid.startswith("Uid="):
@@ -1348,12 +1399,19 @@ def make_pdf_report( data_dir, uid, pdf_out_dir, pdf_filename, username,
     c.report_meta( top=730)    
     c.report_static( top=540, iq_fit = run_fit_form )
     c.report_ROI( top= 290)
-    
+    page = 1 
+    ##Page Two for plot OVAS images if oavs_report is True
+    if oavs_report:
+        c.new_page()
+        c.report_header(page=2) 
+        c.report_oavs(  top= 720, oavs_file=None, new_page=True)    
+        page +=1  
+        
     #Page Two: img~t/iq~t/waterfall/mean~t/g2/rate~q
     c.new_page()
-    c.report_header(page=2)
-    
-    page = 2
+    page +=1
+    c.report_header(page=page)
+           
     if c.report_type != 'ang_saxs':
         c.report_time_analysis( top= 720)   
         if run_one_time: 
