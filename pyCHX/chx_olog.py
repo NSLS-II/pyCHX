@@ -3,6 +3,15 @@ from pyOlog import SimpleOlogClient
 from pyOlog.OlogDataTypes import  Logbook
 
 
+def create_olog_entry( text, logbooks='Data Acquisition'):
+    '''YG developed at Octo 2018, Create a log entry to xf11id '''
+    
+    url='https://logbook.nsls2.bnl.gov/Olog-11-ID/Olog'
+    olog_client=SimpleOlogClient(  url= url,  username= 'xf11id', password= '***REMOVED***'   )     
+    eid = olog_client.log( text, logbooks=logbooks)
+    return eid
+
+
 
 def update_olog_uid_with_file( uid, text, filename, append_name='', try_time = 10):
     '''YG developed at July 18, 2017, attached text and file (with filename) to CHX olog 
@@ -28,9 +37,28 @@ def update_olog_uid_with_file( uid, text, filename, append_name='', try_time = 1
         update_olog_uid( uid= uid, text= text, attachments= atch )
     
     
+def update_olog_logid_with_file( logid, text, filename= None, verbose=False):
+    
+    '''YG developed at Octo 2018, attached text and file (with filename) to CHX olog 
+            with entry defined by logid
+       logid: string of the log entry id
+       text: string, put into olog book
+       filename: string,  
+            
+    '''
+    if filename is not None:
+        atch=[  Attachment(open(filename, 'rb')) ] 
+    else:
+        atch = None
+    try:
+        update_olog_id( logid= logid, text= text, attachments= atch,verbose=verbose )        
+    except:
+        pass
+ 
     
     
-def update_olog_id( logid, text, attachments):   
+    
+def update_olog_id( logid, text, attachments, verbose=True):   
     '''Update olog book  logid entry with text and attachments files
     logid: integer, the log entry id
     text: the text to update, will add this text to the old text
@@ -55,7 +83,8 @@ def update_olog_id( logid, text, attachments):
                       logbooks= [Logbook( name = 'Operations', owner=None, active=True)]
                   )  
     upL = client.updateLog( logid, upd )    
-    print( 'The url=%s was successfully updated with %s and with the attachments'%(url, text))
+    if verbose:
+        print( 'The url=%s was successfully updated with %s and with the attachments'%(url, text))
     
 def update_olog_uid( uid, text, attachments):  
     '''Update olog book  logid entry cotaining uid string with text and attachments files
