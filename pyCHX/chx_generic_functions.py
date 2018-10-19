@@ -1409,9 +1409,9 @@ def check_lost_metadata(md, Nimg=None, inc_x0 =None, inc_y0= None, pixelsize=7.5
         md['x_pixel_size'] = 7.5000004e-05
     dpix = md['x_pixel_size'] * 1000.  #in mm, eiger 4m is 0.075 mm
     try:
-        lambda_ =md['incident_wavelength']    # wavelegth of the X-rays in Angstroms
-    except:
         lambda_ =md['wavelength']
+    except:
+        lambda_ =md['incident_wavelength']    # wavelegth of the X-rays in Angstroms        
     try:
         Ldet = md['det_distance']
         if Ldet<=1000:
@@ -1852,7 +1852,7 @@ def get_meta_data( uid, default_dec = 'eiger', *argv,**kwargs ):
 
     devices = sorted( list(header.devices()) )
     if len(devices) > 1:
-        print( "More than one device. This would have unintented consequences.Currently, only use the first device.")
+        print( "More than one device. This would have unintented consequences.Currently, only the device contains 'default_dec=%s'."%default_dec)
         #raise ValueError("More than one device. This would have unintented consequences.")
     dec = devices[0]    
     for dec_ in devices:        
