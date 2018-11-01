@@ -29,6 +29,53 @@ e.g., flatten( [ ['sg','tt'],'ll' ]   )
 gives ['sg', 'tt', 'l', 'l']
 """
 
+def find_good_xpcs_uids(  fuids, Nlim=100, det = [ '4m', '1m', '500'] ):
+    '''Y.G., Dev Nov 1, 2018 Find the good xpcs series
+       Input:
+           fuids: list, a list of full uids
+           Nlim: integer, the smallest number of images to be considered as XCPS sereis
+           det: list, a list of detector (can be short string of the full  name of the detector)
+       Return:
+           the xpcs uids list
+        
+    '''
+    guids = []
+    for i, uid in enumerate(fuids):
+        if db[uid]['start']['plan_name'] == 'count' or db[uid]['start']['plan_name'] == 'manual_count': 
+            head = db[uid]['start']
+            for dec in head['detectors']:
+                for dt in det:
+                    if dt in dec:
+                        if 'number of images' in head:
+                            if float(head['number of images'] ) >= Nlim:
+                                #print(i, uid)
+                                guids.append(uid)
+    G = np.unique( guids )                                
+    print('Found %s uids for XPCS series.'%len(G) )                            
+    return G
+
+
+def create_fullImg_with_box( shape, box_nx = 9 , box_ny = 8,  ):
+    '''Y.G. 2018/10/26 Divide image with multi touched boxes
+    Input
+        shape: the shape of image
+        box_nx: the number of box in x
+        box_ny: the number width of box in y
+    Return:
+        roi_mask, (* mask )
+    '''
+    
+    #shape = mask.shape
+    Wrow, Wcol = int( np.ceil( shape[0]/box_nx )), int(np.ceil(shape[1]/box_ny) )
+    #print(Wrow, Wcol)
+    roi_mask = np.zeros( shape, dtype=np.int32 )
+    for i in range( box_nx ):
+        for j in range(box_ny): 
+            roi_mask[  i*Wrow: (i+1)*Wrow , j*Wcol: (j+1)*Wcol     ] = i * box_ny + j + 1
+    #roi_mask *= mask 
+    return roi_mask
+
+
 
 def get_refl_y0( inc_ang, inc_y0, Ldet,  pixel_size,  ): 
     ''' Get reflection beam center y
@@ -432,7 +479,16 @@ def refine_roi_mask( roi_mask, pixel_num_thres=10):
             np.where(  roi_mask.ravel()  == gi)[0]  ] = new_ind[i]    
     return new_mask, good_ind -1
 
-
+def shrink_image_stack( imgs, bins):
+    '''shrink imgs by bins
+    imgs: shape as [Nimg, imx, imy] '''
+    Nimg, imx, imy = imgs.shape
+    bx, by = bins
+    imgsk = np.zeros( [Nimg, imx//bx, imy//by] )
+    N = len(imgs)
+    for i in range(N):
+        imgsk[i] =  shrink_image(imgs[i], bins )
+    return imgsk
  
 def shrink_image(img, bins ):
     '''YG Dec 12, 2017 dev@CHX shrink a two-d image by factor as bins, i.e., bins_x, bins_y
@@ -2867,9 +2923,9 @@ def show_label_array_on_image(ax, image, label_array, cmap=None,norm=None, log_i
     
     
     
-def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on = True,
+def show_ROI_on_image( image, ROI,  center=None, rwidth=400,alpha=0.3,  label_on = True,
                        save=False, return_fig = False, rect_reqion=None, log_img = True, vmin=0.01, vmax=5, 
-                      show_ang_cor = False,cmap = cmap_albula,
+                      show_ang_cor = False,cmap = cmap_albula, fig_ax=None,
                       uid='uid', path='',  aspect = 1, show_colorbar=True, show_roi_edge=False, *argv,**kwargs):
     
     '''show ROI on an image
@@ -2884,6 +2940,8 @@ def show_ROI_on_image( image, ROI, center=None, rwidth=400,alpha=0.3,  label_on 
     if RUN_GUI:
         fig = Figure(figsize=(8,8))
         axes = fig.add_subplot(111)
+    elif fig_ax is not None:
+        fig, axes = fig_ax
     else:
         fig, axes = plt.subplots( ) #plt.subplots(figsize=(8,8))
     
@@ -4085,7 +4143,7 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, g2_err_dict = None,
                 title_short =   r'$Q_r= $' + '%.5f  '%( short_ulabel[s_ind] ) + r'$\AA^{-1}$'            
             else:
                 title_short=''        
-                
+        #print(geometry)        
         #filename =''
         til = '%s:--->%s'%(filename,  title_short )
         if num_long_i <=4:            
@@ -4135,8 +4193,11 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, g2_err_dict = None,
                   
             ax.set_ylabel( r"$%s$"%ylabel + '(' + r'$\tau$' + ')' ) 
             ax.set_xlabel(r"$\tau $ $(s)$", fontsize=16)         
-            if master_plot == 'qz' or master_plot == 'angle':                 
-                title_long =  r'$Q_r= $'+'%.5f  '%( long_label[l_ind]  ) + r'$\AA^{-1}$'  
+            if master_plot == 'qz' or master_plot == 'angle': 
+                if geometry!='gi_waxs':
+                    title_long =  r'$Q_r= $'+'%.5f  '%( long_label[l_ind]  ) + r'$\AA^{-1}$' 
+                else:
+                    title_long =  r'$Q_r= $'+'%i  '%( long_label[l_ind]  )                 
                 #print(  title_long,long_label,l_ind   )
             else:             
                 if geometry=='ang_saxs':
@@ -4145,12 +4206,14 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, g2_err_dict = None,
                 elif geometry=='gi_saxs':
                     title_long =   r'$Q_z= $'+ '%.5f  '%( long_label[l_ind]  ) + r'$\AA^{-1}$'                  
                 else:
-                    title_long = ''    
-
+                    title_long = '' 
+            #print( master_plot )
             if master_plot != 'qz':
                 ax.set_title(title_long + ' (%s  )'%(1+l_ind), y =1.1, fontsize=12)                 
             else:                  
-                ax.set_title(title_long + ' (%s  )'%(1+l_ind), y =1.05, fontsize= fontsize_sublabel)                
+                ax.set_title(title_long + ' (%s  )'%(1+l_ind), y =1.05, fontsize= fontsize_sublabel) 
+                #print( geometry )
+                #print( title_long )                
                 if qth_interest is not None:#it might have a bug here, todolist!!!
                     lab = sorted(list(qval_dict_.keys()))
                     #print( lab, l_ind)
