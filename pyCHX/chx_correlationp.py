@@ -598,39 +598,71 @@ def cal_g2p( FD, ring_mask, bad_frame_list=None,
         return  g2, lag_steps 
 
 
+def cal_GPF( FD, ring_mask, bad_frame_list=None, 
+            good_start=0, num_buf = 8, num_lev = None, imgsum=None, norm=None,
+           cal_error=True ):
+    '''calculation G,P,D by using a multi-tau algorithm
+       for a compressed file with parallel calculation
+       if return_g2_details: return g2 with g2_denomitor, g2_past, g2_future
+    '''
+    FD.beg = max(FD.beg, good_start)
+    noframes = FD.end - FD.beg +1   # number of frames, not "no frames"
+    for i in range(FD.beg, FD.end):
+        pass_FD(FD,i)    
+    if num_lev is None:
+        num_lev = int(np.log( noframes/(num_buf-1))/np.log(2) +1) +1
+    print ('In this g2 calculation, the buf and lev number are: %s--%s--'%(num_buf,num_lev))
+    if  bad_frame_list is not None:
+        if len(bad_frame_list)!=0:
+            print ('%s Bad frames involved and will be discarded!'%len(bad_frame_list) )            
+            noframes -=  len(np.where(np.in1d( bad_frame_list, 
+                                              range(good_start, FD.end)))[0])   
+    print ('%s frames will be processed...'%(noframes-1))      
+    ring_masks = [   np.array(ring_mask==i, dtype = np.int64) 
+              for i in np.unique( ring_mask )[1:] ]    
+    qind, pixelist = roi.extract_label_indices(  ring_mask  )   
+    noqs = len(np.unique(qind))
+    nopr = np.bincount(qind, minlength=(noqs+1))[1:]
+    if norm is not None:
+        norms = [ norm[ np.in1d(  pixelist, 
+            extract_label_indices( np.array(ring_mask==i, dtype = np.int64))[1])]
+                for i in np.unique( ring_mask )[1:] ] 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-    
-    
+    inputs = range( len(ring_masks) ) 
+    pool =  Pool(processes= len(inputs) )
+    internal_state = None       
+    print( 'Starting assign the tasks...')    
+    results = {}    
+    if norm is not None: 
+        for i in  tqdm( inputs ): 
+            results[i] =  apply_async( pool, lazy_one_timep, ( FD, num_lev, num_buf, ring_masks[i],
+                        internal_state,  bad_frame_list, imgsum,
+                                    norms[i], cal_error  ) ) 
+    else:
+        #print ('for norm is None')    
+        for i in tqdm ( inputs ): 
+            results[i] = apply_async( pool, lazy_one_timep, ( FD, num_lev, num_buf, ring_masks[i], 
+                        internal_state,   bad_frame_list,imgsum, None, cal_error 
+                                     ) )             
+    pool.close()    
+    print( 'Starting running the tasks...')    
+    res =   [ results[k].get() for k in   tqdm( list(sorted(results.keys())) )   ]  
+            
+    #lag_steps  = res[0][1]         
+    g2_G = np.zeros((  int( (num_lev + 1) * num_buf / 2),  len(pixelist)) )  
+    g2_P = np.zeros_like(  g2_G )
+    g2_F = np.zeros_like(  g2_G )         
+    Gmax = 0
+    lag_steps_err  = res[0][1]  
+    #print('Here')
+    for i in inputs:
+        g2_G[:,qind==1+i] = res[i][2]#[:len_lag]   
+        g2_P[:,qind==1+i] = res[i][3]#[:len_lag]  
+        g2_F[:,qind==1+i] = res[i][4]#[:len_lag]            
+    del results
+    del res
+    return g2_G, g2_P, g2_F
+   
 def auto_two_Arrayp(  data_pixel, rois, index=None):
     
     ''' 
