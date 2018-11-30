@@ -617,16 +617,20 @@ def cal_GPF( FD, ring_mask, bad_frame_list=None,
             print ('%s Bad frames involved and will be discarded!'%len(bad_frame_list) )            
             noframes -=  len(np.where(np.in1d( bad_frame_list, 
                                               range(good_start, FD.end)))[0])   
-    print ('%s frames will be processed...'%(noframes-1))      
+    print ('%s frames will be processed...'%(noframes-1))   
+    if np.min(ring_mask)==0:
+        qstart=1
+    else:
+        qstart=0
     ring_masks = [   np.array(ring_mask==i, dtype = np.int64) 
-              for i in np.unique( ring_mask )[1:] ]    
+              for i in np.unique( ring_mask )[qstart:] ]  
     qind, pixelist = roi.extract_label_indices(  ring_mask  )   
-    noqs = len(np.unique(qind))
-    nopr = np.bincount(qind, minlength=(noqs+1))[1:]
+    noqs = len(np.unique(qind))    
+    nopr = np.bincount(qind, minlength=(noqs+1))[qstart:]
     if norm is not None:
         norms = [ norm[ np.in1d(  pixelist, 
             extract_label_indices( np.array(ring_mask==i, dtype = np.int64))[1])]
-                for i in np.unique( ring_mask )[1:] ] 
+                for i in np.unique( ring_mask )[qstart:] ] 
 
     inputs = range( len(ring_masks) ) 
     pool =  Pool(processes= len(inputs) )
@@ -662,6 +666,63 @@ def cal_GPF( FD, ring_mask, bad_frame_list=None,
     del results
     del res
     return g2_G, g2_P, g2_F
+
+
+def get_g2_from_ROI_GPF( G,P,F,roi_mask):
+    '''YG. 2018.10.26. Get g2 from G, P, F by giving bins (roi_mask)
+    Input:
+        G: <I(t) * I(t+tau)>t
+        P: <  I(t)  >t
+        F: <  I(t+tau) >t
+        roi_mask: the roi mask
+        
+    Output:
+       g2 and g2_err
+    
+    '''
+    
+    qind, pixelist = roi.extract_label_indices(  roi_mask  )   
+    noqs = len(np.unique(qind))    
+    g2 = np.zeros( [G.shape[0], noqs])
+    g2_err = np.zeros( [G.shape[0], noqs])  
+    for i in range(1,1+noqs):
+        ## G[0].shape is the same as roi_mask shape
+        if len( G.shape ) >2:
+            s_Gall_qi = G[:,roi_mask==i]  
+            s_Pall_qi = P[:,roi_mask==i]  
+            s_Fall_qi = F[:,roi_mask==i]  
+        ## G[0].shape is the same length as pixelist
+        else:
+            s_Gall_qi = G[:,qind==i]  
+            s_Pall_qi = P[:,qind==i]  
+            s_Fall_qi = F[:,qind==i]            
+            
+        #print( s_Gall_qi.shape,s_Pall_qi.shape,s_Fall_qi.shape )
+        avgGi = (np.average( s_Gall_qi, axis=1)) 
+        devGi = (np.std( s_Gall_qi, axis=1))
+        avgPi = (np.average( s_Pall_qi, axis=1)) 
+        devPi = (np.std( s_Pall_qi, axis=1))
+        avgFi = (np.average( s_Fall_qi, axis=1)) 
+        devFi = (np.std( s_Fall_qi, axis=1))
+        if len(np.where(avgPi == 0)[0]) != 0:
+            g_max1 = np.where(avgPi == 0)[0][0]
+        else:
+            g_max1 = avgPi.shape[0]    
+        if len(np.where(avgFi == 0)[0]) != 0:
+            g_max2 = np.where(avgFi == 0)[0][0]
+        else:
+            g_max2 = avgFi.shape[0]    
+        g_max = min( g_max1, g_max2)             
+        #print()
+        g2[:g_max,i-1] =   avgGi[:g_max]/( avgPi[:g_max] * avgFi[:g_max] )           
+        g2_err[:g_max,i-1] = np.sqrt( 
+            ( 1/ ( avgFi[:g_max] * avgPi[:g_max] ))**2 * devGi[:g_max] ** 2 +
+            ( avgGi[:g_max]/ ( avgFi[:g_max]**2 * avgPi[:g_max] ))**2 * devFi[:g_max] ** 2 +
+            ( avgGi[:g_max]/ ( avgFi[:g_max] * avgPi[:g_max]**2 ))**2 * devPi[:g_max] ** 2 )
+            
+    return g2, g2_err       
+    
+
    
 def auto_two_Arrayp(  data_pixel, rois, index=None):
     
