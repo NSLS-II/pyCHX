@@ -105,7 +105,7 @@ def update_olog_uid( uid, text, attachments):
     client = OlogClient( url='https://logbook.nsls2.bnl.gov/Olog-11-ID/Olog', 
                                     username= 'xf11id', password= '***REMOVED***' )
     
-    logid = olog_client.find( search= uid )[0]['id']
+    logid = olog_client.find( search= '*%s*'%uid )[0]['id']
     #print(attachments)
     update_olog_id( logid, text, attachments)    
     
