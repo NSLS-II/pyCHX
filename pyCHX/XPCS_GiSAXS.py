@@ -8,7 +8,7 @@ from pyCHX.chx_generic_functions import *
 from pyCHX.chx_compress import ( compress_eigerdata, read_compressed_eigerdata,init_compress_eigerdata, get_avg_imgc,Multifile) 
 from pyCHX.chx_correlationc import ( cal_g2c )
 from pyCHX.chx_libs import  ( colors, markers, colors_,  markers_)
-
+from skbeam.core.accumulators.binned_statistic import BinnedStatistic2D,BinnedStatistic1D
 
 def get_gisaxs_roi( Qr, Qz, qr_map, qz_map, mask=None, qval_dict=None ):
     '''Y.G. 2016 Dec 31
@@ -415,6 +415,121 @@ def make_gisaxs_grid( qr_w= 10, qz_w = 12, dim_r =100,dim_z=120):
 #for Q-map, convert pixel to Q
 ########################################### 
 
+def convert_Qmap( img, qx_map, qy_map=None, bins=None, rangeq=None, 
+                  mask=None, statistic='sum'):
+    """Y.G. Nov 3@CHX 
+    Convert a scattering image to a qmap by giving qx_map and qy_map
+    Return converted qmap, x-coordinates and y-coordinates
+    """
+    if qy_map is not None:           
+        if rangeq is None:
+            qx_min,qx_max = qx_map.min(), qx_map.max()
+            qy_min,qy_max = qy_map.min(), qy_map.max()
+            rangeq = [ [qx_min,qx_max], [qy_min,qy_max] ] 
+        if bins is None:
+            bins = qx_map.shape
+        if mask is not None:
+            m = mask.ravel()
+        else:
+            m = None            
+        b2d = BinnedStatistic2D( qx_map.ravel(), qy_map.ravel(),statistic=statistic, bins=bins,
+                                mask=m, range=rangeq)
+        remesh_data, xbins, ybins = b2d( img.ravel() ), b2d.bin_centers[0], b2d.bin_centers[1]        
+    else:
+        if rangeq is None:
+            qx_min,qx_max = qx_map.min(), qx_map.max()
+            rangeq =   [qx_min,qx_max]       
+        if bins is None:
+            bins = [ qx_map.size ]        
+        if mask is not None:
+            m = mask.ravel()
+        else:
+            m = None
+        b1d = BinnedStatistic1D(  qx_map.ravel(), bins= bins, mask=m  )        
+        remesh_data  = b1d(  img.ravel()  )        
+        xbins= b1d.bin_centers     
+        ybins=None        
+    return remesh_data, xbins, ybins
+
+
+
+
+
+
+
+
+
+
+    
+
+
+def get_refl_xy(  inc_ang, inc_phi, inc_x0, inc_y0, pixelsize=[0.075,0.075], Lsd=5000   ):
+    ''' 
+        Input: 
+            inc_angle: deg,  
+            inc_phi: deg, by default, 0 ( if inc_x = ref_x )
+            pixelsize: 0.075 mm for Eiger4M detector              
+            sample to detector distance: Lsd, in mm            
+            
+        Output:            
+             reflected beam center x, y              
+             
+    '''           
+    px,py = pixelsize     
+    refl_y0 = np.tan( 2* np.radians( inc_ang ) ) * Lsd  / ( py  ) + inc_y0
+    refl_x0 = inc_x0 - np.tan(  np.radians( inc_phi ) ) * ( refl_y0 - inc_y0)*py/px 
+    print('The reflection beam center is: [%.2f, %.2f] (pix)' %(refl_x0, refl_y0) )
+    return refl_x0, refl_y0
+
+def get_alphaf_thetaf( inc_x0, inc_y0, inc_ang, inc_phi = 0, 
+                         pixelsize=[0.075,0.075], Lsd=5000,dimx = 2070.,dimy=2167.):
+    
+    ''' Nov 19, 2018@SMI to get alphaf and thetaf for gi scattering 
+        Input: 
+            inc_angle: deg,  
+            inc_phi: deg, by default, 0 ( if inc_x = ref_x )
+            pixelsize: 0.075 mm for Eiger4M detector              
+            sample to detector distance: Lsd, in mm 
+            detector image size: dimx = 2070,dimy=2167 for Eiger4M detector            
+        Output:            
+             reflected angle alphaf (outplane)
+             reflected angle thetaf (inplane )
+             
+    '''    
+    px,py = pixelsize    
+    y, x = np.indices( [int(dimy),int(dimx)] )    
+    alphai, thetai = np.radians(inc_ang), np.radians(inc_phi)    
+    alphaf = np.arctan2( (y-inc_y0)*py, Lsd )  - alphai 
+    thetaf = np.arctan2( (x-inc_x0)*px, Lsd )/2 - thetai 
+    #print( px, py, Lsd, dimy, dimx, alphai, thetai)
+    return alphaf,thetaf
+
+def convert_gisaxs_pixel_to_q2( inc_ang, alphaf,thetaf, phi=0, lamda=1.0,thetai=0.0, ):
+    
+    ''' 
+    Dec 16, 2015, Y.G.@CHX
+    giving:    
+              incident_angle, (inc_ang), in deg
+              alphaf,
+              thetaf,
+              the title angle (phi)
+              wavelength: angstron               
+                
+        get: q_parallel (qp), q_direction_z (qz)
+                
+    ''' 
+    pref = 2*np.pi/lamda    
+    alphai = np.radians(inc_ang)
+    thetai = np.radians(thetai)
+    phi = np.radians(phi)
+    
+    qx = np.cos( alphaf)*np.cos( 2*thetaf) - np.cos( alphai )*np.cos( 2*thetai)  
+    qy_ = np.cos( alphaf)*np.sin( 2*thetaf) - np.cos( alphai )*np.sin ( 2*thetai)    
+    qz_ = np.sin(alphaf) + np.sin(alphai)  
+    qy = qz_* np.sin( phi) + qy_*np.cos(phi) 
+    qz = qz_* np.cos( phi) - qy_*np.sin(phi) 
+    qr = np.sqrt( qx**2 + qy**2 )     
+    return qx*pref  , qy*pref  , qr*pref  , qz*pref 
 
 def get_incident_angles( inc_x0, inc_y0, refl_x0, refl_y0, pixelsize=[75,75], Lsd=5.0):
     ''' 
@@ -458,10 +573,9 @@ def get_reflected_angles(inc_x0, inc_y0, refl_x0, refl_y0, thetai=0.0,
     y, x = np.indices( [int(dimy),int(dimx)] )    
     #alphaf = np.arctan2( (y-inc_y0)*py*10**(-6), Lsd )/2 - alphai 
     alphaf = np.arctan2( (y-inc_y0)*py*10**(-6), Lsd )  - alphai 
-    thetaf = np.arctan2( (x-inc_x0)*px*10**(-6), Lsd )/2 - thetai   
-    
-    return alphaf,thetaf, alphai, phi    
-    
+    thetaf = np.arctan2( (x-inc_x0)*px*10**(-6), Lsd )/2 - thetai 
+    return alphaf,thetaf, alphai, phi   
+
     
 
 def convert_gisaxs_pixel_to_q( inc_x0, inc_y0, refl_x0, refl_y0, 
@@ -479,24 +593,15 @@ def convert_gisaxs_pixel_to_q( inc_x0, inc_y0, refl_x0, refl_y0,
                 
         get: q_parallel (qp), q_direction_z (qz)
                 
-    '''         
-    
-    
-    alphaf,thetaf,alphai, phi = get_reflected_angles( inc_x0, inc_y0, refl_x0, refl_y0, thetai, pixelsize, Lsd,dimx,dimy)
-       
-    pref = 2*np.pi/lamda
-    
+    '''      
+    alphaf,thetaf,alphai, phi = get_reflected_angles( inc_x0, inc_y0, refl_x0, refl_y0, thetai, pixelsize, Lsd,dimx,dimy)       
+    pref = 2*np.pi/lamda    
     qx = np.cos( alphaf)*np.cos( 2*thetaf) - np.cos( alphai )*np.cos( 2*thetai)  
     qy_ = np.cos( alphaf)*np.sin( 2*thetaf) - np.cos( alphai )*np.sin ( 2*thetai)    
-    qz_ = np.sin(alphaf) + np.sin(alphai) 
-    
-    
+    qz_ = np.sin(alphaf) + np.sin(alphai)  
     qy = qz_* np.sin( phi) + qy_*np.cos(phi) 
-    qz = qz_* np.cos( phi) - qy_*np.sin(phi)   
-    
-    qr = np.sqrt( qx**2 + qy**2 ) 
-    
-    
+    qz = qz_* np.cos( phi) - qy_*np.sin(phi) 
+    qr = np.sqrt( qx**2 + qy**2 )     
     return qx*pref  , qy*pref  , qr*pref  , qz*pref  
         
     
