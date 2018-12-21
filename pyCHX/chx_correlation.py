@@ -1,6 +1,6 @@
 # ######################################################################
 # Developed at the NSLS-II, Brookhaven National Laboratory             #
-# Developed by Sameera K. Abeykoon, February 2014                      #
+ 
 #                                                                      #
 # Copyright (c) 2014, Brookhaven Science Associates, Brookhaven        #
 # National Laboratory. All rights reserved.                            #

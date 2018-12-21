@@ -2,7 +2,202 @@
 #from pyCHX.chx_generic_functions import average_array_withNan
 import numpy as np
 from tqdm import tqdm
+from numpy.fft import fft, ifft
+import skbeam.core.roi as roi
 
+
+
+#############For APD detector
+def get_pix_g2_fft( time_inten ):
+    '''YG Dev@CHX 2018/12/4 get g2 for oneD intensity
+        g2 = G/(P*F)
+        G = <I(t) * I(t+dt)> 
+        P =  <I(t)>
+        F = <I(t+dt)>
+    Input:
+        time_inten: 1d-array,  
+                    a time dependent intensity for one pixel
+    Return:
+        G/(P*F)
+    '''    
+    G =  get_pix_g2_G( time_inten )
+    P, F = get_pix_g2_PF ( time_inten ) 
+    return G/( P * F )
+
+def get_pix_g2_G( time_inten ):
+    '''YG Dev@CHX 2018/12/4 get G for oneD intensity
+        g2 = G/(P*F)
+        G = <I(t) * I(t+dt)> 
+        P =  <I(t)>
+        F = <I(t+dt)>
+    Input:
+        time_inten: 1d-array,  
+                    a time dependent intensity for one pixel
+    Return:
+        G 
+    '''       
+    L = len( time_inten )    
+    norm = np.arange( L, 0, -1 )
+    return np.correlate( time_inten, time_inten, mode = 'full'  )[ L-1:] / norm
+
+def get_pix_g2_PF ( time_inten ) :
+    '''YG Dev@CHX 2018/12/4 get past and future intensity in the normalization of g2
+        g2 = G/(P*F)
+        G = <I(t) * I(t+dt)> 
+        P =  <I(t)>
+        F = <I(t+dt)>
+    Input:
+        time_inten: 1d-array,  
+                    a time dependent intensity for one pixel
+    Return:
+        P, F
+    '''
+    
+    cum_sum = np.cumsum(  time_inten   )[::-1] 
+    cum_Norm =  np.arange( time_inten.shape[0], 0, -1 ) 
+    P = cum_sum / cum_Norm 
+
+    cum_sum2 = np.cumsum( time_inten[::-1], axis = 0 )[::-1] 
+    cum_Norm2 = np.arange( time_inten.shape[0], 0, -1 ) 
+    F = cum_sum2 / cum_Norm2 
+    return P, F
+
+###################
+
+
+    
+def get_ab_correlation(a,b):
+    '''YG 2018/11/05/ derived from pandas.frame corrwith method
+    Get correlation of two one-d array,  formula--> 
+        A = ( ( a-a.mean() ) * (b-b.mean()) ).sum
+        B = ( len(a)-1 ) * a.std() * b.std()
+        Cor = A/B
+    Input:
+        a: one-d  array
+        b: one-d   array
+    Output:
+        c: one-d array, correlation
+    
+    '''
+    a = np.array(a)
+    b = np.array(b)
+    return ((a-a.mean())* (b-b.mean())).sum()/(  (len(a)-1) * a.std()  *b.std()   )
+
+
+def get_oneQ_g2_fft( time_inten_oneQ, axis=0):
+    '''YG Dev@CHX 2018/10/15 get g2 for one Q by giving time_inten for that Q
+        g2 = G/(P*F)
+        G = <I(t) * I(t+dt)> 
+        P =  <I(t)>
+        F = <I(t+dt)>
+    Input:
+        time_inten_oneQ: 2d-array,  shape=[time, pixel number in the ROI], 
+                    a time dependent intensity for a list of pixels 
+                     (   the equivilent pixels belongs to one Q    )
+    Return:
+        G/(P*F)
+    '''    
+    L = time_inten_oneQ.shape[0]
+    P, F = get_g2_PF ( time_inten_oneQ )
+    G = auto_correlation_fft( time_inten_oneQ, axis = axis ) 
+    G2f = np.average( G, axis = 1 ) / L
+    Pf = np.average( P, axis = 1 )
+    Ff = np.average( F, axis = 1 )
+    g2f = G2f/(Pf*Ff)
+    return g2f
+
+
+def get_g2_PF ( time_inten ) :
+    '''YG Dev@CHX 2018/10/15 get past and future intensity in the normalization of g2
+        g2 = G/(P*F)
+        G = <I(t) * I(t+dt)> 
+        P =  <I(t)>
+        F = <I(t+dt)>
+    Input:
+        time_inten: 2d-array, shape=[time, pixel number in the ROI], 
+                    a time dependent intensity for a list of pixels
+    Return:
+        P, F
+    '''
+    
+    cum_sum = np.cumsum( time_inten, axis = 0 )[::-1] 
+    cum_Norm =  np.arange( time_inten.shape[0], 0, -1 ) 
+    P = cum_sum / cum_Norm[:,np.newaxis]
+
+    cum_sum2 = np.cumsum( time_inten[::-1], axis = 0 )[::-1] 
+    cum_Norm2 = np.arange( time_inten.shape[0], 0, -1 ) 
+    F = cum_sum2 / cum_Norm2[:,np.newaxis]
+    return P, F
+
+
+def auto_correlation_fft_padding_zeros( a, axis = -1 ):
+    '''Y.G. Dev@CHX, 2018/10/15 Do autocorelation of ND array by fft
+    Math:
+        Based on auto_cor(arr) = ifft(  fft( arr ) * fft(arr[::-1]) )
+        In numpy form
+                 auto_cor(arr) = ifft(  
+                             fft( arr, n=2N-1, axis=axis ) ##padding enough zeros
+                                                           ## for axis                      
+                             * np.conjugate(               ## conju for reverse array
+                             fft(arr , n=2N-1, axis=axis) )
+                             )  #do reverse fft
+    Input:
+        a: 2d array,   shape=[time, pixel number in the ROI], 
+                    a time dependent intensity for a list of pixels
+        axis: the axis for doing autocor
+    Output:
+        return: the autocorrelation array
+            if a is one-d and two-d, return the cor with the same length of a
+            else: return the cor with full length defined by 2*N-1 
+    
+    '''
+    a= np.asarray(a)
+    M = a.shape
+    N = M[axis]
+    #print(M, N, 2*N-1)
+    cor =  np.real(  ifft( fft( a, n=N*2-1, axis=axis ) * 
+               np.conjugate( fft( a,   n=N*2-1, axis=axis )),
+             n=N*2-1,   axis=axis  )  )  
+ 
+    
+    if len(M) ==1:
+        return cor[:N]
+    elif len(M) ==2:
+        if axis==-1 or axis==1:
+            return cor[:,:N]
+        elif axis==0 or axis ==-2:
+            return cor[:N]
+    else:     
+        return cor
+    
+def auto_correlation_fft( a, axis = -1 ):
+    '''Y.G. Dev@CHX, 2018/10/15 Do autocorelation of ND array by fft
+    Math:
+        Based on auto_cor(arr) = ifft(  fft( arr ) * fft(arr[::-1]) )
+        In numpy form
+                 auto_cor(arr) = ifft(  
+                             fft( arr, n=2N-1, axis=axis ) ##padding enough zeros
+                                                           ## for axis                      
+                             * np.conjugate(               ## conju for reverse array
+                             fft(arr , n=2N-1, axis=axis) )
+                             )  #do reverse fft
+    Input:
+        a: 2d array,   shape=[time, pixel number in the ROI], 
+                    a time dependent intensity for a list of pixels
+        axis: the axis for doing autocor
+    Output:
+        return: the autocorrelation array
+            if a is one-d and two-d, return the cor with the same length of a
+            else: return the cor with full length defined by 2*N-1 
+    
+    '''
+    a= np.asarray(a)    
+    cor =  np.real(  ifft( fft( a,  axis=axis ) * 
+               np.conjugate( fft( a,   axis=axis )),
+                axis=axis  )  )
+    return cor    
+    
+    
 def multitau(Ipix,bind,lvl=12,nobuf=8):
     '''
    tt,g2=multitau(Ipix,bind,lvl=12,nobuf=8)
@@ -241,8 +436,62 @@ def Gaussian( x,  p ):
     return g
 
 
+###########For ellipse shaped sectors by users
+def elps_r(a,b,theta):
+    '''
+    Returns the radius of an ellipse with semimajor/minor axes a/b
+    at angle theta (in radians)'''
+    return a*b/np.sqrt(((b*np.cos(theta))**2)+((a*np.sin(theta))**2))
 
+def place_in_interval(val, interval_list):
+    '''
+    For a sorted list interval_list, returns the bin index val belongs to (0-indexed)
+    Returns -1 if outside of bins'''
+    if val < interval_list[0] or val >= interval_list[-1]:
+        return -1
+    else:
+        return np.argmax(val < interval_list) - 1
 
+def gen_elps_sectors(a, b, r_min, r_n, th_n, c_x, c_y, th_min = 0, th_max = 360):
+    '''
+    Returns a list of x/y coordinates of ellipsoidal sectors ROI. Cuts th_max - th_min degrees into
+    th_n number of angular bins, and r_n number of radial bins, starting from r_min*r to r where
+    r is the radius of the ellipsoid at that angle. The ROIs are centered around c_x, c_y. Defaults to 360 deg.
+    
+    Example:
+    
+        roi_mask = np.zeros_like( avg_img , dtype = np.int32)
+        sectors = gen_elps_sectors(110,55,0.2,5,24,579,177)
+        for ii,sector in enumerate(sectors):
+                roi_mask[sector[1],sector[0]] = ii + 1
+                
+    '''
+    th_list = np.linspace(th_min,th_max,th_n+1)
+    r_list = np.linspace(r_min,1,r_n+1)
+    regions_list = [[[np.array([],dtype=np.int_),np.array([],dtype=np.int_)] for _ in range(r_n)] for _ in range(th_n)]
+    w = int(np.ceil(a*2))
+    h = int(np.ceil(b*2))
+    x_offset = c_x - w//2
+    y_offset = c_y - h//2
+    for ii in range(w):
+        cur_x = ii - (w-1)//2
+        for jj in range(h):
+            cur_y = jj - (h-1)//2
+            cur_theta = np.arctan2(cur_y,cur_x)%(np.pi*2)
+            cur_r = np.sqrt(cur_x**2 + cur_y**2)
+            cur_elps_r = elps_r(a,b,cur_theta)
+            cur_r_list = r_list * cur_elps_r
+            cur_theta = np.rad2deg(cur_theta) # Convert to degrees to compare with th_list
+            r_ind = place_in_interval(cur_r,cur_r_list)
+            th_ind = place_in_interval(cur_theta,th_list)
+            if (r_ind != -1) and (th_ind != -1):
+                regions_list[th_ind][r_ind][0] = np.append(regions_list[th_ind][r_ind][0],ii + x_offset)
+                regions_list[th_ind][r_ind][1] = np.append(regions_list[th_ind][r_ind][1],jj + y_offset)
+    sectors = []
+    for th_reg_list in regions_list:
+        for sector in th_reg_list:
+            sectors += [(sector[0],sector[1])]
+    return sectors
 
 
 
