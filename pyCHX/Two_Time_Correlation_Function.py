@@ -1205,6 +1205,12 @@ def show_C12(C12,  fig_ax=None, q_ind=1, return_fig=False, interpolation = 'none
     else:
         timeperframe=1
         
+    if 'timeoffset' in kwargs.keys():      ### added timeoffset here
+        timeoffset =  kwargs['timeoffset']
+    else:
+        timeoffset=0
+        
+        
     if 'vmin' in kwargs.keys():
         vmin =  kwargs['vmin']
     else:
@@ -1243,7 +1249,7 @@ def show_C12(C12,  fig_ax=None, q_ind=1, return_fig=False, interpolation = 'none
         fig,ax=fig_ax
 
     #extent=[0, data.shape[0]*timeperframe, 0, data.shape[0]*timeperframe ]
-    extent= np.array( [N1, N2, N1, N2]) *timeperframe 
+    extent= np.array( [N1, N2, N1, N2]) *timeperframe + timeoffset   ### added timeoffset to extend
     
     if logs: 
         im = imshow(ax,  data, origin='lower' , cmap=cmap, 
