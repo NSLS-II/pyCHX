@@ -12,7 +12,7 @@ from matplotlib import cm
 import copy, scipy 
 import PIL    
 from shutil import copyfile
-
+import datetime, pytz
 
 
 markers =  ['o', 'D', 'v',   '^', '<',  '>', 'p', 's', 'H',
@@ -28,6 +28,27 @@ flatten_nestlist = lambda l: [item for sublist in l for item in sublist]
 e.g., flatten( [ ['sg','tt'],'ll' ]   )
 gives ['sg', 'tt', 'l', 'l']
 """
+
+
+
+def get_current_time():
+    '''get current time in a fomart of year/month/date/hour(24)/min/sec/,
+        e.g. 2009-01-05 22:14:39
+    '''
+    loc_dt = datetime.datetime.now(pytz.timezone('US/Eastern'))
+    fmt = "%Y-%m-%d %H:%M:%S"    
+    return  loc_dt.strftime(fmt)
+
+
+
+def evalue_array( array, verbose = True ):
+    '''Y.G., Dev Nov 1, 2018 Get min, max, avg, std of an array '''
+    _min, _max, avg, std = np.min( array), np.max( array), np.average( array ), np.std( array )
+    if verbose:
+        print( 'The  min, max, avg, std of this array are: %s  %s   %s   %s, respectively.'%(_min, _max, avg, std ) )
+    return  _min, _max, avg, std
+    
+    
 
 def find_good_xpcs_uids(  fuids, Nlim=100, det = [ '4m', '1m', '500'] ):
     '''Y.G., Dev Nov 1, 2018 Find the good xpcs series
