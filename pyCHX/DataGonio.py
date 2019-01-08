@@ -9,6 +9,10 @@ import PIL # Python Image Library (for opening PNG, etc.)
 import sys, os
 
 from skbeam.core.accumulators.binned_statistic import BinnedStatistic2D,BinnedStatistic1D
+import skbeam.core.roi as roi
+import skbeam.core.correlation as corr
+import skbeam.core.utils as utils
+from pyCHX.chx_generic_functions import average_array_withNan
 
 
 
@@ -100,6 +104,48 @@ def qphiavg(image, q_map=None, phi_map=None, mask=None, bins= None,
     phis = rphibinstat.bin_centers[1]
     return  sqphi,  qs,  phis 
 
+
+def get_QPhiMap(img_shape, center):
+    '''Y.G., Dev Nov 10, 2018 Get q_map and phi_map by giving image shape and center
+    e.g.,
+        q_map, phi_map = get_QPhiMap( mask.shape, center[::-1])   
+    
+     '''
+    q_map = utils.radial_grid( center, img_shape, pixel_size= [1,1] )
+    phi_map = np.degrees( utils.angle_grid(center, img_shape,) )
+    
+    return q_map, phi_map
+
+def get_img_qphimap(img, q_map, phi_map, mask, bins, center, 
+                    qang_range=None, statistic='mean'):
+    '''Y.G., Dev Nov 10, 2018 Get phi_map by giving image
+     e.g.,
+         q_map, phi_map = get_QPhiMap( mask.shape, center[::-1])   
+         sqphi,  qs,  phis = get_img_qphimap( avg, q_map, phi_map, mask,
+                                               bins=[ 1500, 1800],center=center[::-1], 
+                                               qang_range=None, statistic='mean')
+    
+    '''    
+    sqphi,  qs,  phis = qphiavg(img, q_map=q_map, phi_map=phi_map, mask=mask, bins= bins,
+            origin= center, range=qang_range, statistic=statistic)  
+    return sqphi,  qs,  phis
+
+def get_iq_from_sqphi( sqphi):
+    '''Y.G., Dev Nov 10, 2018 Get iq from a q-phi map
+       e.g.,
+            iqPHI = get_iq_from_sqphi( Iqphi )'''
+    return np.nan_to_num( average_array_withNan( sqphi, axis=1 ) )
+
+def get_phi_from_sqphi( sqphi):
+    '''Y.G., Dev Nov 10, 2018 Get Iphi from a q-phi map
+       e.g.,
+            iqPHI = get_iq_from_sqphi( Iqphi ) 
+            qc= np.argmax( iqPHI ) 
+            qw = 5           
+            iphiQ = get_phi_from_sqphi( Iqphi[qc-qw:qc+qw] )
+
+    '''    
+    return np.nan_to_num( average_array_withNan( sqphi, axis=0 ) )
 
 
 
