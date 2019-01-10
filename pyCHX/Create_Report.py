@@ -1679,7 +1679,7 @@ def export_xpcs_results_to_h5_old( filename, export_dir, export_dict ):
     print( 'The xpcs analysis results are exported to %s with filename as %s'%(export_dir , filename))
     
             
-def extract_xpcs_results_from_h5( filename, import_dir, onekey=None, exclude_keys=None ):
+def extract_xpcs_results_from_h5( filename, import_dir, onekey=None, exclude_keys=None, two_time_qindex = None ):
     '''
        YG. Dec 22, 2016 
        extract data from a h5 file
@@ -1718,7 +1718,14 @@ def extract_xpcs_results_from_h5( filename, import_dir, onekey=None, exclude_key
                     elif key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds', 'qr_1d_pds']:
                         pds_type_keys.append( key )                
                     else:    
-                        extract_dict[key] = np.array( hf.get( key  ))
+                        if key == 'g12b':
+                            if two_time_qindex is not None:
+                                extract_dict[key] = hf.get( key  )[:,:,two_time_qindex] 
+                            else:
+                                extract_dict[key] = hf.get( key  )[:] 
+                        else:        
+                            extract_dict[key] = hf.get( key  )[:] #np.array( hf.get( key  ))                        
+                        
         for key in pds_type_keys:
             if key not in exclude_keys:
                 extract_dict[key] = pds.read_hdf(fp, key= key )     
@@ -1733,7 +1740,14 @@ def extract_xpcs_results_from_h5( filename, import_dir, onekey=None, exclude_key
         else:
             try:
                 with h5py.File( fp, 'r') as hf: 
-                    extract_dict[onekey] = np.array( hf.get( onekey  ))
+                    if key == 'g12b':
+                        if two_time_qindex is not None:
+                            extract_dict[key] = hf.get( key  )[:,:,two_time_qindex] 
+                        else:
+                            extract_dict[key] = hf.get( key  )[:] 
+                    else:        
+                        extract_dict[key] = hf.get( key  )[:] #np.array( hf.get( key  ))                            
+                    #extract_dict[onekey] = hf.get( key  )[:] #np.array( hf.get( onekey  ))
             except:
                 print("The %s dosen't have this %s value"%(fp, onekey) )
     return extract_dict
