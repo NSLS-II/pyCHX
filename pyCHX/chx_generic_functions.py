@@ -3766,9 +3766,9 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
                 'simple_exponential' (or 'simple'): fit by a simple exponential function, defined as  
                         beta * np.exp(-2 * relaxation_rate * lags) + baseline
                 'streched_exponential'(or 'streched'): fit by a streched exponential function, defined as  
-                        beta * (np.exp(-2 * relaxation_rate * lags))**alpha + baseline
+                        beta * (   np.exp(  -2 * ( relaxation_rate * tau )**alpha ) + baseline
                  'stretched_vibration':   fit by a streched exponential function with vibration, defined as            
-                     beta * (1 + amp*np.cos(  2*np.pi*60* x) )* np.exp(-2 * relaxation_rate * x)**alpha + baseline
+                     beta * (1 + amp*np.cos(  2*np.pi*60* x) )* np.exp(-2 * (relaxation_rate * x)**alpha) + baseline
                  'flow_para_function' (or flow): fit by a flow function
          
                     
