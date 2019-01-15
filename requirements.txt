@@ -1,4 +1,5 @@
 numpy
+dask
 databroker
 lmfit
 matplotlib
@@ -12,6 +13,8 @@ tqdm
 ipython
 dill
 reportlab
+pytables
+theano
 #git+https://github.com/soft-matter/slicerator.git
 git+https://github.com/scikit-beam/scikit-beam.git#egg=scikit-beam
 git+https://github.com/NSLS-II-CHX/eiger-io.git#eiger-io
