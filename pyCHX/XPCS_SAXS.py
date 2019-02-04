@@ -23,7 +23,7 @@ from pyCHX.chx_correlationp import ( cal_g2p)
 from pandas import DataFrame 
 import os
 
-
+ 
 
 def get_iq_invariant( qt, iqst  ):
     '''Get integer( q**2 * iqst )
@@ -2379,7 +2379,33 @@ def plot_mul_g2( g2s, md ):
     fig.set_tight_layout(True)    
  
                 
-                
+
+
+def get_QrQw_From_RoiMask( roi_mask, setup_pargs  ):
+    '''YG Dev Feb 4@CHX Get Q-center and Q-width fo transmission SAXS
+    Input:
+        roi_mask: int-type array, 2D roi mask, with q-index starting from 1
+        setup_pargs: dict, at least with keys as 
+                     dpix (det pixel size),lamdba_( wavelength), center( beam center)
+    Output:
+        qr_cen: the q center of each ring
+        qr_wid: the q width of each ring
+    
+    '''
+    qp_roi, iq_roi, q_roi = get_circular_average( roi_mask,  
+                                                 np.array(roi_mask,dtype=bool) ,
+                                                 pargs=setup_pargs  )
+    Nmax = roi_mask.max()
+    qr_cen = np.zeros(Nmax)
+    qr_wid =  np.zeros(Nmax)
+    for i in range(1,1+Nmax):
+        indi = np.where( iq_roi == i )[0]
+        qind_s = q_roi[indi[0] ]
+        qind_e = q_roi[indi[-1]  ]
+        #print(qind_s, qind_e)
+        qr_cen[i-1] = 0.5* ( qind_e + qind_s )
+        qr_wid[i-1] =  ( qind_e -  qind_s )
+    return qr_cen, qr_wid                 
             
             
     
