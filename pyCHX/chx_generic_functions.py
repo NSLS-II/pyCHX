@@ -28,7 +28,30 @@ flatten_nestlist = lambda l: [item for sublist in l for item in sublist]
 e.g., flatten( [ ['sg','tt'],'ll' ]   )
 gives ['sg', 'tt', 'l', 'l']
 """
-
+ 
+def shift_mask( mask, shiftx, shifty):
+    '''YG Dev Feb 4@CHX create new mask by shift mask in x and y direction with unit in pixel 
+    Input:
+        mask: int-type array,  
+        shiftx: int scalar, shift value in x direction with unit in pixel  
+        shifty: int scalar, shift value in y direction with unit in pixel  
+    Output:
+        maskn: int-type array, shifted mask        
+    
+    '''
+    qind, pixelist = roi.extract_label_indices( mask )
+    dims = mask.shape
+    imgwidthy = dims[1]   #dimension in y, but in plot being x
+    imgwidthx = dims[0]   #dimension in x, but in plot being y
+    pixely = pixelist%imgwidthy
+    pixelx = pixelist//imgwidthy
+    pixelyn =  pixely +  shiftx
+    pixelxn =  pixelx + shifty
+    w = (pixelyn < imgwidthy ) & (pixelyn >= 0 )  & (pixelxn < imgwidthx ) & (pixelxn >= 0 )  
+    pixelist_new = pixelxn[w] * imgwidthy + pixelyn[w]
+    maskn = np.zeros_like( mask )
+    maskn.ravel()[pixelist_new] = qind[w]   
+    return maskn
 
 
 def get_current_time():
@@ -1031,7 +1054,7 @@ def get_print_uids( start_time, stop_time, return_all_info=False):
 def get_last_uids( n=-1 ):
     '''YG Sep 26, 2017
     A Convinient function to copy uid to jupyter for analysis'''
-    uid = db[n]['start']['uid'][:6]
+    uid = db[n]['start']['uid'][:8]
     sid = db[n]['start']['scan_id']
     m = db[n]['start']['Measurement']
     return "   uid = '%s' #(scan num: %s (Measurement: %s        "%(uid,sid,m) 
