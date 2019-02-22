@@ -10,6 +10,45 @@ from pyCHX.chx_correlationc import ( cal_g2c )
 from pyCHX.chx_libs import  ( colors, markers, colors_,  markers_)
 from skbeam.core.accumulators.binned_statistic import BinnedStatistic2D,BinnedStatistic1D
 
+
+def get_gisaxs_roi2(  qr_edge,  qz_edge, qr_map, qz_map, mask=None, qval_dict=None ):
+    '''Y.G. 2019 Feb 12
+    Get xpcs roi of gisaxs by giving Qr centers/edges, Qz centers/edges
+    Parameters:
+        qr_edge: list, e.g., [ [0.01,0.02],  [0.03,0.04] ]. 
+                    each elment has two values for the start and end of one qr edge
+        qz_edge: list, e.g., [ [0.01,0.02],  [0.03,0.04] ] 
+                   each elment has two values for the start and end of one qz edge
+        qr_map: two-d array, the same shape as gisaxs frame, a qr map
+        qz_map: two-d array, the same shape as gisaxs frame, a qz map
+        mask: array, the scattering mask
+        qval_dict: a dict, each key (a integer) with value as qr or (qr,qz) or (q//, q|-)     
+                    if not None, the new returned qval_dict will include the old one
+        
+    Return:
+        roi_mask: array, the same shape as gisaxs frame, the label array of roi
+        qval_dict, a dict, each key (a integer) with value as qr or (qr,qz) or (q//, q|-)        
+    '''
+
+    #qr_edge, qr_center = get_qedge( *Qr )
+    #qz_edge, qz_center = get_qedge( *Qz )
+    qr_edge, qz_edge = np.array( qr_edge  ), np.array( qz_edge )
+    qr_center = 0.5* (qr_edge[:,0] + qr_edge[:,1])
+    qz_center = 0.5* (qz_edge[:,0] + qz_edge[:,1])
+    label_array_qz = get_qmap_label(qz_map, qz_edge)
+    label_array_qr = get_qmap_label(qr_map, qr_edge)
+    label_array_qzr, qzc, qrc = get_qzrmap(label_array_qz, label_array_qr,qz_center, qr_center)
+    labels_qzr, indices_qzr = roi.extract_label_indices(label_array_qzr)
+    labels_qz, indices_qz = roi.extract_label_indices(label_array_qz)
+    labels_qr, indices_qr = roi.extract_label_indices(label_array_qr)
+    if mask is None:
+        mask=1
+    roi_mask =  label_array_qzr * mask
+    qval_dict = get_qval_dict( np.round(qr_center, 5) , np.round(qz_center,5), qval_dict = qval_dict  )
+    return roi_mask, qval_dict
+
+
+
 def get_gisaxs_roi( Qr, Qz, qr_map, qz_map, mask=None, qval_dict=None ):
     '''Y.G. 2016 Dec 31
     Get xpcs roi of gisaxs
