@@ -1164,7 +1164,7 @@ def show_one_C12( C12,  fig_ax=None,  return_fig=False,interpolation = 'none',cm
     
 
 def show_C12(C12,  fig_ax=None, q_ind=1, return_fig=False, interpolation = 'none', cmap='viridis',
-             logs=True, qlabel=None, *argv,**kwargs):  
+             logs=True, qlabel=None, show_colorbar=True, *argv,**kwargs):  
  
     '''
     plot one-q of two-time correlation function
@@ -1275,7 +1275,8 @@ def show_C12(C12,  fig_ax=None, q_ind=1, return_fig=False, interpolation = 'none
         #ax.set_title('%s-%s frames--Qth= %s'%(N1,N2,g12_num))
     ax.set_xlabel( r'$t_1$ $(s)$', fontsize = 18)
     ax.set_ylabel( r'$t_2$ $(s)$', fontsize = 18)
-    fig.colorbar(im)
+    if show_colorbar:
+        fig.colorbar(im)
     
     save=False    
     if 'save' in kwargs:
