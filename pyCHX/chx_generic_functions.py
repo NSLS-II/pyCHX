@@ -29,6 +29,118 @@ e.g., flatten( [ ['sg','tt'],'ll' ]   )
 gives ['sg', 'tt', 'l', 'l']
 """
  
+def plot_xy_x2( x, y, x2=None, pargs=None,  loglog=False, logy=True,  fig_ax=None,                           
+            xlabel= 'q ('r'$\AA^{-1}$)', xlabel2='q (pixel)', title= '_q_Iq',
+               ylabel = 'I(q)',save=True, *argv,**kwargs):
+    '''YG.@CHX 2019/10/ Plot x, y, x2, if have, will plot as twiny( same y, different x)
+       This funciton is primary for plot q-Iq
+    
+    Input:
+        x: one-d array, x in one unit
+        y: one-d array,  
+        x2:one-d array, x in anoter unit
+        pargs: dict, could include 'uid', 'path'
+        loglog: if True, if plot x and y in log, by default plot in y-log
+        save: if True, save the plot in the path defined in pargs
+        kwargs: could include xlim (in unit of index), ylim (in unit of real value)
+    
+    '''
+    if fig_ax is None:
+        fig, ax1 = plt.subplots()
+    else:
+        fig,ax1=fig_ax
+    if pargs is not None:
+        uid = pargs['uid']
+        path = pargs['path']
+    else:
+        uid='XXX'
+        path=''        
+    if loglog:        
+        ax1.loglog( x,y, '-o')  
+    elif logy:            
+        ax1.semilogy( x,y, '-o') 
+    else:            
+        ax1.plot( x,y, '-o') 
+    ax1.set_xlabel( xlabel )        
+    ax1.set_ylabel( ylabel )
+    title = ax1.set_title( '%s--'%uid + title) 
+    Nx= len(x)
+    if 'xlim' in kwargs.keys():
+        xlim =  kwargs['xlim']
+        if xlim[1]>Nx:
+            xlim[1]=Nx-1
+    else:
+        xlim=[ 0, Nx]
+    if 'ylim' in kwargs.keys():
+        ylim =  kwargs['ylim']
+    else:
+        ylim=[y.min(), y.max()] 
+    lx1,lx2=xlim    
+    ax1.set_xlim(   [ x[lx1], x[lx2] ]   ) 
+    ax1.set_ylim(   ylim  ) 
+    if x2 is not None:
+        ax2 = ax1.twiny()  
+        ax2.set_xlabel( xlabel2 )  
+        ax2.set_ylabel( ylabel )
+        ax2.set_xlim(  [ x2[lx1], x2[lx2] ]  ) 
+    title.set_y(1.1)
+    fig.subplots_adjust(top=0.85)
+    if save:
+        path = pargs['path']
+        fp = path + '%s_q_Iq'%uid  + '.png'  
+        fig.savefig( fp, dpi=fig.dpi)
+
+        
+        
+    
+def save_oavs_tifs(  uid, data_dir, brightness_scale=1, scalebar_size=100, scale=1,threshold = 0 ):
+    '''save oavs as png'''
+    tifs =  list( db[uid].data(  'OAV_image') )[0] 
+    try:
+        pixel_scalebar=np.ceil(scalebar_size/md['OAV resolution um_pixel'])
+    except:
+        pixel_scalebar=None
+        print('No OAVS resolution is available.')
+        
+    text_string='%s $\mu$m'%scalebar_size
+    h = db[uid]
+    oavs=tifs
+
+    oav_period=h['descriptors'][0]['configuration']['OAV']['data']['OAV_cam_acquire_period']
+    oav_expt=h['descriptors'][0]['configuration']['OAV']['data']['OAV_cam_acquire_time']
+    oav_times=[]
+    for i in range(len(oavs)):
+        oav_times.append(oav_expt+i*oav_period)
+    fig=plt.subplots(int(np.ceil(len(oavs)/3)),3,figsize=(3*5.08,int(np.ceil(len(oavs)/3))*4))
+    for m in range(len(oavs)):
+        plt.subplot(int(np.ceil(len(oavs)/3)),3,m+1)
+        #plt.subplots(figsize=(5.2,4))
+        img = oavs[m]
+        try:
+            ind = np.flipud(img*scale)[:,:,2] < threshold
+        except:
+            ind = np.flipud(img*scale) < threshold
+        rgb_cont_img=np.copy(np.flipud(img))
+        #rgb_cont_img[ind,0]=1000
+        if brightness_scale !=1:
+            rgb_cont_img=scale_rgb(rgb_cont_img,scale=brightness_scale)
+
+        plt.imshow(rgb_cont_img,interpolation='none',resample=True, cmap =   'gray')
+        plt.axis('equal')
+        cross=[685,440,50] # definintion of direct beam: x, y, size
+        plt.plot([cross[0]-cross[2]/2,cross[0]+cross[2]/2],[cross[1],cross[1]],'r-')
+        plt.plot([cross[0],cross[0]],[cross[1]-cross[2]/2,cross[1]+cross[2]/2],'r-')
+        if pixel_scalebar is not None:
+            plt.plot([1100,1100+pixel_scalebar],[150,150],'r-',Linewidth=5) # scale bar.
+            plt.text(1000,50,text_string,fontsize=14,color='r')
+        plt.text(600,50,str(oav_times[m])[:5]+' [s]',fontsize=14,color='r')        
+        plt.axis('off')
+    plt.savefig( data_dir + 'uid=%s_OVA_images.png'%uid)        
+        
+        
+        
+    
+    
 def shift_mask( mask, shiftx, shifty):
     '''YG Dev Feb 4@CHX create new mask by shift mask in x and y direction with unit in pixel 
     Input:
