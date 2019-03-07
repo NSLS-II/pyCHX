@@ -467,16 +467,20 @@ def fit_form_factor2( q, iq,  guess_values, fit_range=None, fit_variables = None
     _r= guess_values[ 'radius']
     _sigma = guess_values['sigma']
     _delta_rho= guess_values['delta_rho']
+    if 'background' in list( guess_values.keys()):
+        _bk = guess_values['background']
+    else:
+        _bk = 0
     #_scale = guess_values['scale']
     #_baseline = guess_values['baseline']
     
     mod.set_param_hint( 'radius',   min= _r/10, max=_r*10  )
     mod.set_param_hint( 'sigma',   min= _sigma/10, max=_sigma*10 ) 
     #mod.set_param_hint( 'scale',   min= _scale/1E3, max= _scale*1E3  )   
-    #mod.set_param_hint( 'baseline',   min= 0  )   
+    mod.set_param_hint( 'background',   min= 0  )   
     #mod.set_param_hint( 'delta_rho',   min= 0  )  
     mod.set_param_hint( 'delta_rho',   min= _delta_rho/1E6, max= _delta_rho*1E6  )  
-    pars  = mod.make_params( radius= _r, sigma=_sigma,delta_rho=_delta_rho)# scale= _scale, baseline =_baseline  )  
+    pars  = mod.make_params( radius= _r, sigma=_sigma,delta_rho=_delta_rho,background=_bk)# scale= _scale, baseline =_baseline  )  
     
     if fit_variables is not None:
         for var in  list( fit_variables.keys()):
