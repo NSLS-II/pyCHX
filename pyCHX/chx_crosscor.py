@@ -55,7 +55,7 @@ class CrossCorrelator2:
                711-718.
     '''
     # TODO : when mask is None, don't compute a mask, submasks
-    def __init__(self, shape, mask=None, normalization=None):
+    def __init__(self, shape, mask=None, normalization=None,progress_bar=True ):
         '''
             Prepare the spatial correlator for various regions specified by the
             id's in the image.
@@ -81,7 +81,7 @@ class CrossCorrelator2:
         if normalization is None: normalization = ['regular']
         elif not isinstance(normalization, list): normalization = list([normalization])
         self.normalization = normalization
-
+        self.progress_bar = progress_bar
         if mask is None: #we can do this easily now.
             mask = np.ones(shape)
             
@@ -114,7 +114,7 @@ class CrossCorrelator2:
         if len(self.ids) == 1:
             self.centers = self.centers[0,:]
 
-    def __call__(self, img1, img2=None, normalization=None):
+    def __call__(self, img1, img2=None, normalization=None ):
         ''' Run the cross correlation on an image/curve or against two
                 images/curves
             Parameters
@@ -134,6 +134,7 @@ class CrossCorrelator2:
                 located at shape//2 where shape is the 1 or 2-tuple
                 shape of the array
         '''
+        progress_bar = self.progress_bar
         if normalization is None:
             normalization = self.normalization
 
@@ -146,7 +147,11 @@ class CrossCorrelator2:
 
         pos=self.pos
         #loop over individual regions
-        for reg in tqdm(range(self.nids)):
+        if progress_bar:
+            R = tqdm(range(self.nids))
+        else:
+            R = range(self.nids)
+        for reg in R:
         #for reg in tqdm(range(self.nids)): #for py3.5
             ii = self.pii[pos[reg]:pos[reg+1]]
             jj = self.pjj[pos[reg]:pos[reg+1]]
@@ -638,4 +643,64 @@ class CrossCorrelator1:
             ccorrs = ccorrs[0]
 
         return ccorrs
+
+    
+##for parallel    
+from multiprocessing import Pool
+import dill
+from pyCHX.chx_compress import (apply_async, map_async  ) 
+
+def run_para_ccorr_sym( ccorr_sym, FD, nstart=0, nend=None, imgsum=None, img_norm = None ):
+    '''        
+    example:
+    ccorr_sym = CrossCorrelator2(roi_mask.shape, mask=roi_mask, normalization='symavg')
+    img_norm = get_img_from_iq( qp_saxs, iq_saxs, roi_mask.shape, center)
+    
+    '''
+    
+    if nend is None:
+        nend = FD.end -1
+    if nend > FD.end-1:
+        nend = FD.end-1
+    N = nend - nstart        
+    if imgsum is None:
+        imgsum = np.ones(N)
+    if img_norm is None:
+        img_norm = 1.0 
+    inputs = range( N ) 
+    pool =  Pool(processes= len(inputs) )          
+    print( 'Starting assign the tasks...')    
+    results = {}      
+    for i in  tqdm( range(nstart,nend) ):         
+        #img1 = FD.rdframe(i)
+        #img2 = FD.rdframe(i+1)
+        results[i] =  apply_async( pool, ccorr_sym, 
+                                  ( FD.rdframe(i)/(imgsum[i]*img_norm), FD.rdframe(1+i)/(imgsum[i+1]*img_norm)) 
+                                 )
+    pool.close()    
+    print( 'Starting running the tasks...')    
+    res =   [ results[k].get() for k in   tqdm( list(sorted(results.keys())) )   ]     
+    
+    for i in inputs:
+        if i ==0:
+            cc = res[i]
+            Nc = len(cc)
+        else:
+            cci = res[i]
+            for j in range(Nc):
+                cc[j] += cci[j]
+ 
+    for i in range(Nc):
+        cc[i] = cc[i]/N            
+     
+    del results
+    del res
+    
+    return cc
+
+
+
+
+
+
 
