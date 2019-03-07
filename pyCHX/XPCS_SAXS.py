@@ -1337,57 +1337,44 @@ def show_ring_ang_roi( data, rois,   alpha=0.3, save=False, *argv,**kwargs):
     
     #ax.set_xlabel(r'$q_r$', fontsize=22)
     #ax.set_ylabel(r'$q_z$',fontsize=22)
-
-    #plt.show()
- 
+    #plt.show() 
     
-    
-def plot_qIq_with_ROI( q, iq, q_ring_center, logs=True, save=False, return_fig = False, *argv,**kwargs):   
+def plot_qIq_with_ROI( q, iq, q_ring_center, q_ring_edge=None, logs=True, save=False, return_fig = False, *argv,**kwargs):   
     '''Aug 6, 2016, Y.G.@CHX 
+    Update@2019, March to make a span plot with q_ring_edge
     plot q~Iq with interested q rings'''
-
     uid = 'uid'
     if 'uid' in kwargs.keys():
-        uid = kwargs['uid']        
-
+        uid = kwargs['uid'] 
     if RUN_GUI:
         fig = Figure(figsize=(8, 6))
         axes = fig.add_subplot(111)
     else:
-        fig, axes = plt.subplots(figsize=(8, 6))    
-    
+        fig, axes = plt.subplots(figsize=(8, 6)) 
     if logs:
         axes.semilogy(q, iq, '-o')
     else:        
-        axes.plot(q,  iq, '-o')
-        
+        axes.plot(q,  iq, '-o')    
     axes.set_title('%s--Circular Average with the Q ring values'%uid)
     axes.set_ylabel('I(q)')
     axes.set_xlabel('Q 'r'($\AA^{-1}$)')
-    #axes.set_xlim(0, 0.02)
-    #axes.set_xlim(-0.00001, 0.1)
-    #axes.set_ylim(-0.0001, 10000)
-    #axes.set_ylim(0, 100)
-    
-
     if 'xlim' in kwargs.keys():
-        xlim =  kwargs['xlim']
+        xlim =  kwargs['xlim']    
     else:
         xlim=[q.min(), q.max()]
     if 'ylim' in kwargs.keys():
         ylim =  kwargs['ylim']
     else:
-        ylim=[iq.min(), iq.max()]        
-        
+        ylim=[iq.min(), iq.max()] 
     axes.set_xlim(   xlim  )  
     axes.set_ylim(   ylim  ) 
- 
-        
-        
-    num_rings = len( np.unique( q_ring_center) )
-    for i in range(num_rings):
-        axes.axvline(q_ring_center[i] )#, linewidth = 5  )
-        
+    if q_ring_edge is not None:
+        for qe in q_ring_edge:
+            p = axes.axvspan( qe[0], qe[1], facecolor='#2ca02c', alpha=0.5)    
+    else:            
+        num_rings = len( np.unique( q_ring_center) )
+        for i in range(num_rings):
+            axes.axvline(q_ring_center[i] )#, linewidth = 5  )        
     if save:
         #dt =datetime.now()
         #CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)             
@@ -1401,8 +1388,7 @@ def plot_qIq_with_ROI( q, iq, q_ring_center, logs=True, save=False, return_fig =
         fig.savefig( fp, dpi=fig.dpi) 
     #plt.show()
     if return_fig:
-        return fig, axes 
-
+        return fig, axes
 
     
 def get_each_ring_mean_intensity( data_series, ring_mask, sampling, timeperframe, plot_ = True , save=False, *argv,**kwargs):   
