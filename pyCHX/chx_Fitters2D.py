@@ -1,6 +1,31 @@
 import numpy as np
 from lmfit import Parameters, Model
 
+
+def gauss_func(x, xc, amp, sigma, baseline ):
+    return amp*np.exp(-(x-xc)**2/2./sigma**2) + baseline
+def gauss2D_func(x,y, xc, amp, sigmax, yc,sigmay, baseline ):
+    return amp*np.exp(-(x-xc)**2/2./sigmax**2)*np.exp(-(y-yc)**2/2./sigmay**2) + baseline
+
+
+
+
+
+
+
+
+def extract_param(bestfits, key):
+    Nframes = len(bestfits)
+    params = np.zeros(Nframes)
+    for i in range(Nframes):
+        params[i] = bestfits[i][key]
+    return params
+
+def plarrows(xs,ys,dxs,dys,ax,**kwargs):
+    for i in range(len(xs)):
+        ax.arrow(xs[i],ys[i],dxs[i],dys[i],**kwargs)
+        
+        
 class VectorField2DFitter:
     ''' Base class for fitting a 2D vector field.
         Must be inherited.
@@ -198,10 +223,10 @@ class Gauss2DFitter(LineShape2DFitter):
     def init_parameters(self, **kwargs):
         params = Parameters()
         params.add('baseline', value=0)
-        params.add('amp', value=.15,min=0,max=.5)
+        params.add('amp', value=.1,min=0,max=.5)
 
-        params.add('xc', value=11.,min=.0,max= 100.0)
-        params.add('yc', value=11.,min=.0,max= 100.0)
+        params.add('xc', value=10.,min=.0,max= 100.0)
+        params.add('yc', value=10.,min=.0,max= 100.0)
 
         params.add('sigmax', value=1., min=1e-6, max=50.0)
         params.add('sigmay', value=1., min=1e-6, max=50.0)
@@ -293,5 +318,5 @@ class Gauss2DFitter(LineShape2DFitter):
         for key in kwargs.keys():
             if key in paramsdict and key is not 'xy':
                 paramsdict[key] = kwargs[key]
-
+        #print(  paramsdict )
         return paramsdict
