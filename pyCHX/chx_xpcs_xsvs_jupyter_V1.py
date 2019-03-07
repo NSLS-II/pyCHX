@@ -209,7 +209,13 @@ def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1,  legend_size=8
         uid_dict[uid_] =  get_meta_data( uid )['uid']
     #for i, u in enumerate( list( uid_dict.keys() )):
     for i,u in enumerate( list(uid_list)): 
-        #print(u)
+        #print(u)        
+        if isinstance(yshift,list):
+            yshift_ = yshift[i]
+            ii = i + 1
+        else:
+            yshift_ = yshift
+            ii = i  
         if uid_length is not None:
             u = u[:uid_length]  
         inDiru =  inDir + u + '/'
@@ -233,13 +239,6 @@ def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1,  legend_size=8
                 leg=u
             else:
                 leg='uid=%s-->'%u+legend[i]
-            
-            if isinstance(yshift,list):
-                yshift_ = yshift[i]
-                ii = i + 1
-            else:
-                yshift_ = yshift
-                ii = i
             plot1D(  x = taus, y=d + yshift_*ii, c=colors[i], m = markers[i], ax=ax, logx=True, legend= leg,
                   xlabel='t (sec)', ylabel='g2', legend_size=legend_size,) 
             title='Q = %s'%(total_res['qval_dict'][qth])
@@ -250,6 +249,7 @@ def plot_entries_from_uids( uid_list, inDir, key=  'g2', qth = 1,  legend_size=8
                   xlabel='Frame', ylabel='imgsum',)  
             
         elif key == 'iq':
+            
             x= total_res['q_saxs']   
             y= total_res['iq_saxs']
             plot1D(  x=x, y= y* ymulti[i] + yshift_*ii, c=colors[i], m = markers[i], ax=ax, logx= False, logy=True,
