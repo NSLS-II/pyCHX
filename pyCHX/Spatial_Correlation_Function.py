@@ -1,5 +1,5 @@
 from databroker import DataBroker as db
-from eiger_io.pims_reader import EigerImages
+#from eiger_io.pims_reader import EigerImages
 from chxtools import handlers
 
 ## Import all the required packages for  Data Analysis
@@ -35,8 +35,8 @@ from numpy import log
 
 
 
-from .chx_generic_functions import show_img, plot1D
-from .Mask_Maker import load_metadata, load_images
+from pyCHX.chx_generic_functions import show_img, plot1D
+from pyCHX.Mask_Maker import load_metadata, load_images
 
 
 
