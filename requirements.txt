@@ -13,7 +13,7 @@ tqdm
 ipython
 dill
 reportlab
-pytables
+#pytables
 theano
 #git+https://github.com/soft-matter/slicerator.git
 git+https://github.com/scikit-beam/scikit-beam.git#egg=scikit-beam
