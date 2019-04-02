@@ -107,7 +107,7 @@ def _one_time_process(buf, G, past_intensity_norm, future_intensity_norm,
     i_min = num_bufs // 2 if level else 0
     for i in range(i_min, min(img_per_level[level], num_bufs)):
         # compute the index into the autocorrelation matrix
-        t_index = level * num_bufs / 2 + i
+        t_index = level * num_bufs // 2 + i
         delay_no = (buf_no - i) % num_bufs
 
         # get the images for correlating
@@ -195,7 +195,8 @@ def _init_state_one_time(num_levels, num_bufs, labels):
 
     # G holds the un normalized auto- correlation result. We
     # accumulate computations into G as the algorithm proceeds.
-    G = np.zeros(((num_levels + 1) * num_bufs / 2, num_rois),
+    #print(num_rois)
+    G = np.zeros(( (num_levels + 1) * num_bufs // 2, num_rois),
                  dtype=np.float64)
     # matrix for normalizing G into g2
     past_intensity = np.zeros_like(G)
