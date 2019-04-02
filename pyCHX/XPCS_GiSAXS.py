@@ -491,17 +491,6 @@ def convert_Qmap( img, qx_map, qy_map=None, bins=None, rangeq=None,
     return remesh_data, xbins, ybins
 
 
-
-
-
-
-
-
-
-
-    
-
-
 def get_refl_xy(  inc_ang, inc_phi, inc_x0, inc_y0, pixelsize=[0.075,0.075], Lsd=5000   ):
     ''' 
         Input: 
