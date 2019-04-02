@@ -172,15 +172,42 @@ class create_pdf_report( object ):
         if 'uid_c12' in list(md.keys()):
             uid_c12 = md['uid_c12']             
         
-        '''global definition'''        
+        '''global definition''' 
+        
+        if 'beg_OneTime' in list( md.keys()):
+            beg_OneTime = md['beg_OneTime']
+            end_OneTime = md['end_OneTime']   
+        else:
+            beg_OneTime = None
+            end_OneTime = None
+            
+        if 'beg_TwoTime' in list( md.keys()):
+            beg_TwoTime = md['beg_TwoTime']
+            end_TwoTime = md['end_TwoTime']   
+        else:
+            beg_TwoTime = None
+            end_TwoTime = None            
+            
+            
         try:
             beg = md['beg']
             end=  md['end']
             uid_ = uid + '_fra_%s_%s'%(beg, end)
+            if beg_OneTime is None:
+                uid_OneTime = uid + '_fra_%s_%s'%(beg, end)
+            else:
+                uid_OneTime = uid + '_fra_%s_%s'%(beg_OneTime, end_OneTime) 
+            if beg_TwoTime is None:
+                uid_TwoTime = uid + '_fra_%s_%s'%(beg, end)
+            else:
+                uid_TwoTime = uid + '_fra_%s_%s'%(beg_TwoTime, end_TwoTime)
+                
         except:
             uid_ = uid
+            uid_OneTime = uid
         if beg is None:
             uid_ = uid
+            uid_OneTime = uid
 
         self.avg_img_file = 'uid=%s_img_avg.png'%uid
         self.ROI_on_img_file = 'uid=%s_ROI_on_Image.png'%uid
@@ -201,7 +228,7 @@ class create_pdf_report( object ):
         self.oavs_file = 'uid=%s_OAVS.png'%uid
 
         if uid_g2 is None: 
-            uid_g2 = uid_        
+            uid_g2 = uid_OneTime        
         self.g2_file = 'uid=%s_g2.png'%uid_g2
         self.g2_fit_file = 'uid=%s_g2_fit.png'%uid_g2 
         #print(  self.g2_fit_file )
@@ -214,8 +241,13 @@ class create_pdf_report( object ):
         jfn = 'uid=%s_g2_fit__joint.png'%uid_g2
         if os.path.exists(data_dir + jfn ):
             self.g2_fit_file = jfn
-            self.g2_fit_new_page = True                 
-        self.q_rate_file = 'uid=%s_Q_Rate_fit.png'%uid_g2 
+            self.g2_fit_new_page = True     
+            
+        self.q_rate_file = 'uid=%s_Q_Rate_fit.png'%uid_g2         
+        self.q_rate_loglog_file = 'uid=%s_Q_Rate_loglog.png'%uid_g2 
+        self.g2_q_fitpara_file = 'uid=%s_g2_q_fitpara_plot.png'%uid_g2    
+        
+        
         #print( self.q_rate_file )
         if uid_c12 is None:
             uid_c12 = uid_ 
@@ -752,40 +784,99 @@ class create_pdf_report( object ):
                      str2_left, str2_top, return_=True )         
         #print( imgf,self.data_dir )        
         #add g2 plot fit
-        top = top + 70 #
-        if q_rate_file is None:
-            imgf = self.q_rate_file
-        else:
-            imgf =  q_rate_file
-            
-        
-        if self.report_type != 'ang_saxs':
-            #print(img_width)
-            if img_width > 400:
-                img_height =  90
+        if os.path.isfile( self.q_rate_file ):
+            top = top + 70 #
+            if q_rate_file is None:
+                imgf = self.q_rate_file
             else:
-                img_height= 180 
-                
-            img_left,img_top = img_width-10, top #350, top
-            str2_left, str2_top = img_width + 50, top - 5  #380, top - 5
-            str1_left, str1_top,str1= 450, top + 230,  'q-rate fit  plot' 
-            
+                imgf =  q_rate_file        
+            if self.report_type != 'ang_saxs':
+                #print(img_width)
+                if img_width > 400:
+                    img_height =  90
+                else:
+                    img_height= 180                 
+                img_left,img_top = img_width-10, top #350, top
+                str2_left, str2_top = img_width + 50, top - 5  #380, top - 5
+                str1_left, str1_top,str1= 450, top + 230,  'q-rate fit  plot' 
+            else:
+                img_height= 300
+                img_left,img_top = 350, top - 150
+                str2_left, str2_top = 380, top - 5 
+                str1_left, str1_top,str1= 450, top + 180,  'q-rate fit  plot' 
+            if self.g2_fit_new_page or self.g2_new_page:
+                top = top - 200   
+                img_height= 180     
+                img_left,img_top = 350, top
+                str2_left, str2_top = 380, top - 5
+                str1_left, str1_top,str1= 450, top + 230,  'q-rate fit  plot' 
+            add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                         str1_left, str1_top,str1,
+                         str2_left, str2_top )  
+        
         else:
-            img_height= 300
-            img_left,img_top = 350, top - 150
-            str2_left, str2_top = 380, top - 5 
-            str1_left, str1_top,str1= 450, top + 180,  'q-rate fit  plot' 
+            top = top + 320  #
+            if q_rate_file is None:
+                imgf = self.q_rate_loglog_file
+            else:
+                imgf =  q_rate_file        
+            if self.report_type != 'ang_saxs':
+                #print(img_width)
+                if img_width > 400:
+                    img_height =  90/2
+                else:
+                    img_height= 180 /2                
+                img_left,img_top = img_width-10, top #350, top
+                str2_left, str2_top = img_width + 50, top - 5  #380, top - 5
+                str1_left, str1_top,str1= 450, top + 230,  'q-rate loglog  plot' 
+            else:
+                img_height= 300/2
+                img_left,img_top = 350, top - 150
+                str2_left, str2_top = 380, top - 5 
+                str1_left, str1_top,str1= 450, top + 180,  'q-rate loglog  plot' 
+            if self.g2_fit_new_page or self.g2_new_page:
+                top = top - 200 + 50   
+                img_height= 180 / 1.5    
+                img_left,img_top = 350, top
+                str2_left, str2_top = 380, top - 5
+                str1_left, str1_top,str1= 450, top + 120,  'q-rate loglog  plot' 
+                
+                #print('here')
+                
+            add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                         str1_left, str1_top,str1,
+                         str2_left, str2_top ) 
             
-        if self.g2_fit_new_page or self.g2_new_page:
-            top = top - 200   
-            img_height= 180     
-            img_left,img_top = 350, top
-            str2_left, str2_top = 380, top - 5
-            str1_left, str1_top,str1= 450, top + 230,  'q-rate fit  plot'             
             
-        add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
-                     str1_left, str1_top,str1,
-                     str2_left, str2_top )  
+            top = top - 100 #
+            if q_rate_file is None:
+                imgf = self.g2_q_fitpara_file
+            else:
+                imgf =  q_rate_file        
+            if self.report_type != 'ang_saxs':
+                #print(img_width)
+                if img_width > 400:
+                    img_height =  90
+                else:
+                    img_height= 180                 
+                img_left,img_top = img_width-10, top #350, top
+                str2_left, str2_top = img_width + 50, top - 5  #380, top - 5
+                str1_left, str1_top,str1= 450, top + 230,  'g2 fit para' 
+            else:
+                img_height= 300
+                img_left,img_top = 350, top - 150
+                str2_left, str2_top = 380, top - 5 
+                str1_left, str1_top,str1= 450, top + 180, 'g2 fit para' 
+            if self.g2_fit_new_page or self.g2_new_page:
+                top = top - 200   
+                img_height= 180 * 1.5     
+                img_left,img_top = 350, top
+                str2_left, str2_top = 380, top - 5
+                str1_left, str1_top,str1= 450, top + 280, 'g2 fit para' 
+            add_image_string( c, imgf, self.data_dir, img_left, img_top, img_height, 
+                         str1_left, str1_top,str1,
+                         str2_left, str2_top )                
+   
         
         if new_page:
             c.showPage()
