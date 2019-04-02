@@ -599,6 +599,117 @@ Returns
 
 
 
+def lazy_one_time_debug(FD, num_levels, num_bufs, labels,
+                  internal_state=None, bad_frame_list=None, imgsum=None, norm = None, cal_error=False ):
+    if internal_state is None:
+        internal_state = _init_state_one_time(num_levels, num_bufs, labels, cal_error)
+    # create a shorthand reference to the results and state named tuple
+    s = internal_state
+    qind, pixelist = roi.extract_label_indices(  labels  )    
+    # iterate over the images to compute multi-tau correlation      
+    fra_pix = np.zeros_like( pixelist, dtype=np.float64)    
+    timg = np.zeros(    FD.md['ncols'] * FD.md['nrows']   , dtype=np.int32   ) 
+    timg[pixelist] =   np.arange( 1, len(pixelist) + 1  )     
+    if bad_frame_list is None:
+        bad_frame_list=[]
+    for  i in range( FD.beg , FD.end ):
+        print(i)
+        if i in bad_frame_list:
+            fra_pix[:]= np.nan
+        else:
+            (p,v) = FD.rdrawframe(i)
+            w = np.where( timg[p] )[0]
+            pxlist = timg[  p[w]   ] -1             
+            if imgsum is None:
+                if norm is None:
+                    fra_pix[ pxlist] = v[w] 
+                else: 
+                    fra_pix[ pxlist] = v[w]/ norm[pxlist]   #-1.0  
+            else:
+                if norm is None:
+                    fra_pix[ pxlist] = v[w] / imgsum[i] 
+                else:
+                    fra_pix[ pxlist] = v[w]/ imgsum[i]/  norm[pxlist] 
+        level = 0   
+        # increment buffer
+        s.cur[0] = (1 + s.cur[0]) % num_bufs 
+        # Put the ROI pixels into the ring buffer. 
+        s.buf[0, s.cur[0] - 1] =  fra_pix        
+        fra_pix[:]=0        
+        #print( i, len(p), len(w), len( pixelist))        
+        #print ('i= %s init fra_pix'%i )            
+        buf_no = s.cur[0] - 1
+        # Compute the correlations between the first level
+        # (undownsampled) frames. This modifies G,
+        # past_intensity, future_intensity,
+        # and img_per_level in place!
+        if cal_error:
+            _one_time_process_error(s.buf, s.G, s.past_intensity, s.future_intensity,
+                          s.label_array, num_bufs, s.num_pixels,
+                          s.img_per_level, level, buf_no, s.norm, s.lev_len,
+                                   s.G_all, s.past_intensity_all, s.future_intensity_all)            
+        else:            
+            _one_time_process(s.buf, s.G, s.past_intensity, s.future_intensity,
+                          s.label_array, num_bufs, s.num_pixels,
+                          s.img_per_level, level, buf_no, s.norm, s.lev_len)
+
+        # check whether the number of levels is one, otherwise
+        # continue processing the next level
+        processing = num_levels > 1
+        level = 1
+        while processing:
+            if not s.track_level[level]:
+                s.track_level[level] = True
+                processing = False
+            else:
+                prev = (1 + (s.cur[level - 1] - 2) % num_bufs)
+                s.cur[level] = (
+                    1 + s.cur[level] % num_bufs)
+
+                s.buf[level, s.cur[level] - 1] = ((
+                        s.buf[level - 1, prev - 1] +
+                        s.buf[level - 1, s.cur[level - 1] - 1]) / 2)
+                # make the track_level zero once that level is processed
+                s.track_level[level] = False
+                # call processing_func for each multi-tau level greater
+                # than one. This is modifying things in place. See comment
+                # on previous call above.
+                buf_no = s.cur[level] - 1
+                if cal_error:
+                    _one_time_process_error(s.buf, s.G, s.past_intensity, s.future_intensity,
+                                  s.label_array, num_bufs, s.num_pixels,
+                                  s.img_per_level, level, buf_no, s.norm, s.lev_len,
+                                           s.G_all, s.past_intensity_all, s.future_intensity_all)            
+                else:            
+                    _one_time_process(s.buf, s.G, s.past_intensity, s.future_intensity,
+                                  s.label_array, num_bufs, s.num_pixels,
+                                  s.img_per_level, level, buf_no, s.norm, s.lev_len)
+
+                level += 1
+                # Checking whether there is next level for processing
+                processing = level < num_levels
+        # If any past intensities are zero, then g2 cannot be normalized at
+        # those levels. This if/else code block is basically preventing
+        # divide-by-zero errors.
+        if not cal_error: 
+            if len(np.where(s.past_intensity == 0)[0]) != 0:
+                g_max1 = np.where(s.past_intensity == 0)[0][0]
+            else:
+                g_max1 = s.past_intensity.shape[0]    
+            if len(np.where(s.future_intensity == 0)[0]) != 0:
+                g_max2 = np.where(s.future_intensity == 0)[0][0]
+            else:
+                g_max2 = s.future_intensity.shape[0]    
+            g_max = min( g_max1, g_max2)     
+            g2 = (s.G[:g_max] / (s.past_intensity[:g_max] *
+                                 s.future_intensity[:g_max]))
+            yield results(g2, s.lag_steps[:g_max], s)               
+            #yield( i )
+            
+        else:
+            yield results(None,s.lag_steps, s)
+ 
+            
 
 def auto_corr_scat_factor(lags, beta, relaxation_rate, baseline=1):
     """
