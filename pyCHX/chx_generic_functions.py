@@ -28,6 +28,236 @@ flatten_nestlist = lambda l: [item for sublist in l for item in sublist]
 e.g., flatten( [ ['sg','tt'],'ll' ]   )
 gives ['sg', 'tt', 'l', 'l']
 """
+
+
+
+def plot_q_g2fitpara_general( g2_dict, g2_fitpara, geometry ='saxs',  ylim = None,
+                            plot_all_range=True, plot_index_range = None, show_text=True,return_fig=False,
+                            show_fit=True, ylabel='g2', qth_interest = None, max_plotnum_fig=1600,
+                            *argv,**kwargs): 
+    '''
+    Mar 29,2019, Y.G.@CHX
+    
+    plot q~fit parameters
+     
+    Parameters
+    ----------  
+    qval_dict, dict, with key as roi number,
+                    format as {1: [qr1, qz1], 2: [qr2,qz2] ...} for gi-saxs
+                    format as {1: [qr1], 2: [qr2] ...} for saxs
+                    format as {1: [qr1, qa1], 2: [qr2,qa2], ...] for ang-saxs
+    rate: relaxation_rate
+    plot_index_range:  
+    Option:
+    if power_variable = False, power =2 to fit q^2~rate, 
+                Otherwise, power is variable.
+    show_fit:, bool, if False, not show the fit
+    
+    ''' 
+    
+    if 'uid' in kwargs.keys():
+        uid_ = kwargs['uid'] 
+    else:
+        uid_ = 'uid' 
+    if 'path' in kwargs.keys():
+        path = kwargs['path'] 
+    else:
+        path = ''    
+    data_dir = path    
+    if ylabel=='g2':
+        ylabel='g_2'
+    if ylabel=='g4':
+        ylabel='g_4' 
+        
+    if geometry =='saxs':
+        if qphi_analysis:
+            geometry = 'ang_saxs' 
+    
+        
+    qval_dict_, fit_res_ =  g2_dict, g2_fitpara        
+            
+    (qr_label, qz_label, num_qz, num_qr, num_short,
+     num_long, short_label, long_label,short_ulabel,
+     long_ulabel,ind_long, master_plot,
+     mastp) = get_short_long_labels_from_qval_dict(qval_dict_, geometry=geometry)  
+    fps = [] 
+    
+    #print(qr_label, qz_label, short_ulabel, long_ulabel)    
+    #$print( num_short, num_long )
+    beta, relaxation_rate, baseline, alpha = ( g2_fitpara['beta'], 
+                                               g2_fitpara['relaxation_rate'],
+                                                g2_fitpara['baseline'],
+                                                g2_fitpara['alpha'] )
+    
+    fps=[]
+    for s_ind in range( num_short  ):
+        ind_long_i = ind_long[ s_ind ]
+        num_long_i = len( ind_long_i )  
+        betai, relaxation_ratei, baselinei, alphai = (beta[ind_long_i], relaxation_rate[ind_long_i],
+                                            baseline[ind_long_i], alpha[ind_long_i] )
+        qi = long_ulabel
+        #print(s_ind, qi, np.array( betai) )
+        
+        if RUN_GUI:
+            fig = Figure(figsize=(10, 12))            
+        else:
+            #fig = plt.figure( )
+            if num_long_i <=4:
+                if master_plot != 'qz':
+                    fig = plt.figure(figsize=(8, 6))   
+                else:
+                    if num_short>1:
+                        fig = plt.figure(figsize=(8, 4))
+                    else:
+                        fig = plt.figure(figsize=(10, 6))
+                    #print('Here')
+            elif num_long_i > max_plotnum_fig:
+                num_fig = int(np.ceil(num_long_i/max_plotnum_fig)) #num_long_i //16
+                fig = [ plt.figure(figsize=figsize)  for i in range(num_fig) ]
+                #print( figsize )
+            else:
+                #print('Here')
+                if master_plot != 'qz':
+                    fig = plt.figure(figsize=figsize)
+                else:
+                    fig = plt.figure(figsize=(10, 10))
+        
+        if master_plot == 'qz':
+            if geometry=='ang_saxs':
+                title_short = 'Angle= %.2f'%( short_ulabel[s_ind] )  + r'$^\circ$'                               
+            elif geometry=='gi_saxs':
+                title_short = r'$Q_z= $' + '%.4f'%( short_ulabel[s_ind] ) + r'$\AA^{-1}$'
+            else:
+                title_short = ''            
+        else: #qr
+            if geometry=='ang_saxs' or geometry=='gi_saxs':
+                title_short =   r'$Q_r= $' + '%.5f  '%( short_ulabel[s_ind] ) + r'$\AA^{-1}$'            
+            else:
+                title_short=''        
+        #print(geometry)        
+        #filename =''
+        til = '%s:--->%s'%(uid_,  title_short )
+        if num_long_i <=4:            
+            plt.title( til,fontsize= 14, y =1.15)
+        else:
+            plt.title( til,fontsize=20, y =1.06) 
+        #print( num_long )        
+        if num_long!=1:   
+            #print( 'here')
+            plt.axis('off')             
+            #sy =   min(num_long_i,4) 
+            sy =   min(num_long_i,  int( np.ceil( min(max_plotnum_fig,num_long_i)/4))   ) 
+
+        else: 
+            sy =1
+        sx = min(4, int( np.ceil( min(max_plotnum_fig,num_long_i)/float(sy) ) ))        
+        temp = sy
+        sy = sx
+        sx = temp
+        if sx==1:
+            if sy==1:
+                plt.axis('on')                
+        ax1 = fig.add_subplot( 4,1,1 )
+        ax2 = fig.add_subplot( 4,1,2 )
+        ax3 = fig.add_subplot( 4,1,3 )
+        ax4 = fig.add_subplot( 4,1,4 )        
+        plot1D(x=qi, y=betai, m='o', ls='--', c='k', ax=ax1, legend=r'$\beta$', title='')
+        plot1D(x=qi, y=alphai, m='o', ls='--',c='r', ax=ax2, legend=r'$\alpha$', title='')
+        plot1D(x=qi, y=baselinei, m='o', ls='--', c='g', ax=ax3, legend=r'$baseline$', title='')
+        plot1D(x=qi, y=relaxation_ratei, m='o', c='b', ls='--', ax=ax4, legend= r'$\gamma$ $(s^{-1})$' , title='')
+ 
+        ax4.set_ylabel(   r'$\gamma$ $(s^{-1})$'  ) 
+        ax4.set_xlabel(r"$q $ $(\AA)$", fontsize=16)  
+        ax3.set_ylabel(   r'$baseline'  ) 
+        ax2.set_ylabel(   r'$\alpha$'  ) 
+        ax1.set_ylabel(   r'$\beta$'  ) 
+        fig.tight_layout()
+        fp = data_dir + uid_ + 'g2_q_fit_para_%s.png'%short_ulabel[s_ind] 
+        fig.savefig( fp , dpi=fig.dpi) 
+        fps.append(fp)
+    outputfile =  data_dir + '%s_g2_q_fitpara_plot'%uid_ + '.png'
+    #print(uid)
+    combine_images( fps, outputfile, outsize= [ 2000,2400  ] ) 
+    
+    
+    
+
+
+def plot_q_rate_general( qval_dict, rate, geometry ='saxs',  ylim = None, logq=True, lograte=True,
+                            plot_all_range=True, plot_index_range = None, show_text=True,return_fig=False,
+                            show_fit=True,
+                            *argv,**kwargs): 
+    '''
+    Mar 29,2019, Y.G.@CHX
+    
+    plot q~rate in log-log scale  
+     
+    Parameters
+    ----------  
+    qval_dict, dict, with key as roi number,
+                    format as {1: [qr1, qz1], 2: [qr2,qz2] ...} for gi-saxs
+                    format as {1: [qr1], 2: [qr2] ...} for saxs
+                    format as {1: [qr1, qa1], 2: [qr2,qa2], ...] for ang-saxs
+    rate: relaxation_rate
+    plot_index_range:  
+    Option:
+    if power_variable = False, power =2 to fit q^2~rate, 
+                Otherwise, power is variable.
+    show_fit:, bool, if False, not show the fit
+    
+    ''' 
+    
+    if 'uid' in kwargs.keys():
+        uid = kwargs['uid'] 
+    else:
+        uid = 'uid' 
+    if 'path' in kwargs.keys():
+        path = kwargs['path'] 
+    else:
+        path = ''         
+    (qr_label, qz_label, num_qz, num_qr, num_short,
+     num_long, short_label, long_label,short_ulabel,
+     long_ulabel,ind_long, master_plot,
+     mastp) = get_short_long_labels_from_qval_dict(qval_dict, geometry=geometry)
+    
+    fig,ax = plt.subplots()
+    plt.title(r'$Q$''-Rate-%s'%(uid),fontsize=20, y =1.06)
+    Nqz = num_short  
+    if Nqz!=1:
+        ls = '--'
+    else:
+        ls=''  
+    #print(Nqz)
+    for i  in range(Nqz):
+        ind_long_i = ind_long[ i ]        
+        y = np.array( rate  )[ind_long_i]        
+        x =   long_label[ind_long_i]            
+        #print(i,  x, y, D0 )        
+        if Nqz!=1:
+            label=r'$q_z=%.5f$'%short_ulabel[i]
+        else:
+            label=''
+        ax.loglog(x,  y, marker = 'o', ls =ls, label=label)        
+        if Nqz!=1:legend = ax.legend(loc='best')
+
+    if plot_index_range is not None:
+        d1,d2 = plot_index_range
+        d2 = min( len(x)-1, d2 )             
+        ax.set_xlim(  (x**power)[d1], (x**power)[d2]  )
+        ax.set_ylim( y[d1],y[d2])
+        
+    if ylim is not None:
+        ax.set_ylim( ylim )
+        
+    ax.set_ylabel('Relaxation rate 'r'$\gamma$'"($s^{-1}$) (log)")
+    ax.set_xlabel("$q$"r'($\AA$) (log)')
+    fp = path + '%s_Q_Rate_loglog'%(uid) + '.png'
+    fig.savefig( fp, dpi=fig.dpi)
+    fig.tight_layout()
+    if return_fig:
+        return fig,ax
+    
+    
  
 def plot_xy_x2( x, y, x2=None, pargs=None,  loglog=False, logy=True,  fig_ax=None,                           
             xlabel= 'q ('r'$\AA^{-1}$)', xlabel2='q (pixel)', title= '_q_Iq',
