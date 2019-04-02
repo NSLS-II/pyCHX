@@ -44,14 +44,15 @@ from pyCHX.XPCS_SAXS import (
     plot_qIq_with_ROI, cal_g2, create_hot_pixel_mask,get_circular_average,get_t_iq, 
     get_t_iqc,multi_uids_saxs_xpcs_analysis, plot_t_iqc,  plot_circular_average, 
     get_seg_from_ring_mask, recover_img_from_iq,get_cirucular_average_std,
-    get_angular_mask, combine_two_roi_mask, get_QrQw_From_RoiMask
-                                
+    get_angular_mask, combine_two_roi_mask, get_QrQw_From_RoiMask 
                                 )
 
 
 from pyCHX.Two_Time_Correlation_Function import (
-    show_C12, get_one_time_from_two_time, 
-    get_four_time_from_two_time,rotate_g12q_to_rectangle)
+    show_C12, get_one_time_from_two_time, get_four_time_from_two_time,rotate_g12q_to_rectangle,
+    get_aged_g2_from_g12, get_aged_g2_from_g12q
+        )
+
 from pyCHX.chx_compress import (
     combine_binary_files,    segment_compress_eigerdata,     create_compress_header,            
     para_segment_compress_eigerdata,para_compress_eigerdata)
