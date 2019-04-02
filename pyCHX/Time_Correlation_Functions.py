@@ -3,6 +3,8 @@
 ########Dec 16, 2015, Yugang Zhang, yuzhang@bnl.gov, CHX, NSLS-II, BNL################
 ########Time correlation function, include one-time, two-time, four-time##############
 ########Muli-tau method, array-operation method#######################################
+#####This file could be all removed ################################################
+#######Most codes are included in two-time cor func################################
 ######################################################################################
 
 
@@ -1213,108 +1215,7 @@ def get_mean_intensity( data_pixel, qind):
         mean_inten[qi] =  data_pixel_qi.mean( axis =1 )
     return  mean_inten
 
-
-
-
-def show_C12(C12, qz_ind=0, qr_ind=0, N1=None,N2=None, vmin=None, vmax=None, title=False):
-    
-    g12_num =  qz_ind * num_qr + qr_ind
-    if N1 is None:
-        N1=0
-    if N2 is None:
-        N2=Nming
-    if vmin is None:
-        vmin = 1
-    if vmax is None:
-        vmax = 1.02
-    data = g12b[N1:N2,N1:N2,g12_num]
-    fig, ax = plt.subplots()
-    im=ax.imshow( data, origin='lower' , cmap='viridis', 
-                 norm= LogNorm( vmin, vmax ), 
-            extent=[0, data.shape[0]*timeperframe, 0, data.shape[0]*timeperframe ] )
-    #ax.set_title('%s-%s frames--Qth= %s'%(N1,N2,g12_num))
-    if title:
-        ax.set_title('%s-%s frames--Qz= %s--Qr= %s'%(N1,N2, qz_center[qz_ind], qr_center[qr_ind] ))
-    ax.set_xlabel( r'$t_1$ $(s)$', fontsize = 18)
-    ax.set_ylabel( r'$t_2$ $(s)$', fontsize = 18)
-    fig.colorbar(im)
-    
-    #plt.show()    
-
-
-def show_C12(C12, q_ind=0,  *argv,**kwargs):  
  
-    '''
-    plot one-q of two-time correlation function
-    C12: two-time correlation function, with shape as [ time, time, qs]
-    q_ind: if integer, for a SAXS q, the nth of q to be plotted
-            if a list: for a GiSAXS [qz_ind, qr_ind]  
-    kwargs: support        
-        timeperframe: the time interval
-        N1: the start frame(time)
-        N2: the end frame(time)
-        vmin/vmax: for plot
-        title: if True, show the tile
-    
-    e.g.,
-        show_C12(g12b, q_ind=1, N1=0, N2=500, vmin=1.05, vmax=1.07,  )
-    
-    '''
-  
-    #strs =  [ 'timeperframe', 'N1', 'N2', 'vmin', 'vmax', 'title'] 
-    
-    shape = C12.shape
-    if isinstance(q_ind, int):
-        C12_num = q_ind
-    else:
-        qz_ind, qr_ind = q_ind
-        C12_num =  qz_ind * num_qr + qr_ind 
-    
-    if 'timeperframe' in kwargs.keys():
-        timeperframe =  kwargs['timeperframe']
-    else:
-        timeperframe=1
-        
-    if 'vmin' in kwargs.keys():
-        vmin =  kwargs['vmin']
-    else:
-        vmin=1
-    if 'vmax' in kwargs.keys():
-        vmax =  kwargs['vmax']
-    else:
-        vmax=1.05        
-        
-    if 'N1' in kwargs.keys():
-        N1 =  kwargs['N1']
-    else:
-        N1=0
-        
-    if 'N2' in kwargs.keys():
-        N2 =  kwargs['N2']
-    else:
-        N2= shape[0]
-    if 'title' in kwargs.keys():
-        title =  kwargs['title']
-    else:
-        title=True        
-
-    data = C12[N1:N2,N1:N2,C12_num]
-    fig, ax = plt.subplots()
-    im=ax.imshow( data, origin='lower' , cmap='viridis', 
-                 norm= LogNorm( vmin, vmax ), 
-            extent=[0, data.shape[0]*timeperframe, 0, data.shape[0]*timeperframe ] )
-    if title:
-        if isinstance(q_ind, int):
-            ax.set_title('%s-%s frames--Qth= %s'%(N1,N2,C12_num))
-        else:
-            ax.set_title('%s-%s frames--Qzth= %s--Qrth= %s'%(N1,N2, qz_ind, qr_ind ))
-        
-        #ax.set_title('%s-%s frames--Qth= %s'%(N1,N2,g12_num))
-    ax.set_xlabel( r'$t_1$ $(s)$', fontsize = 18)
-    ax.set_ylabel( r'$t_2$ $(s)$', fontsize = 18)
-    fig.colorbar(im)
-    #plt.show()   
-
 
 
 
