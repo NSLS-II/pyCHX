@@ -503,16 +503,21 @@ Returns
             if imgsum is None:
                 if norm is None:
                     fra_pix[ pxlist] = v[w] 
-                else: 
-                    fra_pix[ pxlist] = v[w]/ norm[pxlist]   #-1.0    
-                    
+                else:                    
+                    S = norm.shape
+                    if len(S)>1:
+                        fra_pix[ pxlist] = v[w]/ norm[i,pxlist]   #-1.0     
+                    else:    
+                        fra_pix[ pxlist] = v[w]/ norm[pxlist]   #-1.0 
             else:
                 if norm is None:
                     fra_pix[ pxlist] = v[w] / imgsum[i] 
                 else:
-                    fra_pix[ pxlist] = v[w]/ imgsum[i]/  norm[pxlist]           
-            
-            
+                    S = norm.shape
+                    if len(S)>1:               
+                        fra_pix[ pxlist] = v[w]/ imgsum[i]/  norm[i,pxlist] 
+                    else:    
+                        fra_pix[ pxlist] = v[w]/ imgsum[i]/  norm[pxlist]             
         level = 0   
         # increment buffer
         s.cur[0] = (1 + s.cur[0]) % num_bufs 
@@ -1433,6 +1438,8 @@ class Get_Pixel_Arrayc(object):
             if self.norm is not None:
                 if len( (self.norm).shape )>1:
                     norm_avgimg_roi = self.norm[i][pxlist] 
+                    #print('here')
+                          
                 else:    
                     norm_avgimg_roi = self.norm[pxlist] 
             else:
@@ -1509,7 +1516,7 @@ def auto_two_Arrayc(  data_pixel, rois,  index=None):
             i +=1
         return g12b
 
-def auto_two_Arrayc_ExplicitNorm(  data_pixel, rois, norm=None, index=None):
+def auto_two_Arrayc_ExplicitNorm(  data_pixel, rois, norm=None,  index=None):
     
     ''' 
     Dec 16, 2015, Y.G.@CHX
@@ -1520,6 +1527,7 @@ def auto_two_Arrayc_ExplicitNorm(  data_pixel, rois, norm=None, index=None):
         rois: 2-D array, the interested roi, has the same shape as image, can be rings for saxs, boxes for gisaxs
         norm: if not None, shoud be the shape as data_pixel, will normalize two time by this norm
               if None, will return two time without normalization
+          
     Options:
         
         data_pixel: if not None,    
