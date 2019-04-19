@@ -157,23 +157,28 @@ def lazy_two_timep(FD, num_levels, num_bufs, labels,
             if imgsum is None:
                 if norm is None:
                     fra_pix[ pxlist] = v[w] 
-                else: 
-                    fra_pix[ pxlist] = v[w]/ norm[pxlist]   #-1.0  
+                else:                    
+                    S = norm.shape
+                    if len(S)>1:
+                        fra_pix[ pxlist] = v[w]/ norm[i,pxlist]   #-1.0     
+                    else:    
+                        fra_pix[ pxlist] = v[w]/ norm[pxlist]   #-1.0 
             else:
                 if norm is None:
                     fra_pix[ pxlist] = v[w] / imgsum[i] 
                 else:
-                    fra_pix[ pxlist] = v[w]/ imgsum[i]/  norm[pxlist]            
-        
+                    S = norm.shape
+                    if len(S)>1:               
+                        fra_pix[ pxlist] = v[w]/ imgsum[i]/  norm[i,pxlist] 
+                    else:    
+                        fra_pix[ pxlist] = v[w]/ imgsum[i]/  norm[pxlist] 
         level = 0   
         # increment buffer
         s.cur[0] = (1 + s.cur[0]) % num_bufs         
         s.count_level[0] = 1 + s.count_level[0]
-        # get the current image time
-        
+        # get the current image time        
         #s = s._replace(current_img_time=(s.current_img_time + 1)) 
-        s.current_img_time += 1
-        
+        s.current_img_time += 1        
         # Put the ROI pixels into the ring buffer. 
         s.buf[0, s.cur[0] - 1] =  fra_pix 
         fra_pix[:]=0
@@ -249,9 +254,15 @@ def cal_c12p( FD, ring_mask, bad_frame_list=None,
               for i in np.unique( ring_mask )[1:] ]    
     qind, pixelist = roi.extract_label_indices(  ring_mask  )    
     if norm is not None:
-        norms = [ norm[ np.in1d(  pixelist, 
-            extract_label_indices( np.array(ring_mask==i, dtype = np.int64))[1])]
-                for i in np.unique( ring_mask )[1:] ] 
+        S = norm.shape
+        if len(S)>1:
+            norms = [ norm[ :, np.in1d(  pixelist, 
+                extract_label_indices( np.array(ring_mask==i, dtype = np.int64))[1])]
+                    for i in np.unique( ring_mask )[1:] ] 
+        else:
+            norms = [ norm[ np.in1d(  pixelist, 
+                extract_label_indices( np.array(ring_mask==i, dtype = np.int64))[1])]
+                    for i in np.unique( ring_mask )[1:] ] 
     inputs = range( len(ring_masks) ) 
     pool =  Pool(processes= len(inputs) )
     internal_state = None       
@@ -381,13 +392,21 @@ def lazy_one_timep(FD, num_levels, num_bufs, labels,
                 if norm is None:
                     #print ('here')
                     fra_pix[ pxlist] = v[w]
-                else:                     
-                    fra_pix[ pxlist] = v[w]/ norm[pxlist]   #-1.0 
+                else:          
+                    S = norm.shape
+                    if len(S)>1:
+                        fra_pix[ pxlist] = v[w]/ norm[i,pxlist]   #-1.0     
+                    else:    
+                        fra_pix[ pxlist] = v[w]/ norm[pxlist]   #-1.0 
             else:
                 if norm is None:
                     fra_pix[ pxlist] = v[w] / imgsum[i] 
                 else:
-                    fra_pix[ pxlist] = v[w]/ imgsum[i]/  norm[pxlist]           
+                    S = norm.shape
+                    if len(S)>1:               
+                        fra_pix[ pxlist] = v[w]/ imgsum[i]/  norm[i,pxlist] 
+                    else:    
+                        fra_pix[ pxlist] = v[w]/ imgsum[i]/  norm[pxlist]           
         
         level = 0   
         # increment buffer
@@ -507,12 +526,16 @@ def cal_g2p( FD, ring_mask, bad_frame_list=None,
     noqs = len(np.unique(qind))
     nopr = np.bincount(qind, minlength=(noqs+1))[1:]
     if norm is not None:
-        norms = [ norm[ np.in1d(  pixelist, 
-            extract_label_indices( np.array(ring_mask==i, dtype = np.int64))[1])]
-                for i in np.unique( ring_mask )[1:] ] 
-
-    inputs = range( len(ring_masks) )    
-    
+        S = norm.shape
+        if len(S)>1:
+            norms = [ norm[ :, np.in1d(  pixelist, 
+                extract_label_indices( np.array(ring_mask==i, dtype = np.int64))[1])]
+                    for i in np.unique( ring_mask )[1:] ] 
+        else:
+            norms = [ norm[ np.in1d(  pixelist, 
+                extract_label_indices( np.array(ring_mask==i, dtype = np.int64))[1])]
+                    for i in np.unique( ring_mask )[1:] ] 
+    inputs = range( len(ring_masks) ) 
     pool =  Pool(processes= len(inputs) )
     internal_state = None       
     print( 'Starting assign the tasks...')    
