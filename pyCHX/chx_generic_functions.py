@@ -13,6 +13,7 @@ import copy, scipy
 import PIL    
 from shutil import copyfile
 import datetime, pytz
+from skbeam.core.utils import radial_grid, angle_grid, radius_to_twotheta, twotheta_to_q
 
 
 markers =  ['o', 'D', 'v',   '^', '<',  '>', 'p', 's', 'H',
@@ -29,11 +30,186 @@ e.g., flatten( [ ['sg','tt'],'ll' ]   )
 gives ['sg', 'tt', 'l', 'l']
 """
 
+def get_qval_qwid_dict( roi_mask, setup_pargs,  geometry='saxs'):
+    '''YG Dev April 6, 2019
+    Get qval_dict and qwid_dict by giving roi_mask, setup_pargs
+    Input: 
+        roi_mask: integer type 2D array
+        setup_pargs: dict, should at least contains, center (direct beam center), dpix (in mm),
+                                                     lamda_: in A-1, Ldet: in mm
+                   e.g., 
+                   {'Ldet': 1495.0,   abs            #essential
+                     'center': [-4469, 363],         #essential
+                     'dpix': 0.075000003562308848,   #essential
+                     'exposuretime': 0.99999702,
+                     'lambda_': 0.9686265,           #essential
+                     'path': '/XF11ID/analysis/2018_1/jianheng/Results/b85dad/',
+                     'timeperframe': 1.0,
+                     'uid': 'uid=b85dad'}
+        geometry: support saxs for isotropic transmission SAXS             
+                          ang_saxs for anisotropic transmission SAXS
+                          flow_saxs for anisotropic transmission SAXS under flow (center symetric)
+                     
+    Return:         
+        qval_dict: dict, key as q-number, val: q val
+        qwid_dict: dict, key as q-number, val: q width (qmax - qmin)
+        
+    TODOLIST: to make GiSAXS work    
+        
+    '''
+   
+    origin = setup_pargs['center']#[::-1]
+    shape = roi_mask.shape
+    qp_map = radial_grid(origin, shape)
+    phi_map = np.degrees( angle_grid(origin, shape) )  
+    two_theta = radius_to_twotheta( setup_pargs['Ldet'], setup_pargs['dpix'] * qp_map )
+    q_map = utils.twotheta_to_q(two_theta,  setup_pargs['lambda_'])     
+    qind, pixelist = roi.extract_label_indices(roi_mask)
+    Qval = np.unique(qind)
+    qval_dict_ = {}    
+    qwid_dict_ = {}
+    for j, i in enumerate( Qval):
+        qval = q_map[ roi_mask == i  ]
+        #print( qval )
+        if geometry=='saxs':
+            qval_dict_[j] = ( qval.max() + qval.min() )/2 # np.mean(qval)
+            qwid_dict_[j] = ( qval.max() - qval.min() )  
+        elif geometry=='ang_saxs':
+            aval = phi_map[ roi_mask == i  ]
+            qval_dict_[j] = np.zeros(2)
+            qwid_dict_[j] = np.zeros(2)            
+            qval_dict_[j][0] = ( qval.max() + qval.min() )/2 # np.mean(qval)
+            qwid_dict_[j][0] = ( qval.max() - qval.min() )              
+            if ( (aval.max() * aval.min())<0 ) &  ( aval.max() > 90 ):
+                qval_dict_[j][1] = ( aval.max() + aval.min() )/2 -180   # np.mean(qval)
+                qwid_dict_[j][1] = abs( aval.max() - aval.min() -360 ) 
+                #print('here -- %s'%j)
+            else:    
+                qval_dict_[j][1] = ( aval.max() + aval.min() )/2    # np.mean(qval)
+                qwid_dict_[j][1] = abs( aval.max() - aval.min() )
+        elif geometry=='flow_saxs':
+            sx,sy = roi_mask.shape         
+            cx,cy = origin
+            aval = (phi_map[cx:])[ roi_mask[cx:] == i  ]
+            if len(aval)==0:
+                aval = (phi_map[:cx])[ roi_mask[:cx] == i  ] + 180              
+            
+            qval_dict_[j] = np.zeros(2)
+            qwid_dict_[j] = np.zeros(2)            
+            qval_dict_[j][0] = ( qval.max() + qval.min() )/2 # np.mean(qval)
+            qwid_dict_[j][0] = ( qval.max() - qval.min() )            
+            #print(aval)
+            if ( (aval.max() * aval.min())<0 ) &  ( aval.max() > 90 ):
+                qval_dict_[j][1] = ( aval.max() + aval.min() )/2 -180   # np.mean(qval)
+                qwid_dict_[j][1] = abs( aval.max() - aval.min() -360 ) 
+                #print('here -- %s'%j)
+            else:    
+                qval_dict_[j][1] = ( aval.max() + aval.min() )/2    # np.mean(qval)
+                qwid_dict_[j][1] = abs( aval.max() - aval.min() )                          
+            
+    return qval_dict_, qwid_dict_  
+
+
+
+def get_SG_norm( FD, pixelist, bins=1, mask=None, window_size= 11, order= 5 ):
+    '''Get normalization of a time series by SavitzkyGolay filter
+    Input:
+        FD: file handler for a compressed data
+        pixelist: pixel list for a roi_mask
+        bins: the bin number for the time series, if number = total number of the time frame, 
+              it means SG of the time averaged image
+        mask: the additional mask
+        window_size, order, for the control of SG filter, see  chx_generic_functions.py/sgolay2d for details
+    Return:
+        norm: shape as ( length of FD, length of pixelist )    
+    '''
+    if mask is None:
+        mask = 1
+    beg = FD.beg
+    end = FD.end
+    N = end-beg
+    BEG = beg
+    if bins==1:
+        END = end
+        NB = N
+        MOD=0
+    else:    
+        END = N//bins 
+        MOD = N%bins
+        NB = END
+    norm = np.zeros( [ end, len(pixelist) ] )  
+    for i in tqdm( range( NB ) ): 
+        if bins == 1:
+            img = FD.rdframe(i + BEG)          
+        else:    
+            for j in range( bins):
+                ct =  i * bins + j + BEG
+                #print(ct)
+                if j==0:  
+                    img =  FD.rdframe(  ct )
+                    n = 1.0
+                else:
+                    (p,v) = FD.rdrawframe(ct)   
+                    np.ravel( img )[p] +=   v
+                    #img +=  FD.rdframe(  ct )
+                    n += 1
+            img /=  n  
+        avg_imgf = sgolay2d( img, window_size= window_size, order= order) * mask
+        normi = np.ravel(avg_imgf)[pixelist] 
+        if bins==1:
+            norm[i+beg] = normi
+        else:
+            norm[  i*bins+beg: (i+1)*bins+beg   ] = normi
+    if MOD:    
+        for j in range(MOD):
+            ct =  (1+i) * bins + j + BEG
+            if j==0:  
+                img =  FD.rdframe(  ct )
+                n = 1.0
+            else:
+                (p,v) = FD.rdrawframe(ct)   
+                np.ravel( img )[p] +=   v
+                n += 1
+            img /=  n         
+            #print(ct,n)    
+            img =  FD.rdframe(  ct )
+            avg_imgf = sgolay2d( img, window_size= window_size, order= order) * mask
+            normi = np.ravel(avg_imgf)[pixelist]     
+            norm[  (i+1)*bins + beg: (i+2)*bins  + beg ] = normi
+    return norm
+
+def shift_mask( new_cen,  new_mask, old_cen, old_roi_mask, limit_qnum=None  ):
+    '''Y.G. Dev April 2019@CHX to make a new roi_mask by shift and crop the old roi_mask, which is much bigger than the new mask
+    Input:
+        new_cen: [x,y]  in uint of pixel
+        new_mask: provide the shape of the new roi_mask and also multiply this mask to the shifted mask
+        old_cen: [x,y]  in uint of pixel 
+        old_roi_mask: the roi_mask  to be shifted
+        limit_qnum: integer, if not None, defines the max number of unique values of nroi_mask 
+        
+    Output:
+        the shifted/croped roi_mask    
+    '''
+    nsx,nsy = new_mask.shape
+    down, up, left, right  = new_cen[0], nsx - new_cen[0],   new_cen[1],  nsy - new_cen[1]
+    x1,x2,y1,y2 =           [ old_cen[0] - down, old_cen[0] + up , old_cen[1] - left, old_cen[1] + right   ]
+    nroi_mask_ = old_roi_mask[ x1:x2, y1:y2    ] * new_mask  
+    nroi_mask = np.zeros_like( nroi_mask_ ) 
+    qind, pixelist = roi.extract_label_indices(nroi_mask_)
+    qu = np.unique(qind)
+    #noqs = len( qu )
+    #nopr = np.bincount(qind, minlength=(noqs+1))[1:]
+    #qm = nopr>0
+    for j, qv in enumerate(qu):
+        nroi_mask[nroi_mask_ == qv] = j +1    
+    if limit_qnum is not None:
+        nroi_mask[ nroi_mask > limit_qnum ]=0 
+    return nroi_mask
 
 
 def plot_q_g2fitpara_general( g2_dict, g2_fitpara, geometry ='saxs',  ylim = None,
                             plot_all_range=True, plot_index_range = None, show_text=True,return_fig=False,
-                            show_fit=True, ylabel='g2', qth_interest = None, max_plotnum_fig=1600,
+                            show_fit=True, ylabel='g2', qth_interest = None, max_plotnum_fig=1600,qphi_analysis=False,
                             *argv,**kwargs): 
     '''
     Mar 29,2019, Y.G.@CHX
@@ -371,7 +547,7 @@ def save_oavs_tifs(  uid, data_dir, brightness_scale=1, scalebar_size=100, scale
         
     
     
-def shift_mask( mask, shiftx, shifty):
+def shift_mask_old( mask, shiftx, shifty):
     '''YG Dev Feb 4@CHX create new mask by shift mask in x and y direction with unit in pixel 
     Input:
         mask: int-type array,  
@@ -1015,7 +1191,6 @@ def re_filename_dir( old_pattern, new_pattern, inDir,verbose=True  ):
             new_filename = fp.replace(old_pattern, new_pattern)
             re_filename( old_filename, new_filename, inDir,verbose= verbose   )    
     
-    
 def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False,q_thresh=0, p_thresh=0, silent=True):
     """
     function to return roi number from qval_dict, corresponding  Q and phi, lists (sets) of all available Qs and phis
@@ -1038,6 +1213,8 @@ def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False,q_thresh=0, p_thresh=0, silent
     from collections import OrderedDict
     qslist=list(OrderedDict.fromkeys(qs))
     phislist=list(OrderedDict.fromkeys(phis))
+    qslist=list(np.sort(qslist))
+    phislist=list(np.sort(phislist))
     if q_nr:
         qinterest=qslist[q]
         qindices = [i for i,x in enumerate(qs) if x == qinterest]
@@ -1060,9 +1237,6 @@ def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False,q_thresh=0, p_thresh=0, silent
         print(phislist)
         print('Roi number for Q= '+str(ret_list[1])+' and phi= '+str(ret_list[2])+': '+str(ret_list[0]))
     return ret_list
-    
-
-
     
 def get_fit_by_two_linear(x,y,  mid_xpoint1,  mid_xpoint2=None, xrange=None, ):
     '''YG Octo 16,2017 Fit a curve with two linear func, the curve is splitted by mid_xpoint, 
