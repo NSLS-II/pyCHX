@@ -36,6 +36,7 @@ from pyCHX.chx_generic_functions import (get_detector, get_sid_filenames,
     average_array_withNan,refine_roi_mask, shrink_image, get_waxs_beam_center, 
     get_eigerImage_per_file,copy_data,delete_data, find_bad_pixels_FD, lin2log_g2,
     create_fullImg_with_box, find_good_xpcs_uids, shift_mask, save_oavs_tifs, plot_xy_x2,
+                                         plot_q_rate_general,plot_q_g2fitpara_general, get_SG_norm
                                             )
  
 
@@ -55,7 +56,7 @@ from pyCHX.Two_Time_Correlation_Function import (
 
 from pyCHX.chx_compress import (
     combine_binary_files,    segment_compress_eigerdata,     create_compress_header,            
-    para_segment_compress_eigerdata,para_compress_eigerdata)
+    para_segment_compress_eigerdata,para_compress_eigerdata,MultifileBNLCustom)
 
 from pyCHX.chx_compress_analysis import ( 
     compress_eigerdata, read_compressed_eigerdata, Multifile,get_avg_imgc, get_each_frame_intensityc,
