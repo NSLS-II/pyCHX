@@ -30,6 +30,72 @@ e.g., flatten( [ ['sg','tt'],'ll' ]   )
 gives ['sg', 'tt', 'l', 'l']
 """
 
+
+def get_roi_mask_qval_qwid_by_shift( new_cen, new_mask, old_cen,old_roi_mask, 
+                                    setup_pargs,  geometry,
+                                    limit_qnum= None):
+    '''YG Dev April 22, 2019 Get  roi_mask, qval_dict, qwid_dict by shift the pre-defined big roi_mask'''
+    center=setup_pargs['center']
+    roi_mask1 = shift_mask( new_cen=center, new_mask=new_mask, old_cen=old_cen,
+                              old_roi_mask=old_roi_mask, limit_qnum= None)          
+    qval_dict_, qwid_dict_ = get_masked_qval_qwid_dict_using_Rmax( 
+                                new_mask=new_mask, setup_pargs=setup_pargs, 
+                                old_roi_mask=old_roi_mask, old_cen=old_cen, geometry =  geometry  )     
+    w,w1 = get_zero_nozero_qind_from_roi_mask(roi_mask1,new_mask) 
+    #print(w,w1)
+    qval_dictx = { k:v for (k,v) in list(qval_dict_.items()) if k  in w1   }
+    qwid_dictx = { k:v for (k,v) in list(qwid_dict_.items()) if k in  w1   }
+    qval_dict={}
+    qwid_dict={}
+    for i, k in enumerate( list(qval_dictx.keys())):
+        qval_dict[i] = qval_dictx[k]
+        qwid_dict[i] = qwid_dictx[k]  
+    return roi_mask1, qval_dict, qwid_dict
+
+
+def get_zero_nozero_qind_from_roi_mask(roi_mask,mask):
+    '''YG Dev April 22, 2019 Get unique qind of roi_mask with zero and non-zero pixel number'''
+    qind, pixelist = roi.extract_label_indices(roi_mask*mask)
+    noqs = len(np.unique(qind))
+    nopr = np.bincount(qind, minlength=(noqs+1))[1:]
+    w=np.where(nopr==0)[0]
+    w1=np.where(nopr!=0)[0]
+    return w, w1
+
+
+
+def get_masked_qval_qwid_dict_using_Rmax( new_mask, setup_pargs, old_roi_mask, old_cen, geometry ):  
+    '''YG Dev April 22, 2019 Get qval_dict, qwid_dict by applying mask to roi_mask using a Rmax method '''
+    cy,cx= setup_pargs['center']
+    my,mx=new_mask.shape
+    Rmax =  int(np.ceil(max( np.hypot(cx,cy),np.hypot(cx-mx,cy-my),np.hypot(cx,cy-my),np.hypot(cx-mx,cy) )))
+    Fmask = np.zeros([Rmax*2,Rmax*2],dtype=int)
+    Fmask[    Rmax-cy : Rmax-cy+my, Rmax-cx: Rmax-cx + mx]=new_mask
+    roi_mask1 = shift_mask( new_cen=[Rmax,Rmax], new_mask=np.ones_like(Fmask), old_cen=old_cen,
+                          old_roi_mask=old_roi_mask, limit_qnum= None)  
+    setup_pargs_={ 'center':[Rmax,Rmax], 'dpix': setup_pargs['dpix'], 'Ldet': setup_pargs['Ldet'],
+                'lambda_': setup_pargs['lambda_'], }
+    qval_dict1, qwid_dict1 = get_masked_qval_qwid_dict( roi_mask1, Fmask, setup_pargs_,  geometry  )  
+    #w = get_zero_qind_from_roi_mask(roi_mask1,Fmask)
+    return qval_dict1, qwid_dict1#,w
+
+
+
+def get_masked_qval_qwid_dict( roi_mask, mask, setup_pargs,  geometry  ):
+    '''YG Dev April 22, 2019 Get qval_dict, qwid_dict by applying mask to roi_mask '''
+        
+    qval_dict_, qwid_dict_ = get_qval_qwid_dict( roi_mask, setup_pargs,  geometry= geometry)  
+    w,w1 = get_zero_nozero_qind_from_roi_mask(roi_mask,mask)
+    qval_dictx = { k:v for (k,v) in list(qval_dict_.items()) if k not in w   }
+    qwid_dictx = { k:v for (k,v) in list(qwid_dict_.items()) if k not in w   }
+    qval_dict={}
+    qwid_dict={}
+    for i, k in enumerate( list(qval_dictx.keys())):
+        qval_dict[i] = qval_dictx[k]
+        qwid_dict[i] = qwid_dictx[k]        
+    return qval_dict, qwid_dict
+
+
 def get_qval_qwid_dict( roi_mask, setup_pargs,  geometry='saxs'):
     '''YG Dev April 6, 2019
     Get qval_dict and qwid_dict by giving roi_mask, setup_pargs
@@ -73,13 +139,17 @@ def get_qval_qwid_dict( roi_mask, setup_pargs,  geometry='saxs'):
         #print( qval )
         if geometry=='saxs':
             qval_dict_[j] = [( qval.max() + qval.min() )/2] # np.mean(qval)
-            qwid_dict_[j] = [( qval.max() - qval.min() ) ] 
+            qwid_dict_[j] = [( qval.max() - qval.min() ) ]
+            
         elif geometry=='ang_saxs':
             aval = phi_map[ roi_mask == i  ]
+            #print(j,i,qval, aval)
             qval_dict_[j] = np.zeros(2)
-            qwid_dict_[j] = np.zeros(2)            
+            qwid_dict_[j] = np.zeros(2) 
+            
             qval_dict_[j][0] = ( qval.max() + qval.min() )/2 # np.mean(qval)
-            qwid_dict_[j][0] = ( qval.max() - qval.min() )              
+            qwid_dict_[j][0] = ( qval.max() - qval.min() )   
+            
             if ( (aval.max() * aval.min())<0 ) &  ( aval.max() > 90 ):
                 qval_dict_[j][1] = ( aval.max() + aval.min() )/2 -180   # np.mean(qval)
                 qwid_dict_[j][1] = abs( aval.max() - aval.min() -360 ) 
@@ -87,6 +157,7 @@ def get_qval_qwid_dict( roi_mask, setup_pargs,  geometry='saxs'):
             else:    
                 qval_dict_[j][1] = ( aval.max() + aval.min() )/2    # np.mean(qval)
                 qwid_dict_[j][1] = abs( aval.max() - aval.min() )
+                
         elif geometry=='flow_saxs':
             sx,sy = roi_mask.shape         
             cx,cy = origin
