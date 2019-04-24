@@ -72,8 +72,8 @@ def get_qval_qwid_dict( roi_mask, setup_pargs,  geometry='saxs'):
         qval = q_map[ roi_mask == i  ]
         #print( qval )
         if geometry=='saxs':
-            qval_dict_[j] = ( qval.max() + qval.min() )/2 # np.mean(qval)
-            qwid_dict_[j] = ( qval.max() - qval.min() )  
+            qval_dict_[j] = [( qval.max() + qval.min() )/2] # np.mean(qval)
+            qwid_dict_[j] = [( qval.max() - qval.min() ) ] 
         elif geometry=='ang_saxs':
             aval = phi_map[ roi_mask == i  ]
             qval_dict_[j] = np.zeros(2)
