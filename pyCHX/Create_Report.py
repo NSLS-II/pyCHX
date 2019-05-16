@@ -234,14 +234,35 @@ class create_pdf_report( object ):
         #print(  self.g2_fit_file )
         self.g2_new_page = False
         self.g2_fit_new_page = False
-        jfn = 'uid=%s_g2__joint.png'%uid_g2
-        if os.path.exists( data_dir + jfn):
-            self.g2_file = jfn
-            self.g2_new_page = True   
-        jfn = 'uid=%s_g2_fit__joint.png'%uid_g2
-        if os.path.exists(data_dir + jfn ):
-            self.g2_fit_file = jfn
-            self.g2_fit_new_page = True     
+        if self.report_type =='saxs':            
+            jfn = 'uid=%s_g2.png'%uid_g2
+            if os.path.exists( data_dir + jfn):
+                self.g2_file = jfn
+            else:
+                jfn = 'uid=%s_g2__joint.png'%uid_g2
+                if os.path.exists( data_dir + jfn):
+                    self.g2_file = jfn
+                    self.g2_new_page = True 
+                #self.g2_new_page = True   
+            jfn = 'uid=%s_g2_fit.png'%uid_g2
+            if os.path.exists(data_dir + jfn ):
+                self.g2_fit_file = jfn
+                #self.g2_fit_new_page = True  
+            else:
+                jfn = 'uid=%s_g2_fit__joint.png'%uid_g2
+                if os.path.exists(data_dir + jfn ):
+                    self.g2_fit_file = jfn
+                    self.g2_fit_new_page = True                  
+                
+        else: 
+            jfn = 'uid=%s_g2__joint.png'%uid_g2
+            if os.path.exists( data_dir + jfn):
+                self.g2_file = jfn
+                self.g2_new_page = True   
+            jfn = 'uid=%s_g2_fit__joint.png'%uid_g2
+            if os.path.exists(data_dir + jfn ):
+                self.g2_fit_file = jfn
+                self.g2_fit_new_page = True     
             
         self.q_rate_file = 'uid=%s_Q_Rate_fit.png'%uid_g2         
         self.q_rate_loglog_file = 'uid=%s_Q_Rate_loglog.png'%uid_g2 
@@ -255,14 +276,31 @@ class create_pdf_report( object ):
         #print(  self.q_rate_two_time_fit_file )
         
         self.two_time_file = 'uid=%s_Two_time.png'%uid_c12        
-        self.two_g2_file = 'uid=%s_g2_two_g2.png'%uid_c12        
-        jfn = 'uid=%s_g2_two_g2__joint.png'%uid_c12         
+        self.two_g2_file = 'uid=%s_g2_two_g2.png'%uid_c12   
         
-        self.two_g2_new_page = False
-        if os.path.exists(  data_dir + jfn ):
-            #print( 'Here we go') 
-            self.two_g2_file = jfn
-            self.two_g2_new_page = True  
+        if self.report_type =='saxs':  
+            
+            jfn = 'uid=%s_g2_two_g2.png'%uid_c12  
+            self.two_g2_new_page = False
+            if os.path.exists(  data_dir + jfn ):
+                #print( 'Here we go') 
+                self.two_g2_file = jfn
+                #self.two_g2_new_page = True 
+            else:                 
+                jfn = 'uid=%s_g2_two_g2__joint.png'%uid_c12  
+                self.two_g2_new_page = False
+                if os.path.exists(  data_dir + jfn ):
+                    #print( 'Here we go') 
+                    self.two_g2_file = jfn
+                    self.two_g2_new_page = True  
+        else:                 
+            jfn = 'uid=%s_g2_two_g2__joint.png'%uid_c12  
+            self.two_g2_new_page = False
+            if os.path.exists(  data_dir + jfn ):
+                #print( 'Here we go') 
+                self.two_g2_file = jfn
+                self.two_g2_new_page = True  
+                    
             
         self.four_time_file = 'uid=%s_g4.png'%uid_                
         jfn = 'uid=%s_g4__joint.png'%uid_  
@@ -784,6 +822,7 @@ class create_pdf_report( object ):
                      str2_left, str2_top, return_=True )         
         #print( imgf,self.data_dir )        
         #add g2 plot fit
+        #print(self.q_rate_file)
         if os.path.isfile( self.q_rate_file ):
             top = top + 70 #
             if q_rate_file is None:
@@ -819,7 +858,8 @@ class create_pdf_report( object ):
             if q_rate_file is None:
                 imgf = self.q_rate_loglog_file
             else:
-                imgf =  q_rate_file        
+                imgf =  q_rate_file 
+            #print(imgf)    
             if self.report_type != 'ang_saxs':
                 #print(img_width)
                 if img_width > 400:
