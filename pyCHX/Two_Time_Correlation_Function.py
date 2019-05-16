@@ -1066,7 +1066,7 @@ def masked_g12( g12, badframes_list):
     return g12m
 
 def show_one_C12( C12,  fig_ax=None,  return_fig=False,interpolation = 'none',cmap='viridis',
-                 *argv,**kwargs):  
+                 show_colorbar=True,  *argv,**kwargs):  
  
     '''
     plot one-q of two-time correlation function
@@ -1146,7 +1146,8 @@ def show_one_C12( C12,  fig_ax=None,  return_fig=False,interpolation = 'none',cm
         #ax.set_title('%s-%s frames--Qth= %s'%(N1,N2,g12_num))
     ax.set_xlabel( r'$t_1$ $(s)$', fontsize = 18)
     ax.set_ylabel( r'$t_2$ $(s)$', fontsize = 18)
-    fig.colorbar(im)
+    if show_colorbar:
+        fig.colorbar(im)
     
     save=False    
     if 'save' in kwargs:
