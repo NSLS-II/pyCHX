@@ -31,13 +31,32 @@ gives ['sg', 'tt', 'l', 'l']
 """
 
 
+def append_txtfile( filename, data, fmt='%s', *argv,**kwargs ):
+    '''YG. Dev May 10, 2109 append data to a file
+    Create an empty file if the file dose not exist, otherwise, will append the data to it
+    Input:
+        fp: filename
+        data: the data to be append
+        fmt: the parameter defined in np.savetxt
+        
+    '''
+    from numpy import savetxt
+    exists = os.path.isfile( filename)
+    if not exists:
+        np.savetxt(  filename,  [ ]  , fmt='%s', )
+        print('create new file')
+        
+    f=open( filename, 'a')     
+    savetxt( f, data, fmt = fmt , *argv,**kwargs )
+    f.close()    
+
 def get_roi_mask_qval_qwid_by_shift( new_cen, new_mask, old_cen,old_roi_mask, 
                                     setup_pargs,  geometry,
                                     limit_qnum= None):
     '''YG Dev April 22, 2019 Get  roi_mask, qval_dict, qwid_dict by shift the pre-defined big roi_mask'''
     center=setup_pargs['center']
     roi_mask1 = shift_mask( new_cen=center, new_mask=new_mask, old_cen=old_cen,
-                              old_roi_mask=old_roi_mask, limit_qnum= None)          
+                              old_roi_mask=old_roi_mask, limit_qnum= limit_qnum)          
     qval_dict_, qwid_dict_ = get_masked_qval_qwid_dict_using_Rmax( 
                                 new_mask=new_mask, setup_pargs=setup_pargs, 
                                 old_roi_mask=old_roi_mask, old_cen=old_cen, geometry =  geometry  )     
@@ -2535,7 +2554,10 @@ def get_meta_data( uid, default_dec = 'eiger', *argv,**kwargs ):
     md ={}
     
     md['suid'] = uid  #short uid
-    md['filename'] = get_sid_filenames(header)[2][0]
+    try:
+        md['filename'] = get_sid_filenames(header)[2][0]
+    except:
+        md['filename'] = 'N.A.'
 
     devices = sorted( list(header.devices()) )
     if len(devices) > 1:
@@ -2872,6 +2894,18 @@ def get_detectors( header ):
     keys = [k for k, v in header.descriptors[0]['data_keys'].items()     if 'external' in v]
     return sorted(keys)
 
+def get_full_data_path( uid ):
+    '''A dirty way to get full data path'''
+    header = db[uid]
+    d = header.db
+    s = list(d.get_documents( db[uid ]))
+    #print(s[2])
+    p = s[2][1]['resource_path']
+    p2 = s[3][1]['datum_kwargs']['seq_id']
+    #print(p,p2)
+    return p + '_' + str(p2) + '_master.h5'
+    
+    
     
 def get_sid_filenames(header):
     """YG. Dev Jan, 2016
@@ -4297,7 +4331,7 @@ def flow_para_function( x, beta, relaxation_rate, flow_velocity, baseline=1):
     return  beta*Diff_part * Flow_part + baseline
 
 
-def flow_para_function_explicitq( x, beta, diffusion, flow_velocity, baseline=1, qr=1, q_ang=0 ):
+def flow_para_function_explicitq( x, beta, diffusion, flow_velocity, alpha=1, baseline=1, qr=1, q_ang=0 ):
     '''Nov 9, 2017 Basically, make q vector to (qr, angle),  
     ###relaxation_rate is actually a diffusion rate
     flow_velocity: q.v (q vector dot v vector = q*v*cos(angle) )
@@ -4306,8 +4340,12 @@ def flow_para_function_explicitq( x, beta, diffusion, flow_velocity, baseline=1,
     
     '''
     
-    Diff_part=    np.exp(-2 * diffusion* qr**2 * x)  
-    Flow_part =  np.pi**2/(16*x*flow_velocity*qr* abs(np.cos(q_ang)) ) *  abs(  erf(  np.sqrt(   4/np.pi * 1j* x * flow_velocity * qr* abs(np.cos(q_ang)) ) ) )**2    
+    Diff_part=    np.exp(-2 * ( diffusion* qr**2 * x)**alpha    ) 
+    if flow_velocity !=0:        
+        if np.cos( q_ang  ) >= 1e-8:
+            Flow_part =  np.pi**2/(16*x*flow_velocity*qr* abs(np.cos(q_ang)) ) *  abs(  erf(  np.sqrt(   4/np.pi * 1j* x * flow_velocity * qr* abs(np.cos(q_ang)) ) ) )**2 
+    else:
+        Flow_part = 1
     return  beta*Diff_part * Flow_part + baseline
 
 
@@ -4447,6 +4485,8 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
     mod.set_param_hint( 'beta',   min=0.0,  max=1.0 )
     mod.set_param_hint( 'alpha',   min=0.0 )
     mod.set_param_hint( 'relaxation_rate',   min=0.0,  max= 1000  )  
+    mod.set_param_hint( 'flow_velocity', min=0)  
+    mod.set_param_hint( 'diffusion',   min=0.0,  max= 2e8  )  
     
     if 'guess_limits' in kwargs:         
         guess_limits  = kwargs['guess_limits']         
@@ -4499,10 +4539,7 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
         _freq =_guess_val['freq'] 
         _amp = _guess_val['amp'] 
         pars  = mod.make_params( beta=_beta,  freq=_freq, amp = _amp,flow_velocity=_flow_velocity,
-                                relaxation_rate =_relaxation_rate, baseline= _baseline)       
- 
-        
-        
+                                relaxation_rate =_relaxation_rate, baseline= _baseline)          
     for v in _vars:
         pars['%s'%v].vary = False
     #print( pars )
@@ -4518,8 +4555,11 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
         #print( _relaxation_rate )
         for k in list(pars.keys()):
             #print(k, _guess_val[k]  )
-            if isinstance( _guess_val[k], (np.ndarray, list) ):
-                pars[k].value = _guess_val[k][i]  
+            try:
+                if isinstance( _guess_val[k], (np.ndarray, list) ):
+                    pars[k].value = _guess_val[k][i]  
+            except:
+                pass
         
         if False:
             if isinstance( _beta, (np.ndarray, list) ):
@@ -4544,6 +4584,9 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
                     qr = qval_dict[i][0], q_ang = abs(np.radians( qval_dict[i][1] - ang_init) )  )
                 pars['qr'].vary = False
                 pars['q_ang'].vary = False
+                for v in _vars:
+                    pars['%s'%v].vary = False
+                
                 #if i==20:
                 #    print(pars)
         #print( pars  )
