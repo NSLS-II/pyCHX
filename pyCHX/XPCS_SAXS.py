@@ -1030,12 +1030,60 @@ def angulars(edges, center, shape):
     return _make_roi(angle_val, edges, shape)
 
 
+def update_angular_mask_width_edge(  edge, mask, center, roi_mask ):
+    '''YG Dev@CHX May, 2019 primary developed for flow-geometry
+       Update anglure mask using new edge
+       Input:
+          edge: the edge of the anglues
+          mask: the mask of the image
+          center: the beam center
+          roi_mask: the roi mask
+       Output:
+          roi_mask: updated roi_mask (effective index starting from 1)
+       '''        
+    for i, (al, ah) in enumerate( edge ):
+        edge_ = np.array([  [ al, ah ]  ])   
+        ang = angulars( np.radians( edge_ ), center, mask.shape) * mask    
+        w = np.ravel(  ang )==1    
+        np.ravel( roi_mask )[w] = i+1    
+    return roi_mask
 
+def fix_angle_mask_at_PN_180( edge , mask, center, roi_mask):
+    '''YG Dev@CHX May, 2019 
+       to fix the problem of making angluar mask at the angle edge around +/- 180
+       Input:
+          edge: the edge of the anglues
+          mask: the mask of the image
+          center: the beam center
+          roi_mask: the roi mask
+       Output:
+          roi_mask: by fixing the edge effect (effective index starting from 1)
+       '''
+    for i, (al, ah) in enumerate( edge ):       
+        flag = True
+        if al<=-180. and ah >-180:        
+            edge_ = np.array([  [ al + 360, 180 ]  ]) 
+        elif al<=180. and ah >180:
+            edge_ = np.array([  [ -180, ah - 360 ]  ]) 
+        elif al<=-180. and ah<-180:
+            edge_ = np.array([  [ al + 360, ah + 360 ]  ])             
+        elif al>=180. and ah>180:
+            edge_ = np.array([  [ al - 360, ah - 360 ]  ])             
+            
+        else:
+            flag = False
+        if flag:    
+            #print(i+1, al,ah, edge_)
+            ang = angulars( np.radians( edge_ ), center, mask.shape) * mask
+            w = np.ravel(  ang )==1
+            #print(w)
+            np.ravel( roi_mask )[w] = i+1
+    return roi_mask
 
-    
 
 def get_angular_mask( mask,  inner_angle= 0, outer_angle = 360, width = None, edges = None,
-                     num_angles = 12, center = None, dpix=[1,1], flow_geometry=False    ):
+                     num_angles = 12, center = None, dpix=[1,1],
+                     flow_geometry=False, flow_angle=90, verbose=True,    ):
      
     ''' 
     mask: 2D-array 
@@ -1047,7 +1095,7 @@ def get_angular_mask( mask,  inner_angle= 0, outer_angle = 360, width = None, ed
      
     center: the beam center in pixel    
     dpix, the pixel size in mm. For Eiger1m/4m, the size is 75 um (0.075 mm)
-    flow_geometry: if True, the angle should be between 0 and 180. the map will be a center inverse symmetry
+    flow_geometry: if True, please give the flow angle. the map will be a mirror symmetry along the flow direction
     
     Returns
     -------
@@ -1055,22 +1103,78 @@ def get_angular_mask( mask,  inner_angle= 0, outer_angle = 360, width = None, ed
     ang_center: ang in unit of degree
     ang_val: ang edges in degree
     
-    '''
-    
-    #center, Ldet, lambda_, dpix= pargs['center'],  pargs['Ldet'],  pargs['lambda_'],  pargs['dpix']
-    
-    #spacing =  (outer_radius - inner_radius)/(num_rings-1) - 2    # spacing between rings
-    #inner_angle,outer_angle = np.radians(inner_angle),  np.radians(outer_angle)
-    
-    #if edges is  None:
-    #    ang_center =   np.linspace( inner_angle,outer_angle, num_angles )  
-    #    edges = np.zeros( [ len(ang_center), 2] )
-    #    if width is None:
-    #        width = ( -inner_angle + outer_angle)/ float( num_angles -1 + 1e-10 )
-    #    else:
-    #        width =  np.radians( width )
-    #    edges[:,0],edges[:,1] = ang_center - width/2, ang_center + width/2 
+    ''' 
+
+    if flow_geometry:
+        if verbose:
+            print('''
+For the flow geometry, please only define a quarter of the expected ROI. 
+The quarter ROI should start from around flow_angle - 90 to around the flow_angle
+Otherwise, there will be somne errors.
+The final ROI will have a center symmetry as well as a mirror symmetry along the flow direction.
+An example for flow_angle=90 will be: 
+edges = roi.ring_edges( -10, 20, 2.5, 5) -->
+                           array([[-10. ,  10. ],
+                                   [ 12.5,  32.5],
+                                   [ 35. ,  55. ],
+                                   [ 57.5,  77.5],
+                                   [ 80. , 100. ]])
+                 
+                 ''')         
+
+    if edges is None:
+        if num_angles!=1:
+            spacing =  (outer_angle - inner_angle - num_angles* width )/(num_angles-1)      # spacing between rings
+        else:
+            spacing = 0
+        edges = roi.ring_edges(inner_angle, width, spacing, num_angles) 
+
+    #print (edges)
+    angs = angulars( np.radians( edges ), center, mask.shape)    
+    ang_center = np.average(edges, axis=1)        
+    ang_mask = angs*mask
+    ang_mask = np.array(ang_mask, dtype=int)
         
+    if flow_geometry:    
+        edges2 = edges - 180
+        edges3 = 2*flow_angle - edges[:,::-1]
+        edges4 = 2*flow_angle - edges[:,::-1] - 180        
+        for edge_ in [edges2, edges3, edges4]:
+            ang_mask = update_angular_mask_width_edge(  edge_, mask, center, ang_mask )
+            ang_mask = fix_angle_mask_at_PN_180( edge_, mask, center, ang_mask )
+    
+    else:
+        for edge_ in enumerate( edges ):
+            ang_mask = fix_angle_mask_at_PN_180( edge_, mask, center, ang_mask )    
+    labels, indices = roi.extract_label_indices(ang_mask)
+    nopr = np.bincount( np.array(labels, dtype=int) )[1:]
+    if len( np.where( nopr ==0 )[0] !=0):
+        print ("Some angs contain zero pixels. Please redefine the edges.")      
+    return ang_mask, ang_center, edges
+
+
+def get_angular_mask_old( mask,  inner_angle= 0, outer_angle = 360, width = None, edges = None,
+                     num_angles = 12, center = None, dpix=[1,1], flow_geometry=False, flow_angle=90    ):
+     
+    ''' 
+    mask: 2D-array 
+    inner_angle # the starting angle in unit of degree
+    outer_angle #  the ending angle in unit of degree
+    width       # width of each angle, in degree, default is None, there is no gap between the neighbour angle ROI
+    edges: default, None. otherwise, give a customized angle edges
+    num_angles    # number of angles
+     
+    center: the beam center in pixel    
+    dpix, the pixel size in mm. For Eiger1m/4m, the size is 75 um (0.075 mm)
+    flow_geometry: if True, please give the flow angle. the map will be a mirror symmetry along the flow direction
+    
+    Returns
+    -------
+    ang_mask: a ring mask, np.array
+    ang_center: ang in unit of degree
+    ang_val: ang edges in degree
+    
+    ''' 
 
     if flow_geometry:
         if edges is  None:
@@ -1120,7 +1224,6 @@ def get_angular_mask( mask,  inner_angle= 0, outer_angle = 360, width = None, ed
         #print (nopr)
         print ("Some angs contain zero pixels. Please redefine the edges.")      
     return ang_mask, ang_center, edges
-
 
        
 def two_theta_to_radius(dist_sample, two_theta):
