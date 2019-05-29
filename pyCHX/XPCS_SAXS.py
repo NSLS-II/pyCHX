@@ -239,7 +239,24 @@ def combine_two_roi_mask( ring_mask, ang_mask, pixel_num_thres=10):
     return new_mask_, good_ind -1
 
 
-
+def refine_qval_dict( qval_dict, roi_mask, new_mask, pixel_num_thres=10):
+    '''YG Dev@CHX 2019 May 29, refine qval_dict by applying a new mask
+    qval_dict corresponding to the roi_mask, now with the new mask, there are some roi might have zero (less than
+    pixel_num_thres number) pixel, so both the roi_mask and the qval_dict will be updated    
+    '''
+    new_roi_mask = np.zeros_like( roi_mask )
+    roi_mask2 = roi_mask * new_mask
+    qind, pixelist = roi.extract_label_indices(roi_mask2)
+    noqs = len(np.unique(qind))
+    nopr = np.bincount(qind, minlength=(noqs+1))[1:]    
+    good_ind = np.where( nopr >= pixel_num_thres)[0] +1    
+    l = len(good_ind) 
+    new_ind = np.arange( 1, l+1 )
+    for i, gi in enumerate( good_ind ):
+        new_roi_mask.ravel()[ 
+            np.where(  roi_mask2.ravel()  == gi)[0]  ] = new_ind[i] 
+    qval_dict_ = {  i:qval_dict[k-1] for (i,k) in enumerate( good_ind) }    
+    return new_roi_mask, qval_dict_
 
 
 
@@ -1083,7 +1100,8 @@ def fix_angle_mask_at_PN_180( edge , mask, center, roi_mask):
 
 def get_angular_mask( mask,  inner_angle= 0, outer_angle = 360, width = None, edges = None,
                      num_angles = 12, center = None, dpix=[1,1],
-                     flow_geometry=False, flow_angle=90, verbose=True,    ):
+                     flow_geometry=False, flow_angle=None,
+                     fix_180_angle=False, verbose= False    ):
      
     ''' 
     mask: 2D-array 
@@ -1133,19 +1151,23 @@ edges = roi.ring_edges( -10, 20, 2.5, 5) -->
     angs = angulars( np.radians( edges ), center, mask.shape)    
     ang_center = np.average(edges, axis=1)        
     ang_mask = angs*mask
-    ang_mask = np.array(ang_mask, dtype=int)
-        
-    if flow_geometry:    
+    ang_mask = np.array(ang_mask, dtype=int)        
+    if flow_geometry:          
         edges2 = edges - 180
-        edges3 = 2*flow_angle - edges[:,::-1]
-        edges4 = 2*flow_angle - edges[:,::-1] - 180        
-        for edge_ in [edges2, edges3, edges4]:
+        for edge_ in [edges2]:
             ang_mask = update_angular_mask_width_edge(  edge_, mask, center, ang_mask )
-            ang_mask = fix_angle_mask_at_PN_180( edge_, mask, center, ang_mask )
-    
+            ang_mask = fix_angle_mask_at_PN_180( edge_, mask, center, ang_mask ) 
+        if flow_angle is not None:
+            edges3 = 2*flow_angle - edges[:,::-1]
+            edges4 = 2*flow_angle - edges[:,::-1] - 180        
+            for edge_ in [ edges3, edges4]:
+                ang_mask = update_angular_mask_width_edge(  edge_, mask, center, ang_mask )
+                ang_mask = fix_angle_mask_at_PN_180( edge_, mask, center, ang_mask )
     else:
-        for edge_ in enumerate( edges ):
-            ang_mask = fix_angle_mask_at_PN_180( edge_, mask, center, ang_mask )    
+        #for i, edge_ in enumerate( edges ):
+            #print(edge_)
+        if fix_180_angle:    
+            ang_mask = fix_angle_mask_at_PN_180( edges, mask, center, ang_mask )    
     labels, indices = roi.extract_label_indices(ang_mask)
     nopr = np.bincount( np.array(labels, dtype=int) )[1:]
     if len( np.where( nopr ==0 )[0] !=0):
