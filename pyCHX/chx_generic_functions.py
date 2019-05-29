@@ -3987,12 +3987,51 @@ def cal_particle_g2( radius, viscosity, qr,  taus, beta=0.2, T=298):
         g2_q1[i] = simple_exponential( taus, beta=beta, relaxation_rate = relaxation_rate,  baseline=1)
     return g2_q1
     
+def get_Reynolds_number( flow_rate, flow_radius, fluid_density, fluid_viscosity ):
+    '''May 10, 2019, Y.G.@CHX
+        get  Reynolds_number , the ratio of the inertial to viscous forces, V*Dia*density/eta
+        Reynolds_number << 1000 gives a laminar flow
+        flow_rate: ul/s
+        flow_radius: mm
+        fluid_density: Kg/m^3  ( for water, 1000 Kg/m^3 = 1 g/cm^3 )      
+        fliud_viscosity: N*s/m^2  ( Kg /(s*m)  )   
+        
+        return     Reynolds_number 
+    '''     
+    return flow_rate * 1e-6 * flow_radius * 1e-3 *2 * fluid_density/ fluid_viscosity
     
+def get_Deborah_number( flow_rate, beam_size, q_vector, diffusion_coefficient ):
+    '''May 10, 2019, Y.G.@CHX
+        get  Deborah_number, the ratio of transit time to diffusion time, (V/beam_size)/ ( D*q^2)
+        flow_rate: ul/s
+        beam_size: ul
+        q_vector: A-1
+        diffusion_coefficient: A^2/s  
+        
+        return     Deborah_number
+    '''     
+    return (flow_rate /beam_size) / ( diffusion_coefficient * q_vector**2 )
 
-def get_diffusion_coefficient( visocity, radius, T=298):
+
+    
+def get_viscosity( diffusion_coefficient , radius, T=298):
+    '''May 10, 2019, Y.G.@CHX
+        get  visocity of a Brownian motion particle with radius in fuild with diffusion_coefficient 
+        diffusion_coefficient in unit of A^2/s        
+        radius: m
+        T: K
+        k: 1.38064852(79)×10−23 J/T, Boltzmann constant   
+        
+        return visocity: N*s/m^2  (water at 25K = 8.9*10^(-4) )       
+    '''
+    
+    k=  1.38064852*10**(-23)    
+    return k*T / ( 6*np.pi* diffusion_coefficient * radius) * 10**20       
+
+def get_diffusion_coefficient( viscosity, radius, T=298):
     '''July 10, 2016, Y.G.@CHX
         get diffusion_coefficient of a Brownian motion particle with radius in fuild with visocity
-        visocity: N*s/m^2  (water at 25K = 8.9*10^(-4) )
+        viscosity: N*s/m^2  (water at 25K = 8.9*10^(-4) )
         radius: m
         T: K
         k: 1.38064852(79)×10−23 J/T, Boltzmann constant   
@@ -4006,7 +4045,7 @@ def get_diffusion_coefficient( visocity, radius, T=298):
     '''
     
     k=  1.38064852*10**(-23)    
-    return k*T / ( 6*np.pi* visocity * radius) * 10**20 
+    return k*T / ( 6*np.pi* viscosity * radius) * 10**20 
 
 
 def ring_edges(inner_radius, width, spacing=0, num_rings=None):
@@ -4344,6 +4383,8 @@ def flow_para_function_explicitq( x, beta, diffusion, flow_velocity, alpha=1, ba
     if flow_velocity !=0:        
         if np.cos( q_ang  ) >= 1e-8:
             Flow_part =  np.pi**2/(16*x*flow_velocity*qr* abs(np.cos(q_ang)) ) *  abs(  erf(  np.sqrt(   4/np.pi * 1j* x * flow_velocity * qr* abs(np.cos(q_ang)) ) ) )**2 
+        else:
+            Flow_part = 1
     else:
         Flow_part = 1
     return  beta*Diff_part * Flow_part + baseline
@@ -4510,21 +4551,50 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
     _beta=_guess_val['beta']
     _alpha=_guess_val['alpha']
     _relaxation_rate = _guess_val['relaxation_rate']
-    _baseline= _guess_val['baseline']    
-    pars  = mod.make_params( beta=_beta, alpha=_alpha, relaxation_rate =_relaxation_rate, baseline= _baseline)
+    _baseline= _guess_val['baseline'] 
+    if isinstance( _beta, (np.ndarray, list) ):
+        _beta_=_beta[0]
+    else:
+        _beta_=_beta
+    if isinstance( _baseline, (np.ndarray, list) ):
+        _baseline_ = _baseline[0]  
+    else:
+        _baseline_ = _baseline
+    if isinstance( _relaxation_rate, (np.ndarray, list) ):
+        _relaxation_rate_= _relaxation_rate[0]
+    else:        
+        _relaxation_rate_= _relaxation_rate
+    if isinstance( _alpha, (np.ndarray, list) ):
+        _alpha_ = _alpha[0] 
+    else:
+        _alpha_ = _alpha        
+    pars  = mod.make_params( beta=_beta_, alpha=_alpha_, 
+                            relaxation_rate =_relaxation_rate_, baseline= _baseline_)
     
     if function=='flow_para_function' or  function=='flow_para':
-        _flow_velocity =_guess_val['flow_velocity']    
-        pars  = mod.make_params( beta=_beta, alpha=_alpha, flow_velocity=_flow_velocity,
-                                relaxation_rate =_relaxation_rate, baseline= _baseline)
+        _flow_velocity =_guess_val['flow_velocity']  
+        if isinstance( _flow_velocity, (np.ndarray, list) ):
+            _flow_velocity_ = _flow_velocity[0] 
+        else:
+            _flow_velocity_ = _flow_velocity       
+        pars  = mod.make_params( beta=_beta_, alpha=_alpha_, flow_velocity=_flow_velocity_,
+                                relaxation_rate =_relaxation_rate_, baseline= _baseline_)
 
     if function=='flow_para_function_explicitq' or  function=='flow_para_qang':
         _flow_velocity =_guess_val['flow_velocity']   
         _diffusion =_guess_val['diffusion']   
         _guess_val['qr']   = 1
         _guess_val['q_ang']  = 0
-        pars  = mod.make_params( beta=_beta, alpha=_alpha, flow_velocity=_flow_velocity,
-                                diffusion =_diffusion, baseline= _baseline,
+        if isinstance( _flow_velocity, (np.ndarray, list) ):
+            _flow_velocity_ = _flow_velocity[0] 
+        else:
+            _flow_velocity_ = _flow_velocity 
+        if isinstance( _diffusion, (np.ndarray, list) ):
+            _diffusion_ = _diffusion[0] 
+        else:
+            _diffusion_ = _diffusion         
+        pars  = mod.make_params( beta=_beta_, alpha=_alpha_, flow_velocity=_flow_velocity_,
+                                diffusion =_diffusion_, baseline= _baseline_,
                                qr=1, q_ang=0
                                )
         
@@ -4561,16 +4631,19 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
             except:
                 pass
         
-        if False:
+        if True:
             if isinstance( _beta, (np.ndarray, list) ):
-                 pars['beta'].value = _guess_val['beta'][i]      
+                #pars['beta'].value = _guess_val['beta'][i]
+                _beta_ = _guess_val['beta'][i]
             if isinstance( _baseline, (np.ndarray, list) ):
-                 pars['baseline'].value = _guess_val['baseline'][i]                
+                #pars['baseline'].value = _guess_val['baseline'][i]   
+                _baseline_ = _guess_val['baseline'][i] 
             if isinstance( _relaxation_rate, (np.ndarray, list) ):
-                 pars['relaxation_rate'].value = _guess_val['relaxation_rate'][i]               
+                #pars['relaxation_rate'].value = _guess_val['relaxation_rate'][i] 
+                _relaxation_rate_ = _guess_val['relaxation_rate'][i] 
             if isinstance( _alpha, (np.ndarray, list) ):
-                 pars['alpha'].value = _guess_val['alpha'][i] 
-                
+                #pars['alpha'].value = _guess_val['alpha'][i] 
+                _alpha_  = _guess_val['alpha'][i]                 
             #for k in list(pars.keys()):
                 #print(k, _guess_val[k]  )
             # pars[k].value = _guess_val[k][i]        
@@ -4578,10 +4651,13 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
             if qval_dict is None:
                 print("Please provide qval_dict, a dict with qr and ang (in unit of degrees).")
             else:
+                
                 pars  = mod.make_params(  
-                    beta=_beta, alpha=_alpha, flow_velocity=_flow_velocity,
-                                diffusion =_diffusion, baseline= _baseline, 
+                    beta=_beta_, alpha=_alpha_, flow_velocity=_flow_velocity_,
+                                diffusion =_diffusion_, baseline= _baseline_,
                     qr = qval_dict[i][0], q_ang = abs(np.radians( qval_dict[i][1] - ang_init) )  )
+                
+                
                 pars['qr'].vary = False
                 pars['q_ang'].vary = False
                 for v in _vars:
