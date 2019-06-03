@@ -30,6 +30,20 @@ e.g., flatten( [ ['sg','tt'],'ll' ]   )
 gives ['sg', 'tt', 'l', 'l']
 """
 
+def get_touched_qwidth( qcenters ):
+    '''YG Dev@CHX April 2019, get touched qwidth by giving qcenters    
+    '''
+    qwX = np.zeros_like(qcenters)
+    qW= qcenters[1:] - qcenters[:-1]
+    qwX[0] = qW[0]
+    for i in range(1,len(qcenters)-1):
+        #print(i)
+        qwX[i] = min( qW[i-1], qW[i]  )
+    qwX[-1] = qW[-1]
+    qwX *=0.9999
+    return qwX
+
+
 
 def append_txtfile( filename, data, fmt='%s', *argv,**kwargs ):
     '''YG. Dev May 10, 2109 append data to a file
