@@ -1032,22 +1032,80 @@ def create_seg_ring( ring_edges, ang_edges, mask, setup_pargs  ):
 
 
 
-def find_bad_pixels_FD(  bad_frame_list, FD, img_shape = [514, 1030], threshold=20 ):
+def find_bad_pixels_FD(  bad_frame_list, FD, img_shape = [514, 1030], 
+                       threshold= 15, show_progress=True):
     '''Designed to find bad pixel list in 500K
        threshold: the max intensity in 5K 
     '''
     bad = np.zeros(  img_shape, dtype=bool )
-    
-    for i in tqdm(bad_frame_list[ bad_frame_list>FD.beg]):
-        p,v = FD.rdrawframe(i)
-        w =  np.where( v > threshold)[0]
-        bad.ravel()[ p[w] ] = 1
-        # x,y = np.where( imgsa[i] > threshold)
-        # bad[x[0],y[0]]  = 1       
+    if  show_progress:
+        for i in tqdm(bad_frame_list[ bad_frame_list>=FD.beg]):
+            p,v = FD.rdrawframe(i)
+            w =  np.where( v > threshold)[0]
+            bad.ravel()[ p[w] ] = 1
+            # x,y = np.where( imgsa[i] > threshold)
+            # bad[x[0],y[0]]  = 1  
+    else:
+        for i in bad_frame_list[ bad_frame_list>=FD.beg]:
+            p,v = FD.rdrawframe(i)
+            w =  np.where( v > threshold)[0]
+            bad.ravel()[ p[w] ] = 1        
+            
     return ~bad
 
 
-
+def get_q_iq_using_dynamic_mask( FD,  mask, setup_pargs, bin_number=1, threshold=15  ):
+    '''DEV by Yugang@CHX, June 6, 2019
+    Get circular average of a time series using a dynamics mask, which pixel values are defined as
+        zeors if above a threshold. 
+    Return an averaged q(pix)-Iq-q(A-1) of the whole time series using bin frames with bin_number
+    Input:
+        FD: the multifile handler for the time series
+        mask: a two-d bool type array
+        setup_pargs: dict, parameters of setup for calculate q-Iq
+                     should have keys as 
+                     'dpix',  'Ldet','lambda_', 'center'
+        bin_number: bin number of the frame
+        threshold: define the dynamics mask, which pixel values are defined as
+                    zeors if above this threshold
+    Output:
+       qp_saxs: q in pixel
+       iq_saxs: intenstity
+       q_saxs:  q in A-1
+    '''
+    beg = FD.beg
+    end = FD.end
+    shape = FD.rdframe(beg).shape
+    Nimg_ = FD.end-FD.beg    
+    #Nimg_ = 100
+    Nimg =   Nimg_//bin_number
+    time_edge = np.array(create_time_slice( N= Nimg_, 
+                                    slice_num= Nimg, slice_width= bin_number )) + beg     
+    for n in  tqdm( range(Nimg) ): 
+        t1,t2 = time_edge[n]
+        #print(t1,t2)
+        if bin_number==1:
+            avg_imgi = FD.rdframe(t1)
+        else:    
+            avg_imgi = get_avg_imgc( FD, beg=t1,end=t2, sampling = 1, 
+                               plot_ = False,show_progress= False)        
+        badpi = find_bad_pixels_FD( np.arange(t1,t2) , FD, 
+                                img_shape = avg_imgi.shape, threshold= threshold, show_progress=False )
+        img = avg_imgi* mask * badpi
+        qp_saxsi, iq_saxsi, q_saxsi = get_circular_average( img, 
+                                                         mask * badpi, save= False,
+                                                            pargs=setup_pargs  )
+        #print( img.max())
+        if t1==FD.beg:
+            qp_saxs, iq_saxs, q_saxs = np.zeros_like( qp_saxsi ), np.zeros_like( iq_saxsi ), np.zeros_like( q_saxsi )
+        qp_saxs += qp_saxsi
+        iq_saxs += iq_saxsi
+        q_saxs  += q_saxsi
+    qp_saxs /= Nimg
+    iq_saxs /= Nimg
+    q_saxs /= Nimg
+    
+    return qp_saxs, iq_saxs, q_saxs
 
 def get_waxs_beam_center(  gamma, origin = [432, 363],  Ldet = 1495, pixel_size = 75 * 1e-3 ):
     '''YG Feb 10, 2018
