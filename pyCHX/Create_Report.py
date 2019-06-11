@@ -822,7 +822,8 @@ class create_pdf_report( object ):
                      str2_left, str2_top, return_=True )         
         #print( imgf,self.data_dir )        
         #add g2 plot fit
-        #print(self.q_rate_file)
+        #print('here')
+        #print(self.q_rate_file, q_rate_file)        
         if os.path.isfile( self.q_rate_file ):
             top = top + 70 #
             if q_rate_file is None:
