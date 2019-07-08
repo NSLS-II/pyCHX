@@ -28,8 +28,10 @@ from modest_image import imshow
 #from pyCHX.chx_compress import *
 
 
-def get_time_edge_avg_img(FD, frame_edge,show_progress =True):
+def get_time_edge_avg_img(FD, frame_edge,show_progress =True, apply_threshold=False,
+                         threshold=15):
     '''YG Dev Nov 14, 2017@CHX
+    Update@2019/6/12 with option of apply a threshold for each frame
     Get averaged img by giving FD and frame edges
     Parameters
     ----------
@@ -40,17 +42,36 @@ def get_time_edge_avg_img(FD, frame_edge,show_progress =True):
         e.g., np.array([[   5,    6],
            [2502, 2503],
            [4999, 5000]])
+    apply_threshold: if True, will mask out all the pixels with intensity above the threshold       
+    threshold: 15 (for Eiger500K burst mode)       
     Return:
         array: (N of frame_edge,  averaged image) , i.e., d[0] gives the first averaged image
     '''
     
     Nt = len( frame_edge )  
     d = np.zeros(Nt, dtype=object)
+    if apply_threshold:
+        avg_imgi = FD.rdframe( FD.beg )
     for i in range(Nt):
-        t1,t2 = frame_edge[i]              
-        d[i] = get_avg_imgc( FD, beg=t1,end=t2, sampling = 1, plot_ = False,show_progress=show_progress )
-        
+        t1,t2 = frame_edge[i] 
+        if not apply_threshold:
+            d[i] = get_avg_imgc( FD, beg=t1,end=t2, sampling = 1, plot_ = False,show_progress=show_progress )
+        else:
+            dti = np.zeros( [t2-t1,avg_imgi.shape[0], avg_imgi.shape[1]] )
+            j = 0
+            for ti in range(t1,t2):
+                #print( j, ti )
+                badpi = find_bad_pixels_FD( np.arange(ti,ti+1), FD, 
+                            img_shape = avg_imgi.shape,
+                                    threshold= threshold, show_progress=False )
+                badpi = np.array(badpi , dtype=float)
+                badpi[badpi==0]=np.nan
+                dti[ j ] = FD.rdframe( ti )*badpi
+                j +=1
+                #print(dti.shape)                
+            d[i] =  np.nanmean(dti,axis=0) #average_array_withNan( dti, axis=0 )     
     return d
+
 
 
 def plot_imgs( imgs, image_name=None, *argv, **kwargs):
