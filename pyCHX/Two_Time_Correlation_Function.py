@@ -999,11 +999,11 @@ def get_four_time_from_two_time(  g12,g2=None, rois=None  ):
     else:
         norm=1.
     if rois is None:
-         g4f12 = np.array(  [ (np.std( g12.diagonal(i), axis=1))**2/norm for i in range(m) ] )
+         g4f12 = np.array(  [ (np.nanstd( g12.diagonal(i), axis=1))**2/norm for i in range(m) ] )
         
     else:
         x1,x2,y1,y2 = rois
-        g4f12 = np.array(  [ (np.std( g12[x1:x2,y1:y2, :].diagonal(i), axis=1))**2/norm for i in range(m) ] )
+        g4f12 = np.array(  [ (np.nanstd( g12[x1:x2,y1:y2, :].diagonal(i), axis=1))**2/norm for i in range(m) ] )
         
     return g4f12
 
