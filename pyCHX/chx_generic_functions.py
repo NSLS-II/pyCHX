@@ -2595,7 +2595,6 @@ def print_dict( dicts, keys=None):
         except:
             pass
         
-        
 def get_meta_data( uid, default_dec = 'eiger', *argv,**kwargs ):
     '''
     Jan 25, 2018 add default_dec opt
@@ -2620,7 +2619,12 @@ def get_meta_data( uid, default_dec = 'eiger', *argv,**kwargs ):
             start_time: the data acquisition starting time in a human readable manner
         And all the input metadata
     '''
-
+    
+    if 'verbose' in kwargs.keys():  # added: option to suppress output
+        verbose= kwargs['verbose']
+    else:
+        verbose=True
+    
     import time   
     header = db[uid]
     md ={}
@@ -2633,7 +2637,8 @@ def get_meta_data( uid, default_dec = 'eiger', *argv,**kwargs ):
 
     devices = sorted( list(header.devices()) )
     if len(devices) > 1:
-        print( "More than one device. This would have unintented consequences.Currently, only the device contains 'default_dec=%s'."%default_dec)
+        if verbose:  # added: mute output
+            print( "More than one device. This would have unintented consequences.Currently, only the device contains 'default_dec=%s'."%default_dec)
         #raise ValueError("More than one device. This would have unintented consequences.")
     dec = devices[0]    
     for dec_ in devices:        
@@ -2662,8 +2667,14 @@ def get_meta_data( uid, default_dec = 'eiger', *argv,**kwargs ):
    
     # print(header.start.time)
     md['start_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(header.start['time']))
-    md['stop_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime( header.stop['time'])) 
-    md['img_shape'] = header['descriptors'][0]['data_keys'][md['detector']]['shape'][:2][::-1]
+    md['stop_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime( header.stop['time']))
+    try:   # added: try to handle runs that don't contain image data
+        md['img_shape'] = header['descriptors'][0]['data_keys'][md['detector']]['shape'][:2][::-1]
+    except:
+        if verbose:
+            print("couldn't find image shape...skip!")
+        else:
+            pass
     md.update(kwargs)
 
     #for k, v in sorted(md.items()):
