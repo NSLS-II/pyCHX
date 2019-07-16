@@ -5,7 +5,7 @@
 ########################################################################
 
 """
-This module is for functions specific to time correlation
+This module is for functions specific to spatial correlation in order to tackle the motion of speckles
 """
 from __future__ import  absolute_import, division, print_function
 #from __future__ import absolute_import, division, print_function
@@ -23,7 +23,59 @@ except ImportError:
 
 from scipy.fftpack.helper import next_fast_len    
     
-    
+def get_cor_region( cor, cij, qid, fitw ):
+    '''YG developed@CHX July/2019, Get a rectangle region of the cor class by giving center and width'''
+    ceni = cor.centers[qid]
+    x1,x2,y1,y2 = max(0, ceni[0]-fitw), ceni[0]+fitw, max(0,ceni[1]-fitw), ceni[1]+fitw
+    return cij[qid][ x1:x2, y1:y2]
+
+def direct_corss_cor( im1, im2 ):
+    '''YG developed@CHX July/2019, directly calculate the cross correlation of two images
+    Input:
+        im1: the first image
+        im2: the second image
+    Return:
+        The cross correlation
+    '''
+    sx,sy=im1.shape
+    Nx,Ny=sx//2,sy//2
+    C = np.zeros( [ 2*Nx, 2*Ny ] )
+    for i in range( -Nx, Nx):
+        for j in range( -Ny, Ny):
+            if i ==0:
+                if j==0:
+                    d1 = im1[:,:]
+                    d2=  im2[:,:]
+                elif j<0:
+                    d1 = im1[:j,:]
+                    d2=  im2[-j:,:]
+                else:    ##j>0
+                    d1 = im1[j:,:]
+                    d2=  im2[:-j,:]                
+            elif i<0:
+                if j==0:
+                    d1 = im1[:,:i]
+                    d2=  im2[:,-i:]
+                elif j<0:
+                    d1 = im1[:j,:i]
+                    d2=  im2[-j:,-i:]
+                else:  ##j>0
+                    d1 = im1[j:,:i]
+                    d2=  im2[:-j,-i:]           
+            else: #i>0:
+                if j==0:
+                    d1 = im1[:,i:]
+                    d2=  im2[:,:-i]
+                elif j<0:
+                    d1 = im1[:j,i:]
+                    d2=  im2[-j:,:-i]
+                else:  ##j>0
+                    d1 = im1[j:,i:]
+                    d2=  im2[:-j,:-i] 
+            #print(i,j)        
+            C[i+Nx,j+Ny] = np.sum( d1*d2 ) / ( np.average(d1)*np.average(d2) * d1.size )
+    return  C.T
+
     
     
 class CrossCorrelator2:
@@ -114,7 +166,7 @@ class CrossCorrelator2:
         if len(self.ids) == 1:
             self.centers = self.centers[0,:]
 
-    def __call__(self, img1, img2=None, normalization=None ):
+    def __call__(self, img1, img2=None, normalization=None, check_res=False ):
         ''' Run the cross correlation on an image/curve or against two
                 images/curves
             Parameters
@@ -167,6 +219,7 @@ class CrossCorrelator2:
             mma1=np.fft.rfftn(submask, fshape) #for mask
                 #do correlation by ffts
             maskcor= np.fft.irfftn(mma1 * mma1.conj(), fshape)#[fslice])
+            #print(reg, maskcor)
             #maskcor = _centered(np.fft.fftshift(maskcor), self.sizes[reg,:]) #make smaller??
             maskcor = _centered(maskcor, self.sizes[reg,:]) #make smaller??
             # choose some small value to threshold
@@ -187,6 +240,18 @@ class CrossCorrelator2:
                 ccorr = np.fft.irfftn(im1 *im2.conj(),fshape)#[fslice])
                 #ccorr = _centered(np.fft.fftshift(ccorr), self.sizes[reg,:])
                 ccorr = _centered(ccorr, self.sizes[reg,:])
+                #print('here')
+            
+                ###check here 
+                if check_res:
+                    if reg==0:
+                        self.norm = maskcor
+                        self.ck= ccorr.copy()
+                    #    print(ccorr.max())
+                        self.tmp = tmpimg
+                        self.fs = fshape
+                     ###end the check
+            
             # now handle the normalizations
             if 'symavg' in normalization:
                 mim1=np.fft.rfftn(tmpimg*submask, fshape)
@@ -207,7 +272,9 @@ class CrossCorrelator2:
                 w = np.where(np.abs(Icorr*Icorr2) > 0) #DO WE NEED THIS (use i,j).
                 ccorr[w] *= maskcor[w]/Icorr[w]/Icorr2[w]
                 #print 'size:',tmpimg.shape,Icorr.shape
-
+                if check_res:
+                    if reg==0:
+                        self.ckn= ccorr.copy()
             if 'regular' in normalization:
                 # only run on overlapping regions for correlation
                 w = np.where(maskcor > .5)
@@ -216,6 +283,13 @@ class CrossCorrelator2:
                     ccorr[w] /= maskcor[w] * np.average(tmpimg[w])**2
                 else:
                     ccorr[w] /= maskcor[w] * np.average(tmpimg[w])*np.average(tmpimg2[w])
+                    if check_res:
+                        if reg==0:
+                            self.ckn= ccorr.copy()
+                    #    print('here')
+                    #    print( np.average(tmpimg[w]) )
+                    #    print(  maskcor[w] )
+                    #    print(  ccorr.max(), maskcor[w], np.average(tmpimg[w]), np.average(tmpimg2[w]) )
             ccorrs.append(ccorr)
 
         if len(ccorrs) == 1:
@@ -231,12 +305,7 @@ def _centered(img,sz):
     img=np.take(img,np.arange(-n[1],sz[1]-n[1]),1,mode="wrap")
     return img
     
-    
-    
-    
-    
-    
-    
+
     
     
 ##define a custmoized fftconvolve
@@ -428,7 +497,7 @@ def _cross_corr1(img1, img2=None):
     # need to reverse indices for second image
     # fftconvolve(A,B) = FFT^(-1)(FFT(A)*FFT(B))
     # but need FFT^(-1)(FFT(A(x))*conj(FFT(B(x)))) = FFT^(-1)(A(x)*B(-x))
-    reverse_index = [slice(None, None, -1) for i in range(ndim)]
+    reverse_index = tuple( [slice(None, None, -1) for i in range(ndim)] )
     imgc = fftconvolve(img1, img2[reverse_index], mode='same')
 
     return imgc
