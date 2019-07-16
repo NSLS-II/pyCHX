@@ -1,18 +1,15 @@
 import numpy as np
 from lmfit import Parameters, Model
 
+"""
+This module is for functions specific to fitting of spatial correlation
+"""
+
 
 def gauss_func(x, xc, amp, sigma, baseline ):
     return amp*np.exp(-(x-xc)**2/2./sigma**2) + baseline
 def gauss2D_func(x,y, xc, amp, sigmax, yc,sigmay, baseline ):
     return amp*np.exp(-(x-xc)**2/2./sigmax**2)*np.exp(-(y-yc)**2/2./sigmay**2) + baseline
-
-
-
-
-
-
-
 
 def extract_param(bestfits, key):
     Nframes = len(bestfits)
@@ -223,7 +220,8 @@ class Gauss2DFitter(LineShape2DFitter):
     def init_parameters(self, **kwargs):
         params = Parameters()
         params.add('baseline', value=0)
-        params.add('amp', value=.1,min=0,max=.5)
+        #params.add('amp', value=.1,min=0,max=.5)
+        params.add('amp', value=.1,)# max=2 )#,min=0,max=2)
 
         params.add('xc', value=10.,min=.0,max= 100.0)
         params.add('yc', value=10.,min=.0,max= 100.0)
@@ -246,11 +244,15 @@ class Gauss2DFitter(LineShape2DFitter):
         if y is None:
             y = np.arange(img.shape[0])
 
+        #x = np.arange(img.shape[1])
+        #y = np.arange(img.shape[0])
+        #print(img.shape)
         XY = np.array(np.meshgrid(x,y))
-            
+        self.XY = XY
+        self.x = x
+        self.y = y
         # doesn't make sense that the amplitude is negative here
         self.params['amp'].min = 0
-
         return super(Gauss2DFitter, self).__call__(XY, img,**kwargs)
 
     def fitfunc(self, XY, xc=None, yc=None, amp=1., baseline=0.,
@@ -314,7 +316,7 @@ class Gauss2DFitter(LineShape2DFitter):
         paramsdict['baseline'] = np.average(img)
         paramsdict['sigmax'] = 1 # make it one pixel in size
         paramsdict['sigmay'] = 1
-
+        #print(  paramsdict )
         for key in kwargs.keys():
             if key in paramsdict and key is not 'xy':
                 paramsdict[key] = kwargs[key]
