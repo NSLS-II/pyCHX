@@ -36,8 +36,8 @@ from pyCHX.chx_generic_functions import (get_detector, get_sid_filenames,
     average_array_withNan,refine_roi_mask, shrink_image, get_waxs_beam_center, 
     get_eigerImage_per_file,copy_data,delete_data, find_bad_pixels_FD, lin2log_g2,
     create_fullImg_with_box, find_good_xpcs_uids, shift_mask, save_oavs_tifs, plot_xy_x2,
-                                         plot_q_rate_general,plot_q_g2fitpara_general, get_SG_norm,get_touched_qwidth,
-                                         create_seg_ring,
+    plot_q_rate_general,plot_q_g2fitpara_general, get_SG_norm,get_touched_qwidth, create_seg_ring,  
+    get_qval_qwid_dict, get_roi_mask_qval_qwid_by_shift,                                      
                                             )
  
 
