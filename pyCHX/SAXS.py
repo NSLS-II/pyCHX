@@ -5,15 +5,15 @@ This module is for the static SAXS analysis, such as fit form factor
 """
 
 #import numpy as np
-#from lmfit import  Model
-#from lmfit import minimize, Parameters, Parameter, report_fit
+from lmfit import  Model
+from lmfit import minimize, Parameters, Parameter, report_fit, fit_report
 #import matplotlib as mpl
 #import matplotlib.pyplot as plt
 #from matplotlib.colors import LogNorm
 from pyCHX.chx_libs import *
 from pyCHX.chx_generic_functions import show_img, plot1D, find_index
 from scipy.special import gamma, gammaln
-from scipy.optimize import leastsq, curve_fit
+from scipy.optimize import leastsq, curve_fit, least_squares
 
 
 def mono_sphere_form_factor_intensity( x, radius, delta_rho=100,fit_func='G'):
@@ -58,7 +58,7 @@ def distribution_func( radius=1.0, sigma=0.1, num_points=20, spread=3, func='G')
     if 1 - spread* sigma<=0:
         spread= (1 - sigma)/sigma -1
     #print( num_points  )    
-    x, rs= np.linspace( radius - radius*spread* sigma, radius+radius*spread*sigma, num_points,retstep=True)
+    x, rs= np.linspace( radius - radius*spread* sigma, radius+radius*spread*sigma, int(num_points),retstep=True)
     #print(x)
     if func=='G':
         func=gaussion
@@ -67,8 +67,7 @@ def distribution_func( radius=1.0, sigma=0.1, num_points=20, spread=3, func='G')
         
     return x, rs, func( x, radius, radius*sigma)
    
-def poly_sphere_form_factor_intensity( x, radius, sigma=0.1, delta_rho=1.00, background=0, num_points=20, spread=5,
-                                      fit_func='G'):
+def poly_sphere_form_factor_intensity( x, radius, sigma=0.1, delta_rho=1.00, background=0, num_points=20, spread=5, fit_func='G'):
     '''
     Input:
         x/q: in A-1, array or a value
@@ -134,23 +133,70 @@ def find_index_old( x,x0,tolerance= None):
 
 def form_factor_residuals(p, iq, q, num_points=20, spread=5, fit_func='G', form_model ='poly_sphere'  ):
     """ Residuals for fit iq by spheical form factor using leastsq.
-         p: parameters for radius, sigma, delta_rho, background """
-    
-    radius, sigma, delta_rho, background = p   
+         p: parameters for radius, sigma, delta_rho, background
+         
+         """
 
+    radius, sigma, delta_rho, background = p  
     fiq = poly_sphere_form_factor_intensity( q, radius=radius, sigma=sigma, delta_rho=delta_rho,  background=background, 
-                                           num_points= num_points,spread=spread,fit_func=fit_func  )
+                                       num_points= num_points,spread=spread,fit_func=fit_func  )
     radius, sigma, delta_rho, background = abs(radius), abs(sigma), abs(delta_rho), abs(background)
-    err= np.log( iq/fiq  )  
-    #err= np.log( fiq/iq )  
+    err= np.log(  iq /fiq   )
+    return np.sqrt(np.abs( err ) )
+
+def form_factor_residuals_bg(p, iq, q, num_points=20, spread=5, fit_func='G', form_model ='poly_sphere'):#, qpower=-4.0,   ):
+    """ Residuals for fit iq by spheical form factor using leastsq.
+         p: parameters for radius, sigma, delta_rho, background         
+         """
+     
+    radius, sigma, delta_rho, background, q4_scale, qpower = p  
+    bk= q4_scale*q**(qpower) + background
+    fiq = poly_sphere_form_factor_intensity( q, radius=radius, sigma=sigma, delta_rho=delta_rho,  background=0, 
+                                       num_points= num_points,spread=spread,fit_func=fit_func  ) + bk
+    radius, sigma, delta_rho, background, q4_scale = abs(radius), abs(sigma), abs(delta_rho), abs(background), abs(q4_scale) 
+    err= np.log(  iq /fiq   ) #iq- (fiq + bk  )      
     return np.sqrt(np.abs( err ) )
 
 
+def form_factor_residuals_lmfit(p, iq, q, num_points=20, spread=5, fit_func='G', form_model ='poly_sphere'):
+    """ Residuals for fit iq by spheical form factor using leastsq.
+         p: parameters for radius, sigma, delta_rho, background         
+         """     
+    radius, sigma, delta_rho, background = (p['radius'],
+                                            p['sigma'],
+                                            p['delta_rho'], 
+                                            p['background'],
+                                           )
+    
+    fiq = poly_sphere_form_factor_intensity( q, radius=radius, sigma=sigma, delta_rho=delta_rho,  
+                                            background=background, 
+                                       num_points= num_points,spread=spread,fit_func=fit_func  ) 
+    err= np.log(  iq /fiq   )    
+    return err
 
+def form_factor_residuals_bg_lmfit(p, iq, q, num_points=20, spread=5, fit_func='G', form_model ='poly_sphere'):
+    """ Residuals for fit iq by spheical form factor using leastsq.
+         p: parameters for radius, sigma, delta_rho, background         
+         """     
+    radius, sigma, delta_rho, background, qpower_scale, qpower = (p['radius'], 
+                                                              p['sigma'],
+                                                              p['delta_rho'], 
+                                                              p['background'],
+                                                              p['qpower_scale'], 
+                                                              p['qpower']
+                                                             )
+    bk= qpower_scale*q**(qpower) + background
+    fiq = poly_sphere_form_factor_intensity( q, radius=radius, sigma=sigma, delta_rho=delta_rho,  background=0, 
+                                       num_points= num_points,spread=spread,fit_func=fit_func  ) + bk
+    err= np.log(  iq /fiq   )    
+    return err
 
-def get_form_factor_fit2( q, iq, guess_values, fit_range=None, fit_variables = None,function='poly_sphere',
-                        fit_func='G',num_points=20, spread=5, *argv,**kwargs): 
-    '''     
+def get_form_factor_fit_lmfit( q, iq, guess_values, guess_limit=None, fit_range=None, fit_variables = None, 
+                              function='poly_sphere', fit_func='G',  qpower_bg=False,
+                              num_points=20, spread=5,   *argv,**kwargs): 
+    '''  
+    YG Dev@CHX 2019/8/1
+    
     Fit form factor
     The support fitting functions include  
                 poly_sphere (poly_sphere_form_factor_intensity),
@@ -159,7 +205,7 @@ def get_form_factor_fit2( q, iq, guess_values, fit_range=None, fit_variables = N
     ---------- 
     q: q vector
     iq: form factor
-    
+    qpower_bg: if True, consider a q**(-power) background in the fitting
     guess_values:a dict, contains keys
         radius: the initial guess of spherecentral radius
         sigma: the initial guess of sqrt root of variance in percent 
@@ -176,7 +222,7 @@ def get_form_factor_fit2( q, iq, guess_values, fit_range=None, fit_variables = N
     an example:
         result = fit_form_factor( q, iq,  res_pargs=None,function='poly_sphere'
     '''
-       
+    #print(q4_bg)   
     if fit_range is not None:
         x1,x2= fit_range
         q1=find_index( q,x1,tolerance= None)
@@ -186,23 +232,123 @@ def get_form_factor_fit2( q, iq, guess_values, fit_range=None, fit_variables = N
         q2=len(q)
 
     q_=q[q1:q2]
-    iq_ = iq[q1:q2]        
+    iq_ = iq[q1:q2] 
+    pars = Parameters()
+    for var in  list( guess_values.keys()): 
+        pars.add( var, value= guess_values[ var ] )            
+    if not qpower_bg:
+        mod = form_factor_residuals_lmfit
+    else:
+        #print('here')
+        mod = form_factor_residuals_bg_lmfit
+           
+    if guess_limit is not None:
+        for var in  list( guess_limit.keys()):
+            m,M = guess_limit[var]
+            pars[var].min= m
+            pars[var].max= M   
+    if fit_variables is not None:
+        for var in  list( fit_variables.keys()):
+            pars[var].vary = fit_variables[var] 
+    #print( pars )        
+    result = minimize( mod, pars, args=(iq_, q_ ), kws={'num_points':num_points,
+                                                        'spread':spread, 
+                                                        'fit_func':fit_func})
+    fitp = {}
+    fitpe={}
+    rp = result.params
+    for var in list( rp.keys()):
+        fitp[var] = rp[var].value
+        fitpe[var] = rp[var].stderr    
+    if not qpower_bg:        
+        radius, sigma, delta_rho, background =  (fitp[ 'radius'], fitp['sigma'],
+                                                 fitp['delta_rho'],fitp['background'])
+        fitq = poly_sphere_form_factor_intensity( q_, radius=radius, sigma=sigma, delta_rho=delta_rho,  background=background,  num_points= num_points,spread=spread,fit_func=fit_func  )
+    else:
+        radius, sigma, delta_rho, background, qpower_scale, qpower =  (fitp[ 'radius'], fitp['sigma'],
+                                                 fitp['delta_rho'],fitp['background'],
+                                                 fitp[ 'qpower_scale'], fitp['qpower']    ) 
+        bk= qpower_scale*q_**( qpower ) + background
+        fitq = poly_sphere_form_factor_intensity( q_, radius=radius, sigma=sigma, delta_rho=delta_rho,  background=0,  num_points= num_points,spread=spread,fit_func=fit_func  ) + bk 
+        
+    #yf= result.model.eval(params=result.params, x=q_)
+    #print( result.best_values )
+    return fitp, fitpe,   q_, fitq, result         
+        
+    
 
-    radius, sigma, delta_rho, background =  (guess_values[ 'radius'], guess_values['sigma'],
+def get_form_factor_fit2( q, iq, guess_values, fit_range=None, fit_variables = None,function='poly_sphere',
+                        fit_func='G', q4_bg=False,  num_points=20, spread=5, bounds=None, *argv,**kwargs): 
+    '''     
+    Fit form factor
+    The support fitting functions include  
+                poly_sphere (poly_sphere_form_factor_intensity),
+                mono_sphere (mono_sphere_form_factor_intensity)
+    Parameters
+    ---------- 
+    q: q vector
+    iq: form factor
+    q4_bg: if True, consider a q**(-4) background in the fitting
+    guess_values:a dict, contains keys
+        radius: the initial guess of spherecentral radius
+        sigma: the initial guess of sqrt root of variance in percent 
+        
+    function: 
+        mono_sphere (mono_sphere_form_factor_intensity): fit by mono dispersed sphere model
+        poly_sphere (poly_sphere_form_factor_intensity): fit by poly dispersed sphere model
+                    
+    Returns
+    -------        
+    fit resutls:
+         radius
+         sigma
+    an example:
+        result = fit_form_factor( q, iq,  res_pargs=None,function='poly_sphere'
+    '''
+    #print(q4_bg)   
+    if fit_range is not None:
+        x1,x2= fit_range
+        q1=find_index( q,x1,tolerance= None)
+        q2=find_index( q,x2,tolerance= None)            
+    else:
+        q1=0
+        q2=len(q)
+
+    q_=q[q1:q2]
+    iq_ = iq[q1:q2]  
+    if not q4_bg:
+        fit_funcs = form_factor_residuals 
+        radius, sigma, delta_rho, background =  (guess_values[ 'radius'], guess_values['sigma'],
                                              guess_values['delta_rho'],guess_values['background'])
-    p = [radius, sigma, delta_rho, background]
-    fit_funcs = form_factor_residuals #(p, iq, q, num_points=num_points, spread=spread,
-                                      #fit_func=fit_func, form_model =function )    
-    pfit, pcov, infodict, errmsg, success = leastsq( fit_funcs, [ p ], args=( iq_, q_,  num_points, spread, fit_func, function ),
-                              full_output=1, ftol=1.49012e-38, xtol=1.49012e-10, factor=100) 
-
+        p = [radius, sigma, delta_rho, background]
+        pfit, pcov, infodict, errmsg, success = leastsq( fit_funcs, [ p ], args=( iq_, q_,  num_points, spread, fit_func, function), full_output=1, ftol=1.49012e-38, xtol=1.49012e-10, factor=100)         
+    else:
+        #print('here')
+        fit_funcs = form_factor_residuals_bg 
+        radius, sigma, delta_rho, background,q4_scale, qpower =  (guess_values[ 'radius'], guess_values['sigma'],
+                                             guess_values['delta_rho'],guess_values['background'],
+                                             guess_values['q4_scale'], guess_values['qpower']  )
+        p = [radius, sigma, delta_rho, background, q4_scale, qpower]  
+        if bounds is None:
+            bounds = (-np.inf, np.inf)
+        print(p )#, qpower)
+        pfit, pcov, infodict, errmsg, success = leastsq( fit_funcs, [ p ], 
+                               args=( iq_, q_,  num_points, spread, fit_func, function ), ftol=1.49012e-38, xtol=1.49012e-10,  )          
+ 
+    #print(q4_bg)    
     #resL = leastsq( fit_funcs, [ p ], args=( iq_, q_,  num_points, spread, fit_func, function ),
     #                          full_output=1, ftol=1.49012e-38, xtol=1.49012e-10, factor=100) 
     
     #radius, sigma, delta_rho, background = np.abs(pfit)
-    radius, sigma, delta_rho, background =  pfit 
-    fitq = poly_sphere_form_factor_intensity( q_, radius=radius, sigma=sigma, delta_rho=delta_rho,  background=background, 
+    if not q4_bg:
+        radius, sigma, delta_rho, background =  pfit 
+        fitq = poly_sphere_form_factor_intensity( q_, radius=radius, sigma=sigma, delta_rho=delta_rho,  background=background, 
                                            num_points= num_points,spread=spread,fit_func=fit_func  )
+    else:
+        radius, sigma, delta_rho, background, q4_scale, qpower =  pfit 
+        bk= q4_scale*q_**( qpower ) + background
+        fitq = poly_sphere_form_factor_intensity( q_, radius=radius, sigma=sigma, delta_rho=delta_rho,  background=0, 
+                                           num_points= num_points,spread=spread,fit_func=fit_func  ) + bk         
     
     if (len(iq_) > len(p)) and pcov is not None:
         s_sq = ( fit_funcs( pfit, iq_, q_, num_points, spread, fit_func, function)).sum()/(len(iq_)-len(p))
@@ -220,6 +366,8 @@ def get_form_factor_fit2( q, iq, guess_values, fit_range=None, fit_variables = N
     perr_leastsq = np.array(error)  
     
     return pfit_leastsq, perr_leastsq, q_, fitq#, resL
+
+ 
 
 
 def get_form_factor_fit( q, iq, guess_values, fit_range=None, fit_variables = None,function='poly_sphere',
@@ -302,6 +450,9 @@ def get_form_factor_fit( q, iq, guess_values, fit_range=None, fit_variables = No
     delta_rho= result.best_values['delta_rho'] 
     print( result.best_values )
     return result, q_
+
+
+
 
 def plot_form_factor_with_fit(q, iq, q_, result,  fit_power=0,  res_pargs=None, return_fig=False,
                          *argv,**kwargs):
