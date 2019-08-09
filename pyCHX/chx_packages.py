@@ -64,7 +64,8 @@ from pyCHX.chx_compress_analysis import (
     get_each_ring_mean_intensityc,  mean_intensityc,cal_waterfallc,plot_waterfallc, 
     cal_each_ring_mean_intensityc,  plot_each_ring_mean_intensityc, get_time_edge_avg_img,
 )
-from pyCHX.SAXS import fit_form_factor,show_saxs_qmap, fit_form_factor2
+from pyCHX.SAXS import (fit_form_factor,show_saxs_qmap, fit_form_factor2,form_factor_residuals_lmfit,
+                        form_factor_residuals_bg_lmfit,get_form_factor_fit_lmfit)
 from pyCHX.chx_correlationc import ( 
     cal_g2c,Get_Pixel_Arrayc,auto_two_Arrayc,get_pixelist_interp_iq,)
 from pyCHX.chx_correlationp import (
