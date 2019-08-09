@@ -192,9 +192,21 @@ class LineShape2DFitter:
                          param_names = self.params.keys())
         # assumes first var is dependent var
         res = self.mod.fit(img.ravel(), XY=(XY[0].ravel(),XY[1].ravel()), params=params,**kwargs)
+        ## old version, only return values
         #add reduced chisq to parameter list
-        res.best_values['chisq']=res.redchi
-        return res.best_values
+        #res.best_values['chisq']=res.redchi        
+        #return res.best_values
+        ## new version, also return the std
+        resf = {}
+        ks = list( res.params.keys() )
+        for var in ks:        
+            resf[var] = res.params[var].value
+            resf[var + '_std' ] = res.params[var].stderr
+        resf['chisq'] = res.redchi  
+        return resf
+        
+    
+    
         
         
     def fitfunc(self):
@@ -221,13 +233,13 @@ class Gauss2DFitter(LineShape2DFitter):
         params = Parameters()
         params.add('baseline', value=0)
         #params.add('amp', value=.1,min=0,max=.5)
-        params.add('amp', value=.1,)# max=2 )#,min=0,max=2)
+        params.add('amp', value=.1 )#02, max=.1 )#,min=0,max=2)
 
-        params.add('xc', value=10.,min=.0,max= 100.0)
-        params.add('yc', value=10.,min=.0,max= 100.0)
+        params.add('xc', value=10.,min=.0,max= 50.0)
+        params.add('yc', value=10.,min=.0,max= 50.0)
 
-        params.add('sigmax', value=1., min=1e-6, max=50.0)
-        params.add('sigmay', value=1., min=1e-6, max=50.0)
+        params.add('sigmax', value=0.5, min=1e-6, max=50.0)
+        params.add('sigmay', value=0.5, min=1e-6, max=50.0)
 
         for key in kwargs.keys():
             if key in params:
