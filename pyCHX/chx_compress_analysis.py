@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 from pyCHX.chx_compress import   (compress_eigerdata, read_compressed_eigerdata,init_compress_eigerdata, 
                                       Multifile,pass_FD,get_avg_imgc,mean_intensityc, get_each_frame_intensityc)
+from pyCHX.chx_generic_functions import find_bad_pixels_FD
 
 from modest_image import imshow                                      
 #from pyCHX.chx_compress import *
@@ -52,7 +53,7 @@ def get_time_edge_avg_img(FD, frame_edge,show_progress =True, apply_threshold=Fa
     d = np.zeros(Nt, dtype=object)
     if apply_threshold:
         avg_imgi = FD.rdframe( FD.beg )
-    for i in range(Nt):
+    for i in tqdm( range(Nt) ) :
         t1,t2 = frame_edge[i] 
         if not apply_threshold:
             d[i] = get_avg_imgc( FD, beg=t1,end=t2, sampling = 1, plot_ = False,show_progress=show_progress )
