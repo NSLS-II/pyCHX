@@ -49,7 +49,7 @@ def fit_one_peak_curve( x,y, fit_range ):
     peak = LorentzianModel()
     background = LinearModel()
     model = peak + background
-    x1,x2=xrange
+    x1,x2=fit_range
     xf=  x[x1:x2]
     yf = y[x1:x2]
     model.set_param_hint('slope', value=5   )
@@ -66,7 +66,9 @@ def fit_one_peak_curve( x,y, fit_range ):
     return cen, cen_std, wid, wid_std , xf, out
 
 
-def plot_xy_with_fit(  x, y, xf, out, xlim=[1e-3,0.01],xlabel= 'q ('r'$\AA^{-1}$)',
+def plot_xy_with_fit(  x, y, xf, out, 
+                     cen, cen_std,wid, wid_std,
+                     xlim=[1e-3,0.01],xlabel= 'q ('r'$\AA^{-1}$)',
                     ylabel='I(q)', filename=None):
     '''YG Dev@Aug 10, 2019 to plot x,y with fit, 
        currently this code is dedicated to plot q-Iq with fit and show the fittign parameter, peak pos, peak wid '''
@@ -1369,8 +1371,34 @@ def load_pilatus(filename):
     '''    
     return np.array(  PIL.Image.open(filename).convert('I') )
     
+def ls_dir(inDir, have_list=[], exclude_list=[] ):
+    '''Y.G. Aug 1, 2019
+    List all filenames in a filefolder  
+    inDir: fullpath of the inDir
+    have_string:   only retrun filename containing the string
+    exclude_string:   only retrun filename not containing the string    
     
-def ls_dir(inDir, string=None):
+    '''
+    from os import listdir
+    from os.path import isfile, join
+
+    tifs = np.array( [f for f in listdir(inDir) if isfile(join(inDir, f))] )
+    tifs_ = []
+    for tif in tifs:
+        flag=1
+        for string in have_list:                
+            if string not in tif:
+                flag *=0
+        for string in  exclude_list:
+            if string in tif:
+                flag *=0            
+        if flag:
+            tifs_.append( tif )
+            
+    return np.array( tifs_ )
+
+
+def ls_dir2(inDir, string=None):
     '''Y.G. Nov 1, 2017
     List all filenames in a filefolder (not include hidden files and subfolders)
     inDir: fullpath of the inDir
@@ -2710,7 +2738,8 @@ def get_meta_data( uid, default_dec = 'eiger', *argv,**kwargs ):
             dec = dec_
          
     #print(dec)
-    detector_names = sorted( header.start['detectors'] )
+    #detector_names = sorted( header.start['detectors'] )
+    detector_names = sorted( get_detectors(db[uid]) )
     #if len(detector_names) > 1:
     #    raise ValueError("More than one det. This would have unintented consequences.")       
     detector_name = detector_names[0]
@@ -2725,9 +2754,13 @@ def get_meta_data( uid, default_dec = 'eiger', *argv,**kwargs ):
     # for k,v in ev['descriptor']['configuration'][dec]['data'].items():
     #     md[ k[len(dec)+1:] ]= v
    
-    md.update(header.start['plan_args'].items())
+    try:
+        md.update(header.start['plan_args'].items())
+        md.pop('plan_args')
+    except:
+        pass
     md.update(header.start.items())
-    md.pop('plan_args')
+    
    
     # print(header.start.time)
     md['start_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(header.start['time']))
