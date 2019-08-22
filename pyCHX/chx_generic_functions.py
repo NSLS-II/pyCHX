@@ -4797,11 +4797,18 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
     model_data = []    
     for i in range(num_rings):  
         if fit_range is not None:
-            y=g2[1:, i][fit_range[0]:fit_range[1]]
-            lags=taus[1:][fit_range[0]:fit_range[1]] 
+            y_=g2[1:, i][fit_range[0]:fit_range[1]]
+            lags_=taus[1:][fit_range[0]:fit_range[1]] 
         else:
-            y=g2[1:, i]
-            lags=taus[1:]     
+            y_=g2[1:, i]
+            lags_=taus[1:]    
+        
+        mm = ~np.isnan(y_)        
+        y =  y_[mm]
+        lags = lags_[mm]        
+        #print( i,  mm.shape, y.shape, y_.shape, lags.shape, lags_.shape  )
+        #y=y_
+        #lags=lags_
         #print( _relaxation_rate )
         for k in list(pars.keys()):
             #print(k, _guess_val[k]  )
@@ -4852,11 +4859,12 @@ def get_g2_fit_general( g2, taus,  function='simple_exponential',
             for k in list(pars.keys()):
                 #print( pars )
                 if k in list(result1.best_values.keys()):
-                    pars[k].value = result1.best_values[k]  
-                
+                    pars[k].value = result1.best_values[k]
         fit_res.append( result1) 
-        model_data.append(  result1.best_fit )
-    return fit_res, lags, np.array( model_data ).T
+        #model_data.append(  result1.best_fit )
+        yf=result1.model.eval(params=result1.params, x= lags_ )
+        model_data.append( yf )
+    return fit_res, lags_, np.array( model_data ).T
 
 
 
