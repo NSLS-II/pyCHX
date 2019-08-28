@@ -1677,6 +1677,8 @@ def export_xpcs_results_to_h5( filename, export_dir, export_dict ):
        YG. May 10, 2017 
        save the results to a h5 file
        
+       YG. Aug28 2019 modify, add try in export pandas to h5 to fit the new version of pandas
+       
        filename:  the h5 file name
        export_dir: the exported file folder
        export_dict: dict, with keys as md, g2, g4 et.al.
@@ -1686,7 +1688,8 @@ def export_xpcs_results_to_h5( filename, export_dir, export_dict ):
     dicts = ['md', 'qval_dict', 'qval_dict_v', 'qval_dict_p']
     dict_nest=['taus_uids', 'g2_uids' ] 
      
-    with h5py.File(fout, 'w') as hf:        
+    with h5py.File(fout, 'w') as hf:   
+        flag=False
         for key in list(export_dict.keys()):   
             #print( key )
             if key in dicts: #=='md' or key == 'qval_dict':                
@@ -1705,11 +1708,19 @@ def export_xpcs_results_to_h5( filename, export_dir, export_dict ):
                     print("Can't export the key: %s in this dataset."%key)
             
             elif key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds', 'qr_1d_pds']:
-                export_dict[key].to_hdf( fout, key=key,  mode='a',   )                
+                try:
+                    export_dict[key].to_hdf( fout, key=key,  mode='a',   ) 
+                except:
+                    flag=True
             else:
                 data = hf.create_dataset(key, data = export_dict[key] )
                 #add this fill line at Octo 27, 2017
                 data.set_fill_value = np.nan
+    if  flag:
+        for key in list(export_dict.keys()):         
+            if key in ['g2_fit_paras','g2b_fit_paras', 'spec_km_pds', 'spec_pds', 'qr_1d_pds']:
+                export_dict[key].to_hdf( fout, key=key,  mode='a',   )  
+                
     print( 'The xpcs analysis results are exported to %s with filename as %s'%(export_dir , filename))
         
 
