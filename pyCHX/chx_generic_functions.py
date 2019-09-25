@@ -14,7 +14,7 @@ import PIL
 from shutil import copyfile
 import datetime, pytz
 from skbeam.core.utils import radial_grid, angle_grid, radius_to_twotheta, twotheta_to_q
-
+from os import listdir
 
 markers =  ['o', 'D', 'v',   '^', '<',  '>', 'p', 's', 'H',
                   'h',   '*', 'd',             
@@ -30,6 +30,40 @@ e.g., flatten( [ ['sg','tt'],'ll' ]   )
 gives ['sg', 'tt', 'l', 'l']
 """
 
+
+
+def get_roi_intensity( img, roi_mask):
+    qind, pixelist = roi.extract_label_indices(roi_mask)
+    noqs = len(np.unique(qind))
+    avgs = np.zeros(noqs)
+    for i in tqdm( range(1,1+noqs)):
+        avgs[i-1] = (  np.average( img[roi_mask==i] )   )  
+    return avgs    
+    
+    
+def generate_h5_list(inDir, filename):
+    '''YG DEV at 9/19/2019@CHX generate a lst file containing all h5 fiels in inDir
+    Input:
+        inDir: the input direction
+        filename: the filename for output (have to lst as extension)
+    Output:
+        Save the all h5 filenames in a lst file    
+    '''
+    fp_list = listdir( inDir )
+    if filename[-4:] !='.lst':
+        filename += '.lst'
+    for FP in fp_list:
+        FP_ = inDir+FP
+        if os.path.isdir(FP_):
+            fp = listdir( FP_ )
+            for fp_ in fp:
+                if '.h5' in fp_:                 
+                    append_txtfile( filename =  filename, 
+                    data =  np.array( [ FP_+'/'+fp_ ]))
+    print('The full path of all the .h5 in %s has been saved in %s.'%(inDir, filename))
+    print( 'You can use ./analysis/run_gui to visualize all the h5 file.')  
+    
+    
 def fit_one_peak_curve( x,y, fit_range ):
     '''YG Dev@Aug 10, 2019 fit a curve with a single Lorentzian shape
     Parameters:
