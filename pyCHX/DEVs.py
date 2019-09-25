@@ -5,6 +5,68 @@ from tqdm import tqdm
 from numpy.fft import fft, ifft
 import skbeam.core.roi as roi
 
+def fit_one_peak_curve( x,y, fit_range ):
+    '''YG Dev@Aug 10, 2019 fit a curve with a single Lorentzian shape
+    Parameters:
+        x: one-d array, x-axis data
+        y: one-d array, y-axis data
+        fit_range: [x1, x2], a list of index, to define the x-range for fit
+    Return:
+        center:  float, center of the peak
+        center_std: float, error bar of center in the fitting
+        fwhm:  float, full width at half max intensity of the peak, 2*sigma
+        fwhm_std:float, error bar of the full width at half max intensity of the peak
+        xf: the x in the fit
+        out: the fitting class resutled from lmfit
+    
+    '''
+    from lmfit.models import LinearModel, LorentzianModel
+    peak = LorentzianModel()
+    background = LinearModel()
+    model = peak + background
+    x1,x2=xrange
+    xf=  x[x1:x2]
+    yf = y[x1:x2]
+    model.set_param_hint('slope', value=5   )
+    model.set_param_hint('intercept', value=0   )
+    model.set_param_hint('center', value=0.005  )
+    model.set_param_hint('amplitude', value= 0.1  )
+    model.set_param_hint('sigma', value=0.003  )
+    #out=model.fit(yf, x=xf)#, method='nelder')
+    out=model.fit(yf, x=xf, method= 'leastsq' )        
+    cen = out.params['center'].value
+    cen_std = out.params['center'].stderr
+    wid = out.params['sigma'].value *2
+    wid_std = out.params['sigma'].stderr *2
+    return cen, cen_std, wid, wid_std , xf, out
+
+
+def plot_xy_with_fit(  x, y, xf, out, xlim=[1e-3,0.01],xlabel= 'q ('r'$\AA^{-1}$)',
+                    ylabel='I(q)', filename=None):
+    '''YG Dev@Aug 10, 2019 to plot x,y with fit, 
+       currently this code is dedicated to plot q-Iq with fit and show the fittign parameter, peak pos, peak wid '''
+    
+    yf2=out.model.eval(params=out.params, x=xf)
+    fig, ax = plt.subplots( )
+    plot1D(x=x,y=y,ax=ax,m='o', ls='',c='k', legend='data')
+    plot1D(x=xf,y=yf2,ax=ax,m='', ls='-',c='r', legend='fit',logy=True)
+    ax.set_xlim( xlim )    
+    #ax.set_ylim( 0.1, 4)
+    #ax.set_title(uid+'--t=%.2f'%tt)
+    ax.set_xlabel( xlabel )        
+    ax.set_ylabel(ylabel )
+    txts = r'peak' + r' = %.5f +/- %.5f '%( cen, cen_std ) 
+    ax.text(x =0.02, y=.2, s=txts, fontsize=14, transform=ax.transAxes)
+    txts = r'wid' + r' = %.4f +/- %.4f'%( wid, wid_std)  
+    #txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
+    ax.text(x =0.02, y=.1, s=txts, fontsize=14, transform=ax.transAxes)
+    plt.tight_layout()        
+    if filename is not None:
+        plt.savefig(  filename )
+    return ax
+        
+
+
 
 
 #############For APD detector
