@@ -37,7 +37,7 @@ from pyCHX.chx_generic_functions import (get_detector, get_sid_filenames,
     get_eigerImage_per_file,copy_data,delete_data, find_bad_pixels_FD, lin2log_g2,
     create_fullImg_with_box, find_good_xpcs_uids, shift_mask, save_oavs_tifs, plot_xy_x2,
     plot_q_rate_general,plot_q_g2fitpara_general, get_SG_norm,get_touched_qwidth, create_seg_ring,  
-    get_qval_qwid_dict, get_roi_mask_qval_qwid_by_shift,                                      
+    get_qval_qwid_dict, get_roi_mask_qval_qwid_by_shift,  fit_one_peak_curve,  plot_xy_with_fit,                                     
                                             )
  
 
@@ -65,7 +65,7 @@ from pyCHX.chx_compress_analysis import (
     cal_each_ring_mean_intensityc,  plot_each_ring_mean_intensityc, get_time_edge_avg_img,
 )
 from pyCHX.SAXS import (fit_form_factor,show_saxs_qmap, fit_form_factor2,form_factor_residuals_lmfit,
-                        form_factor_residuals_bg_lmfit,get_form_factor_fit_lmfit)
+                        form_factor_residuals_bg_lmfit,get_form_factor_fit_lmfit, poly_sphere_form_factor_intensity, )
 from pyCHX.chx_correlationc import ( 
     cal_g2c,Get_Pixel_Arrayc,auto_two_Arrayc,get_pixelist_interp_iq,)
 from pyCHX.chx_correlationp import (
