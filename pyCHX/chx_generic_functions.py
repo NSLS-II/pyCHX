@@ -1505,13 +1505,13 @@ def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False,q_thresh=0, p_thresh=0, silent
     qslist = np.unique( np.round(qslist, qprecision ) )
     phislist=list(OrderedDict.fromkeys(phis))
     qslist=list(np.sort(qslist))
-    print('Q_list: %s'%qslist)
+    #print('Q_list: %s'%qslist)
     phislist=list(np.sort(phislist))
     if q_nr:
         qinterest=qslist[q]
         #qindices = [i for i,x in enumerate(qs) if x == qinterest]
         qindices = [i for i,x in enumerate(qs) if np.abs(x-qinterest) < q_thresh]
-        print('q_indicies: ',qindices)
+        #print('q_indicies: ',qindices)
     else: 
         qinterest=q
         qindices = [i for i,x in enumerate(qs) if np.abs(x-qinterest) < q_thresh] # new
