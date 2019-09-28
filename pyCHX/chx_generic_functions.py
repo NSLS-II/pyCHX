@@ -1479,7 +1479,7 @@ def re_filename_dir( old_pattern, new_pattern, inDir,verbose=True  ):
             new_filename = fp.replace(old_pattern, new_pattern)
             re_filename( old_filename, new_filename, inDir,verbose= verbose   )    
     
-def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False,q_thresh=0, p_thresh=0, silent=True):
+def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False,q_thresh=0, p_thresh=0, silent=True, qprecision=5):
     """
     function to return roi number from qval_dict, corresponding  Q and phi, lists (sets) of all available Qs and phis
     [roi_nr,Q,phi,Q_list,phi_list]=get_roi_nr(..)
@@ -1492,6 +1492,7 @@ def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False,q_thresh=0, p_thresh=0, silent
     silent=True/False: Don't/Do print lists of available qs and phis, q and phi of interest
     by LW 10/21/2017
     update by LW 08/22/2018: introduced thresholds for comparison of Q and phi values (before: exact match required)
+    update 2019/09/28 add qprecision to get unique Q
     """
     qs=[]
     phis=[]
@@ -1499,13 +1500,18 @@ def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False,q_thresh=0, p_thresh=0, silent
         qs.append(qdict[i][0])
         phis.append(qdict[i][1])
     from collections import OrderedDict
+
     qslist=list(OrderedDict.fromkeys(qs))
+    qslist = np.unique( np.round(qslist, qprecision ) )
     phislist=list(OrderedDict.fromkeys(phis))
     qslist=list(np.sort(qslist))
+    print('Q_list: %s'%qslist)
     phislist=list(np.sort(phislist))
     if q_nr:
         qinterest=qslist[q]
-        qindices = [i for i,x in enumerate(qs) if x == qinterest]
+        #qindices = [i for i,x in enumerate(qs) if x == qinterest]
+        qindices = [i for i,x in enumerate(qs) if np.abs(x-qinterest) < q_thresh]
+        print('q_indicies: ',qindices)
     else: 
         qinterest=q
         qindices = [i for i,x in enumerate(qs) if np.abs(x-qinterest) < q_thresh] # new
@@ -1515,6 +1521,7 @@ def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False,q_thresh=0, p_thresh=0, silent
     else:
         phiinterest=phi
         phiindices = [i for i,x in enumerate(phis) if np.abs(x-phiinterest) < p_thresh] # new
+        #print('phi: %s phi_index: %s'%(phiinterest,phiindices))
     #qindices = [i for i,x in enumerate(qs) if x == qinterest]
     #phiindices = [i for i,x in enumerate(phis) if x == phiinterest]
     ret_list=[list(set(qindices).intersection(phiindices))[0],qinterest,phiinterest,qslist,phislist]
