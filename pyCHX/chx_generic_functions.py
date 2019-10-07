@@ -31,6 +31,11 @@ gives ['sg', 'tt', 'l', 'l']
 """
 
 
+def get_frames_from_dscan(  uid, detector = 'eiger4m_single_image' ):
+    '''Get frames from a dscan by giving uid and detector '''
+    hdr = db[uid]
+    return db.get_images(hdr, detector  )
+
 
 def get_roi_intensity( img, roi_mask):
     qind, pixelist = roi.extract_label_indices(roi_mask)
