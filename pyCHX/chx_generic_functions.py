@@ -71,7 +71,7 @@ def generate_h5_list(inDir, filename):
     print( 'You can use ./analysis/run_gui to visualize all the h5 file.')  
     
     
-def fit_one_peak_curve( x,y, fit_range ):
+def fit_one_peak_curve( x,y, fit_range=None ):
     '''YG Dev@Aug 10, 2019 fit a curve with a single Lorentzian shape
     Parameters:
         x: one-d array, x-axis data
@@ -90,9 +90,13 @@ def fit_one_peak_curve( x,y, fit_range ):
     peak = LorentzianModel()
     background = LinearModel()
     model = peak + background
-    x1,x2=fit_range
-    xf=  x[x1:x2]
-    yf = y[x1:x2]
+    if fit_range is not None:        
+        x1,x2=fit_range
+        xf=  x[x1:x2]
+        yf = y[x1:x2]
+    else:
+        xf =  x
+        yf  = y
     model.set_param_hint('slope', value=5   )
     model.set_param_hint('intercept', value=0   )
     model.set_param_hint('center', value=0.005  )
