@@ -15,6 +15,8 @@ from shutil import copyfile
 import datetime, pytz
 from skbeam.core.utils import radial_grid, angle_grid, radius_to_twotheta, twotheta_to_q
 from os import listdir
+import numpy as np
+
 
 markers =  ['o', 'D', 'v',   '^', '<',  '>', 'p', 's', 'H',
                   'h',   '*', 'd',             
@@ -1658,27 +1660,20 @@ def sgolay2d( z, window_size, order, derivative=None):
     Procedure for sg2D:
     https://en.wikipedia.org/wiki/Savitzky%E2%80%93Golay_filter#Two-dimensional_convolution_coefficients
     
-        Two-dimensional smoothing and differentiation can also be applied to tables of data values, such as intensity values in a photographic image which is composed of a rectangular grid of pixels.[16] [17] The trick is to transform part of the table into a row by a simple ordering of the indices of the pixels. Whereas the one-dimensional filter coefficients are found by fitting a polynomial in the subsidiary variable, z to a set of m data points, the two-dimensional coefficients are found by fitting a polynomial in subsidiary variables v and w to a set of m × m data points. The following example, for a bicubic polynomial and m = 5, illustrates the process, which parallels the process for the one dimensional case, above.[18]
+    Two-dimensional smoothing and differentiation can also be applied to tables of data values, such as intensity 
+    values in a photographic image which is composed of a rectangular grid of pixels.[16] [17] The trick is to transform 
+    part of the table into a row by a simple ordering of the indices of the pixels. Whereas the one-dimensional filter 
+    coefficients are found by fitting a polynomial in the subsidiary variable, z to a set of m data points, the 
+    two-dimensional coefficients are found by fitting a polynomial in subsidiary variables v and w to a set of m x m 
+    data points. The following example, for a bicubic polynomial and m = 5, illustrates the process, which parallels the 
+    process for the one dimensional case, above.[18]
 
-    enter image description here enter image description here
-
-    The square of 25 data values, d1 − d25
-
-    enter image description here
-
+    The square of 25 data values, d1 - d25
     becomes a vector when the rows are placed one after another.
-
-    enter image description here
-
-    The Jacobian has 10 columns, one for each of the parameters a00 − a03 and 25 rows, one for each pair of v and w values. Each row has the form
-
-    enter image description here
-
+    The Jacobian has 10 columns, one for each of the parameters a00 - a03 and 25 rows, one for each pair of v and w values.
     The convolution coefficients are calculated as
-
-    enter image description here
-
-    The first row of C contains 25 convolution coefficients which can be multiplied with the 25 data values to provide a smoothed value for the central data point (13) of the 25.
+    The first row of C contains 25 convolution coefficients which can be multiplied with the 25 data values to provide a
+    smoothed value for the central data point (13) of the 25.
 
     """
     # number of terms in the polynomial expression
@@ -4198,8 +4193,8 @@ def cal_particle_g2( radius, viscosity, qr,  taus, beta=0.2, T=298):
         qr, list, in A-1
         visocity: N*s/m^2  (water at 25K = 8.9*10^(-4) )        
         T: temperture, in K 
-            e.g., for a 250 nm sphere in glycerol/water (90:10) at RT (298K) gives:
-           1.38064852*10**(−23) *298  / ( 6*np.pi* 0.20871 * 250 *10**(-9)) * 10**20 /1e5 = 4.18*10^5 A2/s       
+        e.g., for a 250 nm sphere in glycerol/water (90:10) at RT (298K) gives:
+         1.38064852*10**(-123)*298 / ( 6*np.pi * 0.20871 * 250 *10**(-9)) * 10**20 /1e5 = 4.18*10**5 A2/s
         taus: time 
         beta: contrast
        
@@ -4246,9 +4241,9 @@ def get_viscosity( diffusion_coefficient , radius, T=298):
         diffusion_coefficient in unit of A^2/s        
         radius: m
         T: K
-        k: 1.38064852(79)×10−23 J/T, Boltzmann constant   
+        k: 1.38064852(79)*10**(−23) J/T, Boltzmann constant
         
-        return visocity: N*s/m^2  (water at 25K = 8.9*10^(-4) )       
+        return visosity: N*s/m^2  (water at 25K = 8.9*10**(-4) )
     '''
     
     k=  1.38064852*10**(-23)    
@@ -5575,4 +5570,17 @@ def save_g2_fit_para_tocsv( fit_res, filename, path):
     print( "The g2 fitting parameters are saved in %s"%filename1)
     return df
     
-            
+
+
+def R_2(ydata,fit_data):
+    ''' Calculates R squared for a particular fit - by L.W.
+    usage R_2(ydata,fit_data)
+    returns R2 
+    by L.W. Feb. 2019
+    '''
+    y_ave=np.average(ydata)
+    SS_tot=np.sum((np.array(ydata)-y_ave)**2)
+    #print('SS_tot: %s'%SS_tot)
+    SS_res=np.sum((np.array(ydata)-np.array(fit_data))**2)
+    #print('SS_res: %s'%SS_res)
+    return 1-SS_res/SS_tot
