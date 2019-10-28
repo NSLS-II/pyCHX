@@ -5353,8 +5353,10 @@ def plot_g2_general( g2_dict, taus_dict, qval_dict, g2_err_dict = None,
                 ax.set_ylim( kwargs['ylim'])
             elif 'vlim' in kwargs:
                 vmin, vmax =kwargs['vlim']
-                ax.set_ylim([ymin*vmin, ymax*vmax ]) 
-                
+                try:
+                    ax.set_ylim([ymin*vmin, ymax*vmax ]) 
+                except:
+                    pass
             else:
                 pass
             if 'xlim' in kwargs:
