@@ -5,6 +5,17 @@ from pyOlog.OlogDataTypes import Logbook
 def create_olog_entry(text, logbooks='Data Acquisition'):
     """
     Create a log entry to xf11id.
+
+    Parameters
+    ----------
+    text : str
+        the text string to add to the logbook
+    logbooks : str, optional
+        the name of the logbook to update
+
+    Returns
+    -------
+    eid : the entry id returned from the Olog server
     """
     olog_client = SimpleOlogClient()
     eid = olog_client.log(text, logbooks=logbooks)
