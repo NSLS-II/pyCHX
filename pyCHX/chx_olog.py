@@ -11,8 +11,7 @@ def create_olog_entry(text, logbooks='Data Acquisition'):
     return eid
 
 
-def update_olog_uid_with_file(uid, text, filename, append_name='',
-                              try_time=10):
+def update_olog_uid_with_file(uid, text, filename, append_name=''):
     """
     Attach text and file (with filename) to CHX olog with entry defined by uid.
 
