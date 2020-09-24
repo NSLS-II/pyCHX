@@ -6,15 +6,15 @@ This module is for the necessary packages for the XPCS analysis
 from IPython.core.magics.display import Javascript
 from skbeam.core.utils import multi_tau_lags
 from skimage.draw import line_aa, line, polygon, ellipse, circle
-from modest_image import imshow
+#from modest_image import imshow #common
 # edit handlers here to switch to PIMS or dask
 # this does the databroker import
 #from chxtools.handlers import EigerHandler
-from eiger_io.fs_handler import EigerHandler 
-from databroker.assets.path_only_handlers import RawHandler
+#from eiger_io.fs_handler import EigerHandler #common 
+#from databroker.assets.path_only_handlers import RawHandler #common
 ## Import all the required packages for  Data Analysis
-from databroker import Broker
-db = Broker.named('chx')
+#from databroker import Broker #common
+#db = Broker.named('chx') #common
 #* scikit-beam - data analysis tools for X-ray science
 #    - https://github.com/scikit-beam/scikit-beam
 #* xray-vision - plotting helper functions for X-ray science
