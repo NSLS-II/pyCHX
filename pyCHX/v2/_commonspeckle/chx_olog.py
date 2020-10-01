@@ -2,7 +2,7 @@ from pyOlog import LogEntry, Attachment, OlogClient, SimpleOlogClient
 from pyOlog.OlogDataTypes import Logbook
 
 
-def create_olog_entry(text, logbooks='Data Acquisition'):
+def create_olog_entry(text, logbooks="Data Acquisition"):
     """
     Create a log entry to xf11id.
 
@@ -22,7 +22,7 @@ def create_olog_entry(text, logbooks='Data Acquisition'):
     return eid
 
 
-def update_olog_uid_with_file(uid, text, filename, append_name=''):
+def update_olog_uid_with_file(uid, text, filename, append_name=""):
     """
     Attach text and file (with filename) to CHX olog with entry defined by uid.
 
@@ -39,15 +39,16 @@ def update_olog_uid_with_file(uid, text, filename, append_name=''):
         in attached file, copy the file with different filename (append
         append_name), and then attach to olog
     """
-    atch = [Attachment(open(filename, 'rb'))]
+    atch = [Attachment(open(filename, "rb"))]
 
     try:
         update_olog_uid(uid=uid, text=text, attachments=atch)
     except Exception:
         from shutil import copyfile
-        npname = f'{filename[:-4]}_{append_name}.pdf'
+
+        npname = f"{filename[:-4]}_{append_name}.pdf"
         copyfile(filename, npname)
-        atch = [Attachment(open(npname, 'rb'))]
+        atch = [Attachment(open(npname, "rb"))]
         print(f"Append {append_name} to the filename.")
         update_olog_uid(uid=uid, text=text, attachments=atch)
 
@@ -67,12 +68,11 @@ def update_olog_logid_with_file(logid, text, filename=None, verbose=False):
         file name
     """
     if filename is not None:
-        atch = [Attachment(open(filename, 'rb'))]
+        atch = [Attachment(open(filename, "rb"))]
     else:
         atch = None
     try:
-        update_olog_id(logid=logid, text=text, attachments=atch,
-                       verbose=verbose)
+        update_olog_id(logid=logid, text=text, attachments=atch, verbose=verbose)
     except Exception:
         pass
 
@@ -102,14 +102,18 @@ def update_olog_id(logid, text, attachments, verbose=True):
     client = OlogClient()
     url = client._url
 
-    old_text = olog_client.find(id=logid)[0]['text']
-    upd = LogEntry(text=f'{old_text}\n{text}', attachments=attachments,
-                   logbooks=[Logbook(name='Operations', owner=None,
-                                     active=True)])
+    old_text = olog_client.find(id=logid)[0]["text"]
+    upd = LogEntry(
+        text=f"{old_text}\n{text}",
+        attachments=attachments,
+        logbooks=[Logbook(name="Operations", owner=None, active=True)],
+    )
     client.updateLog(logid, upd)
     if verbose:
-        print(f'The url={url} was successfully updated with {text} and with '
-              f'the attachments')
+        print(
+            f"The url={url} was successfully updated with {text} and with "
+            f"the attachments"
+        )
 
 
 def update_olog_uid(uid, text, attachments):
@@ -135,5 +139,5 @@ def update_olog_uid(uid, text, attachments):
     """
     olog_client = SimpleOlogClient()
 
-    logid = olog_client.find(search=f'*{uid}*')[0]['id']
+    logid = olog_client.find(search=f"*{uid}*")[0]["id"]
     update_olog_id(logid, text, attachments)
