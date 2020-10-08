@@ -1,5 +1,9 @@
-from pyCHX.chx_packages import *
-from pyCHX.chx_libs import markers, colors
+from pyCHX.v2._commonspeckle.chx_packages import * #common
+from pyCHX.v2._commonspeckle.chx_libs import markers, colors #common #TODO all other instances import with ()
+#from pyCHX.chx_generic_functions import get_short_long_labels_from_qval_dict
+#RUN_GUI = False
+#from pyCHX.chx_libs import markers
+import pandas as pds
 
 # from pyCHX.chx_generic_functions import get_short_long_labels_from_qval_dict
 # RUN_GUI = False

@@ -16,40 +16,27 @@ from tqdm import tqdm
 import itertools
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-from pyCHX.chx_libs import (
-    colors as colors_array,
-    markers as markers_array,
-    markers_copy,
-    lstyles,
-    Figure,
-    RUN_GUI,
-)  # common
+from pyCHX.v2._commonspeckle.chx_libs import  ( colors as colors_array,  markers as markers_array, markers_copy, lstyles, Figure, RUN_GUI) #common
+#from pyCHX.chx_libs import  colors_ as mcolors,  markers_ as markers
+from pyCHX.v2._commonspeckle.chx_libs import    mcolors,    markers, multi_tau_lags, colors #common
+#from modest_image import ModestImage, imshow #common
 
-# from pyCHX.chx_libs import  colors_ as mcolors,  markers_ as markers
-from pyCHX.chx_libs import mcolors, markers, multi_tau_lags, colors  # common
-
-# from modest_image import ModestImage, imshow #common
-
-
-def delays(num_lev=3, num_buf=4, time=1):
-    """DOCUMENT delays(time=)
-    return array of delays.
-    KEYWORD:  time: scale delays by time ( should be time between frames)
-    """
-    if num_buf % 2 != 0:
-        print("nobuf must be even!!!")
-    dly = np.zeros((num_lev + 1) * int(num_buf / 2) + 1)
-    dict_dly = {}
-    for i in range(1, num_lev + 1):
-        if i == 1:
-            imin = 1
-        else:
-            imin = int(num_buf / 2) + 1
-        ptr = (i - 1) * int(num_buf / 2) + np.arange(imin, num_buf + 1)
-        dly[ptr] = np.arange(imin, num_buf + 1) * 2 ** (i - 1)
-        dict_dly[i] = dly[ptr - 1]
-        dly *= time
-        # print (i, ptr, imin)
+def delays( num_lev=3, num_buf=4, time=1 ): 
+    ''' DOCUMENT delays(time=)
+        return array of delays.
+        KEYWORD:  time: scale delays by time ( should be time between frames)
+     '''
+    if num_buf%2!=0:print ("nobuf must be even!!!"    )
+    dly=np.zeros( (num_lev+1)*int(num_buf/2) +1  )        
+    dict_dly ={}
+    for i in range( 1,num_lev+1):
+        if i==1:imin= 1
+        else:imin= int(num_buf/2)+1
+        ptr=(i-1)*int(num_buf/2)+ np.arange(imin,num_buf+1)
+        dly[ptr]= np.arange( imin, num_buf+1) *2**(i-1)            
+        dict_dly[i] = dly[ptr-1]            
+        dly*=time
+        #print (i, ptr, imin)
     return dly, dict_dly
 
 

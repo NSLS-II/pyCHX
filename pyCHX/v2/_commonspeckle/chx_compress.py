@@ -2,18 +2,10 @@ import os, shutil
 from glob import iglob
 
 import matplotlib.pyplot as plt
-from pyCHX.chx_libs import np, roi, time, datetime, os, getpass, db, LogNorm, RUN_GUI
-from pyCHX.chx_generic_functions import (
-    create_time_slice,
-    get_detector,
-    get_sid_filenames,
-    load_data,
-    reverse_updown,
-    rot90_clockwise,
-    get_eigerImage_per_file,
-    copy_data,
-    delete_data,
-)
+from pyCHX.v2_commonspeckle.chx_libs import (np, roi, time, datetime, os,  getpass, db, 
+                                      LogNorm, RUN_GUI) #common
+from pyCHX.v2_commonspeckle.chx_generic_functions import (create_time_slice,get_detector, get_sid_filenames,  
+     load_data,reverse_updown,rot90_clockwise, get_eigerImage_per_file,copy_data,delete_data, ) #common
 
 
 import struct

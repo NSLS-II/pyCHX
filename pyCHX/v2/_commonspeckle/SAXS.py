@@ -7,12 +7,11 @@ This module is for the static SAXS analysis, such as fit form factor
 # import numpy as np
 from lmfit import Model
 from lmfit import minimize, Parameters, Parameter, report_fit, fit_report
-
-# import matplotlib as mpl
-# import matplotlib.pyplot as plt
-# from matplotlib.colors import LogNorm
-from pyCHX.chx_libs import *
-from pyCHX.chx_generic_functions import show_img, plot1D, find_index
+#import matplotlib as mpl
+#import matplotlib.pyplot as plt
+#from matplotlib.colors import LogNorm
+from pyCHX.v2._commonspeckle.chx_libs import * #common
+from pyCHX.v2._commonspeckle.chx_generic_functions import show_img, plot1D, find_index #common
 from scipy.special import gamma, gammaln
 from scipy.optimize import leastsq, curve_fit, least_squares
 

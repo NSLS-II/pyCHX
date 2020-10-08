@@ -2,8 +2,8 @@ import sys, os, re, PIL
 import numpy as np
 from scipy.signal import savgol_filter as sf
 import matplotlib.pyplot as plt
-from pyCHX.chx_generic_functions import show_img, plot1D
-from pyCHX.DataGonio import convert_Qmap
+from pyCHX.v2._commonspeckle.chx_generic_functions import show_img, plot1D #common
+from pyCHX.v2._commonspeckle.DataGonio import convert_Qmap #common #TODO how much overlap with skbeam.core.recip
 
 
 def get_base_all_filenames(inDir, base_filename_cut_length=-7):
@@ -253,12 +253,12 @@ def stitch_WAXS_in_Qspace(
     return Intensity_map, qxs, qzs
 
 
-def plot_qmap_in_folder(inDir):
-    """YG. Sep 27@SMI
+def plot_qmap_in_folder( inDir ): #TODO is this made for SMI as per docstring?
+    '''YG. Sep 27@SMI
     Plot Qmap data from inDir, which contains qmap data and extent data
-    """
-    from pyCHX.chx_generic_functions import show_img
-    from pyCHX.chx_libs import cmap_vge_hdr, plt
+    '''
+    from pyCHX.v2._commonspeckle.chx_generic_functions import show_img #common #TODO why importing in a function?
+    from pyCHX.v2._commonspeckle.chx_libs import cmap_vge_hdr, plt #common #TODO why importing in a function?
     import pickle as cpl
 
     fp = get_base_all_filenames(inDir, base_filename_cut_length=-10)

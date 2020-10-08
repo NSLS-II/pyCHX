@@ -6,21 +6,11 @@ This module is for parallel computation of time correlation
 from __future__ import absolute_import, division, print_function
 from skbeam.core.utils import multi_tau_lags
 from skbeam.core.roi import extract_label_indices
-from pyCHX.chx_libs import tqdm
-from pyCHX.chx_correlationc import (
-    get_pixelist_interp_iq,
-    _validate_and_transform_inputs,
-    _one_time_process as _one_time_processp,
-    _one_time_process_error as _one_time_process_errorp,
-    _two_time_process as _two_time_processp,
-)
-from pyCHX.chx_compress import (
-    run_dill_encoded,
-    apply_async,
-    map_async,
-    pass_FD,
-    go_through_FD,
-)
+from pyCHX.v2._commonspeckle.chx_libs import tqdm #common #TODO why import from chx module?
+from pyCHX.v2._commonspeckle.chx_correlationc import (  get_pixelist_interp_iq, _validate_and_transform_inputs,
+                 _one_time_process as _one_time_processp,   _one_time_process_error as _one_time_process_errorp,
+                _two_time_process  as _two_time_processp ) #common
+from pyCHX.v2._commonspeckle.chx_compress import ( run_dill_encoded,apply_async, map_async,pass_FD, go_through_FD  ) #common 
 from multiprocessing import Pool
 import dill
 from collections import namedtuple
@@ -1080,17 +1070,18 @@ def auto_two_Arrayp(data_pixel, rois, index=None):
     # print('here')
 
     for i in inputs:
-        qi = qlist[i]
-        g12b[:, :, qi - 1] = res[i]
-    print("G12 calculation DONE!")
-    return g12b  # g12b
+        qi=qlist[i]
+        g12b[:,:,qi -1 ] = res[i]        
+    print( 'G12 calculation DONE!')        
+    return g12b #g12b
 
 
-def _get_two_time_for_one_q(qi, data_pixel_qi, nopr, noframes):
-
-    # print( data_pixel_qi.shape)
-
-    sum1 = (np.average(data_pixel_qi, axis=1)).reshape(1, noframes)
-    sum2 = sum1.T
-    two_time_qi = np.dot(data_pixel_qi, data_pixel_qi.T) / sum1 / sum2 / nopr[qi - 1]
-    return two_time_qi
+def _get_two_time_for_one_q( qi, data_pixel_qi, nopr, noframes   ):
+    
+    #print( data_pixel_qi.shape)
+    
+    sum1 = (np.average( data_pixel_qi, axis=1)).reshape( 1, noframes   )  
+    sum2 = sum1.T 
+    two_time_qi = np.dot(   data_pixel_qi, data_pixel_qi.T)  /sum1  / sum2  / nopr[qi -1]
+    return  two_time_qi
+    
