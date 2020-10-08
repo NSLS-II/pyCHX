@@ -16,9 +16,9 @@ from tqdm import tqdm
 import itertools
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-from pyCHX.chx_libs import  ( colors as colors_array,  markers as markers_array, markers_copy, lstyles, Figure, RUN_GUI)
+from pyCHX.v2._commonspeckle.chx_libs import  ( colors as colors_array,  markers as markers_array, markers_copy, lstyles, Figure, RUN_GUI) #common
 #from pyCHX.chx_libs import  colors_ as mcolors,  markers_ as markers
-from pyCHX.chx_libs import    mcolors,    markers, multi_tau_lags, colors
+from pyCHX.v2._commonspeckle.chx_libs import    mcolors,    markers, multi_tau_lags, colors #common
 #from modest_image import ModestImage, imshow #common
 
 def delays( num_lev=3, num_buf=4, time=1 ): 

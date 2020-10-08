@@ -16,8 +16,8 @@ import struct
 import numpy as np    
 from tqdm import tqdm    
 import pandas as pds
-from pyCHX.chx_libs import multi_tau_lags
-from pyCHX.chx_compress import Multifile,  go_through_FD, pass_FD
+from pyCHX.v2._commonspeckle.chx_libs import multi_tau_lags #common #TODO if keep, import from skbeam
+from pyCHX.v2._commonspeckle.chx_compress import Multifile,  go_through_FD, pass_FD #common
 
 
 

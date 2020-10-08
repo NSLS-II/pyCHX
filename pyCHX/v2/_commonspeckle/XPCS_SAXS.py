@@ -4,20 +4,20 @@ yuzhang@bnl.gov
 This module is for the SAXS XPCS analysis 
 """
 
-from pyCHX.chx_libs import  ( colors, colors_copy, markers, markers_copy,
-                                 colors_,  markers_, )
+from pyCHX.v2._commonspeckle.chx_libs import  ( colors, colors_copy, markers, markers_copy,
+                                                colors_,  markers_, ) #common
 
-from pyCHX.chx_libs import  ( Figure, RUN_GUI )
+from pyCHX.v2._commonspeckle.chx_libs import  ( Figure, RUN_GUI ) #common
 
-from pyCHX.chx_generic_functions import *
+from pyCHX.v2._commonspeckle.chx_generic_functions import * #common
 from scipy.special import erf
 
-from pyCHX.chx_compress_analysis import ( compress_eigerdata, read_compressed_eigerdata,
+from pyCHX.v2._commonspeckle.chx_compress_analysis import ( compress_eigerdata, read_compressed_eigerdata,
                                              init_compress_eigerdata,
-                                             Multifile,get_each_ring_mean_intensityc,get_avg_imgc, mean_intensityc )
+                                             Multifile,get_each_ring_mean_intensityc,get_avg_imgc, mean_intensityc ) #common
 
-from pyCHX.chx_correlationc import ( cal_g2c,Get_Pixel_Arrayc,auto_two_Arrayc,get_pixelist_interp_iq,)
-from pyCHX.chx_correlationp import ( cal_g2p)
+from pyCHX.v2._commonspeckle.chx_correlationc import ( cal_g2c,Get_Pixel_Arrayc,auto_two_Arrayc,get_pixelist_interp_iq,) #common
+from pyCHX.v2._commonspeckle.chx_correlationp import ( cal_g2p) #common
 
 
 from pandas import DataFrame 

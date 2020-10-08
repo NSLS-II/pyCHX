@@ -8,11 +8,11 @@ The chx_correlationp2 is for dedug g2
 from __future__ import absolute_import, division, print_function
 from skbeam.core.utils import multi_tau_lags
 from skbeam.core.roi import extract_label_indices
-from pyCHX.chx_libs import tqdm
-from pyCHX.chx_correlationc import (  get_pixelist_interp_iq, _validate_and_transform_inputs,
+from pyCHX.v2._commonspeckle.chx_libs import tqdm #common #TODO why not from chx module??
+from pyCHX.v2._commonspeckle.chx_correlationc import (  get_pixelist_interp_iq, _validate_and_transform_inputs,
                  _one_time_process as _one_time_processp,   _one_time_process_error as _one_time_process_errorp,
-                _two_time_process  as _two_time_processp )
-from pyCHX.chx_compress import ( run_dill_encoded,apply_async, map_async,pass_FD, go_through_FD  ) 
+                _two_time_process  as _two_time_processp ) #common
+from pyCHX.v2._commonspeckle.chx_compress import ( run_dill_encoded,apply_async, map_async,pass_FD, go_through_FD  ) #common 
 from multiprocessing import Pool
 import dill
 from collections import namedtuple
