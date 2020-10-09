@@ -26,7 +26,7 @@ from pyCHX.v2_commonspeckle.chx_compress import   (compress_eigerdata, read_comp
                                       Multifile,pass_FD,get_avg_imgc,mean_intensityc, get_each_frame_intensityc) #common
 from pyCHX.v2_commonspeckle.chx_generic_functions import find_bad_pixels_FD #common
 
-#ifrom modest_image import imshow #common                                      
+#from modest_image import imshow #common                                      
 #from pyCHX.chx_compress import *
 
 
