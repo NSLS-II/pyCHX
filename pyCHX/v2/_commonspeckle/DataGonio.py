@@ -16,7 +16,7 @@ from skbeam.core.accumulators.binned_statistic import (
 import skbeam.core.roi as roi
 import skbeam.core.correlation as corr
 import skbeam.core.utils as utils
-from pyCHX.chx_generic_functions import average_array_withNan
+from pyCHX.v2._commonspekcle.chx_generic_functions import average_array_withNan #common
 
 
 def convert_Qmap(
@@ -837,19 +837,21 @@ class CalibrationGonio(Calibration):
             x = np.arange(self.width) - self.x0
             y = np.arange(self.height) - self.y0
             X, Y = np.meshgrid(x, y)
-            R = np.sqrt(X ** 2 + Y ** 2)
+            R = np.sqrt(X**2 + Y**2)
 
-            # twotheta = np.arctan(self.r_map()*c) # radians
-            theta_f = np.arctan2(X * c, 1)  # radians
-            # alpha_f_prime = np.arctan2( Y*c, 1 ) # radians
-            alpha_f = np.arctan2(Y * c * np.cos(theta_f), 1)  # radians
+            #twotheta = np.arctan(self.r_map()*c) # radians
+            theta_f = np.arctan2( X*c, 1 ) # radians
+            #alpha_f_prime = np.arctan2( Y*c, 1 ) # radians
+            alpha_f = np.arctan2( Y*c*np.cos(theta_f), 1 ) # radians
 
-            self.qx_map_data1 = self.get_k() * np.sin(theta_f) * np.cos(alpha_f)
-            self.qy_map_data1 = self.get_k() * (
-                np.cos(theta_f) * np.cos(alpha_f) - 1
-            )  # TODO: Check sign
-            self.qz_map_data1 = -1.0 * self.get_k() * np.sin(alpha_f)
 
-            self.qr_map_data1 = np.sign(self.qx_map_data1) * np.sqrt(
-                np.square(self.qx_map_data1) + np.square(self.qy_map_data1)
-            )
+            self.qx_map_data1 = self.get_k()*np.sin(theta_f)*np.cos(alpha_f)
+            self.qy_map_data1 = self.get_k()*( np.cos(theta_f)*np.cos(alpha_f) - 1 ) # TODO: Check sign
+            self.qz_map_data1 = -1.0*self.get_k()*np.sin(alpha_f)
+
+            self.qr_map_data1 = np.sign(self.qx_map_data1)*np.sqrt(np.square(self.qx_map_data1) + np.square(self.qy_map_data1))
+
+        
+
+        
+    
