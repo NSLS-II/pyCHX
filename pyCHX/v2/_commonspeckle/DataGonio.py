@@ -12,7 +12,7 @@ from skbeam.core.accumulators.binned_statistic import BinnedStatistic2D,BinnedSt
 import skbeam.core.roi as roi
 import skbeam.core.correlation as corr
 import skbeam.core.utils as utils
-from pyCHX.v2._commonspekcle.chx_generic_functions import average_array_withNan #common
+from pyCHX.v2._commonspeckle.chx_generic_functions import average_array_withNan #common
 
 
 
