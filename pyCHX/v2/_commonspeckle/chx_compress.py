@@ -22,7 +22,7 @@ import pickle as pkl
 # imports handler from CHX
 # this is where the decision is made whether or not to use dask
 #from chxtools.handlers import EigerImages, EigerHandler
-from eiger_io.fs_handler import EigerHandler,EigerImages 
+#from eiger_io.fs_handler import EigerHandler,EigerImages #common 
 
 def run_dill_encoded(what):    
     fun, args = dill.loads(what)
