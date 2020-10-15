@@ -5,13 +5,13 @@ import struct
 
 import matplotlib.pyplot as plt
 
-from pyCHX.v2_commonspeckle.chx_libs import (np, roi, time, datetime, os,  getpass, db, LogNorm,Figure, RUN_GUI) #common
+from pyCHX.v2._commonspeckle.chx_libs import (np, roi, time, datetime, os,  getpass,  LogNorm,Figure, RUN_GUI) #common db rm
 #from pyCHX.chx_generic_functions import (get_circular_average)
 #from pyCHX.XPCS_SAXS import (get_circular_average)
-from pyCHX.v2_commonspeckle.chx_libs import  ( colors, markers, colors_,  markers_) #common
+from pyCHX.v2._commonspeckle.chx_libs import  ( colors, markers, colors_,  markers_) #common
 
 import os
-from pyCHX.v2_commonspeckle.chx_generic_functions import ( save_arrays ) #common
+from pyCHX.v2._commonspeckle.chx_generic_functions import ( save_arrays ) #common
 
 
 from skbeam.core.utils import multi_tau_lags
@@ -21,9 +21,9 @@ from collections import namedtuple
 import logging
 logger = logging.getLogger(__name__)
 
-from pyCHX.v2_commonspeckle.chx_compress import   (compress_eigerdata, read_compressed_eigerdata,init_compress_eigerdata, 
+from pyCHX.v2._commonspeckle.chx_compress import   (compress_eigerdata, read_compressed_eigerdata,init_compress_eigerdata, 
                                       Multifile,pass_FD,get_avg_imgc,mean_intensityc, get_each_frame_intensityc) #common
-from pyCHX.v2_commonspeckle.chx_generic_functions import find_bad_pixels_FD #common
+from pyCHX.v2._commonspeckle.chx_generic_functions import find_bad_pixels_FD #common
 
 #from modest_image import imshow #common                                      
 #from pyCHX.chx_compress import *
