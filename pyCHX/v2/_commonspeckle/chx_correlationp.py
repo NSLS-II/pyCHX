@@ -10,7 +10,7 @@ from pyCHX.v2._commonspeckle.chx_libs import tqdm #common #TODO why import from 
 from pyCHX.v2._commonspeckle.chx_correlationc import (  get_pixelist_interp_iq, _validate_and_transform_inputs,
                  _one_time_process as _one_time_processp,   _one_time_process_error as _one_time_process_errorp,
                 _two_time_process  as _two_time_processp ) #common
-from pyCHX.v2._commonspeckle.chx_compress import ( run_dill_encoded,apply_async, map_async,pass_FD, go_through_FD  ) #common 
+from pyCHX.v2._commonspeckle.chx_compress import ( run_dill_encoded,apply_async, map_async,pass_FD, go_through_FD  ) #common #TODO understand what to keep 
 from multiprocessing import Pool
 import dill
 from collections import namedtuple
