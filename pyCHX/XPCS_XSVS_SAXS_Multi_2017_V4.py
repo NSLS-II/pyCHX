@@ -2,7 +2,7 @@
 
 
 #from pyCHX.chx_packages import * #common
-from pyCHX.v2._commonspeckle.chx_xpcs_xsvs_jupyter import run_xpcs_xsvs_singl #common
+from pyCHX.v2._commonspeckle.chx_xpcs_xsvs_jupyter import run_xpcs_xsvs_single #common
   
 def XPCS_XSVS_SAXS_Multi(  start_time, stop_time, run_pargs,  suf_ids = None, 
                          uid_average=  'Au50_7p5PEGX1_vs_slow_120116',
