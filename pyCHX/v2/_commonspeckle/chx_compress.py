@@ -2,12 +2,30 @@ import os, shutil
 from glob import iglob
 
 import matplotlib.pyplot as plt
-#from pyCHX.v2._commonspeckle.chx_libs import (np, roi, time, datetime, os,  getpass, db, 
+
+# from pyCHX.v2._commonspeckle.chx_libs import (np, roi, time, datetime, os,  getpass, db,
 #                                      LogNorm, RUN_GUI) #common
-from pyCHX.v2._commonspeckle.chx_libs import (np, roi, time, datetime, os,  getpass,  
-                                      LogNorm, RUN_GUI) #common
-from pyCHX.v2._commonspeckle.chx_generic_functions import (create_time_slice,get_detector, get_sid_filenames,  
-     load_data,reverse_updown,rot90_clockwise, get_eigerImage_per_file,copy_data,delete_data, ) #common
+from pyCHX.v2._commonspeckle.chx_libs import (
+    np,
+    roi,
+    time,
+    datetime,
+    os,
+    getpass,
+    LogNorm,
+    RUN_GUI,
+)  # common
+from pyCHX.v2._commonspeckle.chx_generic_functions import (
+    create_time_slice,
+    get_detector,
+    get_sid_filenames,
+    load_data,
+    reverse_updown,
+    rot90_clockwise,
+    get_eigerImage_per_file,
+    copy_data,
+    delete_data,
+)  # common
 
 
 import struct
@@ -22,8 +40,9 @@ import pickle as pkl
 
 # imports handler from CHX
 # this is where the decision is made whether or not to use dask
-#from chxtools.handlers import EigerImages, EigerHandler
-#from eiger_io.fs_handler import EigerHandler,EigerImages #common 
+# from chxtools.handlers import EigerImages, EigerHandler
+# from eiger_io.fs_handler import EigerHandler,EigerImages #common
+
 
 def run_dill_encoded(what):
     fun, args = dill.loads(what)

@@ -34,8 +34,14 @@ from multiprocessing import Pool
 import dill
 import itertools
 
-from pyCHX.v2._commonspeckle.chx_compress import ( run_dill_encoded,apply_async, map_async,pass_FD, go_through_FD  ) #common 
-from pyCHX.v2._commonspeckle.chx_generic_functions import trans_data_to_pd #common
+from pyCHX.v2._commonspeckle.chx_compress import (
+    run_dill_encoded,
+    apply_async,
+    map_async,
+    pass_FD,
+    go_through_FD,
+)  # common
+from pyCHX.v2._commonspeckle.chx_generic_functions import trans_data_to_pd  # common
 
 
 def xsvsp(

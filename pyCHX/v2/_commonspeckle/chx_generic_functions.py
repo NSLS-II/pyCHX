@@ -1,12 +1,13 @@
-from pyCHX.v2._commonspeckle.chx_libs import * #common
-#from tqdm import *
-from pyCHX.v2._commonspeckle.chx_libs import  ( colors,  markers ) #common
+from pyCHX.v2._commonspeckle.chx_libs import *  # common
+
+# from tqdm import *
+from pyCHX.v2._commonspeckle.chx_libs import colors, markers  # common
 from scipy.special import erf
 
 from skimage.filters import prewitt
 from skimage.draw import line_aa, line, polygon, ellipse, circle
 
-#from modest_image import imshow #common
+# from modest_image import imshow #common
 import matplotlib.cm as mcm
 from matplotlib import cm
 import copy, scipy
