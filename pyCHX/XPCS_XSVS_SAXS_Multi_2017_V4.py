@@ -1,7 +1,7 @@
 #python XPCS_XSVS_SAXS_Multi_2017_V4.py 
 
 
-from pyCHX.chx_packages import *
+from pyCHX.chx_packages import * 
 from pyCHX.chx_xpcs_xsvs_jupyter import run_xpcs_xsvs_single
   
 def XPCS_XSVS_SAXS_Multi(  start_time, stop_time, run_pargs,  suf_ids = None, 

@@ -4,10 +4,10 @@ yuzhang@bnl.gov
 This module is for the GiSAXS XPCS analysis 
 """
 
-from pyCHX.chx_generic_functions import *
-from pyCHX.chx_compress import ( compress_eigerdata, read_compressed_eigerdata,init_compress_eigerdata, get_avg_imgc,Multifile) 
-from pyCHX.chx_correlationc import ( cal_g2c )
-from pyCHX.chx_libs import  ( colors, markers, colors_,  markers_)
+from pyCHX.v2._commonspeckle.chx_generic_functions import * #common
+from pyCHX.v2._commonspeckle.chx_compress import ( compress_eigerdata, read_compressed_eigerdata,init_compress_eigerdata, get_avg_imgc,Multifile) #common 
+from pyCHX.v2._commonspeckle.chx_correlationc import ( cal_g2c ) #common
+from pyCHX.v2._commonspeckle.chx_libs import  ( colors, markers, colors_,  markers_) #common
 from skbeam.core.accumulators.binned_statistic import BinnedStatistic2D,BinnedStatistic1D
 
 

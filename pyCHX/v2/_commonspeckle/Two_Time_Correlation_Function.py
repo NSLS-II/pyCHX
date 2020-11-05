@@ -16,7 +16,7 @@ from tqdm import tqdm
 import itertools
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-from pyCHX.chx_libs import (
+from pyCHX.v2._commonspeckle.chx_libs import (
     colors as colors_array,
     markers as markers_array,
     markers_copy,
@@ -26,7 +26,12 @@ from pyCHX.chx_libs import (
 )  # common
 
 # from pyCHX.chx_libs import  colors_ as mcolors,  markers_ as markers
-from pyCHX.chx_libs import mcolors, markers, multi_tau_lags, colors  # common
+from pyCHX.v2._commonspeckle.chx_libs import (
+    mcolors,
+    markers,
+    multi_tau_lags,
+    colors,
+)  # common
 
 # from modest_image import ModestImage, imshow #common
 

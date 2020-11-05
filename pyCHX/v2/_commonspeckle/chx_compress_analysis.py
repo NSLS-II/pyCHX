@@ -5,25 +5,29 @@ import struct
 
 import matplotlib.pyplot as plt
 
-from pyCHX.chx_libs import (
+from pyCHX.v2._commonspeckle.chx_libs import (
     np,
     roi,
     time,
     datetime,
     os,
     getpass,
-    db,
     LogNorm,
     Figure,
     RUN_GUI,
-)
+)  # common db rm
 
 # from pyCHX.chx_generic_functions import (get_circular_average)
 # from pyCHX.XPCS_SAXS import (get_circular_average)
-from pyCHX.chx_libs import colors, markers, colors_, markers_
+from pyCHX.v2._commonspeckle.chx_libs import (
+    colors,
+    markers,
+    colors_,
+    markers_,
+)  # common
 
 import os
-from pyCHX.chx_generic_functions import save_arrays
+from pyCHX.v2._commonspeckle.chx_generic_functions import save_arrays  # common
 
 
 from skbeam.core.utils import multi_tau_lags
@@ -34,7 +38,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from pyCHX.chx_compress import (
+from pyCHX.v2._commonspeckle.chx_compress import (
     compress_eigerdata,
     read_compressed_eigerdata,
     init_compress_eigerdata,
@@ -43,11 +47,10 @@ from pyCHX.chx_compress import (
     get_avg_imgc,
     mean_intensityc,
     get_each_frame_intensityc,
-)
-from pyCHX.chx_generic_functions import find_bad_pixels_FD
+)  # common
+from pyCHX.v2._commonspeckle.chx_generic_functions import find_bad_pixels_FD  # common
 
-from modest_image import imshow
-
+# from modest_image import imshow #common
 # from pyCHX.chx_compress import *
 
 
