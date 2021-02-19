@@ -1035,18 +1035,38 @@ def get_one_time_from_two_time(g12, norms=None, nopr=None):
     m, n, noqs = g12.shape
     if norms is None:
         g2f12 = np.array([np.nanmean(g12.diagonal(i), axis=1) for i in range(m)])
+        g2f12_error = np.array(
+            [np.std(g12.diagonal(i), axis=1) / np.sqrt(m - i) for i in range(m)]
+        )
+        # propagate error to the last point
+        g2f12_error[-1, :] = g2f12_error[-2, :]
+
     else:
+        if nopr is None:
+            print("Error: normalization option must have nopr")
+            return np.nan, np.nan
+
         g2f12 = np.zeros([m, noqs])
+        g2f12_error = np.zeros([m, noqs])
         for q in range(noqs):
             yn = norms[:, q]
-            g2f12[i, q] = np.array(
+            scale = np.array(
+                [np.mean(yn[i:]) * np.mean(yn[: m - i]) * nopr[q] for i in range(m)]
+            )
+            g2f12[:, q] = np.array(
+                [np.nanmean(g12[:, :, q].diagonal(i)) / scale[i] for i in range(m)]
+            )
+
+            g2f12_error[:, q] = np.array(
                 [
-                    np.nanmean(g12[:, :, q].diagonal(i))
-                    / (np.average(yn[i:]) * np.average(yn[: m - i]) * nopr[q])
+                    np.std(g12[:, :, q].diagonal(i)) / np.sqrt(m - i) / scale[i]
                     for i in range(m)
                 ]
             )
-    return g2f12
+        # propagate error to the last point
+        g2f12_error[-1, :] = g2f12_error[-2, :]
+
+    return g2f12, g2f12_error
 
 
 def get_four_time_from_two_time(g12, g2=None, rois=None):
