@@ -322,8 +322,7 @@ import threading
 
 #from . import sigtools
 import numpy as np
-from scipy._lib.six import callable
-from scipy._lib._version import NumpyVersion
+from numpy.lib import NumpyVersion
 from scipy import linalg
 from scipy.fftpack import (fft, ifft, ifftshift, fft2, ifft2, fftn,
                            ifftn, fftfreq)
