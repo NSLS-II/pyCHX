@@ -2811,7 +2811,9 @@ def get_meta_data( uid, default_dec = 'eiger', *argv,**kwargs ):
     md['start_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(header.start['time']))
     md['stop_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime( header.stop['time']))
     try:   # added: try to handle runs that don't contain image data
-        md['img_shape'] = header['descriptors'][0]['data_keys'][md['detector']]['shape'][:2][::-1]
+        if "primary" in header.v2:
+            descriptor = header.v2["primary"].descriptors[0]
+            md['img_shape'] = descriptor['data_keys'][md['detector']]['shape'][:2][::-1]
     except:
         if verbose:
             print("couldn't find image shape...skip!")
@@ -3108,16 +3110,18 @@ def get_flatfield( uid, reverse=False ):
 
 def get_detector( header ):
     '''Get the first detector image string by giving header '''
-    keys = [k for k, v in header.descriptors[0]['data_keys'].items()     if 'external' in v]
+    keys = get_detectors(header)
     for k in keys:
         if 'eiger' in k:
             return k
-    #return keys[0]
 
 def get_detectors( header ):
     '''Get all the detector image strings by giving header '''
-    keys = [k for k, v in header.descriptors[0]['data_keys'].items()     if 'external' in v]
-    return sorted(keys)
+    if "primary" in header.v2:
+        descriptor = header.v2["primary"].descriptors[0]
+        keys = [k for k, v in descriptor['data_keys'].items()     if 'external' in v]
+        return sorted(set(keys))
+    return  []
 
 def get_full_data_path( uid ):
     '''A dirty way to get full data path'''
@@ -3150,15 +3154,28 @@ def get_sid_filenames(header):
     sid,uid, filenames   = get_sid_filenames(db[uid])
     
     """   
+    from collections import defaultdict
+    from glob import glob
+    from pathlib import Path
+
     filepaths = []
-    db = header.db
-    # get files from assets
-    res_uids = db.get_resource_uids(header)
-    for uid in res_uids:
-        datum_gen = db.reg.datum_gen_given_resource(uid)
-        datum_kwarg_gen = (datum['datum_kwargs'] for datum in
-                           datum_gen)
-        filepaths.extend(db.reg.get_file_list(uid, datum_kwarg_gen))
+    resources = {}  # uid: document
+    datums = defaultdict(list)  # uid: List(document)
+    for name, doc in header.documents():
+        if name == "resource":
+            resources[doc["uid"]] = doc
+        elif name == "datum":
+            datums[doc["resource"]].append(doc)
+        elif name == "datum_page":
+            for datum in event_model.unpack_datum_page(doc):
+                datums[datum["resource"]].append(datum)
+    for resource_uid, resource in resources.items():
+        file_prefix = Path(resource.get('root', '/'), resource["resource_path"])
+        for datum in datums[resource_uid]:
+            dm_kw = datum["datum_kwargs"]
+            seq_id = dm_kw['seq_id']
+            new_filepaths = glob(f'{file_prefix!s}_{seq_id}*')
+            filepaths.extend(new_filepaths)
     return header.start['scan_id'],  header.start['uid'], filepaths
 
 def load_data(uid, detector='eiger4m_single_image', fill=True, reverse=False, rot90=False):
