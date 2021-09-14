@@ -2811,7 +2811,9 @@ def get_meta_data( uid, default_dec = 'eiger', *argv,**kwargs ):
     md['start_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(header.start['time']))
     md['stop_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime( header.stop['time']))
     try:   # added: try to handle runs that don't contain image data
-        md['img_shape'] = header['descriptors'][0]['data_keys'][md['detector']]['shape'][:2][::-1]
+        if "primary" in header.v2:
+            descriptor = header.v2["primary"].descriptors[0]
+            md['img_shape'] = descriptor['data_keys'][md['detector']]['shape'][:2][::-1]
     except:
         if verbose:
             print("couldn't find image shape...skip!")
@@ -3108,16 +3110,18 @@ def get_flatfield( uid, reverse=False ):
 
 def get_detector( header ):
     '''Get the first detector image string by giving header '''
-    keys = [k for k, v in header.descriptors[0]['data_keys'].items()     if 'external' in v]
+    keys = get_detectors(header)
     for k in keys:
         if 'eiger' in k:
             return k
-    #return keys[0]
 
 def get_detectors( header ):
     '''Get all the detector image strings by giving header '''
-    keys = [k for k, v in header.descriptors[0]['data_keys'].items()     if 'external' in v]
-    return sorted(keys)
+    if "primary" in header.v2:
+        descriptor = header.v2["primary"].descriptors[0]
+        keys = [k for k, v in descriptor['data_keys'].items()     if 'external' in v]
+        return sorted(set(keys))
+    return  []
 
 def get_full_data_path( uid ):
     '''A dirty way to get full data path'''
