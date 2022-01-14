@@ -3171,6 +3171,8 @@ def get_sid_filenames(header):
                 datums[datum["resource"]].append(datum)
     for resource_uid, resource in resources.items():
         file_prefix = Path(resource.get('root', '/'), resource["resource_path"])
+        if 'eiger' not in resource['spec'].lower():
+            continue
         for datum in datums[resource_uid]:
             dm_kw = datum["datum_kwargs"]
             seq_id = dm_kw['seq_id']
