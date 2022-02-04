@@ -55,7 +55,7 @@ gives ['sg', 'tt', 'l', 'l']
 
 
 def get_frames_from_dscan(uid, detector="eiger4m_single_image"):
-    """Get frames from a dscan by giving uid and detector """
+    """Get frames from a dscan by giving uid and detector"""
     hdr = db[uid]
     return db.get_images(hdr, detector)
 
@@ -253,7 +253,7 @@ def get_zero_nozero_qind_from_roi_mask(roi_mask, mask):
 def get_masked_qval_qwid_dict_using_Rmax(
     new_mask, setup_pargs, old_roi_mask, old_cen, geometry
 ):
-    """YG Dev April 22, 2019 Get qval_dict, qwid_dict by applying mask to roi_mask using a Rmax method """
+    """YG Dev April 22, 2019 Get qval_dict, qwid_dict by applying mask to roi_mask using a Rmax method"""
     cy, cx = setup_pargs["center"]
     my, mx = new_mask.shape
     Rmax = int(
@@ -289,7 +289,7 @@ def get_masked_qval_qwid_dict_using_Rmax(
 
 
 def get_masked_qval_qwid_dict(roi_mask, mask, setup_pargs, geometry):
-    """YG Dev April 22, 2019 Get qval_dict, qwid_dict by applying mask to roi_mask """
+    """YG Dev April 22, 2019 Get qval_dict, qwid_dict by applying mask to roi_mask"""
 
     qval_dict_, qwid_dict_ = get_qval_qwid_dict(
         roi_mask, setup_pargs, geometry=geometry
@@ -969,7 +969,7 @@ def get_current_time():
 
 
 def evalue_array(array, verbose=True):
-    """Y.G., Dev Nov 1, 2018 Get min, max, avg, std of an array """
+    """Y.G., Dev Nov 1, 2018 Get min, max, avg, std of an array"""
     _min, _max, avg, std = (
         np.min(array),
         np.max(array),
@@ -2259,9 +2259,9 @@ def create_ring_mask(shape, r1, r2, center, mask=None):
     """
 
     m = np.zeros(shape, dtype=bool)
-    rr, cc = disk(center[1], center[0], r2, shape=shape)
+    rr, cc = disk((center[1], center[0]), r2, shape=shape)
     m[rr, cc] = 1
-    rr, cc = disk(center[1], center[0], r1, shape=shape)
+    rr, cc = disk((center[1], center[0]), r1, shape=shape)
     m[rr, cc] = 0
     if mask is not None:
         m += mask
@@ -3453,7 +3453,7 @@ def create_wedge(image, center, radius, wcors, acute_angle=True):
     y = [cy] + list(wcors[1])
 
     maskc = np.zeros_like(image, dtype=bool)
-    rr, cc = disk(cy, cx, radius, shape=image.shape)
+    rr, cc = disk((cy, cx), radius, shape=image.shape)
     maskc[rr, cc] = 1
 
     maskp = np.zeros_like(image, dtype=bool)
@@ -3527,7 +3527,7 @@ def create_cross_mask(
     bst_mask[rr, cc] = 1
 
     if center_radius != 0:
-        rr, cc = disk(cy, cx, center_radius, shape=bst_mask.shape)
+        rr, cc = disk((cy, cx), center_radius, shape=bst_mask.shape)
         bst_mask[rr, cc] = 1
 
     full_mask = ~bst_mask
@@ -3602,7 +3602,7 @@ def get_flatfield(uid, reverse=False):
 
 
 def get_detector(header):
-    """Get the first detector image string by giving header """
+    """Get the first detector image string by giving header"""
     keys = [k for k, v in header.descriptors[0]["data_keys"].items() if "external" in v]
     for k in keys:
         if "eiger" in k:
@@ -3611,7 +3611,7 @@ def get_detector(header):
 
 
 def get_detectors(header):
-    """Get all the detector image strings by giving header """
+    """Get all the detector image strings by giving header"""
     keys = [k for k, v in header.descriptors[0]["data_keys"].items() if "external" in v]
     return sorted(keys)
 
@@ -3860,11 +3860,11 @@ def create_hot_pixel_mask(
 
         imy, imx = img.shape
         cy, cx = center
-        rr, cc = disk(cy, cx, center_radius, shape=img.shape)
+        rr, cc = disk((cy, cx), center_radius, shape=img.shape)
         bst_mask[rr, cc] = 0
         if outer_radius:
             bst_mask = np.zeros_like(img, dtype=bool)
-            rr2, cc2 = disk(cy, cx, outer_radius, shape=img.shape)
+            rr2, cc2 = disk((cy, cx), outer_radius, shape=img.shape)
             bst_mask[rr2, cc2] = 1
             bst_mask[rr, cc] = 0
     hmask = np.ones_like(img)
@@ -4308,7 +4308,7 @@ def get_each_frame_intensity(
 
 
 def create_time_slice(N, slice_num, slice_width, edges=None):
-    """create a ROI time regions """
+    """create a ROI time regions"""
     if edges is not None:
         time_edge = edges
     else:
@@ -5340,7 +5340,7 @@ def stretched_auto_corr_scat_factor(x, beta, relaxation_rate, alpha=1.0, baselin
 
 
 def simple_exponential(x, beta, relaxation_rate, baseline=1):
-    """relation_rate: unit 1/s """
+    """relation_rate: unit 1/s"""
     return beta * np.exp(-2 * relaxation_rate * x) + baseline
 
 
