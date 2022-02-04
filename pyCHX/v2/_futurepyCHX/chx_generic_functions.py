@@ -2259,9 +2259,9 @@ def create_ring_mask(shape, r1, r2, center, mask=None):
     """
 
     m = np.zeros(shape, dtype=bool)
-    rr, cc = disk(center[1], center[0], r2, shape=shape)
+    rr, cc = disk((center[1], center[0]), r2, shape=shape)
     m[rr, cc] = 1
-    rr, cc = disk(center[1], center[0], r1, shape=shape)
+    rr, cc = disk((center[1], center[0]), r1, shape=shape)
     m[rr, cc] = 0
     if mask is not None:
         m += mask
@@ -3453,7 +3453,7 @@ def create_wedge(image, center, radius, wcors, acute_angle=True):
     y = [cy] + list(wcors[1])
 
     maskc = np.zeros_like(image, dtype=bool)
-    rr, cc = disk(cy, cx, radius, shape=image.shape)
+    rr, cc = disk((cy, cx), radius, shape=image.shape)
     maskc[rr, cc] = 1
 
     maskp = np.zeros_like(image, dtype=bool)
@@ -3527,7 +3527,7 @@ def create_cross_mask(
     bst_mask[rr, cc] = 1
 
     if center_radius != 0:
-        rr, cc = disk(cy, cx, center_radius, shape=bst_mask.shape)
+        rr, cc = disk((cy, cx), center_radius, shape=bst_mask.shape)
         bst_mask[rr, cc] = 1
 
     full_mask = ~bst_mask
@@ -3860,11 +3860,11 @@ def create_hot_pixel_mask(
 
         imy, imx = img.shape
         cy, cx = center
-        rr, cc = disk(cy, cx, center_radius, shape=img.shape)
+        rr, cc = disk((cy, cx), center_radius, shape=img.shape)
         bst_mask[rr, cc] = 0
         if outer_radius:
             bst_mask = np.zeros_like(img, dtype=bool)
-            rr2, cc2 = disk(cy, cx, outer_radius, shape=img.shape)
+            rr2, cc2 = disk((cy, cx), outer_radius, shape=img.shape)
             bst_mask[rr2, cc2] = 1
             bst_mask[rr, cc] = 0
     hmask = np.ones_like(img)
