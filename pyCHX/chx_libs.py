@@ -5,7 +5,7 @@ This module is for the necessary packages for the XPCS analysis
 """
 from IPython.core.magics.display import Javascript
 from skbeam.core.utils import multi_tau_lags
-from skimage.draw import line_aa, line, polygon, ellipse, circle
+from skimage.draw import line_aa, line, polygon, ellipse, disk
 from modest_image import imshow
 # edit handlers here to switch to PIMS or dask
 # this does the databroker import
