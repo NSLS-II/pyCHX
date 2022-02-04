@@ -4,7 +4,7 @@ from pyCHX.chx_libs import  ( colors,  markers )
 from scipy.special import erf
 
 from skimage.filters import  prewitt
-from skimage.draw import line_aa, line, polygon, ellipse, circle
+from skimage.draw import line_aa, line, polygon, ellipse, disk 
 
 from modest_image import imshow
 import matplotlib.cm as mcm
@@ -1918,9 +1918,9 @@ def create_ring_mask( shape, r1, r2, center, mask=None):
     '''
 
     m = np.zeros( shape, dtype= bool) 
-    rr,cc = circle(  center[1], center[0], r2, shape=shape  )
+    rr,cc = disk(  center[1], center[0], r2, shape=shape  )
     m[rr,cc] = 1
-    rr,cc = circle(  center[1], center[0], r1,shape=shape  )
+    rr,cc = disk(  center[1], center[0], r1,shape=shape  )
     m[rr,cc] = 0 
     if mask is not None:
         m += mask
@@ -2884,7 +2884,7 @@ def create_polygon_mask(  image, xcorners, ycorners   ):
     
     
     '''
-    from skimage.draw import line_aa, line, polygon, circle    
+    from skimage.draw import line_aa, line, polygon, disk    
     imy, imx = image.shape 
     bst_mask = np.zeros_like( image , dtype = bool)   
     rr, cc = polygon( ycorners,xcorners)
@@ -2906,7 +2906,7 @@ def create_rectangle_mask(  image, xcorners, ycorners   ):
     
     
     '''
-    from skimage.draw import line_aa, line, polygon, circle    
+    from skimage.draw import line_aa, line, polygon, disk    
     imy, imx = image.shape 
     bst_mask = np.zeros_like( image , dtype = bool)   
     rr, cc = polygon( ycorners,xcorners)
@@ -2954,18 +2954,18 @@ def create_multi_rotated_rectangle_mask(  image, center=None, length=100, width=
     
 def create_wedge(  image, center, radius, wcors,  acute_angle=True) :
     '''YG develop at June 18, 2017, @CHX
-        Create a wedge by a combination of circle and a triangle defined by center and wcors
+        Create a wedge by a combination of disk and a triangle defined by center and wcors
         wcors: [ [x1,x2,x3...], [y1,y2,y3..]
     
     '''
-    from skimage.draw import line_aa, line, polygon, circle
+    from skimage.draw import line_aa, line, polygon, disk
     imy, imx = image.shape   
     cy,cx = center
     x  = [cx] + list(wcors[0])
     y =  [cy] + list(wcors[1])
     
     maskc = np.zeros_like( image , dtype = bool) 
-    rr, cc = circle( cy, cx, radius, shape = image.shape)
+    rr, cc = disk( cy, cx, radius, shape = image.shape)
     maskc[rr,cc] =1  
     
     maskp = np.zeros_like( image , dtype = bool)
@@ -2982,7 +2982,7 @@ def create_wedge(  image, center, radius, wcors,  acute_angle=True) :
                 
 
 def create_cross_mask(  image, center, wy_left=4, wy_right=4, wx_up=4, wx_down=4,
-                     center_circle = True, center_radius=10
+                     center_disk = True, center_radius=10
                      ):
     '''
     Give image and the beam center to create a cross-shaped mask
@@ -2990,12 +2990,12 @@ def create_cross_mask(  image, center, wy_left=4, wy_right=4, wx_up=4, wx_down=4
     wy_right: the width of rigth h-line
     wx_up: the width of up v-line
     wx_down: the width of down v-line
-    center_circle: if True, create a circle with center and center_radius
+    center_disk: if True, create a disk with center and center_radius
     
     Return:
     the cross mask
     '''
-    from skimage.draw import line_aa, line, polygon, circle
+    from skimage.draw import line_aa, line, polygon, disk
     
     imy, imx = image.shape   
     cx,cy = center
@@ -3033,7 +3033,7 @@ def create_cross_mask(  image, center, wy_left=4, wy_right=4, wx_up=4, wx_down=4
     bst_mask[rr,cc] =1   
     
     if center_radius!=0:
-        rr, cc = circle( cy, cx, center_radius, shape = bst_mask.shape)
+        rr, cc = disk( cy, cx, center_radius, shape = bst_mask.shape)
         bst_mask[rr,cc] =1   
     
     
@@ -3370,7 +3370,7 @@ def create_hot_pixel_mask(img, threshold, center=None, center_radius=300, outer_
            threshold: the threshold above which will be considered as hot pixels
            center: optional, default=None
                              else, as a two-element list (beam center), i.e., [center_x, center_y]
-           if center is not None, the hot pixel will not include a circle region 
+           if center is not None, the hot pixel will not include a disk region 
                            which is defined by center and center_radius ( in unit of pixel)
        Output:
            a bool types numpy array (mask), 1 is good and 0 is excluded   
@@ -3378,14 +3378,14 @@ def create_hot_pixel_mask(img, threshold, center=None, center_radius=300, outer_
     '''
     bst_mask = np.ones_like( img , dtype = bool)    
     if center is not None:    
-        from skimage.draw import  circle    
+        from skimage.draw import  disk   
         imy, imx = img.shape   
         cy,cx = center        
-        rr, cc = circle( cy, cx, center_radius,shape=img.shape )
+        rr, cc = disk( cy, cx, center_radius,shape=img.shape )
         bst_mask[rr,cc] =0 
         if outer_radius:
             bst_mask = np.zeros_like( img , dtype = bool)   
-            rr2, cc2 = circle( cy, cx, outer_radius,shape=img.shape )
+            rr2, cc2 = disk( cy, cx, outer_radius,shape=img.shape )
             bst_mask[rr2,cc2] =1
             bst_mask[rr,cc] =0 
     hmask = np.ones_like( img )
