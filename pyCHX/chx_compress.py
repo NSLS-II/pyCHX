@@ -57,7 +57,7 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
                        hot_pixel_threshold=2**30, nobytes=2,bins=1, bad_frame_list=None,
                        para_compress= False, num_sub=100, dtypes='uid',reverse =True, rot90=False,
                       num_max_para_process=500, with_pickle=False, direct_load_data=True, data_path=None,
-                       images_per_file=100, copy_rawdata=True,new_path = '/tmp_data/data/'):   
+                       images_per_file=100, copy_rawdata=True,new_path = '/tmp_data/data/', func_images_per_file=get_eigerImage_per_file):
     '''
     Init 2016, YG@CHX
     DEV 2018, June, make images_per_file a dummy, will be determined by get_eigerImage_per_file if direct_load_data
@@ -76,7 +76,7 @@ def compress_eigerdata( images, mask, md, filename=None,  force_compress=False,
             #para_compress=   True   
     #print( dtypes )      
     if direct_load_data:        
-        images_per_file = get_eigerImage_per_file( data_path ) 
+        images_per_file = func_images_per_file( data_path )
         if data_path is None:
             sud = get_sid_filenames(db[uid])
             data_path = sud[2][0]
