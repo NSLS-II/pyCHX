@@ -1229,7 +1229,7 @@ def get_waxs_beam_center(  gamma, origin = [432, 363],  Ldet = 1495, pixel_size 
        output:
            beam center: for the target gamma, in pixel
     '''
-    return [ np.int( origin[0] + np.tan( np.radians(gamma)) * Ldet/pixel_size) ,origin[1]   ]
+    return [ int( origin[0] + np.tan( np.radians(gamma)) * Ldet/pixel_size) ,origin[1]   ] 
 
 
 
@@ -1504,25 +1504,24 @@ def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False,q_thresh=0, p_thresh=0, silent
     by LW 10/21/2017
     update by LW 08/22/2018: introduced thresholds for comparison of Q and phi values (before: exact match required)
     update 2019/09/28 add qprecision to get unique Q
+    update 2020/3/12 explicitly order input dictionary to fix problem with environments >= 2019-3.0.1
     """
+    import collections
+    from collections import OrderedDict
+    qdict = collections.OrderedDict(sorted(qdict.items()))
     qs=[]
     phis=[]
     for i in qdict.keys():
         qs.append(qdict[i][0])
-        phis.append(qdict[i][1])
-    from collections import OrderedDict
-
+        phis.append(qdict[i][1])  
     qslist=list(OrderedDict.fromkeys(qs))
     qslist = np.unique( np.round(qslist, qprecision ) )
     phislist=list(OrderedDict.fromkeys(phis))
     qslist=list(np.sort(qslist))
-    #print('Q_list: %s'%qslist)
     phislist=list(np.sort(phislist))
     if q_nr:
         qinterest=qslist[q]
-        #qindices = [i for i,x in enumerate(qs) if x == qinterest]
         qindices = [i for i,x in enumerate(qs) if np.abs(x-qinterest) < q_thresh]
-        #print('q_indicies: ',qindices)
     else:
         qinterest=q
         qindices = [i for i,x in enumerate(qs) if np.abs(x-qinterest) < q_thresh] # new
@@ -1532,10 +1531,7 @@ def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False,q_thresh=0, p_thresh=0, silent
     else:
         phiinterest=phi
         phiindices = [i for i,x in enumerate(phis) if np.abs(x-phiinterest) < p_thresh] # new
-        #print('phi: %s phi_index: %s'%(phiinterest,phiindices))
-    #qindices = [i for i,x in enumerate(qs) if x == qinterest]
-    #phiindices = [i for i,x in enumerate(phis) if x == phiinterest]
-    ret_list=[list(set(qindices).intersection(phiindices))[0],qinterest,phiinterest,qslist,phislist]
+    ret_list=[list(set(qindices).intersection(phiindices))[0],qinterest,phiinterest,qslist,phislist] #-> this is the original
     if silent == False:
         print('list of available Qs:')
         print(qslist)
@@ -2378,8 +2374,8 @@ def combine_images( filenames, outputfile, outsize=(2000, 2400)):
     #nx = np.int( np.ceil( np.sqrt(N)) )
     #ny = np.int( np.ceil( N / float(nx)  ) )
 
-    ny = np.int( np.ceil( np.sqrt(N)) )
-    nx = np.int( np.ceil( N / float(ny)  ) )
+    ny = int( np.ceil( np.sqrt(N)) )
+    nx = int( np.ceil( N / float(ny)  ) )
 
     #print(nx,ny)
     result = Image.new("RGB", outsize, color=(255,255,255,0))
@@ -2887,7 +2883,7 @@ def create_polygon_mask(  image, xcorners, ycorners   ):
     from skimage.draw import line_aa, line, polygon, disk
     imy, imx = image.shape
     bst_mask = np.zeros_like( image , dtype = bool)
-    rr, cc = polygon( ycorners,xcorners)
+    rr, cc = polygon( ycorners,xcorners,shape = image.shape)
     bst_mask[rr,cc] =1
     #full_mask= ~bst_mask
     return bst_mask
@@ -2909,7 +2905,7 @@ def create_rectangle_mask(  image, xcorners, ycorners   ):
     from skimage.draw import line_aa, line, polygon, disk
     imy, imx = image.shape
     bst_mask = np.zeros_like( image , dtype = bool)
-    rr, cc = polygon( ycorners,xcorners)
+    rr, cc = polygon( ycorners,xcorners,shape = image.shape)
     bst_mask[rr,cc] =1
     #full_mask= ~bst_mask
     return bst_mask
@@ -2945,7 +2941,7 @@ def create_multi_rotated_rectangle_mask(  image, center=None, length=100, width=
     wx =   width
     x = np.array( [ max(0, cx - wx//2), min(imx, cx+wx//2), min(imx, cx+wx//2), max(0,cx-wx//2 ) ])
     y = np.array( [ cy, cy, min( imy, cy + wy) , min(imy, cy + wy) ])
-    rr, cc = polygon( y,x)
+    rr, cc = polygon( y,x, shape = image.shape)
     mask[rr,cc] =1
     mask_rot=  np.zeros( image.shape, dtype = bool)
     for angle in angles:
@@ -2972,7 +2968,7 @@ def create_wedge(  image, center, radius, wcors,  acute_angle=True) :
     x = np.array( x )
     y = np.array( y )
     print(x,y)
-    rr, cc = polygon( y,x)
+    rr, cc = polygon( y,x, shape = image.shape)
     maskp[rr,cc] =1
     if acute_angle:
         return maskc*maskp
@@ -3005,7 +3001,7 @@ def create_cross_mask(  image, center, wy_left=4, wy_right=4, wx_up=4, wx_down=4
     wy = wy_right
     x = np.array( [ cx, imx, imx, cx  ])
     y = np.array( [ cy-wy, cy-wy, cy + wy, cy + wy])
-    rr, cc = polygon( y,x)
+    rr, cc = polygon( y,x, shape = image.shape)
     bst_mask[rr,cc] =1
 
     ###
@@ -3013,7 +3009,7 @@ def create_cross_mask(  image, center, wy_left=4, wy_right=4, wx_up=4, wx_down=4
     wy = wy_left
     x = np.array( [0,  cx, cx,0  ])
     y = np.array( [ cy-wy, cy-wy, cy + wy, cy + wy])
-    rr, cc = polygon( y,x)
+    rr, cc = polygon( y,x, shape = image.shape)
     bst_mask[rr,cc] =1
 
     ###
@@ -3021,7 +3017,7 @@ def create_cross_mask(  image, center, wy_left=4, wy_right=4, wx_up=4, wx_down=4
     wx = wx_up
     x = np.array( [ cx-wx, cx + wx, cx+wx, cx-wx  ])
     y = np.array( [ cy, cy, imy, imy])
-    rr, cc = polygon( y,x)
+    rr, cc = polygon( y,x, shape = image.shape)
     bst_mask[rr,cc] =1
 
     ###
@@ -3029,7 +3025,7 @@ def create_cross_mask(  image, center, wy_left=4, wy_right=4, wx_up=4, wx_down=4
     wx = wx_down
     x = np.array( [ cx-wx, cx + wx, cx+wx, cx-wx  ])
     y = np.array( [ 0,0, cy, cy])
-    rr, cc = polygon( y,x)
+    rr, cc = polygon( y,x, shape = image.shape)
     bst_mask[rr,cc] =1
 
     if center_radius!=0:
