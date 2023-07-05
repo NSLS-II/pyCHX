@@ -119,6 +119,7 @@ class create_pdf_report( object ):
     
     def __init__( self, data_dir, uid,  out_dir=None, filename=None, load=True, user=None,
                  report_type='saxs',md=None, res_h5_filename=None ):
+        from datetime import datetime
         self.data_dir = data_dir
         self.uid = uid
         self.md = md        
