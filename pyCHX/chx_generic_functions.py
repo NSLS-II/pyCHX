@@ -886,9 +886,9 @@ def lin2log_g2(lin_tau,lin_g2,num_points=False):
     #print('from lin-to-log-g2_sampling: ',lin_tau)
     if num_points == False:
         # automatically decide how many log-points (8/decade)
-        dec=np.ceil((np.log10(lin_tau.max())-np.log10(lin_tau.min()))*8)
+        dec=int(np.ceil((np.log10(lin_tau.max())-np.log10(lin_tau.min()))*8))
     else:
-        dec=num_points
+        dec=int(num_points)
     log_tau=np.logspace(np.log10(lin_tau[0]),np.log10(lin_tau.max()),dec)
     # re-sample correlation function:
     log_g2=[]
@@ -1229,7 +1229,7 @@ def get_waxs_beam_center(  gamma, origin = [432, 363],  Ldet = 1495, pixel_size 
        output:
            beam center: for the target gamma, in pixel
     '''
-    return [ np.int( origin[0] + np.tan( np.radians(gamma)) * Ldet/pixel_size) ,origin[1]   ]
+    return [ int( origin[0] + np.tan( np.radians(gamma)) * Ldet/pixel_size) ,origin[1]   ] 
 
 
 
@@ -1385,15 +1385,14 @@ def pad_length(arr,pad_val=np.nan):
     adds pad_val to each row, to make the length of each row equal to the lenght of the longest row of the original matrix
     -> used to convert python generic data object to HDF5 native format
     function fixes python bug in padding (np.pad) integer array with np.nan
+    update June 2023: remove use of np.shape and np.size that doesn't work (anymore?) on arrays with inhomogenous size
     by LW 12/30/2017
     """
     max_len=[]
-    for i in range(np.shape(arr)[0]):
-        #print(np.size(arr[i]))
-        max_len.append([np.size(arr[i])])
-    #print(max_len)
+    for i in range(len(arr)):
+        max_len.append([len(arr[i])])
     max_len=np.max(max_len)
-    for l in range(np.shape(arr)[0]):
+    for l in range(len(arr)):
         arr[l]=np.pad(arr[l]*1.,(0,max_len-np.size(arr[l])),mode='constant',constant_values=pad_val)
     return arr
 
@@ -1504,25 +1503,24 @@ def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False,q_thresh=0, p_thresh=0, silent
     by LW 10/21/2017
     update by LW 08/22/2018: introduced thresholds for comparison of Q and phi values (before: exact match required)
     update 2019/09/28 add qprecision to get unique Q
+    update 2020/3/12 explicitly order input dictionary to fix problem with environments >= 2019-3.0.1
     """
+    import collections
+    from collections import OrderedDict
+    qdict = collections.OrderedDict(sorted(qdict.items()))
     qs=[]
     phis=[]
     for i in qdict.keys():
         qs.append(qdict[i][0])
-        phis.append(qdict[i][1])
-    from collections import OrderedDict
-
+        phis.append(qdict[i][1])  
     qslist=list(OrderedDict.fromkeys(qs))
     qslist = np.unique( np.round(qslist, qprecision ) )
     phislist=list(OrderedDict.fromkeys(phis))
     qslist=list(np.sort(qslist))
-    #print('Q_list: %s'%qslist)
     phislist=list(np.sort(phislist))
     if q_nr:
         qinterest=qslist[q]
-        #qindices = [i for i,x in enumerate(qs) if x == qinterest]
         qindices = [i for i,x in enumerate(qs) if np.abs(x-qinterest) < q_thresh]
-        #print('q_indicies: ',qindices)
     else:
         qinterest=q
         qindices = [i for i,x in enumerate(qs) if np.abs(x-qinterest) < q_thresh] # new
@@ -1532,10 +1530,7 @@ def get_roi_nr(qdict,q,phi,q_nr=True,phi_nr=False,q_thresh=0, p_thresh=0, silent
     else:
         phiinterest=phi
         phiindices = [i for i,x in enumerate(phis) if np.abs(x-phiinterest) < p_thresh] # new
-        #print('phi: %s phi_index: %s'%(phiinterest,phiindices))
-    #qindices = [i for i,x in enumerate(qs) if x == qinterest]
-    #phiindices = [i for i,x in enumerate(phis) if x == phiinterest]
-    ret_list=[list(set(qindices).intersection(phiindices))[0],qinterest,phiinterest,qslist,phislist]
+    ret_list=[list(set(qindices).intersection(phiindices))[0],qinterest,phiinterest,qslist,phislist] #-> this is the original
     if silent == False:
         print('list of available Qs:')
         print(qslist)
@@ -2378,8 +2373,8 @@ def combine_images( filenames, outputfile, outsize=(2000, 2400)):
     #nx = np.int( np.ceil( np.sqrt(N)) )
     #ny = np.int( np.ceil( N / float(nx)  ) )
 
-    ny = np.int( np.ceil( np.sqrt(N)) )
-    nx = np.int( np.ceil( N / float(ny)  ) )
+    ny = int( np.ceil( np.sqrt(N)) )
+    nx = int( np.ceil( N / float(ny)  ) )
 
     #print(nx,ny)
     result = Image.new("RGB", outsize, color=(255,255,255,0))
@@ -2887,7 +2882,7 @@ def create_polygon_mask(  image, xcorners, ycorners   ):
     from skimage.draw import line_aa, line, polygon, disk
     imy, imx = image.shape
     bst_mask = np.zeros_like( image , dtype = bool)
-    rr, cc = polygon( ycorners,xcorners)
+    rr, cc = polygon( ycorners,xcorners,shape = image.shape)
     bst_mask[rr,cc] =1
     #full_mask= ~bst_mask
     return bst_mask
@@ -2909,7 +2904,7 @@ def create_rectangle_mask(  image, xcorners, ycorners   ):
     from skimage.draw import line_aa, line, polygon, disk
     imy, imx = image.shape
     bst_mask = np.zeros_like( image , dtype = bool)
-    rr, cc = polygon( ycorners,xcorners)
+    rr, cc = polygon( ycorners,xcorners,shape = image.shape)
     bst_mask[rr,cc] =1
     #full_mask= ~bst_mask
     return bst_mask
@@ -2945,7 +2940,7 @@ def create_multi_rotated_rectangle_mask(  image, center=None, length=100, width=
     wx =   width
     x = np.array( [ max(0, cx - wx//2), min(imx, cx+wx//2), min(imx, cx+wx//2), max(0,cx-wx//2 ) ])
     y = np.array( [ cy, cy, min( imy, cy + wy) , min(imy, cy + wy) ])
-    rr, cc = polygon( y,x)
+    rr, cc = polygon( y,x, shape = image.shape)
     mask[rr,cc] =1
     mask_rot=  np.zeros( image.shape, dtype = bool)
     for angle in angles:
@@ -2972,7 +2967,7 @@ def create_wedge(  image, center, radius, wcors,  acute_angle=True) :
     x = np.array( x )
     y = np.array( y )
     print(x,y)
-    rr, cc = polygon( y,x)
+    rr, cc = polygon( y,x, shape = image.shape)
     maskp[rr,cc] =1
     if acute_angle:
         return maskc*maskp
@@ -3005,7 +3000,7 @@ def create_cross_mask(  image, center, wy_left=4, wy_right=4, wx_up=4, wx_down=4
     wy = wy_right
     x = np.array( [ cx, imx, imx, cx  ])
     y = np.array( [ cy-wy, cy-wy, cy + wy, cy + wy])
-    rr, cc = polygon( y,x)
+    rr, cc = polygon( y,x, shape = image.shape)
     bst_mask[rr,cc] =1
 
     ###
@@ -3013,7 +3008,7 @@ def create_cross_mask(  image, center, wy_left=4, wy_right=4, wx_up=4, wx_down=4
     wy = wy_left
     x = np.array( [0,  cx, cx,0  ])
     y = np.array( [ cy-wy, cy-wy, cy + wy, cy + wy])
-    rr, cc = polygon( y,x)
+    rr, cc = polygon( y,x, shape = image.shape)
     bst_mask[rr,cc] =1
 
     ###
@@ -3021,7 +3016,7 @@ def create_cross_mask(  image, center, wy_left=4, wy_right=4, wx_up=4, wx_down=4
     wx = wx_up
     x = np.array( [ cx-wx, cx + wx, cx+wx, cx-wx  ])
     y = np.array( [ cy, cy, imy, imy])
-    rr, cc = polygon( y,x)
+    rr, cc = polygon( y,x, shape = image.shape)
     bst_mask[rr,cc] =1
 
     ###
@@ -3029,7 +3024,7 @@ def create_cross_mask(  image, center, wy_left=4, wy_right=4, wx_up=4, wx_down=4
     wx = wx_down
     x = np.array( [ cx-wx, cx + wx, cx+wx, cx-wx  ])
     y = np.array( [ 0,0, cy, cy])
-    rr, cc = polygon( y,x)
+    rr, cc = polygon( y,x, shape = image.shape)
     bst_mask[rr,cc] =1
 
     if center_radius!=0:
@@ -5609,3 +5604,102 @@ def R_2(ydata,fit_data):
     SS_res=np.sum((np.array(ydata)-np.array(fit_data))**2)
     #print('SS_res: %s'%SS_res)
     return 1-SS_res/SS_tot
+
+def is_outlier(points,thresh=3.5,verbose=False):
+    """MAD test
+    """     
+    points.tolist()
+    if len(points) ==1:
+        points=points[:,None]
+        if verbose:
+            print('input to is_outlier is a single point...')
+    median = np.median(points)*np.ones(np.shape(points))#, axis=0)
+    
+    diff = (points-median)**2
+    diff=np.sqrt(diff)
+    med_abs_deviation= np.median(diff)
+    modified_z_score = .6745*diff/med_abs_deviation
+    return modified_z_score > thresh
+
+def outlier_mask(avg_img,mask,roi_mask,outlier_threshold = 7.5,maximum_outlier_fraction = .1,verbose=False,plot=False):
+    """
+    outlier_mask(avg_img,mask,roi_mask,outlier_threshold = 7.5,maximum_outlier_fraction = .1,verbose=False,plot=False)
+    avg_img: average image data (2D)
+    mask: 2D array, same size as avg_img with pixels that are already masked
+    roi_mask: 2D array, same size as avg_img, ROI labels 'encoded' as mask values (i.e. all pixels belonging to ROI 5 have the value 5)
+    outlier_threshold: threshold for MAD test
+    maximum_outlier_fraction: maximum fraction of pixels in an ROI that can be classifed as outliers. If the detected fraction is higher, no outliers will be masked for that ROI.
+    verbose: 'True' enables message output
+    plot: 'True' enables visualization of outliers
+    returns: mask (dtype=float): 0 for pixels that have been classified as outliers, 1 else
+    dependency: is_outlier()
+
+    function does outlier detection for each ROI separately based on pixel intensity in avg_img*mask and ROI specified by roi_mask, using the median-absolute-deviation (MAD) method
+
+    by LW 06/21/2023
+    """
+    hhmask = np.ones(np.shape(roi_mask))
+    pc=1
+
+    for rn in np.arange(1,np.max(roi_mask)+1,1):
+        rm=np.zeros(np.shape(roi_mask));rm=rm-1;rm[np.where( roi_mask == rn)]=1
+        pixel = roi.roi_pixel_values(avg_img*rm, roi_mask, [rn] )
+        out_l = is_outlier((avg_img*mask*rm)[rm>-1], thresh=outlier_threshold)
+        if np.nanmax(out_l)>0: # Did detect at least one outlier
+            ave_roi_int = np.nanmean((pixel[0][0])[out_l<1])
+            if verbose: print('ROI #%s\naverage ROI intensity: %s'%(rn,ave_roi_int))
+            try:
+                upper_outlier_threshold = np.nanmin((out_l*pixel[0][0])[out_l*pixel[0][0]>ave_roi_int])
+                if verbose: print('upper outlier threshold: %s'%upper_outlier_threshold)
+            except:
+                upper_outlier_threshold = False
+                if verbose: print('no upper outlier threshold found')
+            ind1 = (out_l*pixel[0][0])>0; ind2 =  (out_l*pixel[0][0])< ave_roi_int
+            try:
+                lower_outlier_threshold = np.nanmax((out_l*pixel[0][0])[ind1*ind2])
+            except:
+                lower_outlier_threshold = False
+                if verbose: print('no lower outlier threshold found')
+        else:
+            if verbose:  print('ROI #%s: no outliers detected'%rn)
+
+        ### MAKE SURE we don't REMOVE more than x percent of the pixels in the roi 
+        outlier_fraction =  np.sum(out_l)/len(pixel[0][0])
+        if verbose: print('fraction of pixel values detected as outliers: %s'%np.round(outlier_fraction,2))
+        if outlier_fraction > maximum_outlier_fraction:
+            if verbose: print('fraction of pixel values detected as outliers > than maximum fraction %s allowed -> NOT masking outliers...check threshold for MAD and maximum fraction of outliers allowed'%maximum_outlier_fraction)
+            upper_outlier_threshold = False; lower_outlier_threshold = False
+
+        if upper_outlier_threshold:
+            hhmask[avg_img*rm > upper_outlier_threshold] = 0
+        if lower_outlier_threshold:
+            hhmask[avg_img*rm < lower_outlier_threshold] = 0
+
+        if plot:
+            if pc == 1: fig,ax = plt.subplots(1,5,figsize=(24,4))
+            plt.subplot(1,5,pc);pc+=1;
+            if pc>5: pc=1
+            pixel = roi.roi_pixel_values(avg_img*rm*mask, roi_mask, [rn] )
+            plt.plot( pixel[0][0] ,'bo',markersize=1.5 )
+            if upper_outlier_threshold or lower_outlier_threshold:
+                x=np.arange(len(out_l))
+                plt.plot([x[0],x[-1]],[ave_roi_int,ave_roi_int],'g--',label='ROI average: %s'%np.round(ave_roi_int,4))
+            if upper_outlier_threshold:
+                ind=(out_l*pixel[0][0])> upper_outlier_threshold
+                plt.plot(x[ind],(out_l*pixel[0][0])[ind],'r+')
+                plt.plot([x[0],x[-1]],[upper_outlier_threshold,upper_outlier_threshold],'r--',label='upper thresh.: %s'%np.round(upper_outlier_threshold,4))
+            if lower_outlier_threshold:
+                ind=(out_l*pixel[0][0])< lower_outlier_threshold
+                plt.plot(x[ind],(out_l*pixel[0][0])[ind],'r+')
+                plt.plot([x[0],x[-1]],[lower_outlier_threshold,lower_outlier_threshold],'r--',label='lower thresh.: %s'%np.round(upper_outlier_threshold,4))
+            plt.ylabel('Intensity') ;plt.xlabel('pixel');plt.title('ROI #: %s'%rn);plt.legend(loc='best',fontsize=8)
+
+    if plot:
+        fig,ax = plt.subplots()
+        plt.imshow(hhmask)
+        hot_dark=np.nonzero(hhmask<1)
+        cmap = plt.cm.get_cmap('viridis')
+        plt.plot(hot_dark[1],hot_dark[0],'+',color=cmap(0))
+        plt.xlabel('pixel');plt.ylabel('pixel');plt.title('masked pixels with outlier threshold: %s'%outlier_threshold)
+
+    return hhmask
