@@ -146,8 +146,8 @@ def read_compressed_eigerdata( mask, filename, beg, end,
             CAL = True
     if CAL:            
         FD = Multifile( filename, beg, end)    
-        imgsum  =  np.zeros(   FD.end- FD.beg, dtype= np.float  )     
-        avg_img = np.zeros(  [FD.md['ncols'], FD.md['nrows'] ] , dtype= np.float )     
+        imgsum  =  np.zeros(   FD.end- FD.beg, dtype= np.float64  )     
+        avg_img = np.zeros(  [FD.md['ncols'], FD.md['nrows'] ] , dtype= np.float64 )     
         imgsum, bad_frame_list_ = get_each_frame_intensityc( FD, sampling = 1, 
                 bad_pixel_threshold=bad_pixel_threshold, bad_pixel_low_threshold=bad_pixel_low_threshold,
                                         hot_pixel_threshold=hot_pixel_threshold, plot_ = False,
@@ -345,7 +345,7 @@ def segment_compress_eigerdata( images,  mask, md, filename,
                 
     Nimg_ = len( images)     
     M,N = images[0].shape
-    avg_img = np.zeros( [M,N], dtype= np.float )    
+    avg_img = np.zeros( [M,N], dtype= np.float64 )    
     Nopix =  float( avg_img.size )
     n=0
     good_count = 0
@@ -531,7 +531,7 @@ def init_compress_eigerdata( images, mask, md, filename,
     fp.write( Header)  
     
     Nimg_ = len( images)
-    avg_img = np.zeros_like(    images[0], dtype= np.float ) 
+    avg_img = np.zeros_like(    images[0], dtype= np.float64 ) 
     Nopix =  float( avg_img.size )
     n=0
     good_count = 0
