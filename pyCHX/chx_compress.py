@@ -874,13 +874,13 @@ def init_compress_eigerdata(
     |--------------IMG N+1 begin------------|
     |----------------etc.....---------------|
 
-     
-     Header contains 1024 bytes version name, 'beam_center_x', 'beam_center_y', 'count_time', 'detector_distance', 
-           'frame_time', 'incident_wavelength', 'x_pixel_size', 'y_pixel_size', 
+
+     Header contains 1024 bytes version name, 'beam_center_x', 'beam_center_y', 'count_time', 'detector_distance',
+           'frame_time', 'incident_wavelength', 'x_pixel_size', 'y_pixel_size',
            bytes per pixel (either 2 or 4 (Default)),
-           Nrows, Ncols, Rows_Begin, Rows_End, Cols_Begin, Cols_End, 
-           
-         
+           Nrows, Ncols, Rows_Begin, Rows_End, Cols_Begin, Cols_End,
+
+
 
 """
 

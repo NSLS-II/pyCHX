@@ -1,7 +1,7 @@
 """
 Aug 10, Developed by Y.G.@CHX
 yuzhang@bnl.gov
-This module is for parallel computation of time correlation 
+This module is for parallel computation of time correlation
 Feb 20, 2018
 The chx_correlationp2 is for dedug g2
 """

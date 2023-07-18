@@ -1,7 +1,7 @@
 """
-Dec 10, 2015 Developed by Y.G.@CHX 
+Dec 10, 2015 Developed by Y.G.@CHX
 yuzhang@bnl.gov
-This module is for the GiSAXS XPCS analysis 
+This module is for the GiSAXS XPCS analysis
 """
 
 from skbeam.core.accumulators.binned_statistic import BinnedStatistic1D, BinnedStatistic2D

@@ -1,5 +1,5 @@
 """
-Sep 10 Developed by Y.G.@CHX 
+Sep 10 Developed by Y.G.@CHX
 yuzhang@bnl.gov
 This module is for the static SAXS analysis, such as fit form factor
 """

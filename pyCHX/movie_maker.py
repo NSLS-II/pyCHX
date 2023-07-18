@@ -64,7 +64,7 @@ def save_png_series(
 
     """
     save a series of images in a format of png
-    
+
     Parameters
     ----------
     imgs : array
@@ -74,11 +74,11 @@ def save_png_series(
     outDir: the output path
     vmin/vmax: for image contrast
     cmap: the color for plot
-    dpi: resolution 
+    dpi: resolution
 
     Returns
     -------
-    save png files 
+    save png files
 
     """
     if uid == None:
@@ -140,7 +140,7 @@ def movie_maker(
 
     """
     Make a movie by give a image series
-    
+
     Parameters
     ----------
     imgs : array
@@ -162,13 +162,13 @@ def movie_maker(
 
     fps : int, optional
         Frame rate for movie.
-    
+
     real_interval:
        the real time interval between each frame in unit of ms
     outDir: the output path
     vmin/vmax: for image contrast
     cmap: the color for plot
-    dpi: resolution       
+    dpi: resolution
 
     Returns
     -------

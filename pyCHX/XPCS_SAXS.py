@@ -1,7 +1,7 @@
 """
-Dec 10, 2015 Developed by Y.G.@CHX 
+Dec 10, 2015 Developed by Y.G.@CHX
 yuzhang@bnl.gov
-This module is for the SAXS XPCS analysis 
+This module is for the SAXS XPCS analysis
 """
 
 import os
@@ -1175,18 +1175,18 @@ def get_angular_mask(
         if verbose:
             print(
                 """
-For the flow geometry, please only define a quarter of the expected ROI. 
+For the flow geometry, please only define a quarter of the expected ROI.
 The quarter ROI should start from around flow_angle - 90 to around the flow_angle
 Otherwise, there will be somne errors.
 The final ROI will have a center symmetry as well as a mirror symmetry along the flow direction.
-An example for flow_angle=90 will be: 
+An example for flow_angle=90 will be:
 edges = roi.ring_edges( -10, 20, 2.5, 5) -->
                            array([[-10. ,  10. ],
                                    [ 12.5,  32.5],
                                    [ 35. ,  55. ],
                                    [ 57.5,  77.5],
                                    [ 80. , 100. ]])
-                 
+
                  """
             )
 

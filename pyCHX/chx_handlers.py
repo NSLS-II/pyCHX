@@ -13,7 +13,7 @@ from eiger_io.fs_handler import EigerImages as EigerImagesPIMS
 from eiger_io.fs_handler_dask import EigerHandlerDask, EigerImagesDask
 
 """
-Tried to allow function to change namespace did not work. 
+Tried to allow function to change namespace did not work.
 DO NOT USE
 """
 
