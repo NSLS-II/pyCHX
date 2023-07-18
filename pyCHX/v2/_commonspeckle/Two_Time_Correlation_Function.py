@@ -18,10 +18,9 @@ from matplotlib.colors import LogNorm
 from tqdm import tqdm
 
 # from pyCHX.chx_libs import  colors_ as mcolors,  markers_ as markers
-from pyCHX.v2._commonspeckle.chx_libs import RUN_GUI, Figure  # common
 from pyCHX.v2._commonspeckle.chx_libs import colors  # common
-from pyCHX.v2._commonspeckle.chx_libs import colors as colors_array
 from pyCHX.v2._commonspeckle.chx_libs import lstyles  # common
+from pyCHX.v2._commonspeckle.chx_libs import RUN_GUI, Figure  # common
 from pyCHX.v2._commonspeckle.chx_libs import markers
 from pyCHX.v2._commonspeckle.chx_libs import markers as markers_array
 from pyCHX.v2._commonspeckle.chx_libs import markers_copy, mcolors, multi_tau_lags  # common
