@@ -1,18 +1,20 @@
 # import sys
+import os
 import re  # Regular expressions
-import numpy as np
-import pylab as plt
+import sys
+
 import matplotlib as mpl
+import numpy as np
 
 # from scipy.optimize import leastsq
 # import scipy.special
 import PIL  # Python Image Library (for opening PNG, etc.)
-import sys, os
-
-from skbeam.core.accumulators.binned_statistic import BinnedStatistic2D, BinnedStatistic1D
-import skbeam.core.roi as roi
+import pylab as plt
 import skbeam.core.correlation as corr
+import skbeam.core.roi as roi
 import skbeam.core.utils as utils
+from skbeam.core.accumulators.binned_statistic import BinnedStatistic1D, BinnedStatistic2D
+
 from pyCHX.chx_generic_functions import average_array_withNan
 
 
@@ -74,7 +76,7 @@ def qphiavg(image, q_map=None, phi_map=None, mask=None, bins=None, origin=None, 
     if origin is None:
         origin = (shape[0] - 1) / 2.0, (shape[1] - 1) / 2.0
 
-    from skbeam.core.utils import radial_grid, angle_grid
+    from skbeam.core.utils import angle_grid, radial_grid
 
     if q_map is None:
         q_map = radial_grid(origin, shape)

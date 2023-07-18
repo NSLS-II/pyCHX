@@ -1,5 +1,5 @@
 import numpy as np
-from lmfit import Parameters, Model
+from lmfit import Model, Parameters
 
 """
 This module is for functions specific to fitting of spatial correlation

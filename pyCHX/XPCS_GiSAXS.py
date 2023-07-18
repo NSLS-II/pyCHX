@@ -4,17 +4,18 @@ yuzhang@bnl.gov
 This module is for the GiSAXS XPCS analysis 
 """
 
-from pyCHX.chx_generic_functions import *
+from skbeam.core.accumulators.binned_statistic import BinnedStatistic1D, BinnedStatistic2D
+
 from pyCHX.chx_compress import (
-    compress_eigerdata,
-    read_compressed_eigerdata,
-    init_compress_eigerdata,
-    get_avg_imgc,
     Multifile,
+    compress_eigerdata,
+    get_avg_imgc,
+    init_compress_eigerdata,
+    read_compressed_eigerdata,
 )
 from pyCHX.chx_correlationc import cal_g2c
-from pyCHX.chx_libs import colors, markers, colors_, markers_
-from skbeam.core.accumulators.binned_statistic import BinnedStatistic2D, BinnedStatistic1D
+from pyCHX.chx_generic_functions import *
+from pyCHX.chx_libs import colors, colors_, markers, markers_
 
 
 def get_gisaxs_roi2(qr_edge, qz_edge, qr_map, qz_map, mask=None, qval_dict=None):
@@ -1218,9 +1219,10 @@ def plot_qzr_map(qr, qz, inc_x0, ticks=None, data=None, uid="uid", path="", vmin
         ticks = plot_qzr_map(  ticks, inc_x0, data = avg_imgmr, Nzline=10,  Nrline=10   )
     """
 
-    import matplotlib.pyplot as plt
     import copy
+
     import matplotlib.cm as mcm
+    import matplotlib.pyplot as plt
 
     if ticks is None:
         zticks, zticks_label, rticks, rticks_label, label_array_qr, label_array_qz = get_qzr_map(
@@ -1295,9 +1297,10 @@ def show_qzr_map(qr, qz, inc_x0, data=None, Nzline=10, Nrline=10, interp=True, *
         ticks = show_qzr_map(  qr,qz, inc_x0, data = avg_imgmr, Nzline=10,  Nrline=10   )
     """
 
-    import matplotlib.pyplot as plt
     import copy
+
     import matplotlib.cm as mcm
+    import matplotlib.pyplot as plt
 
     cmap = "viridis"
     _cmap = copy.copy((mcm.get_cmap(cmap)))

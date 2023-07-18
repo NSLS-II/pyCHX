@@ -1,24 +1,62 @@
-from numpy import pi, sin, arctan, sqrt, mgrid, where, shape, exp, linspace, std, arange
-from numpy import power, log, log10, array, zeros, ones, reshape, mean, histogram, round, int_
-from numpy import indices, hypot, digitize, ma, histogramdd, apply_over_axes, sum
-from numpy import around, intersect1d, ravel, unique, hstack, vstack, zeros_like
-from numpy import save, load, dot
-from numpy.linalg import lstsq
-from numpy import polyfit, poly1d
-import sys, os
+import os
 import pickle as pkl
-
-import matplotlib.pyplot as plt
+import struct
+import sys
 
 # from Init_for_Timepix import * # the setup file
 import time
 
-import struct
+import matplotlib.pyplot as plt
 import numpy as np
-from tqdm import tqdm
 import pandas as pds
-from pyCHX.chx_libs import multi_tau_lags
+from numpy import (
+    apply_over_axes,
+    arange,
+    arctan,
+    around,
+    array,
+    digitize,
+    dot,
+    exp,
+    histogram,
+    histogramdd,
+    hstack,
+    hypot,
+    indices,
+    int_,
+    intersect1d,
+    linspace,
+    load,
+    log,
+    log10,
+    ma,
+    mean,
+    mgrid,
+    ones,
+    pi,
+    poly1d,
+    polyfit,
+    power,
+    ravel,
+    reshape,
+    round,
+    save,
+    shape,
+    sin,
+    sqrt,
+    std,
+    sum,
+    unique,
+    vstack,
+    where,
+    zeros,
+    zeros_like,
+)
+from numpy.linalg import lstsq
+from tqdm import tqdm
+
 from pyCHX.chx_compress import Multifile, go_through_FD, pass_FD
+from pyCHX.chx_libs import multi_tau_lags
 
 
 def get_timepixel_data(data_dir, filename, time_unit=1):

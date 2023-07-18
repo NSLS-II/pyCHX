@@ -6,35 +6,33 @@ This module will provide XSVS analysis tools
 """
 
 from __future__ import absolute_import, division, print_function
-import six
 
+import logging
 import time
 
+import six
 from skbeam.core import roi
 from skbeam.core.utils import bin_edges_to_centers, geometric_series
 
-import logging
-
 logger = logging.getLogger(__name__)
 
-import sys, os
+import itertools
+import os
+import sys
+from datetime import datetime
+from multiprocessing import Pool
 
+import dill
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
-from datetime import datetime
-
 import numpy as np
 import scipy as sp
 import scipy.stats as st
-from scipy.optimize import leastsq
-from scipy.optimize import minimize
+from matplotlib.colors import LogNorm
+from scipy.optimize import leastsq, minimize
 from tqdm import tqdm
-from multiprocessing import Pool
-import dill
-import itertools
 
-from pyCHX.chx_compress import run_dill_encoded, apply_async, map_async, pass_FD, go_through_FD
+from pyCHX.chx_compress import apply_async, go_through_FD, map_async, pass_FD, run_dill_encoded
 from pyCHX.chx_generic_functions import trans_data_to_pd
 
 
@@ -880,7 +878,6 @@ def get_bin_edges(num_times, num_rois, mean_roi, max_cts):
 from scipy import stats
 from scipy.special import gamma, gammaln
 
-
 ###########################3
 ##Dev at Nov 18, 2016
 #
@@ -1297,8 +1294,9 @@ def get_K(KL_val):
 def save_KM(K_mean, KL_val, ML_val, qs=None, level_time=None, uid=None, path=None):
     """save Kmean, K_val, M_val as dataframe"""
 
-    from pandas import DataFrame
     import os
+
+    from pandas import DataFrame
 
     kl = get_K(KL_val)
     ml = 1 / get_contrast(ML_val)

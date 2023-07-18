@@ -4,24 +4,24 @@ yuzhang@bnl.gov
 This module is for parallel computation of time correlation
 """
 from __future__ import absolute_import, division, print_function
-from skbeam.core.utils import multi_tau_lags
-from skbeam.core.roi import extract_label_indices
-from pyCHX.chx_libs import tqdm
-from pyCHX.chx_correlationc import (
-    get_pixelist_interp_iq,
-    _validate_and_transform_inputs,
-    _one_time_process as _one_time_processp,
-    _one_time_process_error as _one_time_process_errorp,
-    _two_time_process as _two_time_processp,
-)
-from pyCHX.chx_compress import run_dill_encoded, apply_async, map_async, pass_FD, go_through_FD
-from multiprocessing import Pool
-import dill
+
+import logging
+import sys
 from collections import namedtuple
+from multiprocessing import Pool
+
+import dill
 import numpy as np
 import skbeam.core.roi as roi
-import sys
-import logging
+from skbeam.core.roi import extract_label_indices
+from skbeam.core.utils import multi_tau_lags
+
+from pyCHX.chx_compress import apply_async, go_through_FD, map_async, pass_FD, run_dill_encoded
+from pyCHX.chx_correlationc import _one_time_process as _one_time_processp
+from pyCHX.chx_correlationc import _one_time_process_error as _one_time_process_errorp
+from pyCHX.chx_correlationc import _two_time_process as _two_time_processp
+from pyCHX.chx_correlationc import _validate_and_transform_inputs, get_pixelist_interp_iq
+from pyCHX.chx_libs import tqdm
 
 logger = logging.getLogger(__name__)
 

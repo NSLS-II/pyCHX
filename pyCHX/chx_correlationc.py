@@ -7,13 +7,13 @@ This module is for computation of time correlation by using compressing algorith
 
 from __future__ import absolute_import, division, print_function
 
-from skbeam.core.utils import multi_tau_lags
-from skbeam.core.roi import extract_label_indices
+import logging
 from collections import namedtuple
+
 import numpy as np
 import skbeam.core.roi as roi
-
-import logging
+from skbeam.core.roi import extract_label_indices
+from skbeam.core.utils import multi_tau_lags
 
 logger = logging.getLogger(__name__)
 from tqdm import tqdm

@@ -1,4 +1,4 @@
-from pyOlog import LogEntry, Attachment, OlogClient, SimpleOlogClient
+from pyOlog import Attachment, LogEntry, OlogClient, SimpleOlogClient
 from pyOlog.OlogDataTypes import Logbook
 
 

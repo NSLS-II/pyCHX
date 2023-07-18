@@ -1,9 +1,9 @@
 # simple brute force multitau
 # from pyCHX.chx_generic_functions import average_array_withNan
 import numpy as np
-from tqdm import tqdm
-from numpy.fft import fft, ifft
 import skbeam.core.roi as roi
+from numpy.fft import fft, ifft
+from tqdm import tqdm
 
 
 def fit_one_peak_curve(x, y, fit_range):
@@ -436,9 +436,9 @@ def autocor_xytframe(self, n):
 
 ###################For Fit
 
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import leastsq
-import matplotlib.pyplot as plt
 
 # duplicate my curfit function from yorick, except use sigma and not w
 # notice the main feature is an adjust list.

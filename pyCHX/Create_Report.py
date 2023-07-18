@@ -19,28 +19,28 @@ def check_dict_keys(dicts, key):
         dicts[key] = "unknown"
 
 
+import os
+import sys
+from datetime import datetime
+from time import time
+
 import h5py
-
-from reportlab.pdfgen import canvas
-from reportlab.lib.units import inch, cm, mm
-from reportlab.lib.colors import pink, green, brown, white, black, red, blue
-
-
+import numpy as np
+import pandas as pds
+from PIL import Image
+from reportlab.lib.colors import black, blue, brown, green, pink, red, white
+from reportlab.lib.pagesizes import A4, letter
 from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import cm, inch, mm
+from reportlab.pdfgen import canvas
+
+from pyCHX.chx_generic_functions import pload_obj
 
 # from reportlab.platypus import Image, Paragraph, Table
 
-from reportlab.lib.pagesizes import letter, A4
-from pyCHX.chx_generic_functions import pload_obj
 
 
-from PIL import Image
-from time import time
-from datetime import datetime
 
-import sys, os
-import pandas as pds
-import numpy as np
 
 
 def add_one_line_string(c, s, top, left=30, fontsize=11):
@@ -1966,8 +1966,8 @@ def extract_xpcs_results_from_h5_debug(filename, import_dir, onekey=None, exclud
         extact_dict: dict, with keys as md, g2, g4 et.al.
     """
 
-    import pandas as pds
     import numpy as np
+    import pandas as pds
 
     extract_dict = {}
     fp = import_dir + filename
@@ -2062,8 +2062,8 @@ def extract_xpcs_results_from_h5(filename, import_dir, onekey=None, exclude_keys
         extact_dict: dict, with keys as md, g2, g4 et.al.
     """
 
-    import pandas as pds
     import numpy as np
+    import pandas as pds
 
     extract_dict = {}
     fp = import_dir + filename

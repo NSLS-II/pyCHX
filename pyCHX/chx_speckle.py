@@ -6,29 +6,26 @@ This module will provide XSVS analysis tools
 """
 
 from __future__ import absolute_import, division, print_function
-import six
-
-import time
-
-from skbeam.core import roi
-from skbeam.core.utils import bin_edges_to_centers, geometric_series
 
 import logging
+import time
+
+import six
+from skbeam.core import roi
+from skbeam.core.utils import bin_edges_to_centers, geometric_series
 
 logger = logging.getLogger(__name__)
 
 import sys
+from datetime import datetime
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
-from datetime import datetime
-
 import numpy as np
 import scipy as sp
 import scipy.stats as st
-from scipy.optimize import leastsq
-from scipy.optimize import minimize
+from matplotlib.colors import LogNorm
+from scipy.optimize import leastsq, minimize
 
 
 def xsvs(

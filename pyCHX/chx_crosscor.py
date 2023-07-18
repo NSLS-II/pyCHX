@@ -9,12 +9,14 @@ This module is for functions specific to spatial correlation in order to tackle 
 """
 from __future__ import absolute_import, division, print_function
 
-# from __future__ import absolute_import, division, print_function
-from skbeam.core.utils import multi_tau_lags
-from skbeam.core.roi import extract_label_indices
 from collections import namedtuple
+
 import numpy as np
 from scipy.signal import fftconvolve
+from skbeam.core.roi import extract_label_indices
+
+# from __future__ import absolute_import, division, print_function
+from skbeam.core.utils import multi_tau_lags
 
 # for a convenient status bar
 try:
@@ -334,15 +336,11 @@ def _centered(img, sz):
 # 1999 -- 2002
 
 
-import warnings
 import threading
+import warnings
 
 # from . import sigtools
 import numpy as np
-from numpy.lib import NumpyVersion
-from scipy import linalg
-from scipy.fftpack import fft, ifft, ifftshift, fft2, ifft2, fftn, ifftn, fftfreq
-from numpy.fft import rfftn, irfftn
 from numpy import (
     allclose,
     angle,
@@ -386,6 +384,10 @@ from numpy import (
     zeros,
     zeros_like,
 )
+from numpy.fft import irfftn, rfftn
+from numpy.lib import NumpyVersion
+from scipy import linalg
+from scipy.fftpack import fft, fft2, fftfreq, fftn, ifft, ifft2, ifftn, ifftshift
 
 # from ._arraytools import axis_slice, axis_reverse, odd_ext, even_ext, const_ext
 
@@ -772,7 +774,9 @@ class CrossCorrelator1:
 
 ##for parallel
 from multiprocessing import Pool
+
 import dill
+
 from pyCHX.chx_compress import apply_async, map_async
 
 

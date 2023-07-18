@@ -1,23 +1,23 @@
-from pyCHX.chx_libs import *
+import copy
+import datetime
+from os import listdir
+from shutil import copyfile
+
+import matplotlib.cm as mcm
+import numpy as np
+import PIL
+import pytz
+import scipy
+from matplotlib import cm
+from modest_image import imshow
+from scipy.special import erf
+from skbeam.core.utils import angle_grid, radial_grid, radius_to_twotheta, twotheta_to_q
+from skimage.draw import disk, ellipse, line, line_aa, polygon
+from skimage.filters import prewitt
 
 # from tqdm import *
+from pyCHX.chx_libs import *
 from pyCHX.chx_libs import colors, markers
-from scipy.special import erf
-
-from skimage.filters import prewitt
-from skimage.draw import line_aa, line, polygon, ellipse, disk
-
-from modest_image import imshow
-import matplotlib.cm as mcm
-from matplotlib import cm
-import copy, scipy
-import PIL
-from shutil import copyfile
-import datetime, pytz
-from skbeam.core.utils import radial_grid, angle_grid, radius_to_twotheta, twotheta_to_q
-from os import listdir
-import numpy as np
-
 
 markers = [
     "o",
@@ -1036,7 +1036,8 @@ def copy_data(old_path, new_path="/tmp_data/data/"):
     new_path: the new path
 
     """
-    import shutil, glob
+    import glob
+    import shutil
 
     # old_path = sud[2][0]
     # new_path = '/tmp_data/data/'
@@ -1053,7 +1054,8 @@ def delete_data(old_path, new_path="/tmp_data/data/"):
     old_path: the full path of the Eiger master file
     new_path: the new path
     """
-    import shutil, glob
+    import glob
+    import shutil
 
     # old_path = sud[2][0]
     # new_path = '/tmp_data/data/'
@@ -3112,7 +3114,7 @@ def create_polygon_mask(image, xcorners, ycorners):
 
 
     """
-    from skimage.draw import line_aa, line, polygon, disk
+    from skimage.draw import disk, line, line_aa, polygon
 
     imy, imx = image.shape
     bst_mask = np.zeros_like(image, dtype=bool)
@@ -3135,7 +3137,7 @@ def create_rectangle_mask(image, xcorners, ycorners):
 
 
     """
-    from skimage.draw import line_aa, line, polygon, disk
+    from skimage.draw import disk, line, line_aa, polygon
 
     imy, imx = image.shape
     bst_mask = np.zeros_like(image, dtype=bool)
@@ -3190,7 +3192,7 @@ def create_wedge(image, center, radius, wcors, acute_angle=True):
     wcors: [ [x1,x2,x3...], [y1,y2,y3..]
 
     """
-    from skimage.draw import line_aa, line, polygon, disk
+    from skimage.draw import disk, line, line_aa, polygon
 
     imy, imx = image.shape
     cy, cx = center
@@ -3227,7 +3229,7 @@ def create_cross_mask(
     Return:
     the cross mask
     """
-    from skimage.draw import line_aa, line, polygon, disk
+    from skimage.draw import disk, line, line_aa, polygon
 
     imy, imx = image.shape
     cx, cy = center
@@ -3299,6 +3301,7 @@ def export_scan_scalar(
 
     """
     from databroker import DataBroker as db
+
     from pyCHX.chx_generic_functions import trans_data_to_pd
 
     hdr = db[uid]
@@ -4438,8 +4441,10 @@ def trans_data_to_pd(data, label=None, dtype="array"):
         a pandas.DataFrame
     """
     # lists a [ list1, list2...] all the list have the same length
+    import sys
+
+    import pandas as pd
     from numpy import arange, array
-    import pandas as pd, sys
 
     if dtype == "list":
         data = array(data).T
@@ -4782,9 +4787,10 @@ def trans_tf_to_td(tf, dtype="dframe"):
     """July 02, 2015, Y.G.@CHX
     Translate epoch time to string
     """
-    import pandas as pd
-    import numpy as np
     import datetime
+
+    import numpy as np
+    import pandas as pd
 
     """translate time.float to time.date,
        td.type dframe: a dataframe
@@ -4804,6 +4810,7 @@ def trans_td_to_tf(td, dtype="dframe"):
 
     """
     import time
+
     import numpy as np
 
     """translate time.date to time.float,

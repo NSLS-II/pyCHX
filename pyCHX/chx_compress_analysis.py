@@ -1,41 +1,51 @@
 from __future__ import absolute_import, division, print_function
 
-from tqdm import tqdm
+import logging
+import os
 import struct
+from collections import namedtuple
 
 import matplotlib.pyplot as plt
+from skbeam.core.roi import extract_label_indices
+from skbeam.core.utils import multi_tau_lags
+from tqdm import tqdm
 
-from pyCHX.chx_libs import np, roi, time, datetime, os, getpass, db, LogNorm, Figure, RUN_GUI
+from pyCHX.chx_generic_functions import save_arrays
 
 # from pyCHX.chx_generic_functions import (get_circular_average)
 # from pyCHX.XPCS_SAXS import (get_circular_average)
-from pyCHX.chx_libs import colors, markers, colors_, markers_
-
-import os
-from pyCHX.chx_generic_functions import save_arrays
-
-
-from skbeam.core.utils import multi_tau_lags
-from skbeam.core.roi import extract_label_indices
-from collections import namedtuple
-
-import logging
+from pyCHX.chx_libs import (
+    RUN_GUI,
+    Figure,
+    LogNorm,
+    colors,
+    colors_,
+    datetime,
+    db,
+    getpass,
+    markers,
+    markers_,
+    np,
+    os,
+    roi,
+    time,
+)
 
 logger = logging.getLogger(__name__)
 
+from modest_image import imshow
+
 from pyCHX.chx_compress import (
-    compress_eigerdata,
-    read_compressed_eigerdata,
-    init_compress_eigerdata,
     Multifile,
-    pass_FD,
+    compress_eigerdata,
     get_avg_imgc,
-    mean_intensityc,
     get_each_frame_intensityc,
+    init_compress_eigerdata,
+    mean_intensityc,
+    pass_FD,
+    read_compressed_eigerdata,
 )
 from pyCHX.chx_generic_functions import find_bad_pixels_FD
-
-from modest_image import imshow
 
 # from pyCHX.chx_compress import *
 

@@ -1,35 +1,34 @@
-import os, shutil
-from glob import iglob
-
-import matplotlib.pyplot as plt
-from pyCHX.chx_libs import np, roi, time, datetime, os, getpass, db, LogNorm, RUN_GUI
-from pyCHX.chx_generic_functions import (
-    create_time_slice,
-    get_detector,
-    get_sid_filenames,
-    load_data,
-    reverse_updown,
-    rot90_clockwise,
-    get_eigerImage_per_file,
-    copy_data,
-    delete_data,
-)
-
-
-import struct
-from tqdm import tqdm
-from contextlib import closing
-
-from multiprocessing import Pool
-import dill
-import sys
 import gc
+import os
 import pickle as pkl
+import shutil
+import struct
+import sys
+from contextlib import closing
+from glob import iglob
+from multiprocessing import Pool
+
+import dill
+import matplotlib.pyplot as plt
 
 # imports handler from CHX
 # this is where the decision is made whether or not to use dask
 # from chxtools.handlers import EigerImages, EigerHandler
 from eiger_io.fs_handler import EigerHandler, EigerImages
+from tqdm import tqdm
+
+from pyCHX.chx_generic_functions import (
+    copy_data,
+    create_time_slice,
+    delete_data,
+    get_detector,
+    get_eigerImage_per_file,
+    get_sid_filenames,
+    load_data,
+    reverse_updown,
+    rot90_clockwise,
+)
+from pyCHX.chx_libs import RUN_GUI, LogNorm, datetime, db, getpass, np, os, roi, time
 
 
 def run_dill_encoded(what):

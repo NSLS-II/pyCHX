@@ -4,41 +4,24 @@ yuzhang@bnl.gov
 This module is for the SAXS XPCS analysis 
 """
 
-from pyCHX.chx_libs import (
-    colors,
-    colors_copy,
-    markers,
-    markers_copy,
-    colors_,
-    markers_,
-)
+import os
 
-from pyCHX.chx_libs import Figure, RUN_GUI
-
-from pyCHX.chx_generic_functions import *
+from pandas import DataFrame
 from scipy.special import erf
 
 from pyCHX.chx_compress_analysis import (
-    compress_eigerdata,
-    read_compressed_eigerdata,
-    init_compress_eigerdata,
     Multifile,
-    get_each_ring_mean_intensityc,
+    compress_eigerdata,
     get_avg_imgc,
+    get_each_ring_mean_intensityc,
+    init_compress_eigerdata,
     mean_intensityc,
+    read_compressed_eigerdata,
 )
-
-from pyCHX.chx_correlationc import (
-    cal_g2c,
-    Get_Pixel_Arrayc,
-    auto_two_Arrayc,
-    get_pixelist_interp_iq,
-)
+from pyCHX.chx_correlationc import Get_Pixel_Arrayc, auto_two_Arrayc, cal_g2c, get_pixelist_interp_iq
 from pyCHX.chx_correlationp import cal_g2p
-
-
-from pandas import DataFrame
-import os
+from pyCHX.chx_generic_functions import *
+from pyCHX.chx_libs import RUN_GUI, Figure, colors, colors_, colors_copy, markers, markers_, markers_copy
 
 
 def get_iq_invariant(qt, iqst):

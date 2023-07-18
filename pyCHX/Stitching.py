@@ -1,8 +1,13 @@
-import sys, os, re, PIL
-import numpy as np
-from scipy.signal import savgol_filter as sf
+import os
+import re
+import sys
+
 import matplotlib.pyplot as plt
-from pyCHX.chx_generic_functions import show_img, plot1D
+import numpy as np
+import PIL
+from scipy.signal import savgol_filter as sf
+
+from pyCHX.chx_generic_functions import plot1D, show_img
 from pyCHX.DataGonio import convert_Qmap
 
 
@@ -236,9 +241,10 @@ def plot_qmap_in_folder(inDir):
     """YG. Sep 27@SMI
     Plot Qmap data from inDir, which contains qmap data and extent data
     """
+    import pickle as cpl
+
     from pyCHX.chx_generic_functions import show_img
     from pyCHX.chx_libs import cmap_vge_hdr, plt
-    import pickle as cpl
 
     fp = get_base_all_filenames(inDir, base_filename_cut_length=-10)
     print(

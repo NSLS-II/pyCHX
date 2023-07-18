@@ -5,16 +5,16 @@ This module is for the static SAXS analysis, such as fit form factor
 """
 
 # import numpy as np
-from lmfit import Model
-from lmfit import minimize, Parameters, Parameter, report_fit, fit_report
+from lmfit import Model, Parameter, Parameters, fit_report, minimize, report_fit
+from scipy.optimize import curve_fit, least_squares, leastsq
+from scipy.special import gamma, gammaln
+
+from pyCHX.chx_generic_functions import find_index, plot1D, show_img
 
 # import matplotlib as mpl
 # import matplotlib.pyplot as plt
 # from matplotlib.colors import LogNorm
 from pyCHX.chx_libs import *
-from pyCHX.chx_generic_functions import show_img, plot1D, find_index
-from scipy.special import gamma, gammaln
-from scipy.optimize import leastsq, curve_fit, least_squares
 
 
 def mono_sphere_form_factor_intensity(x, radius, delta_rho=100, fit_func="G"):

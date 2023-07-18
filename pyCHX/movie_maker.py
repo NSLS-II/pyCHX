@@ -58,8 +58,8 @@ def select_regoin(
 def save_png_series(
     imgs, ROI=None, logs=True, outDir=None, uid=None, vmin=None, vmax=None, cmap="viridis", dpi=100
 ):
-    import numpy as np
     import matplotlib.pyplot as plt
+    import numpy as np
     from matplotlib.colors import LogNorm
 
     """
@@ -133,9 +133,9 @@ def movie_maker(
     cmap="viridis",
     dpi=100,
 ):
-    import numpy as np
-    import matplotlib.pyplot as plt
     import matplotlib.animation as animation
+    import matplotlib.pyplot as plt
+    import numpy as np
     from matplotlib.colors import LogNorm
 
     """
