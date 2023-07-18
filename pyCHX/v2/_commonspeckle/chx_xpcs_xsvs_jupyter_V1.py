@@ -1,18 +1,13 @@
 # from pyCHX.v2._commonspeckle.chx_packages import * #common
-from pyCHX.v2._commonspeckle.chx_libs import (
-    markers,
-    colors,
-)  # common #TODO all other instances import with ()
-
+# from pyCHX.chx_generic_functions import get_short_long_labels_from_qval_dict
+# RUN_GUI = False
+# from pyCHX.chx_libs import markers
 # from pyCHX.chx_generic_functions import get_short_long_labels_from_qval_dict
 # RUN_GUI = False
 # from pyCHX.chx_libs import markers
 import pandas as pds
 
-# from pyCHX.chx_generic_functions import get_short_long_labels_from_qval_dict
-# RUN_GUI = False
-# from pyCHX.chx_libs import markers
-import pandas as pds
+from pyCHX.v2._commonspeckle.chx_libs import colors, markers  # common #TODO all other instances import with ()
 
 
 def get_t_iqc_uids(uid_list, setup_pargs, slice_num=10, slice_width=1):
@@ -44,9 +39,7 @@ def get_t_iqc_uids(uid_list, setup_pargs, slice_num=10, slice_width=1):
         good_start = 5
         FD = Multifile(filename, good_start, N)
         Nimg = FD.end - FD.beg
-        time_edge = create_time_slice(
-            Nimg, slice_num=slice_num, slice_width=slice_width, edges=None
-        )
+        time_edge = create_time_slice(Nimg, slice_num=slice_num, slice_width=slice_width, edges=None)
         time_edge = np.array(time_edge) + good_start
         # print( time_edge )
         tstamp[uid] = time_edge[:, 0] * timeperframe
@@ -62,7 +55,7 @@ def plot_t_iqtMq2(qt, iqst, tstamp, ax=None, perf=""):
         fig, ax = plt.subplots()
     q = qt
     for i in range(iqst.shape[0]):
-        yi = iqst[i] * q ** 2
+        yi = iqst[i] * q**2
         time_labeli = perf + "time_%s s" % (round(tstamp[i], 3))
         plot1D(
             x=q,
@@ -104,7 +97,6 @@ def plot_entries_from_csvlist(
     legend=None,
     fp_fulluid=True,
 ):
-
     """
     YG Feb2, 2018, make yshift be also a list
 
@@ -251,7 +243,6 @@ def plot_entries_from_uids(
     fp_fulluid=False,
     fp_append=None,
 ):  # ,title=''  ):
-
     """
     YG Feb2, 2018, make yshift be also a list
 
@@ -313,9 +304,7 @@ def plot_entries_from_uids(
                 filename = "uid=%s_Res.h5" % uid_dict[u]
         else:
             filename = filename_list[i]
-        total_res = extract_xpcs_results_from_h5(
-            filename=filename, import_dir=inDiru, exclude_keys=["g12b"]
-        )
+        total_res = extract_xpcs_results_from_h5(filename=filename, import_dir=inDiru, exclude_keys=["g12b"])
         if key == "g2":
             d = total_res[key][1:, qth]
             taus = total_res["taus"][1:]
@@ -351,7 +340,6 @@ def plot_entries_from_uids(
             )
 
         elif key == "iq":
-
             x = total_res["q_saxs"]
             y = total_res["iq_saxs"]
             plot1D(
@@ -416,7 +404,6 @@ def get_iq_from_uids(uids, mask, setup_pargs):
     n = 0
     for k in list(uids.keys()):
         for uid in uids[k]:
-
             uidstr = "uid=%s" % uid
             sud = get_sid_filenames(db[uid])
             # print(sud)
@@ -455,9 +442,7 @@ def get_iq_from_uids(uids, mask, setup_pargs):
 
             setup_pargs["uid"] = uidstr
 
-            qp_saxs, iq_saxs, q_saxs = get_circular_average(
-                avg_img, mask, pargs=setup_pargs, save=True
-            )
+            qp_saxs, iq_saxs, q_saxs = get_circular_average(avg_img, mask, pargs=setup_pargs, save=True)
             if n == 0:
                 iqs = np.zeros([len(q_saxs), Nuid + 1])
                 iqs[:, 0] = q_saxs
@@ -576,9 +561,7 @@ def get_uids_in_time_period(start_time, stop_time):
     return np.array(uids), np.array(fuids)
 
 
-def do_compress_on_line(
-    start_time, stop_time, mask_dict=None, mask=None, wait_time=2, max_try_num=3
-):
+def do_compress_on_line(start_time, stop_time, mask_dict=None, mask=None, wait_time=2, max_try_num=3):
     """Y.G. Mar 10, 2017
     Do on-line compress by giving start time and stop time
     Parameters:
@@ -655,10 +638,7 @@ def realtime_xpcs_analysis(
             print("*" * 50)
             # print('Do compress for %s now...'%uid)
             print("Starting analysis for %s now..." % uid)
-            if (
-                db[uid]["start"]["plan_name"] == "count"
-                or db[uid]["start"]["plan_name"] == "manual_count"
-            ):
+            if db[uid]["start"]["plan_name"] == "count" or db[uid]["start"]["plan_name"] == "manual_count":
                 # if db[uid]['start']['dtype'] =='xpcs':
                 finish = wait_data_acquistion_finish(uid, wait_time, max_try_num)
                 if finish:
@@ -787,7 +767,6 @@ def get_two_time_mulit_uids(
     direct_load_data=False,
     compress_path=None,
 ):
-
     """Calculate two time correlation by using auto_two_Arrayc func for a set of uids,
         if the two-time resutls are already created, by default (force_generate=False), just pass
     Parameters:
@@ -836,20 +815,13 @@ def get_two_time_mulit_uids(
         if not force_generate:
             if os.path.exists(filename + ".npy"):
                 doit = False
-                print(
-                    "The two time correlation function for uid=%s is already calculated. Just pass..."
-                    % uid
-                )
+                print("The two time correlation function for uid=%s is already calculated. Just pass..." % uid)
         if doit:
             data_pixel = Get_Pixel_Arrayc(FD, pixelist, norm=norm).get_data()
             g12b = auto_two_Arrayc(data_pixel, roi_mask, index=None)
             np.save(filename, g12b)
             del g12b
-            print(
-                "The two time correlation function for uid={} is saved as {}.".format(
-                    uid, filename
-                )
-            )
+            print("The two time correlation function for uid={} is saved as {}.".format(uid, filename))
 
 
 def get_series_g2_from_g12(
@@ -897,18 +869,14 @@ def get_series_g2_from_g12(
             )
             good_end = L
         if not log_taus:
-            g2[key] = get_one_time_from_two_time(
-                g12b[good_start:good_end, good_start:good_end, :]
-            )
+            g2[key] = get_one_time_from_two_time(g12b[good_start:good_end, good_start:good_end, :])
         else:
             # print(  good_end,  num_bufs )
             lag_step = get_multi_tau_lag_steps(good_end, num_bufs)
             lag_step = lag_step[lag_step < good_end - good_start]
             # print( len(lag_steps ) )
             lag_steps[key] = lag_step * time_step
-            g2[key] = get_one_time_from_two_time(
-                g12b[good_start:good_end, good_start:good_end, :]
-            )[lag_step]
+            g2[key] = get_one_time_from_two_time(g12b[good_start:good_end, good_start:good_end, :])[lag_step]
 
     return lag_steps, g2
 
@@ -966,9 +934,7 @@ def get_series_one_time_mulit_uids(
     """
 
     if path is None:
-        print(
-            "Please calculate two time function first by using get_two_time_mulit_uids function."
-        )
+        print("Please calculate two time function first by using get_two_time_mulit_uids function.")
     else:
         taus_uids = {}
         g2_uids = {}
@@ -1154,9 +1120,7 @@ def plot_dose_g2(
     # return taus_dict, g2_dict
 
 
-def run_xpcs_xsvs_single(
-    uid, run_pargs, md_cor=None, return_res=False, reverse=True, clear_plot=False
-):
+def run_xpcs_xsvs_single(uid, run_pargs, md_cor=None, return_res=False, reverse=True, clear_plot=False):
     """Y.G. Dec 22, 2016
        Run XPCS XSVS analysis for a single uid
        Parameters:
@@ -1337,9 +1301,7 @@ def run_xpcs_xsvs_single(
     if md["detector"] == "eiger1m_single_image":
         Chip_Mask = np.load("/XF11ID/analysis/2017_1/masks/Eiger1M_Chip_Mask.npy")
     elif md["detector"] == "eiger4m_single_image" or md["detector"] == "image":
-        Chip_Mask = np.array(
-            np.load("/XF11ID/analysis/2017_1/masks/Eiger4M_chip_mask.npy"), dtype=bool
-        )
+        Chip_Mask = np.array(np.load("/XF11ID/analysis/2017_1/masks/Eiger4M_chip_mask.npy"), dtype=bool)
         BadPix = np.load("/XF11ID/analysis/2018_1/BadPix_4M.npy")
         Chip_Mask.ravel()[BadPix] = 0
     elif md["detector"] == "eiger500K_single_image":
@@ -1396,9 +1358,7 @@ def run_xpcs_xsvs_single(
     )
     # print_dict( setup_pargs )
 
-    mask = load_mask(
-        mask_path, mask_name, plot_=False, image_name=uidstr + "_mask", reverse=reverse
-    )
+    mask = load_mask(mask_path, mask_name, plot_=False, image_name=uidstr + "_mask", reverse=reverse)
     mask *= pixel_mask
     if md["detector"] == "eiger4m_single_image":
         mask[:, 2069] = 0  # False  #Concluded from the previous results
@@ -1441,9 +1401,7 @@ def run_xpcs_xsvs_single(
         photon_occ = len(np.where(avg_img)[0]) / (imgsa[0].size)
         # compress =  photon_occ < .4  #if the photon ocupation < 0.5, do compress
         print("The non-zeros photon occupation is %s." % (photon_occ))
-        print(
-            "Will " + "Always " + ["NOT", "DO"][compress] + " apply compress process."
-        )
+        print("Will " + "Always " + ["NOT", "DO"][compress] + " apply compress process.")
         # good_start = 5  #make the good_start at least 0
         t0 = time.time()
         filename = "/XF11ID/analysis/Compressed_Data" + "/uid_%s.cmp" % md["uid"]
@@ -1468,15 +1426,7 @@ def run_xpcs_xsvs_single(
         uid_ = uidstr + "_fra_%s_%s" % (FD.beg, FD.end)
         print(uid_)
         plot1D(
-            y=imgsum[
-                np.array(
-                    [
-                        i
-                        for i in np.arange(good_start, len(imgsum))
-                        if i not in bad_frame_list
-                    ]
-                )
-            ],
+            y=imgsum[np.array([i for i in np.arange(good_start, len(imgsum)) if i not in bad_frame_list])],
             title=uidstr + "_imgsum",
             xlabel="Frame",
             ylabel="Total_Intensity",
@@ -1486,7 +1436,7 @@ def run_xpcs_xsvs_single(
 
         mask = mask * Chip_Mask
 
-        #%system   free && sync && echo 3 > /proc/sys/vm/drop_caches && free
+        # %system   free && sync && echo 3 > /proc/sys/vm/drop_caches && free
         ## Get bad frame list by a polynominal fit
         bad_frame_list = get_bad_frame_list(
             imgsum,
@@ -1517,9 +1467,7 @@ def run_xpcs_xsvs_single(
             cmap=cmap_albula,
         )
 
-        imgsum_y = imgsum[
-            np.array([i for i in np.arange(len(imgsum)) if i not in bad_frame_list])
-        ]
+        imgsum_y = imgsum[np.array([i for i in np.arange(len(imgsum)) if i not in bad_frame_list])]
         imgsum_x = np.arange(len(imgsum_y))
         save_lists(
             [imgsum_x, imgsum_y],
@@ -1539,7 +1487,6 @@ def run_xpcs_xsvs_single(
 
         ############for SAXS and ANG_SAXS (Flow_SAXS)
         if scat_geometry == "saxs" or scat_geometry == "ang_saxs":
-
             # show_saxs_qmap( avg_img, setup_pargs, width=600, vmin=.1, vmax=np.max(avg_img*.1), logs=True,
             #   image_name= uidstr + '_img_avg',  save=True)
             # np.save(  data_dir + 'uid=%s--img-avg'%uid, avg_img)
@@ -1613,14 +1560,10 @@ def run_xpcs_xsvs_single(
 
             if scat_geometry != "ang_saxs":
                 Nimg = FD.end - FD.beg
-                time_edge = create_time_slice(
-                    N=Nimg, slice_num=3, slice_width=1, edges=None
-                )
+                time_edge = create_time_slice(N=Nimg, slice_num=3, slice_width=1, edges=None)
                 time_edge = np.array(time_edge) + good_start
                 # print( time_edge )
-                qpt, iqst, qt = get_t_iqc(
-                    FD, time_edge, mask * Chip_Mask, pargs=setup_pargs, nx=1500
-                )
+                qpt, iqst, qt = get_t_iqc(FD, time_edge, mask * Chip_Mask, pargs=setup_pargs, nx=1500)
                 plot_t_iqc(
                     qt,
                     iqst,
@@ -1675,9 +1618,7 @@ def run_xpcs_xsvs_single(
                 path=data_dir,
                 uid=uidstr,
             )
-            qr_1d_pds = cal_1d_qr(
-                avg_img, Qr, Qz, qr_map, qz_map, inc_x0, setup_pargs=setup_pargs
-            )
+            qr_1d_pds = cal_1d_qr(avg_img, Qr, Qz, qr_map, qz_map, inc_x0, setup_pargs=setup_pargs)
             plot_qr_1d_with_ROI(
                 qr_1d_pds,
                 qr_center=np.unique(np.array(list(qval_dict.values()))[:, 0]),
@@ -1688,13 +1629,9 @@ def run_xpcs_xsvs_single(
             )
 
             Nimg = FD.end - FD.beg
-            time_edge = create_time_slice(
-                N=Nimg, slice_num=3, slice_width=1, edges=None
-            )
+            time_edge = create_time_slice(N=Nimg, slice_num=3, slice_width=1, edges=None)
             time_edge = np.array(time_edge) + good_start
-            qrt_pds = get_t_qrc(
-                FD, time_edge, Qr, Qz, qr_map, qz_map, path=data_dir, uid=uidstr
-            )
+            qrt_pds = get_t_qrc(FD, time_edge, Qr, Qz, qr_map, qz_map, path=data_dir, uid=uidstr)
             plot_qrt_pds(qrt_pds, time_edge, qz_index=0, uid=uidstr, path=data_dir)
 
         ##############################
@@ -1709,11 +1646,7 @@ def run_xpcs_xsvs_single(
                 save=True,
                 path=data_dir,
             )
-        if (
-            scat_geometry == "saxs"
-            or scat_geometry == "gi_saxs"
-            or scat_geometry == "gi_waxs"
-        ):
+        if scat_geometry == "saxs" or scat_geometry == "gi_saxs" or scat_geometry == "gi_waxs":
             if run_waterfall:
                 wat = cal_waterfallc(
                     FD,
@@ -1740,9 +1673,7 @@ def run_xpcs_xsvs_single(
             times_roi, mean_int_sets = cal_each_ring_mean_intensityc(
                 FD, roi_mask, timeperframe=None, multi_cor=True
             )
-            plot_each_ring_mean_intensityc(
-                times_roi, mean_int_sets, uid=uidstr, save=True, path=data_dir
-            )
+            plot_each_ring_mean_intensityc(times_roi, mean_int_sets, uid=uidstr, save=True, path=data_dir)
             roi_avg = np.average(mean_int_sets, axis=0)
 
         uid_ = uidstr + "_fra_%s_%s" % (FD.beg, FD.end)
@@ -2036,7 +1967,6 @@ def run_xpcs_xsvs_single(
         # For two-time
         data_pixel = None
         if run_two_time:
-
             data_pixel = Get_Pixel_Arrayc(FD, pixelist, norm=norm).get_data()
             t0 = time.time()
             g12b = auto_two_Arrayc(data_pixel, roi_mask, index=None)
@@ -2234,9 +2164,7 @@ def run_xpcs_xsvs_single(
             # time_steps = np.array( utils.geometric_series(2,   len(imgs)   ) )
             time_steps = [0, 1]  # only run the first two levels
             num_times = len(time_steps)
-            times_xsvs = (
-                exposuretime + (2 ** (np.arange(len(time_steps))) - 1) * timeperframe
-            )
+            times_xsvs = exposuretime + (2 ** (np.arange(len(time_steps))) - 1) * timeperframe
             print("The max counts are: %s" % max_cts)
 
             ### Do historam
@@ -2257,7 +2185,7 @@ def run_xpcs_xsvs_single(
                 bad_images=bad_frame_list,
                 only_two_levels=True,
             )
-            spec_kmean = np.array([roi_avg * 2 ** j for j in range(spec_his.shape[0])])
+            spec_kmean = np.array([roi_avg * 2**j for j in range(spec_his.shape[0])])
             run_time(t0)
 
             run_xsvs_all_lags = False
@@ -2529,18 +2457,12 @@ def run_xpcs_xsvs_single(
             Exdt["mean_int_sets"] = mean_int_sets
         if run_one_time:
             if scat_geometry != "ang_saxs":
-                for k, v in zip(
-                    ["taus", "g2", "g2_fit_paras"], [taus, g2, g2_fit_paras]
-                ):
+                for k, v in zip(["taus", "g2", "g2_fit_paras"], [taus, g2, g2_fit_paras]):
                     Exdt[k] = v
             else:
-                for k, v in zip(
-                    ["taus_v", "g2_v", "g2_fit_paras_v"], [taus_v, g2_v, g2_fit_paras_v]
-                ):
+                for k, v in zip(["taus_v", "g2_v", "g2_fit_paras_v"], [taus_v, g2_v, g2_fit_paras_v]):
                     Exdt[k] = v
-                for k, v in zip(
-                    ["taus_p", "g2_p", "g2_fit_paras_p"], [taus_p, g2_p, g2_fit_paras_p]
-                ):
+                for k, v in zip(["taus_p", "g2_p", "g2_fit_paras_p"], [taus_p, g2_p, g2_fit_paras_p]):
                     Exdt[k] = v
         if run_two_time:
             for k, v in zip(
@@ -2564,9 +2486,7 @@ def run_xpcs_xsvs_single(
             ):
                 Exdt[k] = v
 
-        export_xpcs_results_to_h5(
-            "uid=%s_Res.h5" % md["uid"], data_dir, export_dict=Exdt
-        )
+        export_xpcs_results_to_h5("uid=%s_Res.h5" % md["uid"], data_dir, export_dict=Exdt)
         # extract_dict = extract_xpcs_results_from_h5( filename = 'uid=%s_Res.h5'%md['uid'], import_dir = data_dir )
         # Creat PDF Report
         pdf_out_dir = os.path.join("/XF11ID/analysis/", CYCLE, username, "Results/")
@@ -2601,9 +2521,7 @@ def run_xpcs_xsvs_single(
             pname = pdf_out_dir + pdf_filename
             atch = [Attachment(open(pname, "rb"))]
             try:
-                update_olog_uid(
-                    uid=md["uid"], text="Add XPCS Analysis PDF Report", attachments=atch
-                )
+                update_olog_uid(uid=md["uid"], text="Add XPCS Analysis PDF Report", attachments=atch)
             except:
                 print(
                     "I can't attach this PDF: %s due to a duplicated filename. Please give a different PDF file."

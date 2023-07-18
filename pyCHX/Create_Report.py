@@ -39,10 +39,6 @@ from pyCHX.chx_generic_functions import pload_obj
 # from reportlab.platypus import Image, Paragraph, Table
 
 
-
-
-
-
 def add_one_line_string(c, s, top, left=30, fontsize=11):
     if (fontsize * len(s)) > 1000:
         fontsize = 1000.0 / (len(s))

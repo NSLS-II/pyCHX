@@ -37,6 +37,7 @@ This is coded by  Julien Lhermitte @2018, May
 
 """
 
+
 # TODO : split into RO and RW classes
 class Multifile:
     """
@@ -93,7 +94,7 @@ class Multifile:
         return self._read_raw(n)
 
     def rdchunk(self):
-        """ read the next chunk"""
+        """read the next chunk"""
         header = self._fd.read(1024)
 
     def index(self):
@@ -120,11 +121,9 @@ class Multifile:
         print("Done. Took {} secs for {} frames".format(t2 - t1, self.Nframes))
 
     def _read_header(self, n):
-        """ Read header from current seek position."""
+        """Read header from current seek position."""
         if n > self.Nframes:
-            raise KeyError(
-                "Error, only {} frames, asked for {}".format(self.Nframes, n)
-            )
+            raise KeyError("Error, only {} frames, asked for {}".format(self.Nframes, n))
         # read in bytes
         cur = self.frame_indexes[n]
         header_raw = self._fd[cur : cur + self.HEADER_SIZE]
@@ -147,9 +146,7 @@ class Multifile:
         Reads from current cursor in file.
         """
         if n > self.Nframes:
-            raise KeyError(
-                "Error, only {} frames, asked for {}".format(self.Nframes, n)
-            )
+            raise KeyError("Error, only {} frames, asked for {}".format(self.Nframes, n))
         cur = self.frame_indexes[n] + 1024
         dlen = self._read_header(n)["dlen"]
 
@@ -166,7 +163,7 @@ class Multifile:
         return pos, vals
 
     def _write_header(self, dlen, rows, cols):
-        """ Write header at current position."""
+        """Write header at current position."""
         self._rows = rows
         self._cols = cols
         self._dlen = dlen
@@ -181,7 +178,7 @@ class Multifile:
         self._fd.write(header)
 
     def write_raw(self, pos, vals):
-        """ Write a raw set of values for the next chunk."""
+        """Write a raw set of values for the next chunk."""
         rows = self._rows
         cols = self._cols
         dlen = len(pos)
@@ -195,6 +192,7 @@ class Multifile:
 
 import struct
 import time
+
 
 # TODO : split into RO and RW classes
 class MultifileBNL:
@@ -309,9 +307,7 @@ class MultifileBNL:
         Reads from current cursor in file.
         """
         if n > self.Nframes:
-            raise KeyError(
-                "Error, only {} frames, asked for {}".format(self.Nframes, n)
-            )
+            raise KeyError("Error, only {} frames, asked for {}".format(self.Nframes, n))
         # dlen is 4 bytes
         cur = self.frame_indexes[n]
         dlen = np.frombuffer(self._fd[cur : cur + 4], dtype="<u4")[0]

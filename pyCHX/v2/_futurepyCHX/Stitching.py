@@ -1,8 +1,13 @@
-import sys, os, re, PIL
-import numpy as np
-from scipy.signal import savgol_filter as sf
+import os
+import re
+import sys
+
 import matplotlib.pyplot as plt
-from pyCHX.chx_generic_functions import show_img, plot1D
+import numpy as np
+import PIL
+from scipy.signal import savgol_filter as sf
+
+from pyCHX.chx_generic_functions import plot1D, show_img
 from pyCHX.DataGonio import convert_Qmap
 
 
@@ -21,9 +26,7 @@ def get_base_all_filenames(inDir, base_filename_cut_length=-7):
 
     tifs = np.array([f for f in listdir(inDir) if isfile(join(inDir, f))])
     tifsc = list(tifs.copy())
-    utifs = np.sort(np.unique(np.array([f[:base_filename_cut_length] for f in tifs])))[
-        ::-1
-    ]
+    utifs = np.sort(np.unique(np.array([f[:base_filename_cut_length] for f in tifs])))[::-1]
     files = {}
     for uf in utifs:
         files[uf] = []
@@ -136,9 +139,7 @@ def Correct_Overlap_Images_Intensities(
                 mode="mirror",
                 cval=0.0,
             )
-            data[:, a1:a2] = d[:, b1:b2] * np.repeat(
-                scale_smooth[i], b2 - b1, axis=0
-            ).reshape([M, b2 - b1])
+            data[:, a1:a2] = d[:, b1:b2] * np.repeat(scale_smooth[i], b2 - b1, axis=0).reshape([M, b2 - b1])
             dataM[i] = np.zeros_like(dataM[i - 1])
             dataM[i][:, 0 : w - ow] = dataM[i - 1][:, N - w : N - ow]
             dataM[i][:, w - ow :] = data[:, a1:a2]
@@ -170,10 +171,7 @@ def check_overlap_scaling_factor(scale, scale_smooth, i=1, filename=None, save=F
         fig.savefig(filename)
 
 
-def stitch_WAXS_in_Qspace(
-    dataM, phis, calibration, dx=0, dy=22, dz=0, dq=0.015, mask=None
-):
-
+def stitch_WAXS_in_Qspace(dataM, phis, calibration, dx=0, dy=22, dz=0, dq=0.015, mask=None):
     """YG Octo 11, 2017 stitch waxs scattering images in qspace
     dataM: the data (with corrected intensity), dict format (todolist, make array also avialable)
     phis: for SMI, the rotation angle around z-aixs
@@ -226,22 +224,16 @@ def stitch_WAXS_in_Qspace(
         dM = np.rot90(dataM[i].T)
         D = dM.ravel()
         phi = phis[i]
-        calibration.set_angles(
-            det_phi_g=phi, det_theta_g=0.0, offset_x=dx, offset_y=dy, offset_z=dz
-        )
+        calibration.set_angles(det_phi_g=phi, det_theta_g=0.0, offset_x=dx, offset_y=dy, offset_z=dz)
         calibration.clear_maps()
         QZ = calibration.qz_map().ravel()  # [pixel_list]
         QX = calibration.qx_map().ravel()  # [pixel_list]
         bins = [num_qz, num_qx]
         rangeq = [[qz_min, qz_max], [qx_min, qx_max]]
         # Nov 7,2017 using new func to qmap
-        remesh_data, zbins, xbins = convert_Qmap(
-            dM, QZ, QX, bins=bins, range=rangeq, mask=mask
-        )
+        remesh_data, zbins, xbins = convert_Qmap(dM, QZ, QX, bins=bins, range=rangeq, mask=mask)
         # Normalize by the binning
-        num_per_bin, zbins, xbins = convert_Qmap(
-            np.ones_like(dM), QZ, QX, bins=bins, range=rangeq, mask=mask
-        )
+        num_per_bin, zbins, xbins = convert_Qmap(np.ones_like(dM), QZ, QX, bins=bins, range=rangeq, mask=mask)
 
         # remesh_data, zbins, xbins = np.histogram2d(QZ, QX, bins=bins, range=rangeq, normed=False, weights=D)
         # Normalize by the binning
@@ -257,9 +249,10 @@ def plot_qmap_in_folder(inDir):
     """YG. Sep 27@SMI
     Plot Qmap data from inDir, which contains qmap data and extent data
     """
+    import pickle as cpl
+
     from pyCHX.chx_generic_functions import show_img
     from pyCHX.chx_libs import cmap_vge_hdr, plt
-    import pickle as cpl
 
     fp = get_base_all_filenames(inDir, base_filename_cut_length=-10)
     print(
@@ -315,10 +308,7 @@ def get_qmap_range(calibration, phi_min, phi_max):
     return np.array([qx_start, qx_end, qz_start, qz_end])
 
 
-def get_phi(
-    filename, phi_offset=0, phi_start=4.5, phi_spacing=4.0, polarity=-1, ext="_WAXS.tif"
-):
-
+def get_phi(filename, phi_offset=0, phi_start=4.5, phi_spacing=4.0, polarity=-1, ext="_WAXS.tif"):
     pattern_re = "^.+\/?([a-zA-Z0-9_]+_)(\d\d\d\d\d\d)(\%s)$" % ext
     # print( pattern_re )
     # pattern_re='^.+\/?([a-zA-Z0-9_]+_)(\d\d\d)(\.tif)$'
@@ -424,7 +414,6 @@ def stitch_WAXS_in_Qspace_CHX(
     dz=0,
     dq=0.0008,
 ):
-
     """YG Octo 11, 2017 stitch waxs scattering images in qspace
     dataM: the data (with corrected intensity), dict format (todolist, make array also avialable)
     phis: for SMI, the rotation angle around z-aixs

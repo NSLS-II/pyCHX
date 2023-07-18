@@ -35,11 +35,7 @@ with open(path.join(here, "requirements.txt")) as requirements_file:
     requirements = [
         line
         for line in requirements_file.read().splitlines()
-        if not (
-            line.startswith("git")
-            or line.startswith("#")
-            or line.strip() == ""
-        )
+        if not (line.startswith("git") or line.startswith("#") or line.strip() == "")
     ]
 
 setup(

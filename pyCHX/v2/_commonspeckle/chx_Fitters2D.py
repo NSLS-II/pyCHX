@@ -1,5 +1,5 @@
 import numpy as np
-from lmfit import Parameters, Model
+from lmfit import Model, Parameters
 
 """
 This module is for functions specific to fitting of spatial correlation
@@ -7,14 +7,12 @@ This module is for functions specific to fitting of spatial correlation
 
 
 def gauss_func(x, xc, amp, sigma, baseline):
-    return amp * np.exp(-((x - xc) ** 2) / 2.0 / sigma ** 2) + baseline
+    return amp * np.exp(-((x - xc) ** 2) / 2.0 / sigma**2) + baseline
 
 
 def gauss2D_func(x, y, xc, amp, sigmax, yc, sigmay, baseline):
     return (
-        amp
-        * np.exp(-((x - xc) ** 2) / 2.0 / sigmax ** 2)
-        * np.exp(-((y - yc) ** 2) / 2.0 / sigmay ** 2)
+        amp * np.exp(-((x - xc) ** 2) / 2.0 / sigmax**2) * np.exp(-((y - yc) ** 2) / 2.0 / sigmay**2)
         + baseline
     )
 
@@ -83,9 +81,7 @@ class VectorField2DFitter:
                 # then guess
                 params[key].value = guesskeys[key]
 
-        self.mod = Model(
-            self.fitfunc, independent_vars=["x", "y"], param_names=self.params.keys()
-        )
+        self.mod = Model(self.fitfunc, independent_vars=["x", "y"], param_names=self.params.keys())
         # assumes first var is dependent var, and save last params
         V = np.array([vx, vy])
         self._res = self.mod.fit(V, x=x, y=y, params=params)
@@ -96,13 +92,13 @@ class VectorField2DFitter:
         return self._res.best_values
 
     def last_result(self):
-        """ Return fitted result of the last fit."""
+        """Return fitted result of the last fit."""
         if self._res is None:
             return ValueError("Please run fit first")
         return self._res.best_fit
 
     def last_values(self):
-        """ Return fitted values of the last fit."""
+        """Return fitted values of the last fit."""
         if self._params is None:
             return ValueError("Please run fit first")
         return self._params
@@ -153,7 +149,7 @@ class VectorField2DLinearFitter(VectorField2DFitter):
 
 
 class LineShape2DFitter:
-    """ Base class for all lineshape 2D Fitters."""
+    """Base class for all lineshape 2D Fitters."""
 
     def __init__(self, params=None):
         """Initialize. If you set an initial guess
@@ -199,13 +195,9 @@ class LineShape2DFitter:
                 # then guess
                 params[key].value = guesskeys[key]
 
-        self.mod = Model(
-            self.fitfunc, independent_vars=["XY"], param_names=self.params.keys()
-        )
+        self.mod = Model(self.fitfunc, independent_vars=["XY"], param_names=self.params.keys())
         # assumes first var is dependent var
-        res = self.mod.fit(
-            img.ravel(), XY=(XY[0].ravel(), XY[1].ravel()), params=params, **kwargs
-        )
+        res = self.mod.fit(img.ravel(), XY=(XY[0].ravel(), XY[1].ravel()), params=params, **kwargs)
         ## old version, only return values
         # add reduced chisq to parameter list
         # res.best_values['chisq']=res.redchi
@@ -227,7 +219,7 @@ class LineShape2DFitter:
 
 
 class Gauss2DFitter(LineShape2DFitter):
-    """ A simple Gaussian 2D fitter."""
+    """A simple Gaussian 2D fitter."""
 
     def __init__(self, **kwargs):
         """Initialize a Gaussian 2D Fitter object
@@ -277,9 +269,7 @@ class Gauss2DFitter(LineShape2DFitter):
         self.params["amp"].min = 0
         return super(Gauss2DFitter, self).__call__(XY, img, **kwargs)
 
-    def fitfunc(
-        self, XY, xc=None, yc=None, amp=1.0, baseline=0.0, sigmax=1.0, sigmay=1.0
-    ):
+    def fitfunc(self, XY, xc=None, yc=None, amp=1.0, baseline=0.0, sigmax=1.0, sigmay=1.0):
         """
         xy : 2 by N by N matrix containing x and y
             xy[0] : x
@@ -297,9 +287,7 @@ class Gauss2DFitter(LineShape2DFitter):
             yc = X.shape[0] // 2
 
         return (
-            amp
-            * np.exp(-((X - xc) ** 2) / 2.0 / sigmax ** 2)
-            * np.exp(-((Y - yc) ** 2) / 2.0 / sigmay ** 2)
+            amp * np.exp(-((X - xc) ** 2) / 2.0 / sigmax**2) * np.exp(-((Y - yc) ** 2) / 2.0 / sigmay**2)
             + baseline
         )
 

@@ -1,4 +1,4 @@
-from pyOlog import LogEntry, Attachment, OlogClient, SimpleOlogClient
+from pyOlog import Attachment, LogEntry, OlogClient, SimpleOlogClient
 from pyOlog.OlogDataTypes import Logbook
 
 
@@ -110,10 +110,7 @@ def update_olog_id(logid, text, attachments, verbose=True):
     )
     client.updateLog(logid, upd)
     if verbose:
-        print(
-            f"The url={url} was successfully updated with {text} and with "
-            f"the attachments"
-        )
+        print(f"The url={url} was successfully updated with {text} and with " f"the attachments")
 
 
 def update_olog_uid(uid, text, attachments):
