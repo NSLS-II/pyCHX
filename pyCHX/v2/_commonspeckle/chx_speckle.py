@@ -6,29 +6,26 @@ This module will provide XSVS analysis tools
 """
 
 from __future__ import absolute_import, division, print_function
-import six
-
-import time
-
-from skbeam.core import roi
-from skbeam.core.utils import bin_edges_to_centers, geometric_series
 
 import logging
+import time
+
+import six
+from skbeam.core import roi
+from skbeam.core.utils import bin_edges_to_centers, geometric_series
 
 logger = logging.getLogger(__name__)
 
 import sys
+from datetime import datetime
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
-from datetime import datetime
-
 import numpy as np
 import scipy as sp
 import scipy.stats as st
-from scipy.optimize import leastsq
-from scipy.optimize import minimize
+from matplotlib.colors import LogNorm
+from scipy.optimize import leastsq, minimize
 
 
 def xsvs(
@@ -127,7 +124,7 @@ def xsvs(
     # get the bin edges for each time bin for each ROI
     bin_edges = np.zeros(prob_k_all.shape[0], dtype=prob_k_all.dtype)
     for i in range(num_times):
-        bin_edges[i] = np.arange(max_cts * 2 ** i)
+        bin_edges[i] = np.arange(max_cts * 2**i)
 
     start_time = time.time()  # used to log the computation time (optionally)
 
@@ -269,9 +266,7 @@ def xsvs(
                 prob_k_all[i, j] = np.array([0] * (len(bin_edges[i]) - 1))
                 prob_k_std_dev[i, j] = np.array([0] * (len(bin_edges[i]) - 1))
 
-    logger.info(
-        "Processing time for XSVS took %s seconds." "", (time.time() - start_time)
-    )
+    logger.info("Processing time for XSVS took %s seconds." "", (time.time() - start_time))
     elapsed_time = time.time() - start_time
     # print (Num)
     print("Total time: %.2f min" % (elapsed_time / 60.0))
@@ -337,9 +332,7 @@ def _process(
             roi_data = data[labels == label]
             spe_hist, bin_edges = np.histogram(roi_data, bins=bin_edges, density=True)
             spe_hist = np.nan_to_num(spe_hist)
-            prob_k[level, j] += (spe_hist - prob_k[level, j]) / (
-                img_per_level[level] - track_bad_level[level]
-            )
+            prob_k[level, j] += (spe_hist - prob_k[level, j]) / (img_per_level[level] - track_bad_level[level])
 
             prob_k_pow[level, j] += (np.power(spe_hist, 2) - prob_k_pow[level, j]) / (
                 img_per_level[level] - track_bad_level[level]
@@ -374,7 +367,7 @@ def normalize_bin_edges(num_times, num_rois, mean_roi, max_cts):
     norm_bin_centers = np.zeros_like(norm_bin_edges)
     for i in range(num_times):
         for j in range(num_rois):
-            norm_bin_edges[i, j] = np.arange(max_cts * 2 ** i) / (mean_roi[j] * 2 ** i)
+            norm_bin_edges[i, j] = np.arange(max_cts * 2**i) / (mean_roi[j] * 2**i)
             norm_bin_centers[i, j] = bin_edges_to_centers(norm_bin_edges[i, j])
 
     return norm_bin_edges, norm_bin_centers
@@ -412,9 +405,9 @@ def get_bin_edges(num_times, num_rois, mean_roi, max_cts):
 
     for i in range(num_times):
         for j in range(num_rois):
-            bin_edges[i, j] = np.arange(max_cts * 2 ** i)
+            bin_edges[i, j] = np.arange(max_cts * 2**i)
             bin_centers[i, j] = bin_edges_to_centers(bin_edges[i, j])
-            norm_bin_edges[i, j] = bin_edges[i, j] / (mean_roi[j] * 2 ** i)
+            norm_bin_edges[i, j] = bin_edges[i, j] / (mean_roi[j] * 2**i)
             norm_bin_centers[i, j] = bin_edges_to_centers(norm_bin_edges[i, j])
 
     return bin_edges, bin_centers, norm_bin_edges, norm_bin_centers
@@ -583,9 +576,9 @@ def diff_mot_con_factor(times, relaxation_rate, contrast_factor, cf_baseline=0):
     negative_binom_distribution() function Notes
 
     """
-    co_eff = (
-        np.exp(-2 * relaxation_rate * times) - 1 + 2 * relaxation_rate * times
-    ) / (2 * (relaxation_rate * times) ** 2)
+    co_eff = (np.exp(-2 * relaxation_rate * times) - 1 + 2 * relaxation_rate * times) / (
+        2 * (relaxation_rate * times) ** 2
+    )
 
     return contrast_factor * co_eff + cf_baseline
 
@@ -621,7 +614,7 @@ def plot_sxvs(
     plt.xticks([])
     plt.yticks([])
     if time_steps is None:
-        time_steps = [2 ** i for i in range(num_times)]
+        time_steps = [2**i for i in range(num_times)]
     for i in range(num_rings):
         for j in range(num_times):
             axes = fig.add_subplot(sx, sy, i + 1)
@@ -698,7 +691,7 @@ def fit_xsvs1(
     plt.xticks([])
     plt.yticks([])
     if time_steps is None:
-        time_steps = [2 ** i for i in range(num_times)]
+        time_steps = [2**i for i in range(num_times)]
 
     for i in range(num_rings):
         M_val[i] = []
@@ -715,21 +708,21 @@ def fit_xsvs1(
                 result = mod.fit(
                     spe_cts_all[j, i][rois],
                     bin_values=bin_edges[j, i][:-1][rois],
-                    K=5 * 2 ** j,
+                    K=5 * 2**j,
                     M=12,
                 )
             elif func == "gm":
                 result = mod.fit(
                     spe_cts_all[j, i][rois],
                     bin_values=bin_edges[j, i][:-1][rois],
-                    K=K_mean[i] * 2 ** j,
+                    K=K_mean[i] * 2**j,
                     M=20,
                 )
             elif func == "ps":
                 result = mod.fit(
                     spe_cts_all[j, i][rois],
                     bin_values=bin_edges[j, i][:-1][rois],
-                    K=K_mean[i] * 2 ** j,
+                    K=K_mean[i] * 2**j,
                 )
             else:
                 pass
@@ -752,15 +745,11 @@ def fit_xsvs1(
             fitx_ = np.linspace(0, max(Knorm_bin_edges[j, i][:-1]), 1000)
             fitx = np.linspace(0, max(bin_edges[j, i][:-1]), 1000)
             if func == "bn":
-                fity = nbinom_dist(
-                    fitx, K_val[i][j], M_val[i][j]
-                )  # M and K are fitted best values
+                fity = nbinom_dist(fitx, K_val[i][j], M_val[i][j])  # M and K are fitted best values
                 label = "nbinom"
-                txt = (
-                    "K=" + "%.3f" % (K_val[i][0]) + "," + "M=" + "%.3f" % (M_val[i][0])
-                )
+                txt = "K=" + "%.3f" % (K_val[i][0]) + "," + "M=" + "%.3f" % (M_val[i][0])
             elif func == "gm":
-                fity = gamma_dist(fitx, K_mean[i] * 2 ** j, M_val[i][j])
+                fity = gamma_dist(fitx, K_mean[i] * 2**j, M_val[i][j])
                 label = "gamma"
                 txt = "M=" + "%.3f" % (M_val[i][0])
             elif func == "ps":
@@ -831,7 +820,6 @@ def plot_xsvs_g2(g2, taus, res_pargs=None, *argv, **kwargs):
         q_ring_center = res_pargs["q_ring_center"]
 
     else:
-
         if "uid" in kwargs.keys():
             uid = kwargs["uid"]
         else:
@@ -856,7 +844,6 @@ def plot_xsvs_g2(g2, taus, res_pargs=None, *argv, **kwargs):
 
     # print (num_rings)
     if num_rings != 1:
-
         # fig = plt.figure(figsize=(14, 10))
         fig = plt.figure(figsize=(12, 10))
         plt.axis("off")
@@ -939,7 +926,7 @@ def nbinomlog1_notworknow(p, hist, x, N, mu):
 
 
 def nbinomres(p, hist, x, N):
-    """ residuals to leastsq() to fit normal chi-square"""
+    """residuals to leastsq() to fit normal chi-square"""
     mu, M = p
     Np = N * st.nbinom.pmf(x, M, 1.0 / (1.0 + mu / M))
     err = (hist - Np) / np.sqrt(Np)
@@ -1005,20 +992,20 @@ def get_xsvs_fit(
                 resultL = leastsq(
                     nbinomlog1,
                     [m0],
-                    args=(y, x_, N, K_mean[i] * 2 ** j),
+                    args=(y, x_, N, K_mean[i] * 2**j),
                     ftol=1.49012e-38,
                     xtol=1.49012e-38,
                     factor=100,
                     full_output=1,
                 )
                 ML_val[i].append(abs(resultL[0][0]))
-                KL_val[i].append(K_mean[i] * 2 ** j)  #   resultL[0][0] )
+                KL_val[i].append(K_mean[i] * 2**j)  #   resultL[0][0] )
 
             else:
                 # vary M and K
                 resultL = leastsq(
                     nbinomlog,
-                    [K_mean[i] * 2 ** j, m0],
+                    [K_mean[i] * 2**j, m0],
                     args=(y, x_, N),
                     ftol=1.49012e-38,
                     xtol=1.49012e-38,
@@ -1047,7 +1034,6 @@ def plot_xsvs_fit(
     times=None,
     fontsize=3,
 ):
-
     fig = plt.figure(figsize=(9, 6))
     plt.title(
         "uid= %s" % uid + " Fitting with Negative Binomial Function",
@@ -1095,7 +1081,7 @@ def plot_xsvs_fit(
             # Using the best K and M values interpolate and get more values for fitting curve
 
             xscale = bin_edges[j, i][:-1][1] / Knorm_bin_edges[j, i][:-1][1]
-            fitx = np.linspace(0, max_cts * 2 ** j, 5000)
+            fitx = np.linspace(0, max_cts * 2**j, 5000)
             fitx_ = fitx / xscale
 
             # fity = nbinom_dist( fitx, K_val[i][j], M_val[i][j] )
@@ -1111,7 +1097,7 @@ def plot_xsvs_fit(
                 if times is not None:
                     label = str(times[j] * 1000) + " ms"
                 else:
-                    label = "Bin_%s" % (2 ** j)
+                    label = "Bin_%s" % (2**j)
 
                 (art,) = axes.plot(x, y, "o", label=label)
             else:
@@ -1168,9 +1154,7 @@ def get_max_countc(FD, labeled_array):
         )
 
     max_inten = 0
-    for i in tqdm(
-        range(FD.beg, FD.end, 1), desc="Get max intensity of ROIs in all frames"
-    ):
+    for i in tqdm(range(FD.beg, FD.end, 1), desc="Get max intensity of ROIs in all frames"):
         (p, v) = FD.rdrawframe(i)
         w = np.where(timg[p])[0]
 
@@ -1213,9 +1197,7 @@ def plot_g2_contrast(
     # fig = plt.figure(figsize=(14, 10))
 
     fig = plt.figure()
-    plt.title(
-        "uid= %s_" % uid + "Contrast Factor for Each Q Rings", fontsize=14, y=1.08
-    )
+    plt.title("uid= %s_" % uid + "Contrast Factor for Each Q Rings", fontsize=14, y=1.08)
     if qth is None:
         plt.axis("off")
     n = 1

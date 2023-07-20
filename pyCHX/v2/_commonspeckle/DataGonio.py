@@ -1,24 +1,21 @@
 # import sys
+import os
 import re  # Regular expressions
-import numpy as np
-import pylab as plt
+import sys
+
 import matplotlib as mpl
+import numpy as np
 
 # from scipy.optimize import leastsq
 # import scipy.special
 import PIL  # Python Image Library (for opening PNG, etc.)
-import sys, os
-
-from skbeam.core.accumulators.binned_statistic import (
-    BinnedStatistic2D,
-    BinnedStatistic1D,
-)
-import skbeam.core.roi as roi
+import pylab as plt
 import skbeam.core.correlation as corr
+import skbeam.core.roi as roi
 import skbeam.core.utils as utils
-from pyCHX.v2._commonspeckle.chx_generic_functions import (
-    average_array_withNan,
-)  # common
+from skbeam.core.accumulators.binned_statistic import BinnedStatistic1D, BinnedStatistic2D
+
+from pyCHX.v2._commonspeckle.chx_generic_functions import average_array_withNan  # common
 
 
 def convert_Qmap(
@@ -106,7 +103,7 @@ def qphiavg(
     if origin is None:
         origin = (shape[0] - 1) / 2.0, (shape[1] - 1) / 2.0
 
-    from skbeam.core.utils import radial_grid, angle_grid
+    from skbeam.core.utils import angle_grid, radial_grid
 
     if q_map is None:
         q_map = radial_grid(origin, shape)
@@ -154,9 +151,7 @@ def get_QPhiMap(img_shape, center):
     return q_map, phi_map
 
 
-def get_img_qphimap(
-    img, q_map, phi_map, mask, bins, center, qang_range=None, statistic="mean"
-):
+def get_img_qphimap(img, q_map, phi_map, mask, bins, center, qang_range=None, statistic="mean"):
     """Y.G., Dev Nov 10, 2018 Get phi_map by giving image
     e.g.,
         q_map, phi_map = get_QPhiMap( mask.shape, center[::-1])
@@ -289,7 +284,6 @@ class Mask(object):
             self.data *= data
 
     def load_hdf5(self, infile, invert=False):
-
         with h5py.File(infile, "r") as f:
             data = np.asarray(f["mask"])
 
@@ -323,7 +317,6 @@ class Calibration(object):
     """
 
     def __init__(self, wavelength_A=None, distance_m=None, pixel_size_um=None):
-
         self.wavelength_A = wavelength_A
         self.distance_m = distance_m
         self.pixel_size_um = pixel_size_um
@@ -452,7 +445,7 @@ class Calibration(object):
         x = np.arange(self.width) - self.x0
         y = np.arange(self.height) - self.y0
         X, Y = np.meshgrid(x, y)
-        R = np.sqrt(X ** 2 + Y ** 2)
+        R = np.sqrt(X**2 + Y**2)
 
         self.r_map_data = R
 
@@ -528,7 +521,6 @@ class Calibration(object):
         return self.qr_map_data
 
     def _generate_qxyz_maps(self):
-
         # Conversion factor for pixel coordinates
         # (where sample-detector distance is set to d = 1)
         c = (self.pixel_size_um / 1e6) / self.distance_m
@@ -536,7 +528,7 @@ class Calibration(object):
         x = np.arange(self.width) - self.x0
         y = np.arange(self.height) - self.y0
         X, Y = np.meshgrid(x, y)
-        R = np.sqrt(X ** 2 + Y ** 2)
+        R = np.sqrt(X**2 + Y**2)
 
         # twotheta = np.arctan(self.r_map()*c) # radians
         theta_f = np.arctan2(X * c, 1)  # radians
@@ -544,9 +536,7 @@ class Calibration(object):
         alpha_f = np.arctan2(Y * c * np.cos(theta_f), 1)  # radians
 
         self.qx_map_data = self.get_k() * np.sin(theta_f) * np.cos(alpha_f)
-        self.qy_map_data = self.get_k() * (
-            np.cos(theta_f) * np.cos(alpha_f) - 1
-        )  # TODO: Check sign
+        self.qy_map_data = self.get_k() * (np.cos(theta_f) * np.cos(alpha_f) - 1)  # TODO: Check sign
         self.qz_map_data = -1.0 * self.get_k() * np.sin(alpha_f)
 
         self.qr_map_data = np.sign(self.qx_map_data) * np.sqrt(
@@ -646,9 +636,7 @@ class CalibrationGonio(Calibration):
         Rxy = np.dot(Rx, Ry)
         return np.dot(Rxy, Rz)
 
-    def _generate_qxyz_map_SF_from_Lab(
-        self, qx, qy, qz, sam_phi, sam_theta, sam_chi, degrees=True
-    ):
+    def _generate_qxyz_map_SF_from_Lab(self, qx, qy, qz, sam_phi, sam_theta, sam_chi, degrees=True):
         """
         Convert qmap from Lab frame to sample frame
         """
@@ -674,18 +662,13 @@ class CalibrationGonio(Calibration):
             self.sam_chi,
             degrees=degrees,
         )
-        self.qr_map_lab_data = np.sqrt(
-            np.square(self.qx_map_lab_data) + np.square(self.qy_map_lab_data)
-        )
+        self.qr_map_lab_data = np.sqrt(np.square(self.qx_map_lab_data) + np.square(self.qy_map_lab_data))
 
         self.q_map_lab_data = np.sqrt(
-            np.square(self.qx_map_lab_data)
-            + np.square(self.qy_map_lab_data)
-            + np.square(self.qz_map_lab_data)
+            np.square(self.qx_map_lab_data) + np.square(self.qy_map_lab_data) + np.square(self.qz_map_lab_data)
         )
 
     def get_ratioDw(self):
-
         width_mm = self.width * self.pixel_size_um / 1000.0
         return self.distance_m / (width_mm / 1000.0)
 
@@ -725,13 +708,10 @@ class CalibrationGonio(Calibration):
         k_over_Dprime = self.get_k() / Dprime
 
         qx_c = k_over_Dprime * (
-            X_c * np.cos(phi_g)
-            - np.sin(phi_g) * (d * np.cos(theta_g) - Y_c * np.sin(theta_g))
+            X_c * np.cos(phi_g) - np.sin(phi_g) * (d * np.cos(theta_g) - Y_c * np.sin(theta_g))
         )
         qy_c = k_over_Dprime * (
-            X_c * np.sin(phi_g)
-            + np.cos(phi_g) * (d * np.cos(theta_g) - Y_c * np.sin(theta_g))
-            - Dprime
+            X_c * np.sin(phi_g) + np.cos(phi_g) * (d * np.cos(theta_g) - Y_c * np.sin(theta_g)) - Dprime
         )
         qz_c = -1 * k_over_Dprime * (d * np.sin(theta_g) + Y_c * np.cos(theta_g))
 
@@ -745,7 +725,7 @@ class CalibrationGonio(Calibration):
         x = np.arange(self.width) - self.x0
         y = np.arange(self.height) - self.y0
         X, Y = np.meshgrid(x, y)
-        R = np.sqrt(X ** 2 + Y ** 2)
+        R = np.sqrt(X**2 + Y**2)
 
         # twotheta = np.arctan(self.r_map()*c) # radians
         theta_f = np.arctan2(X * c, 1)  # radians
@@ -753,9 +733,7 @@ class CalibrationGonio(Calibration):
         alpha_f = np.arctan2(Y * c * np.cos(theta_f), 1)  # radians
 
         self.qx_map_data = self.get_k() * np.sin(theta_f) * np.cos(alpha_f)
-        self.qy_map_data = self.get_k() * (
-            np.cos(theta_f) * np.cos(alpha_f) - 1
-        )  # TODO: Check sign
+        self.qy_map_data = self.get_k() * (np.cos(theta_f) * np.cos(alpha_f) - 1)  # TODO: Check sign
         self.qz_map_data = -1.0 * self.get_k() * np.sin(alpha_f)
 
         self.qr_map_data = np.sign(self.qx_map_data) * np.sqrt(
@@ -802,9 +780,9 @@ class CalibrationGonio(Calibration):
             np.square(dprime)
             + np.square(X_c)
             + np.square(Y_c)
-            + offset_x ** 2
-            + offset_y ** 2
-            + offset_z ** 2
+            + offset_x**2
+            + offset_y**2
+            + offset_z**2
             + 2 * offset_x * (X_c * np.cos(phi_g) - np.sin(phi_g) * yprime)
             + 2 * offset_y * (X_c * np.sin(phi_g) + np.cos(phi_g) * yprime)
             + 2 * offset_z * (dprime * np.sin(theta_g) + Y_c * np.cos(theta_g))
@@ -813,14 +791,8 @@ class CalibrationGonio(Calibration):
         k_over_Dprime = self.get_k() / Dprime
 
         qx_c = k_over_Dprime * (X_c * np.cos(phi_g) - np.sin(phi_g) * yprime + offset_x)
-        qy_c = k_over_Dprime * (
-            X_c * np.sin(phi_g) + np.cos(phi_g) * yprime + offset_y - Dprime
-        )
-        qz_c = (
-            -1
-            * k_over_Dprime
-            * (dprime * np.sin(theta_g) + Y_c * np.cos(theta_g) + offset_z)
-        )
+        qy_c = k_over_Dprime * (X_c * np.sin(phi_g) + np.cos(phi_g) * yprime + offset_y - Dprime)
+        qz_c = -1 * k_over_Dprime * (dprime * np.sin(theta_g) + Y_c * np.cos(theta_g) + offset_z)
 
         qr_c = np.sqrt(np.square(qx_c) + np.square(qy_c))
         q_c = np.sqrt(np.square(qx_c) + np.square(qy_c) + np.square(qz_c))
@@ -839,7 +811,7 @@ class CalibrationGonio(Calibration):
             x = np.arange(self.width) - self.x0
             y = np.arange(self.height) - self.y0
             X, Y = np.meshgrid(x, y)
-            R = np.sqrt(X ** 2 + Y ** 2)
+            R = np.sqrt(X**2 + Y**2)
 
             # twotheta = np.arctan(self.r_map()*c) # radians
             theta_f = np.arctan2(X * c, 1)  # radians
@@ -847,9 +819,7 @@ class CalibrationGonio(Calibration):
             alpha_f = np.arctan2(Y * c * np.cos(theta_f), 1)  # radians
 
             self.qx_map_data1 = self.get_k() * np.sin(theta_f) * np.cos(alpha_f)
-            self.qy_map_data1 = self.get_k() * (
-                np.cos(theta_f) * np.cos(alpha_f) - 1
-            )  # TODO: Check sign
+            self.qy_map_data1 = self.get_k() * (np.cos(theta_f) * np.cos(alpha_f) - 1)  # TODO: Check sign
             self.qz_map_data1 = -1.0 * self.get_k() * np.sin(alpha_f)
 
             self.qr_map_data1 = np.sign(self.qx_map_data1) * np.sqrt(

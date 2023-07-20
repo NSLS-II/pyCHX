@@ -9,12 +9,14 @@ This module is for functions specific to spatial correlation in order to tackle 
 """
 from __future__ import absolute_import, division, print_function
 
-# from __future__ import absolute_import, division, print_function
-from skbeam.core.utils import multi_tau_lags
-from skbeam.core.roi import extract_label_indices
 from collections import namedtuple
+
 import numpy as np
 from scipy.signal import fftconvolve
+from skbeam.core.roi import extract_label_indices
+
+# from __future__ import absolute_import, division, print_function
+from skbeam.core.utils import multi_tau_lags
 
 # for a convenient status bar
 try:
@@ -84,9 +86,7 @@ def direct_corss_cor(im1, im2):
                     d1 = im1[j:, i:]
                     d2 = im2[:-j, :-i]
             # print(i,j)
-            C[i + Nx, j + Ny] = np.sum(d1 * d2) / (
-                np.average(d1) * np.average(d2) * d1.size
-            )
+            C[i + Nx, j + Ny] = np.sum(d1 * d2) / (np.average(d1) * np.average(d2) * d1.size)
     return C.T
 
 
@@ -308,9 +308,7 @@ class CrossCorrelator2:
                 if self_correlation:
                     ccorr[w] /= maskcor[w] * np.average(tmpimg[w]) ** 2
                 else:
-                    ccorr[w] /= (
-                        maskcor[w] * np.average(tmpimg[w]) * np.average(tmpimg2[w])
-                    )
+                    ccorr[w] /= maskcor[w] * np.average(tmpimg[w]) * np.average(tmpimg2[w])
                     if check_res:
                         if reg == 0:
                             self.ckn = ccorr.copy()
@@ -343,16 +341,11 @@ def _centered(img, sz):
 # 1999 -- 2002
 
 
-import warnings
 import threading
+import warnings
 
 # from . import sigtools
 import numpy as np
-from scipy._lib.six import callable
-from scipy._lib._version import NumpyVersion
-from scipy import linalg
-from scipy.fftpack import fft, ifft, ifftshift, fft2, ifft2, fftn, ifftn, fftfreq
-from numpy.fft import rfftn, irfftn
 from numpy import (
     allclose,
     angle,
@@ -396,6 +389,11 @@ from numpy import (
     zeros,
     zeros_like,
 )
+from numpy.fft import irfftn, rfftn
+from scipy import linalg
+from scipy._lib._version import NumpyVersion
+from scipy._lib.six import callable
+from scipy.fftpack import fft, fft2, fftfreq, fftn, ifft, ifft2, ifftn, ifftshift
 
 # from ._arraytools import axis_slice, axis_reverse, odd_ext, even_ext, const_ext
 
@@ -494,9 +492,7 @@ def fftconvolve_new(in1, in2, mode="full"):
 
     s1 = array(in1.shape)
     s2 = array(in2.shape)
-    complex_result = np.issubdtype(in1.dtype, np.complex) or np.issubdtype(
-        in2.dtype, np.complex
-    )
+    complex_result = np.issubdtype(in1.dtype, np.complex) or np.issubdtype(in2.dtype, np.complex)
     shape = s1 + s2 - 1
 
     if mode == "valid":
@@ -762,13 +758,9 @@ class CrossCorrelator1:
                 # do symmetric averaging
                 Icorr = _cross_corr1(tmpimg * self.submasks[reg], self.submasks[reg])
                 if self_correlation:
-                    Icorr2 = _cross_corr1(
-                        self.submasks[reg], tmpimg * self.submasks[reg]
-                    )
+                    Icorr2 = _cross_corr1(self.submasks[reg], tmpimg * self.submasks[reg])
                 else:
-                    Icorr2 = _cross_corr1(
-                        self.submasks[reg], tmpimg2 * self.submasks[reg]
-                    )
+                    Icorr2 = _cross_corr1(self.submasks[reg], tmpimg2 * self.submasks[reg])
                 # there is an extra condition that Icorr*Icorr2 != 0
                 w = np.where(np.abs(Icorr * Icorr2) > 0)  # DO WE NEED THIS (use i,j).
                 ccorr[w] *= self.maskcorrs[reg][w] / Icorr[w] / Icorr2[w]
@@ -780,11 +772,7 @@ class CrossCorrelator1:
                 if self_correlation:
                     ccorr[w] /= self.maskcorrs[reg][w] * np.average(tmpimg[w]) ** 2
                 else:
-                    ccorr[w] /= (
-                        self.maskcorrs[reg][w]
-                        * np.average(tmpimg[w])
-                        * np.average(tmpimg2[w])
-                    )
+                    ccorr[w] /= self.maskcorrs[reg][w] * np.average(tmpimg[w]) * np.average(tmpimg2[w])
             ccorrs.append(ccorr)
 
         if len(ccorrs) == 1:
@@ -795,7 +783,9 @@ class CrossCorrelator1:
 
 ##for parallel
 from multiprocessing import Pool
+
 import dill
+
 from pyCHX.chx_compress import apply_async, map_async
 
 

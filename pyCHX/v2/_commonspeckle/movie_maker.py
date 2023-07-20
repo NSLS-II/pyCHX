@@ -50,7 +50,6 @@ def select_regoin(
         try:
             imgx = img[ys:ye, xs:xe]
         except:
-
             imgx = img[ys:ye, xs:xe, :]
 
     return imgx
@@ -67,13 +66,13 @@ def save_png_series(
     cmap="viridis",
     dpi=100,
 ):
-    import numpy as np
     import matplotlib.pyplot as plt
+    import numpy as np
     from matplotlib.colors import LogNorm
 
     """
     save a series of images in a format of png
-    
+
     Parameters
     ----------
     imgs : array
@@ -83,11 +82,11 @@ def save_png_series(
     outDir: the output path
     vmin/vmax: for image contrast
     cmap: the color for plot
-    dpi: resolution 
+    dpi: resolution
 
     Returns
     -------
-    save png files 
+    save png files
 
     """
     if uid == None:
@@ -153,15 +152,14 @@ def movie_maker(
     cmap="viridis",
     dpi=100,
 ):
-
-    import numpy as np
-    import matplotlib.pyplot as plt
     import matplotlib.animation as animation
+    import matplotlib.pyplot as plt
+    import numpy as np
     from matplotlib.colors import LogNorm
 
     """
     Make a movie by give a image series
-    
+
     Parameters
     ----------
     imgs : array
@@ -183,13 +181,13 @@ def movie_maker(
 
     fps : int, optional
         Frame rate for movie.
-    
+
     real_interval:
        the real time interval between each frame in unit of ms
     outDir: the output path
     vmin/vmax: for image contrast
     cmap: the color for plot
-    dpi: resolution       
+    dpi: resolution
 
     Returns
     -------
@@ -221,9 +219,7 @@ def movie_maker(
     # print( cmap, vmin, vmax )
 
     if not logs:
-        im = ax.imshow(
-            i0, origin="lower", cmap=cmap, interpolation="nearest", vmin=vmin, vmax=vmax
-        )
+        im = ax.imshow(i0, origin="lower", cmap=cmap, interpolation="nearest", vmin=vmin, vmax=vmax)
     else:
         im = ax.imshow(
             i0,
@@ -234,9 +230,7 @@ def movie_maker(
         )
 
     # ttl = ax.text(.75, .2, '', transform = ax.transAxes, va='center', color='white', fontsize=18)
-    ttl = ax.text(
-        0.75, 0.2, "", transform=ax.transAxes, va="center", color="black", fontsize=18
-    )
+    ttl = ax.text(0.75, 0.2, "", transform=ax.transAxes, va="center", color="black", fontsize=18)
     # print asp
     # fig.set_size_inches( [5., 5 * asp] )
 

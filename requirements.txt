@@ -36,7 +36,3 @@ git+https://github.com/ChrisBeaumont/mpl-modest-image
 #Download error on https://pypi.python.org/simple/: [Errno -2] Name or service not known -- Some packages may not be found!
 #Do local packages or working download links found for slicerator>=0.9.7
 #error: Could not find suitable distribution for Requirement.parse('slicerator>=0.9.7')
-
-
-
-

@@ -7,13 +7,13 @@ This module is for computation of time correlation by using compressing algorith
 
 from __future__ import absolute_import, division, print_function
 
-from skbeam.core.utils import multi_tau_lags
-from skbeam.core.roi import extract_label_indices
+import logging
 from collections import namedtuple
+
 import numpy as np
 import skbeam.core.roi as roi
-
-import logging
+from skbeam.core.roi import extract_label_indices
+from skbeam.core.utils import multi_tau_lags
 
 logger = logging.getLogger(__name__)
 from tqdm import tqdm
@@ -186,7 +186,6 @@ def _one_time_process_error(
         if np.isnan(past_img).any() or np.isnan(future_img).any():
             norm[level + 1][ind] += 1
         else:
-
             # for w, arr in zip([past_img*future_img, past_img, future_img],
             #                  [G, past_intensity_norm, future_intensity_norm,
             #                  ]):
@@ -311,9 +310,7 @@ def _validate_and_transform_inputs(num_bufs, num_levels, labels):
         length of each levels
     """
     if num_bufs % 2 != 0:
-        raise ValueError(
-            "There must be an even number of `num_bufs`. You " "provided %s" % num_bufs
-        )
+        raise ValueError("There must be an even number of `num_bufs`. You " "provided %s" % num_bufs)
     label_array, pixel_list = extract_label_indices(labels)
 
     # map the indices onto a sequential list of integers starting at 1
@@ -401,9 +398,7 @@ def _init_state_one_time(num_levels, num_bufs, labels, cal_error=False):
     # matrix for normalizing G into g2
     future_intensity = np.zeros_like(G)
     if cal_error:
-        G_all = np.zeros(
-            (int((num_levels + 1) * num_bufs / 2), len(pixel_list)), dtype=np.float64
-        )
+        G_all = np.zeros((int((num_levels + 1) * num_bufs / 2), len(pixel_list)), dtype=np.float64)
 
         # matrix for normalizing G into g2
         past_intensity_all = np.zeros_like(G_all)
@@ -462,7 +457,6 @@ def lazy_one_time(
     norm=None,
     cal_error=False,
 ):
-
     """Generator implementation of 1-time multi-tau correlation
         If you do not want multi-tau correlation, set num_levels to 1 and
         num_bufs to the number of images you wish to correlate
@@ -952,9 +946,7 @@ def multi_tau_auto_corr(
         return result.g2, result.lag_steps
 
 
-def multi_tau_two_time_auto_corr(
-    num_lev, num_buf, ring_mask, FD, bad_frame_list=None, imgsum=None, norm=None
-):
+def multi_tau_two_time_auto_corr(num_lev, num_buf, ring_mask, FD, bad_frame_list=None, imgsum=None, norm=None):
     """Wraps generator implementation of multi-tau two time correlation
     This function computes two-time correlation
     Original code : author: Yugang Zhang
@@ -989,7 +981,6 @@ def lazy_two_time(
     imgsum=None,
     norm=None,
 ):
-
     # def lazy_two_time(labels, images, num_frames, num_bufs, num_levels=1,
     #                  two_time_internal_state=None):
     """Generator implementation of two-time correlation
@@ -1049,9 +1040,7 @@ def lazy_two_time(
 
     num_frames = FD.end - FD.beg
     if two_time_internal_state is None:
-        two_time_internal_state = _init_state_two_time(
-            num_levels, num_bufs, labels, num_frames
-        )
+        two_time_internal_state = _init_state_two_time(num_levels, num_bufs, labels, num_frames)
     # create a shorthand reference to the results and state named tuple
     s = two_time_internal_state
     qind, pixelist = roi.extract_label_indices(labels)
@@ -1122,10 +1111,7 @@ def lazy_two_time(
 
                 t1_idx = (s.count_level[level] - 1) * 2
 
-                current_img_time = (
-                    (s.time_ind[level - 1])[t1_idx]
-                    + (s.time_ind[level - 1])[t1_idx + 1]
-                ) / 2.0
+                current_img_time = ((s.time_ind[level - 1])[t1_idx] + (s.time_ind[level - 1])[t1_idx + 1]) / 2.0
                 # time frame for each level
                 s.time_ind[level].append(current_img_time)
                 # make the track_level zero once that level is processed
@@ -1245,13 +1231,9 @@ def _two_time_process(
         if not isinstance(current_img_time, int):
             nshift = 2 ** (level - 1)
             for i in range(-nshift + 1, nshift + 1):
-                g2[:, int(tind1 + i), int(tind2 + i)] = (
-                    tmp_binned / (pi_binned * fi_binned)
-                ) * num_pixels
+                g2[:, int(tind1 + i), int(tind2 + i)] = (tmp_binned / (pi_binned * fi_binned)) * num_pixels
         else:
-            g2[:, int(tind1), int(tind2)] = (
-                tmp_binned / (pi_binned * fi_binned) * num_pixels
-            )
+            g2[:, int(tind1), int(tind2)] = tmp_binned / (pi_binned * fi_binned) * num_pixels
 
         # print( num_pixels )
 
@@ -1361,16 +1343,11 @@ def cal_c12c(
 
     if num_lev is None:
         num_lev = int(np.log(noframes / (num_buf - 1)) / np.log(2) + 1) + 1
-    print(
-        "In this g2 calculation, the buf and lev number are: %s--%s--"
-        % (num_buf, num_lev)
-    )
+    print("In this g2 calculation, the buf and lev number are: %s--%s--" % (num_buf, num_lev))
     if bad_frame_list is not None:
         if len(bad_frame_list) != 0:
             print("Bad frame involved and will be precessed!")
-            noframes -= len(
-                np.where(np.in1d(bad_frame_list, range(good_start, FD.end)))[0]
-            )
+            noframes -= len(np.where(np.in1d(bad_frame_list, range(good_start, FD.end)))[0])
     print("%s frames will be processed..." % (noframes))
 
     c12, lag_steps, state = multi_tau_two_time_auto_corr(
@@ -1407,16 +1384,11 @@ def cal_g2c(
 
     if num_lev is None:
         num_lev = int(np.log(noframes / (num_buf - 1)) / np.log(2) + 1) + 1
-    print(
-        "In this g2 calculation, the buf and lev number are: %s--%s--"
-        % (num_buf, num_lev)
-    )
+    print("In this g2 calculation, the buf and lev number are: %s--%s--" % (num_buf, num_lev))
     if bad_frame_list is not None:
         if len(bad_frame_list) != 0:
             print("Bad frame involved and will be precessed!")
-            noframes -= len(
-                np.where(np.in1d(bad_frame_list, range(good_start, FD.end)))[0]
-            )
+            noframes -= len(np.where(np.in1d(bad_frame_list, range(good_start, FD.end)))[0])
 
     print("%s frames will be processed..." % (noframes))
     if cal_error:
@@ -1465,10 +1437,8 @@ def cal_g2c(
             g2[:g_max, qi - 1] = avgGi[:g_max] / (avgPi[:g_max] * avgFi[:g_max])
             g2_err[:g_max, qi - 1] = np.sqrt(
                 (1 / (avgFi[:g_max] * avgPi[:g_max])) ** 2 * devGi[:g_max] ** 2
-                + (avgGi[:g_max] / (avgFi[:g_max] ** 2 * avgPi[:g_max])) ** 2
-                * devFi[:g_max] ** 2
-                + (avgGi[:g_max] / (avgFi[:g_max] * avgPi[:g_max] ** 2)) ** 2
-                * devPi[:g_max] ** 2
+                + (avgGi[:g_max] / (avgFi[:g_max] ** 2 * avgPi[:g_max])) ** 2 * devFi[:g_max] ** 2
+                + (avgGi[:g_max] / (avgFi[:g_max] * avgPi[:g_max] ** 2)) ** 2 * devPi[:g_max] ** 2
             )
 
         print("G2 with error bar calculation DONE!")
@@ -1490,7 +1460,6 @@ def cal_g2c(
 
 
 def get_pixelist_interp_iq(qp, iq, ring_mask, center):
-
     qind, pixelist = roi.extract_label_indices(ring_mask)
     # pixely = pixelist%FD.md['nrows'] -center[1]
     # pixelx = pixelist//FD.md['nrows'] - center[0]
@@ -1583,20 +1552,14 @@ class Get_Pixel_Arrayc_todo(object):
             pxlist = timg[p[w]] - 1
             # np.bincount( qind[pxlist], weight=
 
-            if (
-                self.mean_int_sets is not None
-            ):  # for each frame will normalize each ROI by it's averaged value
+            if self.mean_int_sets is not None:  # for each frame will normalize each ROI by it's averaged value
                 for j in range(noqs):
                     # if i ==100:
                     #    if j==0:
                     #        print( self.mean_int_sets[i][j] )
                     #        print( qind_[ noprs[j]: noprs[j+1] ] )
-                    Mean_Int_Qind[qind_[noprs[j] : noprs[j + 1]]] = self.mean_int_sets[
-                        i
-                    ][j]
-                norm_Mean_Int_Qind = Mean_Int_Qind[
-                    pxlist
-                ]  # self.mean_int_set or Mean_Int_Qind[pxlist]
+                    Mean_Int_Qind[qind_[noprs[j] : noprs[j + 1]]] = self.mean_int_sets[i][j]
+                norm_Mean_Int_Qind = Mean_Int_Qind[pxlist]  # self.mean_int_set or Mean_Int_Qind[pxlist]
 
                 # if i==100:
                 #    print( i, Mean_Int_Qind[ self.qind== 11    ])
@@ -1703,20 +1666,14 @@ class Get_Pixel_Arrayc(object):
             w = np.where(timg[p])[0]
             pxlist = timg[p[w]] - 1
 
-            if (
-                self.mean_int_sets is not None
-            ):  # for normalization of each averaged ROI of each frame
+            if self.mean_int_sets is not None:  # for normalization of each averaged ROI of each frame
                 for j in range(noqs):
                     # if i ==100:
                     #    if j==0:
                     #        print( self.mean_int_sets[i][j] )
                     #        print( qind_[ noprs[j]: noprs[j+1] ] )
-                    Mean_Int_Qind[qind_[noprs[j] : noprs[j + 1]]] = self.mean_int_sets[
-                        i
-                    ][j]
-                norm_Mean_Int_Qind = Mean_Int_Qind[
-                    pxlist
-                ]  # self.mean_int_set or Mean_Int_Qind[pxlist]
+                    Mean_Int_Qind[qind_[noprs[j] : noprs[j + 1]]] = self.mean_int_sets[i][j]
+                norm_Mean_Int_Qind = Mean_Int_Qind[pxlist]  # self.mean_int_set or Mean_Int_Qind[pxlist]
 
                 # if i==100:
                 #    print( i, Mean_Int_Qind[ self.qind== 11    ])
@@ -1750,7 +1707,6 @@ class Get_Pixel_Arrayc(object):
 
 
 def auto_two_Arrayc(data_pixel, rois, index=None):
-
     """
     Dec 16, 2015, Y.G.@CHX
     a numpy operation method to get two-time correlation function
@@ -1809,15 +1765,12 @@ def auto_two_Arrayc(data_pixel, rois, index=None):
             sum2 = sum1.T
             # print( qi, qlist, )
             # print( g12b[:,:,qi -1 ] )
-            g12b[:, :, i] = (
-                np.dot(data_pixel_qi, data_pixel_qi.T) / sum1 / sum2 / nopr[qi - 1]
-            )
+            g12b[:, :, i] = np.dot(data_pixel_qi, data_pixel_qi.T) / sum1 / sum2 / nopr[qi - 1]
             i += 1
         return g12b
 
 
 def auto_two_Arrayc_ExplicitNorm(data_pixel, rois, norm=None, index=None):
-
     """
     Dec 16, 2015, Y.G.@CHX
     a numpy operation method to get two-time correlation function by giving explict normalization
@@ -1879,15 +1832,12 @@ def auto_two_Arrayc_ExplicitNorm(data_pixel, rois, norm=None, index=None):
             else:
                 sum1 = 1
                 sum2 = 1
-            g12b[:, :, i] = (
-                np.dot(data_pixel_qi, data_pixel_qi.T) / sum1 / sum2 / nopr[qi - 1]
-            )
+            g12b[:, :, i] = np.dot(data_pixel_qi, data_pixel_qi.T) / sum1 / sum2 / nopr[qi - 1]
             i += 1
         return g12b
 
 
 def two_time_norm(data_pixel, rois, index=None):
-
     """
     Dec 16, 2015, Y.G.@CHX
     a numpy operation method to get two-time correlation function

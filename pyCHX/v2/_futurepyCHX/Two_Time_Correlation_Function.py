@@ -5,29 +5,27 @@
 ######################################################################################
 
 
-import numpy as np
+import itertools
 import sys
 import time
-import skbeam.core.roi as roi
-from matplotlib import gridspec
 from datetime import datetime
 
-from tqdm import tqdm
-import itertools
 import matplotlib.pyplot as plt
+import numpy as np
+import skbeam.core.roi as roi
+from matplotlib import gridspec
 from matplotlib.colors import LogNorm
-from pyCHX.chx_libs import (
-    colors as colors_array,
-    markers as markers_array,
-    markers_copy,
-    lstyles,
-    Figure,
-    RUN_GUI,
-)
+from modest_image import ModestImage, imshow
+from tqdm import tqdm
 
 # from pyCHX.chx_libs import  colors_ as mcolors,  markers_ as markers
-from pyCHX.chx_libs import mcolors, markers, multi_tau_lags, colors
-from modest_image import ModestImage, imshow
+from pyCHX.chx_libs import RUN_GUI, Figure
+from pyCHX.chx_libs import colors
+from pyCHX.chx_libs import colors as colors_array
+from pyCHX.chx_libs import lstyles
+from pyCHX.chx_libs import markers
+from pyCHX.chx_libs import markers as markers_array
+from pyCHX.chx_libs import markers_copy, mcolors, multi_tau_lags
 
 
 def delays(num_lev=3, num_buf=4, time=1):
@@ -167,9 +165,7 @@ def run_time(t0):
     print("Total time: %.2f min" % (elapsed_time / 60.0))
 
 
-def get_each_frame_ROI_intensity(
-    data_pixel, bad_pixel_threshold=1e10, plot_=False, *argv, **kwargs
-):
+def get_each_frame_ROI_intensity(data_pixel, bad_pixel_threshold=1e10, plot_=False, *argv, **kwargs):
     """
     Dec 16, 2015, Y.G.@CHX
     Get the ROI intensity of each frame
@@ -181,9 +177,7 @@ def get_each_frame_ROI_intensity(
     """
 
     # print ( argv, kwargs )
-    imgsum = np.array(
-        [np.sum(img) for img in tqdm(data_series[::sampling], leave=True)]
-    )
+    imgsum = np.array([np.sum(img) for img in tqdm(data_series[::sampling], leave=True)])
     if plot_:
         uid = "uid"
         if "uid" in kwargs.keys():
@@ -211,7 +205,6 @@ def get_each_frame_ROI_intensity(
 
 
 def auto_two_Array(data, rois, data_pixel=None):
-
     """
     Dec 16, 2015, Y.G.@CHX
     a numpy operation method to get two-time correlation function
@@ -257,9 +250,7 @@ def auto_two_Array(data, rois, data_pixel=None):
         sum1 = (np.average(data_pixel_qi, axis=1)).reshape(1, noframes)
         sum2 = sum1.T
 
-        g12b[:, :, qi - 1] = (
-            np.dot(data_pixel_qi, data_pixel_qi.T) / sum1 / sum2 / nopr[qi - 1]
-        )
+        g12b[:, :, qi - 1] = np.dot(data_pixel_qi, data_pixel_qi.T) / sum1 / sum2 / nopr[qi - 1]
         # print ( proi, int( qi //( Unitq) ) )
     #        if  int( qi //( Unitq) ) == proi:
     #            sys.stdout.write("#")
@@ -341,7 +332,6 @@ def get_time_edge(tstart, tend, twidth, nots, return_int=False):
 
 
 def rotate_g12q_to_rectangle(g12q):
-
     """
     Dec 16, 2015, Y.G.@CHX
     Rotate anti clockwise 45 of a one-q two correlation function along diagonal to a masked array
@@ -368,7 +358,6 @@ def rotate_g12q_to_rectangle(g12q):
 
 
 def get_aged_g2_from_g12(g12, age_edge, age_center):
-
     """
     Dec 16, 2015, Y.G.@CHX
     Get one-time correlation function of different age from two correlation function
@@ -411,10 +400,7 @@ def get_aged_g2_from_g12(g12, age_edge, age_center):
     return g2_aged
 
 
-def get_aged_g2_from_g12q(
-    g12q, age_edge, age_center=None, timeperframe=1, time_sampling="log", num_bufs=8
-):
-
+def get_aged_g2_from_g12q(g12q, age_edge, age_center=None, timeperframe=1, time_sampling="log", num_bufs=8):
     """
 
 
@@ -486,10 +472,7 @@ def get_aged_g2_from_g12q(
     return lag_dict, g2_aged
 
 
-def get_aged_g2_from_g12q2(
-    g12q, slice_num=6, slice_width=5, slice_start=0, slice_end=1
-):
-
+def get_aged_g2_from_g12q2(g12q, slice_num=6, slice_width=5, slice_start=0, slice_end=1):
     """
     Dec 16, 2015, Y.G.@CHX
     Get one-time correlation function of different age from two correlation function
@@ -518,9 +501,7 @@ def get_aged_g2_from_g12q2(
 
     arr = rotate_g12q_to_rectangle(g12q)
     m, n = arr.shape  # m should be 2*n-1
-    age_edge, age_center = get_qedge(
-        qstart=slice_start, qend=slice_end, qwidth=slice_width, noqs=slice_num
-    )
+    age_edge, age_center = get_qedge(qstart=slice_start, qend=slice_end, qwidth=slice_width, noqs=slice_num)
     age_edge, age_center = np.int_(age_edge), np.int_(age_center)
     # print (age_edge, age_center)
     g2_aged = {}
@@ -547,7 +528,6 @@ def show_g12q_aged_g2(
     *argv,
     **kwargs,
 ):
-
     """
     Octo 20, 2017, add taus_aged option
 
@@ -580,9 +560,7 @@ def show_g12q_aged_g2(
 
     age_center = np.array(list(sorted(g2_aged.keys())))
     print("the cut age centers are: " + str(age_center))
-    age_center = (
-        np.int_(np.array(list(sorted(g2_aged.keys()))) / timeperframe) * 2
-    )  # in pixel
+    age_center = np.int_(np.array(list(sorted(g2_aged.keys()))) / timeperframe) * 2  # in pixel
     M, N = g12q.shape
 
     # fig, ax = plt.subplots( figsize = (8,8) )
@@ -765,10 +743,7 @@ def plot_aged_g2(g2_aged, tau=None, timeperframe=1, ylim=None, xlim=None):
 # get fout-time
 
 
-def get_tau_from_g12q(
-    g12q, slice_num=6, slice_width=1, slice_start=None, slice_end=None
-):
-
+def get_tau_from_g12q(g12q, slice_num=6, slice_width=1, slice_start=None, slice_end=None):
     """
     Dec 16, 2015, Y.G.@CHX
     Get tau lines from two correlation function
@@ -798,9 +773,7 @@ def get_tau_from_g12q(
     arr = rotate_g12q_to_rectangle(g12q)
     m, n = arr.shape  # m should be 2*n-1
 
-    age_edge, age_center = get_qedge(
-        qstart=slice_start, qend=slice_end, qwidth=slice_width, noqs=slice_num
-    )
+    age_edge, age_center = get_qedge(qstart=slice_start, qend=slice_end, qwidth=slice_width, noqs=slice_num)
     age_edge, age_center = np.int_(age_edge), np.int_(age_center)
     # print (age_edge, age_center)
     tau = {}
@@ -815,7 +788,6 @@ def get_tau_from_g12q(
 
 
 def show_g12q_taus(g12q, taus, slice_width=10, timeperframe=1, vmin=1, vmax=1.25):
-
     """
     Dec 16, 2015, Y.G.@CHX
     Plot tau-lines as a function of age with two correlation function
@@ -887,9 +859,7 @@ def show_g12q_taus(g12q, taus, slice_width=10, timeperframe=1, vmin=1, vmax=1.25
     for i in sorted(taus.keys()):
         gx = np.arange(len(taus[i])) * timeperframe
         marker = next(markers)
-        ax1.plot(
-            gx, taus[i], "-%s" % marker, label=r"$tau= %.1f s$" % (i * timeperframe)
-        )
+        ax1.plot(gx, taus[i], "-%s" % marker, label=r"$tau= %.1f s$" % (i * timeperframe))
         ax1.set_ylim(vmin, vmax)
         ax1.set_xlabel(r"$t (s)$", fontsize=5)
         ax1.set_ylabel("g2")
@@ -960,7 +930,6 @@ def histogram_taus(taus, hisbin=20, plot=True, timeperframe=1):
 
 
 def get_one_time_from_two_time_old(g12, norms=None, nopr=None):
-
     """
     Dec 16, 2015, Y.G.@CHX
     Get one-time correlation function from two correlation function
@@ -988,22 +957,18 @@ def get_one_time_from_two_time_old(g12, norms=None, nopr=None):
     for q in range(noqs):
         y = g12[:, :, q]
         for tau in range(m):
-
             if norms is None:
                 g2f12[tau, q] = np.nanmean(np.diag(y, k=int(tau)))
             else:
                 yn = norms[:, q]
                 yn1 = np.average(yn[tau:])
                 yn2 = np.average(yn[: m - tau])
-                g2f12[tau, q] = np.nanmean(np.diag(y, k=int(tau))) / (
-                    yn1 * yn2 * nopr[q]
-                )
+                g2f12[tau, q] = np.nanmean(np.diag(y, k=int(tau))) / (yn1 * yn2 * nopr[q])
 
     return g2f12
 
 
 def get_one_time_from_two_time(g12, norms=None, nopr=None):
-
     """
     Dec 16, 2015, Y.G.@CHX
     Get one-time correlation function from two correlation function
@@ -1035,8 +1000,7 @@ def get_one_time_from_two_time(g12, norms=None, nopr=None):
             yn = norms[:, q]
             g2f12[i, q] = np.array(
                 [
-                    np.nanmean(g12[:, :, q].diagonal(i))
-                    / (np.average(yn[i:]) * np.average(yn[: m - i]) * nopr[q])
+                    np.nanmean(g12[:, :, q].diagonal(i)) / (np.average(yn[i:]) * np.average(yn[: m - i]) * nopr[q])
                     for i in range(m)
                 ]
             )
@@ -1073,18 +1037,11 @@ def get_four_time_from_two_time(g12, g2=None, rois=None):
     else:
         norm = 1.0
     if rois is None:
-        g4f12 = np.array(
-            [(np.nanstd(g12.diagonal(i), axis=1)) ** 2 / norm for i in range(m)]
-        )
+        g4f12 = np.array([(np.nanstd(g12.diagonal(i), axis=1)) ** 2 / norm for i in range(m)])
 
     else:
         x1, x2, y1, y2 = rois
-        g4f12 = np.array(
-            [
-                (np.nanstd(g12[x1:x2, y1:y2, :].diagonal(i), axis=1)) ** 2 / norm
-                for i in range(m)
-            ]
-        )
+        g4f12 = np.array([(np.nanstd(g12[x1:x2, y1:y2, :].diagonal(i), axis=1)) ** 2 / norm for i in range(m)])
 
     return g4f12
 
@@ -1155,7 +1112,6 @@ def show_one_C12(
     *argv,
     **kwargs,
 ):
-
     """
     plot one-q of two-time correlation function
     C12: two-time correlation function, with shape as [ time, time, qs]
@@ -1229,7 +1185,6 @@ def show_one_C12(
         interpolation=interpolation,
     )
     if title:
-
         tit = "%s-[%s-%s] frames" % (uid, N1, N2)
 
         ax.set_title(tit)
@@ -1267,7 +1222,6 @@ def show_C12(
     *argv,
     **kwargs,
 ):
-
     """
     plot one-q of two-time correlation function
     C12: two-time correlation function, with shape as [ time, time, qs]
@@ -1352,9 +1306,7 @@ def show_C12(
         fig, ax = fig_ax
 
     # extent=[0, data.shape[0]*timeperframe, 0, data.shape[0]*timeperframe ]
-    extent = (
-        np.array([N1, N2, N1, N2]) * timeperframe + timeoffset
-    )  ### added timeoffset to extend
+    extent = np.array([N1, N2, N1, N2]) * timeperframe + timeoffset  ### added timeoffset to extend
 
     if logs:
         im = imshow(
