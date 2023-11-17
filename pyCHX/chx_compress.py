@@ -349,7 +349,7 @@ def para_compress_eigerdata(
         images_per_file=images_per_file,
     )
 
-    res_ = np.array([results[k].get() for k in list(sorted(results.keys()))])
+    res_ = [results[k].get() for k in list(sorted(results.keys()))]
     imgsum = np.zeros(N)
     bad_frame_list = np.zeros(N, dtype=bool)
     good_count = 1
@@ -385,9 +385,9 @@ def para_compress_eigerdata(
 
 
 def combine_compressed(filename, Nf, del_old=True):
-    old_files = np.concatenate(
-        np.array([[filename + "-header"], [filename + "_temp-%i.tmp" % i for i in range(Nf)]])
-    )
+    old_files = [filename + "-header"]
+    for i in range(Nf):
+        old_files.append(filename + "_temp-%i.tmp")
     combine_binary_files(filename, old_files, del_old)
 
 
