@@ -1,4 +1,5 @@
 """Dev@Octo12,2017"""
+
 import numpy as np
 
 damaged_4Mpixel = np.array(

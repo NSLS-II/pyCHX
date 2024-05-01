@@ -11,10 +11,7 @@ def gauss_func(x, xc, amp, sigma, baseline):
 
 
 def gauss2D_func(x, y, xc, amp, sigmax, yc, sigmay, baseline):
-    return (
-        amp * np.exp(-((x - xc) ** 2) / 2.0 / sigmax**2) * np.exp(-((y - yc) ** 2) / 2.0 / sigmay**2)
-        + baseline
-    )
+    return amp * np.exp(-((x - xc) ** 2) / 2.0 / sigmax**2) * np.exp(-((y - yc) ** 2) / 2.0 / sigmay**2) + baseline
 
 
 def extract_param(bestfits, key):

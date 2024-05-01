@@ -681,9 +681,7 @@ def fit_xsvs1(
 
             # print ( rois )
             if func == "bn":
-                result = mod.fit(
-                    spe_cts_all[j, i][rois], bin_values=bin_edges[j, i][:-1][rois], K=5 * 2**j, M=12
-                )
+                result = mod.fit(spe_cts_all[j, i][rois], bin_values=bin_edges[j, i][:-1][rois], K=5 * 2**j, M=12)
             elif func == "gm":
                 result = mod.fit(
                     spe_cts_all[j, i][rois], bin_values=bin_edges[j, i][:-1][rois], K=K_mean[i] * 2**j, M=20
