@@ -3135,73 +3135,123 @@ def get_full_data_path( uid ):
     #print(p,p2)
     return p + '_' + str(p2) + '_master.h5'
 
-
-
-def get_sid_filenames(header):
-    """YG. Dev Jan, 2016
-    Get a bluesky scan_id, unique_id, filename by giveing uid
-
-    Parameters
-    ----------
-    header: a header of a bluesky scan, e.g. db[-1]
-
-    Returns
-    -------
-    scan_id: integer
-    unique_id: string, a full string of a uid
-    filename: sring
-
-    Usuage:
-    sid,uid, filenames   = get_sid_filenames(db[uid])
-
+def get_sid_filenames(hdr,verbose=False):
     """
-    from collections import defaultdict
-    from glob import glob
-    from pathlib import Path
+    get scan_id, uid and detector filename from databroker
+    get_sid_filenames(hdr,verbose=False)
+    hdr = db[uid]
+    returns (scan_id, uid, filepath)
+    LW 04/30/2024
+    """
+    import glob
+    from time import strftime, localtime
+    start_doc = hdr.start
+    stop_doc = hdr.stop
+    success = False
+    
+    ret = (start_doc["scan_id"], start_doc["uid"], glob.glob(f"{start_doc['data path']}*_{start_doc['sequence id']}_master.h5")) # looking for (eiger) datafile at the path specified in metadata
+    if len(ret[2])==0:
+        if verbose: print('could not find detector filename from "data_path" in metadata: %s'%start_doc['data path'])
+    else:
+         if verbose: print('Found detector filename from "data_path" in metadata!');success=True
+    
+    if not success: # looking at path in metadata, but taking the date from the run start document
+        data_path=start_doc['data path'][:-11]+strftime("%Y/%m/%d/",localtime(start_doc['time']))
+        ret = (start_doc["scan_id"], start_doc["uid"], glob.glob(f"{data_path}*_{start_doc['sequence id']}_master.h5"))
+        if len(ret[2])==0:
+            if verbose: print('could not find detector filename in %s'%data_path)
+        else:
+             if verbose: print('Found detector filename in %s'%data_path);success=True
 
-    filepaths = []
-    resources = {}  # uid: document
-    datums = defaultdict(list)  # uid: List(document)
-    for name, doc in header.documents():
-        if name == "resource":
-            resources[doc["uid"]] = doc
-        elif name == "datum":
-            datums[doc["resource"]].append(doc)
-        elif name == "datum_page":
-            for datum in event_model.unpack_datum_page(doc):
-                datums[datum["resource"]].append(datum)
-    for resource_uid, resource in resources.items():
-        file_prefix = Path(resource.get('root', '/'), resource["resource_path"])
-        if 'eiger' not in resource['spec'].lower():
-            continue
-        for datum in datums[resource_uid]:
-            dm_kw = datum["datum_kwargs"]
-            seq_id = dm_kw['seq_id']
-            new_filepaths = glob(f'{file_prefix!s}_{seq_id}*')
-            filepaths.extend(new_filepaths)
-    return header.start['scan_id'],  header.start['uid'], filepaths
+    if not success: # looking at path in metadata, but taking the date from the run stop document (in case the date rolled over between creating the start doc and staging the detector)
+        data_path=start_doc['data path'][:-11]+strftime("%Y/%m/%d/",localtime(stop_doc['time']))
+        ret = (start_doc["scan_id"], start_doc["uid"], glob.glob(f"{data_path}*_{start_doc['sequence id']}_master.h5"))
+        if len(ret[2])==0:
+            if verbose: print('Sorry, could not find detector filename....')
+        else:
+             if verbose: print('Found detector filename in %s'%data_path);success=True
+    return ret 
 
-def load_dask_data(uid,detector,reverse=False,rot90=False):
+
+# def get_sid_filenames(header):
+#     """YG. Dev Jan, 2016
+#     Get a bluesky scan_id, unique_id, filename by giveing uid
+
+#     Parameters
+#     ----------
+#     header: a header of a bluesky scan, e.g. db[-1]
+
+#     Returns
+#     -------
+#     scan_id: integer
+#     unique_id: string, a full string of a uid
+#     filename: sring
+
+#     Usuage:
+#     sid,uid, filenames   = get_sid_filenames(db[uid])
+
+#     """
+#     from collections import defaultdict
+#     from glob import glob
+#     from pathlib import Path
+
+#     filepaths = []
+#     resources = {}  # uid: document
+#     datums = defaultdict(list)  # uid: List(document)
+#     for name, doc in header.documents():
+#         if name == "resource":
+#             resources[doc["uid"]] = doc
+#         elif name == "datum":
+#             datums[doc["resource"]].append(doc)
+#         elif name == "datum_page":
+#             for datum in event_model.unpack_datum_page(doc):
+#                 datums[datum["resource"]].append(datum)
+#     for resource_uid, resource in resources.items():
+#         file_prefix = Path(resource.get('root', '/'), resource["resource_path"])
+#         if 'eiger' not in resource['spec'].lower():
+#             continue
+#         for datum in datums[resource_uid]:
+#             dm_kw = datum["datum_kwargs"]
+#             seq_id = dm_kw['seq_id']
+#             new_filepaths = glob(f'{file_prefix!s}_{seq_id}*')
+#             filepaths.extend(new_filepaths)
+#     return header.start['scan_id'],  header.start['uid'], filepaths
+
+def load_dask_data(uid,detector,mask_path_full,reverse=False,rot90=False):
     """
     load data as dask-array
     get image md (direct beam, wavelength, sample-detector distance,...) from databroker documents (no need to read an actual image)
+    get pixel_mask and binary_mask from static location (getting it from image metadata takes forever in some conda envs...)
     load_dask_data(uid,detector,reverse=False,rot90=False)
+    uid: uid (str)
+    detector: md['detector']
+    mask_path_full: current standard would be _mask_path_+'pixel_masks/'
     returns detector_images(dask-array), image_md
     LW 04/26/2024
     """
     import dask
     hdr=db[uid]
     det=detector.split('_image')[0]
-    # collect image metadata
+    # collect image metadata from loading single image   
     img_md_dict={'detector_distance':'det_distance','incident_wavelength':'wavelength','frame_time':'cam_acquire_period','count_time':'cam_acquire_time','num_images':'cam_num_images','beam_center_x':'beam_center_x','beam_center_y':'beam_center_y'}
     img_md={}
     for k in list(img_md_dict.keys()):
         img_md[k]=hdr.config_data(det)['primary'][0]['%s_%s'%(det,img_md_dict[k])]
     if md['detector'] in ['eiger4m_single_image','eiger1m_single_image','eiger500K_single_image']:
         img_md.update({'y_pixel_size': 7.5e-05, 'x_pixel_size': 7.5e-05})
-    else: img_md.update({'y_pixel_size': None, 'x_pixel_size': None})
+        got_pixel_mask=True
+    else:
+        img_md.update({'y_pixel_size': None, 'x_pixel_size': None})
+        got_pixel_mask=False
+    # load pixel mask from static location
+    if got_pixel_mask:   
+        json_open=open(_mask_path_+'pixel_masks/pixel_mask_compression_%s.json'%detector.split('_')[0])
+        mask_dict=json.load(json_open)
+        img_md['pixel_mask']=np.array(mask_dict['pixel_mask'])
+        img_md['binary_mask']=np.array(mask_dict['binary_mask'])
+        del mask_dict
+
     # load image data as dask-arry:
-    #raise Exception('this was supposed to break!')
     dimg=hdr.xarray_dask()[md['detector']][0]
     if reverse:
         dimg=dask.array.flip(dimg,axis=(0,1))

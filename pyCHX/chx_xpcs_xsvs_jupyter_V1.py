@@ -3,9 +3,11 @@ from pyCHX.chx_libs import markers, colors
 #from pyCHX.chx_generic_functions import get_short_long_labels_from_qval_dict
 #RUN_GUI = False
 #from pyCHX.chx_libs import markers
+from IPython import get_ipython
 import pandas as pds
-# temporary fix: get_data() uses depreciated np.float and gets imported from pyCHX/chx_correlationc.py -> clobber function with temporary fix:
-%run /nsls2/data/chx/legacy/analysis/2022_3/lwiegart/development/chx_analysis_setup.ipynb
+
+ip = get_ipython()
+ip.run_line_magic("run", "/nsls2/data/chx/shared/CHX_Software/packages/environment_management/chx_analysis_setup.ipynb")
 
 def get_t_iqc_uids( uid_list, setup_pargs, slice_num= 10, slice_width= 1):
     '''Get Iq at different time edge (difined by slice_num and slice_width) for a list of uids
