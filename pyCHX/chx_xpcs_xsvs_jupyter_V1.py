@@ -8,10 +8,10 @@ from IPython import get_ipython
 from pyCHX.chx_libs import colors, markers
 from pyCHX.chx_packages import *
 
-ip = get_ipython()
-ip.run_line_magic(
-    "run", "/nsls2/data/chx/shared/CHX_Software/packages/environment_management/chx_analysis_setup.ipynb"
-)
+# ip = get_ipython()
+# ip.run_line_magic(
+#     "run", "/nsls2/data/chx/shared/CHX_Software/packages/environment_management/chx_analysis_setup.ipynb"
+# )
 
 
 def get_t_iqc_uids(uid_list, setup_pargs, slice_num=10, slice_width=1):
