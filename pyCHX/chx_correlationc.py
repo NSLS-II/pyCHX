@@ -4,7 +4,6 @@ yuzhang@bnl.gov
 This module is for computation of time correlation by using compressing algorithm
 """
 
-
 from __future__ import absolute_import, division, print_function
 
 import logging
@@ -185,6 +184,7 @@ def _one_time_process_error(
         if np.isnan(past_img).any() or np.isnan(future_img).any():
             norm[level + 1][ind] += 1
         else:
+
             # for w, arr in zip([past_img*future_img, past_img, future_img],
             #                  [G, past_intensity_norm, future_intensity_norm,
             #                  ]):
@@ -966,6 +966,7 @@ def multi_tau_two_time_auto_corr(num_lev, num_buf, ring_mask, FD, bad_frame_list
 def lazy_two_time(
     FD, num_levels, num_bufs, labels, two_time_internal_state=None, bad_frame_list=None, imgsum=None, norm=None
 ):
+
     # def lazy_two_time(labels, images, num_frames, num_bufs, num_levels=1,
     #                  two_time_internal_state=None):
     """Generator implementation of two-time correlation
@@ -1413,6 +1414,7 @@ def cal_g2c(
 
 
 def get_pixelist_interp_iq(qp, iq, ring_mask, center):
+
     qind, pixelist = roi.extract_label_indices(ring_mask)
     # pixely = pixelist%FD.md['nrows'] -center[1]
     # pixelx = pixelist//FD.md['nrows'] - center[0]

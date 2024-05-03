@@ -288,6 +288,7 @@ def para_compress_eigerdata(
     copy_rawdata=True,
     new_path="/tmp_data/data/",
 ):
+
     data_path_ = data_path
     if dtypes == "uid":
         uid = md["uid"]  # images
@@ -387,7 +388,7 @@ def para_compress_eigerdata(
 def combine_compressed(filename, Nf, del_old=True):
     old_files = [filename + "-header"]
     for i in range(Nf):
-        old_files.append(filename + "_temp-%i.tmp")
+        old_files.append(filename + "_temp-%i.tmp" % i)
     combine_binary_files(filename, old_files, del_old)
 
 
@@ -967,6 +968,7 @@ class Multifile:
         self.dlen = np.fromfile(self.FID, dtype=np.int32, count=1)[0]
 
     def _readImageRaw(self):
+
         p = np.fromfile(self.FID, dtype=np.int32, count=self.dlen)
         v = np.fromfile(self.FID, dtype=self.valtype, count=self.dlen)
         self.imgread = 1

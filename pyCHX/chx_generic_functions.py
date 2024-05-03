@@ -111,7 +111,7 @@ def fit_one_peak_curve(x, y, fit_range=None):
     peak = LorentzianModel()
     background = LinearModel()
     model = peak + background
-    if fit_range is not None:
+    if fit_range != None:
         x1, x2 = fit_range
         xf = x[x1:x2]
         yf = y[x1:x2]
@@ -164,7 +164,7 @@ def plot_xy_with_fit(
     # txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
     ax.text(x=0.02, y=0.1, s=txts, fontsize=14, transform=ax.transAxes)
     plt.tight_layout()
-    if filename is not None:
+    if filename != None:
         plt.savefig(filename)
     return ax
 
@@ -379,7 +379,7 @@ def get_SG_norm(FD, pixelist, bins=1, mask=None, window_size=11, order=5):
     Return:
         norm: shape as ( length of FD, length of pixelist )
     """
-    if mask is None:
+    if mask == None:
         mask = 1
     beg = FD.beg
     end = FD.end
@@ -459,7 +459,7 @@ def shift_mask(new_cen, new_mask, old_cen, old_roi_mask, limit_qnum=None):
     # qm = nopr>0
     for j, qv in enumerate(qu):
         nroi_mask[nroi_mask_ == qv] = j + 1
-    if limit_qnum is not None:
+    if limit_qnum != None:
         nroi_mask[nroi_mask > limit_qnum] = 0
     return nroi_mask
 
@@ -722,13 +722,13 @@ def plot_q_rate_general(
         if Nqz != 1:
             legend = ax.legend(loc="best")
 
-    if plot_index_range is not None:
+    if plot_index_range != None:
         d1, d2 = plot_index_range
         d2 = min(len(x) - 1, d2)
         ax.set_xlim((x**power)[d1], (x**power)[d2])
         ax.set_ylim(y[d1], y[d2])
 
-    if ylim is not None:
+    if ylim != None:
         ax.set_ylim(ylim)
 
     ax.set_ylabel("Relaxation rate " r"$\gamma$" "($s^{-1}$) (log)")
@@ -769,11 +769,11 @@ def plot_xy_x2(
         kwargs: could include xlim (in unit of index), ylim (in unit of real value)
 
     """
-    if fig_ax is None:
+    if fig_ax == None:
         fig, ax1 = plt.subplots()
     else:
         fig, ax1 = fig_ax
-    if pargs is not None:
+    if pargs != None:
         uid = pargs["uid"]
         path = pargs["path"]
     else:
@@ -802,7 +802,7 @@ def plot_xy_x2(
     lx1, lx2 = xlim
     ax1.set_xlim([x[lx1], x[lx2]])
     ax1.set_ylim(ylim)
-    if x2 is not None:
+    if x2 != None:
         ax2 = ax1.twiny()
         ax2.set_xlabel(xlabel2)
         ax2.set_ylabel(ylabel)
@@ -828,8 +828,14 @@ def save_oavs_tifs(uid, data_dir, brightness_scale=1, scalebar_size=100, scale=1
     h = db[uid]
     oavs = tifs
 
-    oav_period = h["descriptors"][0]["configuration"]["OAV"]["data"]["OAV_cam_acquire_period"]
-    oav_expt = h["descriptors"][0]["configuration"]["OAV"]["data"]["OAV_cam_acquire_time"]
+    # 12/03/2023: have a problem with OAV not being detector [0]...just try and go throught the list
+    detectors = sorted(get_detectors(h))
+    for d in range(len(detectors)):
+        try:
+            oav_period = h["descriptors"][d]["configuration"]["OAV"]["data"]["OAV_cam_acquire_period"]
+            oav_expt = h["descriptors"][d]["configuration"]["OAV"]["data"]["OAV_cam_acquire_time"]
+        except:
+            pass
     oav_times = []
     for i in range(len(oavs)):
         oav_times.append(oav_expt + i * oav_period)
@@ -852,7 +858,7 @@ def save_oavs_tifs(uid, data_dir, brightness_scale=1, scalebar_size=100, scale=1
         cross = [685, 440, 50]  # definintion of direct beam: x, y, size
         plt.plot([cross[0] - cross[2] / 2, cross[0] + cross[2] / 2], [cross[1], cross[1]], "r-")
         plt.plot([cross[0], cross[0]], [cross[1] - cross[2] / 2, cross[1] + cross[2] / 2], "r-")
-        if pixel_scalebar is not None:
+        if pixel_scalebar != None:
             plt.plot([1100, 1100 + pixel_scalebar], [150, 150], "r-", Linewidth=5)  # scale bar.
             plt.text(1000, 50, text_string, fontsize=14, color="r")
         plt.text(600, 50, str(oav_times[m])[:5] + " [s]", fontsize=14, color="r")
@@ -1080,11 +1086,11 @@ def show_tif_series(
 
     """
 
-    if center is not None:
+    if center != None:
         cy, cx = center
     # infs = sorted(sample_list)
     N = len(tif_series)
-    if Nx is None:
+    if Nx == None:
         sy = int(np.sqrt(N))
     else:
         sy = Nx
@@ -1132,7 +1138,7 @@ def ps(y, shift=0.5, replot=True, logplot="off", x=None):
 
 
     """
-    if x is None:
+    if x == None:
         x = np.arange(len(y))
     x = np.array(x)
     y = np.array(y)
@@ -1392,7 +1398,7 @@ def average_array_withNan(array, axis=0, mask=None):
         avg: averaged array along axis
     """
     shape = array.shape
-    if mask is None:
+    if mask == None:
         mask = np.isnan(array)
         # mask = np.ma.masked_invalid(array).mask
     array_ = np.ma.masked_array(array, mask=mask)
@@ -1578,7 +1584,7 @@ def ls_dir2(inDir, string=None):
     from os import listdir
     from os.path import isfile, join
 
-    if string is None:
+    if string == None:
         tifs = np.array([f for f in listdir(inDir) if isfile(join(inDir, f))])
     else:
         tifs = np.array([f for f in listdir(inDir) if (isfile(join(inDir, f))) & (string in f)])
@@ -1596,7 +1602,7 @@ def re_filename(old_filename, new_filename, inDir=None, verbose=True):
             '/home/yuzhang/Analysis/Timepix/2017_3/Results/run17/run17_pos1/'
            )
     """
-    if inDir is not None:
+    if inDir != None:
         os.rename(inDir + old_filename, inDir + new_filename)
     else:
         os.rename(old_filename, new_filename)
@@ -1699,10 +1705,10 @@ def get_fit_by_two_linear(
             convinent fit class, gmfit2(x) gives yvale
 
     """
-    if xrange is None:
+    if xrange == None:
         x1, x2 = min(x), max(x)
     x1, x2 = xrange
-    if mid_xpoint2 is None:
+    if mid_xpoint2 == None:
         mid_xpoint2 = mid_xpoint1
     D1, gmfit1 = linear_fit(x, y, xrange=[x1, mid_xpoint1])
     D2, gmfit2 = linear_fit(x, y, xrange=[mid_xpoint2, x2])
@@ -1734,7 +1740,7 @@ def get_curve_turning_points(
 
 def plot_fit_two_linear_fit(x, y, gmfit1, gmfit2, ax=None):
     """YG Octo 16,2017 Plot data with two fitted linear func"""
-    if ax is None:
+    if ax == None:
         fig, ax = plt.subplots()
     plot1D(x=x, y=y, ax=ax, c="k", legend="data", m="o", ls="")  # logx=True, logy=True )
     plot1D(x=x, y=gmfit1(x), ax=ax, c="r", m="", ls="-", legend="fit1")
@@ -1746,7 +1752,7 @@ def linear_fit(x, y, xrange=None):
     """YG Octo 16,2017 copied from XPCS_SAXS
     a linear fit
     """
-    if xrange is not None:
+    if xrange != None:
         xmin, xmax = xrange
         x1, x2 = find_index(x, xmin, tolerance=None), find_index(x, xmax, tolerance=None)
         x_ = x[x1:x2]
@@ -1955,30 +1961,30 @@ def extract_data_from_file(
         p = fin.readlines()
         di = 1e20
         for i, line in enumerate(p):
-            if start_row is not None:
+            if start_row != None:
                 di = start_row
-            elif good_line_pattern is not None:
+            elif good_line_pattern != None:
                 if good_line_pattern in line:
                     di = i
             else:
                 di = 0
             if i == di + 1:
                 els = line.split()
-                if good_cols is None:
+                if good_cols == None:
                     data = np.array(els, dtype=float)
                 else:
                     data = np.array([els[j] for j in good_cols], dtype=float)
             elif i > di:
                 try:
                     els = line.split()
-                    if good_cols is None:
+                    if good_cols == None:
                         temp = np.array(els, dtype=float)
                     else:
                         temp = np.array([els[j] for j in good_cols], dtype=float)
                     data = np.vstack((data, temp))
                 except:
                     pass
-        if labels is None:
+        if labels == None:
             labels = np.arange(data.shape[1])
         df = pds.DataFrame(data, index=np.arange(data.shape[0]), columns=labels)
     return df
@@ -2075,7 +2081,7 @@ def create_ring_mask(shape, r1, r2, center, mask=None):
     m[rr, cc] = 1
     rr, cc = disk((center[1], center[0]), r1, shape=shape)
     m[rr, cc] = 0
-    if mask is not None:
+    if mask != None:
         m += mask
     return m
 
@@ -2246,7 +2252,7 @@ def plot_g1(taus, g2, g2_fit_paras, qr=None, ylim=[0, 1], title=""):
     Plot one-time correlation, giving taus, g2, g2_fit"""
     noqs = g2.shape[1]
     fig, ax = plt.subplots()
-    if qr is None:
+    if qr == None:
         qr = np.arange(noqs)
     for i in range(noqs):
         b = g2_fit_paras["baseline"][i]
@@ -2366,7 +2372,7 @@ def create_user_folder(CYCLE, username=None, default_dir="/XF11ID/analysis/"):
         Created folder name
     """
     if username != "Default":
-        if username is None:
+        if username == None:
             username = getpass.getuser()
         data_dir0 = os.path.join(default_dir, CYCLE, username, "Results/")
     else:
@@ -2439,7 +2445,7 @@ def get_series_g2_taus(fra_max_list, acq_time=1, max_fra_num=None, log_taus=True
     """
     tausd = {}
     for n in fra_max_list:
-        if max_fra_num is not None:
+        if max_fra_num != None:
             L = max_fra_num
         else:
             L = np.infty
@@ -2508,10 +2514,10 @@ def check_lost_metadata(md, Nimg=None, inc_x0=None, inc_y0=None, pixelsize=7.5 *
             uid = md["uid"]
             acquisition_period = float(db[uid]["start"]["acquire period"])
     timeperframe = acquisition_period
-    if inc_x0 is not None:
+    if inc_x0 != None:
         mdn["beam_center_x"] = inc_y0
         print("Beam_center_x has been changed to %s. (no change in raw metadata): " % inc_y0)
-    if inc_y0 is not None:
+    if inc_y0 != None:
         mdn["beam_center_y"] = inc_x0
         print("Beam_center_y has been changed to %s.  (no change in raw metadata): " % inc_x0)
     center = [int(mdn["beam_center_x"]), int(mdn["beam_center_y"])]  # beam center [y,x] for python image
@@ -2554,7 +2560,7 @@ def combine_images(filenames, outputfile, outsize=(2000, 2400)):
             hsize_ = hsize
         # print( index, file, basewidth, hsize )
         size = (basewidth_, hsize_)
-        bands = [b.resize(size, Image.LINEAR) for b in bands]
+        bands = [b.resize(size, Image.Resampling.BILINEAR) for b in bands]
         img = Image.merge("RGBA", bands)
         x = index % nx * basewidth
         y = index // nx * hsize
@@ -2583,13 +2589,13 @@ def get_qval_dict(qr_center, qz_center=None, qval_dict=None, multi_qr_for_one_qz
 
     """
 
-    if qval_dict is None:
+    if qval_dict == None:
         qval_dict = {}
         maxN = 0
     else:
         maxN = np.max(list(qval_dict.keys())) + 1
 
-    if qz_center is not None:
+    if qz_center != None:
         if multi_qr_for_one_qz:
             if one_qz_multi_qr:
                 for qzind in range(len(qz_center)):
@@ -2662,7 +2668,7 @@ def check_bad_uids(uids, mask, img_choice_N=10, bad_uids_index=None):
     buids = []
     guids = list(uids)
     # print( guids )
-    if bad_uids_index is None:
+    if bad_uids_index == None:
         bad_uids_index = []
     for i, uid in enumerate(uids):
         # print( i, uid )
@@ -2718,7 +2724,7 @@ def ployfit(y, x=None, order=20):
     fit data (one-d array) by a ploynominal function
     return the fitted one-d array
     """
-    if x is None:
+    if x == None:
         x = range(len(y))
     pol = np.polyfit(x, y, order)
     return np.polyval(pol, x)
@@ -2743,9 +2749,9 @@ def check_bad_data_points(
          else: use the mean (a value) of imgsum and scale to get low and high threshold, it's good to remove bad frames/pixels on top of  flatten curve
 
     """
-    if good_start is None:
+    if good_start == None:
         good_start = 0
-    if good_end is None:
+    if good_end == None:
         good_end = len(data)
     bd1 = [i for i in range(0, good_start)]
     bd3 = [i for i in range(good_end, len(data))]
@@ -2803,7 +2809,7 @@ def check_bad_data_points(
             legend_size=legend_size,
         )
 
-        if path is not None:
+        if path != None:
             fp = path + "%s" % (uid) + "_find_bad_points" + ".png"
             plt.savefig(fp, dpi=fig.dpi)
     bd2 = list(np.where(np.abs(d - d.mean()) > scale * d.std())[0] + good_start)
@@ -2834,9 +2840,9 @@ def get_bad_frame_list(
          else: use the mean (a value) of imgsum and scale to get low and high threshold, it's good to remove bad frames/pixels on top of  flatten curve
 
     """
-    if good_start is None:
+    if good_start == None:
         good_start = 0
-    if good_end is None:
+    if good_end == None:
         good_end = len(imgsum)
     bd1 = [i for i in range(0, good_start)]
     bd3 = [i for i in range(good_end, len(imgsum))]
@@ -2894,7 +2900,7 @@ def get_bad_frame_list(
             legend_size=legend_size,
         )
 
-        if path is not None:
+        if path != None:
             fp = path + "%s" % (uid) + "_imgsum_analysis" + ".png"
             plt.savefig(fp, dpi=fig.dpi)
 
@@ -2939,6 +2945,7 @@ def find_bad_pixels(FD, bad_frame_list, uid="uid"):
 
 
 def mask_exclude_badpixel(bp, mask, uid):
+
     for i in range(len(bp)):
         mask[int(bp[bp.columns[0]][i]), int(bp[bp.columns[1]][i])] = 0
     return mask
@@ -2949,7 +2956,7 @@ def print_dict(dicts, keys=None):
     print keys: values in a dicts
     if keys is None: print all the keys
     """
-    if keys is None:
+    if keys == None:
         keys = list(dicts.keys())
     for k in keys:
         try:
@@ -3368,49 +3375,163 @@ def get_full_data_path(uid):
     return p + "_" + str(p2) + "_master.h5"
 
 
-def get_sid_filenames(header):
-    """YG. Dev Jan, 2016
-    Get a bluesky scan_id, unique_id, filename by giveing uid
-
-    Parameters
-    ----------
-    header: a header of a bluesky scan, e.g. db[-1]
-
-    Returns
-    -------
-    scan_id: integer
-    unique_id: string, a full string of a uid
-    filename: sring
-
-    Usuage:
-    sid,uid, filenames   = get_sid_filenames(db[uid])
-
+def get_sid_filenames(hdr, verbose=False):
     """
-    from collections import defaultdict
-    from glob import glob
-    from pathlib import Path
+    get scan_id, uid and detector filename from databroker
+    get_sid_filenames(hdr,verbose=False)
+    hdr = db[uid]
+    returns (scan_id, uid, filepath)
+    LW 04/30/2024
+    """
+    import glob
+    from time import localtime, strftime
 
-    filepaths = []
-    resources = {}  # uid: document
-    datums = defaultdict(list)  # uid: List(document)
-    for name, doc in header.documents():
-        if name == "resource":
-            resources[doc["uid"]] = doc
-        elif name == "datum":
-            datums[doc["resource"]].append(doc)
-        elif name == "datum_page":
-            for datum in event_model.unpack_datum_page(doc):
-                datums[datum["resource"]].append(datum)
-    for resource_uid, resource in resources.items():
-        file_prefix = Path(resource.get("root", "/"), resource["resource_path"])
-        if "eiger" not in resource["spec"].lower():
-            continue
-        for datum in datums[resource_uid]:
-            dm_kw = datum["datum_kwargs"]
-            seq_id = dm_kw["seq_id"]
-            new_filepaths = glob(f"{file_prefix!s}_{seq_id}*")
-            filepaths.extend(new_filepaths)
-    return header.start["scan_id"], header.start["uid"], filepaths
+    start_doc = hdr.start
+    stop_doc = hdr.stop
+    success = False
+
+    ret = (
+        start_doc["scan_id"],
+        start_doc["uid"],
+        glob.glob(f"{start_doc['data path']}*_{start_doc['sequence id']}_master.h5"),
+    )  # looking for (eiger) datafile at the path specified in metadata
+    if len(ret[2]) == 0:
+        if verbose:
+            print('could not find detector filename from "data_path" in metadata: %s' % start_doc["data path"])
+    else:
+        if verbose:
+            print('Found detector filename from "data_path" in metadata!')
+            success = True
+
+    if not success:  # looking at path in metadata, but taking the date from the run start document
+        data_path = start_doc["data path"][:-11] + strftime("%Y/%m/%d/", localtime(start_doc["time"]))
+        ret = (
+            start_doc["scan_id"],
+            start_doc["uid"],
+            glob.glob(f"{data_path}*_{start_doc['sequence id']}_master.h5"),
+        )
+        if len(ret[2]) == 0:
+            if verbose:
+                print("could not find detector filename in %s" % data_path)
+        else:
+            if verbose:
+                print("Found detector filename in %s" % data_path)
+                success = True
+
+    if (
+        not success
+    ):  # looking at path in metadata, but taking the date from the run stop document (in case the date rolled over between creating the start doc and staging the detector)
+        data_path = start_doc["data path"][:-11] + strftime("%Y/%m/%d/", localtime(stop_doc["time"]))
+        ret = (
+            start_doc["scan_id"],
+            start_doc["uid"],
+            glob.glob(f"{data_path}*_{start_doc['sequence id']}_master.h5"),
+        )
+        if len(ret[2]) == 0:
+            if verbose:
+                print("Sorry, could not find detector filename....")
+        else:
+            if verbose:
+                print("Found detector filename in %s" % data_path)
+                success = True
+    return ret
+
+
+# def get_sid_filenames(header):
+#     """YG. Dev Jan, 2016
+#     Get a bluesky scan_id, unique_id, filename by giveing uid
+
+#     Parameters
+#     ----------
+#     header: a header of a bluesky scan, e.g. db[-1]
+
+#     Returns
+#     -------
+#     scan_id: integer
+#     unique_id: string, a full string of a uid
+#     filename: sring
+
+#     Usuage:
+#     sid,uid, filenames   = get_sid_filenames(db[uid])
+
+#     """
+#     from collections import defaultdict
+#     from glob import glob
+#     from pathlib import Path
+
+#     filepaths = []
+#     resources = {}  # uid: document
+#     datums = defaultdict(list)  # uid: List(document)
+#     for name, doc in header.documents():
+#         if name == "resource":
+#             resources[doc["uid"]] = doc
+#         elif name == "datum":
+#             datums[doc["resource"]].append(doc)
+#         elif name == "datum_page":
+#             for datum in event_model.unpack_datum_page(doc):
+#                 datums[datum["resource"]].append(datum)
+#     for resource_uid, resource in resources.items():
+#         file_prefix = Path(resource.get('root', '/'), resource["resource_path"])
+#         if 'eiger' not in resource['spec'].lower():
+#             continue
+#         for datum in datums[resource_uid]:
+#             dm_kw = datum["datum_kwargs"]
+#             seq_id = dm_kw['seq_id']
+#             new_filepaths = glob(f'{file_prefix!s}_{seq_id}*')
+#             filepaths.extend(new_filepaths)
+#     return header.start['scan_id'],  header.start['uid'], filepaths
+
+
+def load_dask_data(uid, detector, mask_path_full, reverse=False, rot90=False):
+    """
+    load data as dask-array
+    get image md (direct beam, wavelength, sample-detector distance,...) from databroker documents (no need to read an actual image)
+    get pixel_mask and binary_mask from static location (getting it from image metadata takes forever in some conda envs...)
+    load_dask_data(uid,detector,reverse=False,rot90=False)
+    uid: uid (str)
+    detector: md['detector']
+    mask_path_full: current standard would be _mask_path_+'pixel_masks/'
+    returns detector_images(dask-array), image_md
+    LW 04/26/2024
+    """
+    import dask
+
+    hdr = db[uid]
+    det = detector.split("_image")[0]
+    # collect image metadata from loading single image
+    img_md_dict = {
+        "detector_distance": "det_distance",
+        "incident_wavelength": "wavelength",
+        "frame_time": "cam_acquire_period",
+        "count_time": "cam_acquire_time",
+        "num_images": "cam_num_images",
+        "beam_center_x": "beam_center_x",
+        "beam_center_y": "beam_center_y",
+    }
+    img_md = {}
+    for k in list(img_md_dict.keys()):
+        img_md[k] = hdr.config_data(det)["primary"][0]["%s_%s" % (det, img_md_dict[k])]
+    if md["detector"] in ["eiger4m_single_image", "eiger1m_single_image", "eiger500K_single_image"]:
+        img_md.update({"y_pixel_size": 7.5e-05, "x_pixel_size": 7.5e-05})
+        got_pixel_mask = True
+    else:
+        img_md.update({"y_pixel_size": None, "x_pixel_size": None})
+        got_pixel_mask = False
+    # load pixel mask from static location
+    if got_pixel_mask:
+        json_open = open(_mask_path_ + "pixel_masks/pixel_mask_compression_%s.json" % detector.split("_")[0])
+        mask_dict = json.load(json_open)
+        img_md["pixel_mask"] = np.array(mask_dict["pixel_mask"])
+        img_md["binary_mask"] = np.array(mask_dict["binary_mask"])
+        del mask_dict
+
+    # load image data as dask-arry:
+    dimg = hdr.xarray_dask()[md["detector"]][0]
+    if reverse:
+        dimg = dask.array.flip(dimg, axis=(0, 1))
+    if rot90:
+        dimg = dask.array.rot90(dimg, axes=(1, 2))
+    return dimg, img_md
 
 
 def load_data(uid, detector="eiger4m_single_image", fill=True, reverse=False, rot90=False):
@@ -3604,7 +3725,7 @@ def create_hot_pixel_mask(img, threshold, center=None, center_radius=300, outer_
 
     """
     bst_mask = np.ones_like(img, dtype=bool)
-    if center is not None:
+    if center != None:
         from skimage.draw import disk
 
         imy, imx = img.shape
@@ -3718,7 +3839,7 @@ def show_img(
     -------
     None
     """
-    if ax is None:
+    if ax == None:
         if RUN_GUI:
             fig = Figure()
             ax = fig.add_subplot(111)
@@ -3727,7 +3848,7 @@ def show_img(
     else:
         fig, ax = ax
 
-    if center is not None:
+    if center != None:
         plot1D(center[1], center[0], ax=ax, c="b", m="o", legend="")
     if not logs:
         if not use_mat_imshow:
@@ -3765,32 +3886,33 @@ def show_img(
                 norm=LogNorm(vmin, vmax),
                 extent=extent,
             )
-    if label_array is not None:
+    if label_array != None:
         im2 = show_label_array(ax, label_array, alpha=alpha, cmap=cmap, interpolation=interpolation)
 
     ax.set_title(image_name)
-    if xlim is not None:
+    if xlim != None:
         ax.set_xlim(xlim)
-    if ylim is not None:
+    if ylim != None:
         ax.set_ylim(ylim)
 
     if not show_ticks:
         ax.set_yticks([])
         ax.set_xticks([])
     else:
+
         ax.tick_params(axis="both", which="major", labelsize=tick_size)
         ax.tick_params(axis="both", which="minor", labelsize=tick_size)
         # mpl.rcParams['xtick.labelsize'] = tick_size
         # mpl.rcParams['ytick.labelsize'] = tick_size
         # print(tick_size)
 
-    if ylabel is not None:
+    if ylabel != None:
         # ax.set_ylabel(ylabel)#, fontsize = 9)
         ax.set_ylabel(ylabel, fontsize=lab_fontsize)
-    if xlabel is not None:
+    if xlabel != None:
         ax.set_xlabel(xlabel, fontsize=lab_fontsize)
 
-    if aspect is not None:
+    if aspect != None:
         # aspect = image.shape[1]/float( image.shape[0] )
         ax.set_aspect(aspect)
     else:
@@ -3807,7 +3929,7 @@ def show_img(
             fp = path + "%s" % (file_name) + CurTime + "." + save_format
         else:
             fp = path + "%s" % (image_name) + "." + save_format
-        if dpi is None:
+        if dpi == None:
             dpi = fig.dpi
         plt.savefig(fp, dpi=dpi)
     # fig.set_tight_layout(tight)
@@ -3843,17 +3965,17 @@ def plot1D(
     -------
     None
     """
-    if ax is None:
+    if ax == None:
         if RUN_GUI:
             fig = Figure()
             ax = fig.add_subplot(111)
         else:
-            if figsize is not None:
+            if figsize != None:
                 fig, ax = plt.subplots(figsize=figsize)
             else:
                 fig, ax = plt.subplots()
 
-    if legend is None:
+    if legend == None:
         legend = " "
     try:
         logx = kwargs["logx"]
@@ -3887,9 +4009,9 @@ def plot1D(
         except:
             color = next(colors_)
 
-    if x is None:
+    if x == None:
         x = range(len(y))
-    if yerr is None:
+    if yerr == None:
         ax.plot(
             x,
             y,
@@ -4028,7 +4150,7 @@ def get_each_frame_intensity(
 
 def create_time_slice(N, slice_num, slice_width, edges=None):
     """create a ROI time regions"""
-    if edges is not None:
+    if edges != None:
         time_edge = edges
     else:
         if slice_num == 1:
@@ -4081,14 +4203,14 @@ def show_label_array(ax, label_array, cmap=None, aspect=None, interpolation="nea
     img : AxesImage
         The artist added to the axes
     """
-    if cmap is None:
+    if cmap == None:
         cmap = "viridis"
     # print(cmap)
     _cmap = copy.copy((mcm.get_cmap(cmap)))
     _cmap.set_under("w", 0)
     vmin = max(0.5, kwargs.pop("vmin", 0.5))
     im = ax.imshow(label_array, cmap=cmap, interpolation=interpolation, vmin=vmin, **kwargs)
-    if aspect is None:
+    if aspect == None:
         ax.set_aspect(aspect="auto")
         # ax.set_aspect('equal')
     return im
@@ -4186,7 +4308,7 @@ def show_ROI_on_image(
     if RUN_GUI:
         fig = Figure(figsize=(8, 8))
         axes = fig.add_subplot(111)
-    elif fig_ax is not None:
+    elif fig_ax != None:
         fig, axes = fig_ax
     else:
         fig, axes = plt.subplots()  # plt.subplots(figsize=(8,8))
@@ -4228,8 +4350,8 @@ def show_ROI_on_image(
             cmap=cmap,
         )
 
-    if rect_reqion is None:
-        if center is not None:
+    if rect_reqion == None:
+        if center != None:
             x1, x2 = [center[1] - rwidth, center[1] + rwidth]
             y1, y2 = [center[0] - rwidth, center[0] + rwidth]
             axes.set_xlim([x1, x2])
@@ -4292,7 +4414,7 @@ def crop_image(image, crop_mask):
 
 def get_avg_img(data_series, img_samp_index=None, sampling=100, plot_=False, save=False, *argv, **kwargs):
     """Get average imagef from a data_series by every sampling number to save time"""
-    if img_samp_index is None:
+    if img_samp_index == None:
         avg_img = np.average(data_series[::sampling], axis=0)
     else:
         avg_img = np.zeros_like(data_series[0])
@@ -4386,7 +4508,7 @@ def cal_g2(image_series, ring_mask, bad_image_process, bad_frame_list=None, good
         bad_img_list = np.array(bad_frame_list) - good_start
         new_imgs = mask_image.bad_to_nan_gen(image_series, bad_img_list)
 
-        if num_lev is None:
+        if num_lev == None:
             num_lev = int(np.log(noframes / (num_buf - 1)) / np.log(2) + 1) + 1
         print("In this g2 calculation, the buf and lev number are: %s--%s--" % (num_buf, num_lev))
         print("%s frames will be processed..." % (noframes))
@@ -4396,7 +4518,8 @@ def cal_g2(image_series, ring_mask, bad_image_process, bad_frame_list=None, good
         print("G2 calculation DONE!")
 
     else:
-        if num_lev is None:
+
+        if num_lev == None:
             num_lev = int(np.log(noframes / (num_buf - 1)) / np.log(2) + 1) + 1
         print("In this g2 calculation, the buf and lev number are: %s--%s--" % (num_buf, num_lev))
         print("%s frames will be processed..." % (noframes))
@@ -4456,7 +4579,7 @@ def trans_data_to_pd(data, label=None, dtype="array"):
         print("Wrong data type! Now only support 'list' and 'array' tpye")
 
     index = arange(N)
-    if label is None:
+    if label == None:
         label = ["data%s" % i for i in range(M)]
     # print label
     df = pd.DataFrame(data, index=index, columns=label)
@@ -4487,7 +4610,7 @@ def save_lists(data, label=None, filename=None, path=None, return_res=False, ver
     df = trans_data_to_pd(d.T, label, "array")
     # dt =datetime.now()
     # CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
-    if filename is None:
+    if filename == None:
         filename = "data"
     filename = os.path.join(path, filename)  # +'.csv')
     df.to_csv(filename)
@@ -4546,7 +4669,7 @@ def save_arrays(data, label=None, dtype="array", filename=None, path=None, retur
     df = trans_data_to_pd(data, label, dtype)
     # dt =datetime.now()
     # CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
-    if filename is None:
+    if filename == None:
         filename = "data"
     filename_ = os.path.join(path, filename)  # +'.csv')
     df.to_csv(filename_)
@@ -4654,6 +4777,8 @@ def ring_edges(inner_radius, width, spacing=0, num_rings=None):
     The number of rings, their widths, and any spacing between rings can be
     specified. They can be uniform or varied.
 
+    LW 04/02/2024: fixed checking whether width and spacing are iterable
+
     Parameters
     ----------
     inner_radius : float
@@ -4694,12 +4819,23 @@ def ring_edges(inner_radius, width, spacing=0, num_rings=None):
     """
     # All of this input validation merely checks that width, spacing, and
     # num_rings are self-consistent and complete.
-    width_is_list = isinstance(width, collections.Iterable)
-    spacing_is_list = isinstance(spacing, collections.Iterable)
+    try:
+        iter(width)
+        width_is_list = True
+    except:
+        width_is_list = False
+    try:
+        iter(spacing)
+        spacing_is_list = True
+    except:
+        spacing_is_list = False
+
+    # width_is_list = isinstance(width, collections.Iterable)
+    # spacing_is_list = isinstance(spacing, collections.Iterable)
     if width_is_list and spacing_is_list:
         if len(width) != len(spacing) + 1:
             raise ValueError("List of spacings must be one less than list " "of widths.")
-    if num_rings is None:
+    if num_rings == None:
         try:
             num_rings = len(width)
         except TypeError:
@@ -4722,7 +4858,7 @@ def ring_edges(inner_radius, width, spacing=0, num_rings=None):
     if not width_is_list:
         width = np.ones(num_rings) * width
 
-    if spacing is None:
+    if spacing == None:
         spacing = []
     else:
         if not spacing_is_list:
@@ -4748,6 +4884,8 @@ def get_non_uniform_edges(
     rings by giving ring centers
     For each center, there are number_rings with each of width
 
+    LW 04/02/2024: fixed checking whether 'width' is iterable
+
     Parameters
     ----------
     centers : float
@@ -4769,12 +4907,13 @@ def get_non_uniform_edges(
         inner and outer radius for each ring
     """
 
-    if number_rings is None:
+    if number_rings == None:
         number_rings = 1
     edges = np.zeros([len(centers) * number_rings, 2])
-    # print( width )
 
-    if not isinstance(width, collections.Iterable):
+    try:
+        iter(width)
+    except:
         width = np.ones_like(centers) * width
     for i, c in enumerate(centers):
         edges[i * number_rings : (i + 1) * number_rings, :] = ring_edges(
@@ -4796,7 +4935,7 @@ def trans_tf_to_td(tf, dtype="dframe"):
        td.type dframe: a dataframe
        td.type list,   a list
     """
-    if dtype is "dframe":
+    if dtype == "dframe":
         ind = tf.index
     else:
         ind = range(len(tf))
@@ -4817,7 +4956,7 @@ def trans_td_to_tf(td, dtype="dframe"):
        td.type dframe: a dataframe
        td.type list,   a list
     """
-    if dtype is "dframe":
+    if dtype == "dframe":
         ind = td.index
     else:
         ind = range(len(td))
@@ -5006,6 +5145,7 @@ def flow_para_function_explicitq(x, beta, diffusion, flow_velocity, alpha=1, bas
 
 
 def get_flow_velocity(average_velocity, shape_factor):
+
     return average_velocity * (1 - shape_factor) / (1 + shape_factor)
 
 
@@ -5119,7 +5259,7 @@ def get_g2_fit_general(
     num_rings = g2.shape[1]
     if "fit_variables" in kwargs:
         additional_var = kwargs["fit_variables"]
-        _vars = [k for k in list(additional_var.keys()) if additional_var[k] is False]
+        _vars = [k for k in list(additional_var.keys()) if additional_var[k] == False]
     else:
         _vars = []
     if function == "simple_exponential" or function == "simple":
@@ -5252,7 +5392,7 @@ def get_g2_fit_general(
     fit_res = []
     model_data = []
     for i in range(num_rings):
-        if fit_range is not None:
+        if fit_range != None:
             y_ = g2[1:, i][fit_range[0] : fit_range[1]]
             lags_ = taus[1:][fit_range[0] : fit_range[1]]
         else:
@@ -5291,9 +5431,10 @@ def get_g2_fit_general(
             # print(k, _guess_val[k]  )
             # pars[k].value = _guess_val[k][i]
         if function == "flow_para_function_explicitq" or function == "flow_para_qang":
-            if qval_dict is None:
+            if qval_dict == None:
                 print("Please provide qval_dict, a dict with qr and ang (in unit of degrees).")
             else:
+
                 pars = mod.make_params(
                     beta=_beta_,
                     alpha=_alpha_,
@@ -5495,7 +5636,7 @@ def plot_g2_general(
     if geometry == "saxs":
         if qphi_analysis:
             geometry = "ang_saxs"
-    if qth_interest is not None:
+    if qth_interest != None:
         if not isinstance(qth_interest, list):
             print("Please give a list for qth_interest")
         else:
@@ -5509,7 +5650,7 @@ def plot_g2_general(
             #    taus_dict_[k] = taus_dict[k][:,[i for i in qth_interest]]
             taus_dict_ = taus_dict
             qval_dict_ = {k: qval_dict[k] for k in qth_interest}
-            if fit_res is not None:
+            if fit_res != None:
                 fit_res_ = [fit_res[k] for k in qth_interest]
             else:
                 fit_res_ = None
@@ -5647,20 +5788,20 @@ def plot_g2_general(
                 ax.set_title(title_long + " (%s  )" % (1 + l_ind), y=1.05, fontsize=fontsize_sublabel)
                 # print( geometry )
                 # print( title_long )
-                if qth_interest is not None:  # it might have a bug here, todolist!!!
+                if qth_interest != None:  # it might have a bug here, todolist!!!
                     lab = sorted(list(qval_dict_.keys()))
                     # print( lab, l_ind)
                     ax.set_title(title_long + " (%s  )" % (lab[l_ind] + 1), y=1.05, fontsize=12)
             for ki, k in enumerate(list(g2_dict_.keys())):
                 if ki == 0:
                     c = "b"
-                    if fit_res is None:
+                    if fit_res == None:
                         m = "-o"
                     else:
                         m = "o"
                 elif ki == 1:
                     c = "r"
-                    if fit_res is None:
+                    if fit_res == None:
                         m = "s"
                     else:
                         m = "-"
@@ -5686,8 +5827,8 @@ def plot_g2_general(
                         x = taus_dict_[k][nlst]
                         if ki == 0:
                             ymin, ymax = min(y), max(y[1:])
-                        if g2_err_dict is None:
-                            if g2_labels is None:
+                        if g2_err_dict == None:
+                            if g2_labels == None:
                                 ax.semilogx(x, y, m, color=c, markersize=6)
                             else:
                                 # print('here ki ={} nlst = {}'.format( ki, nlst ))
@@ -5697,7 +5838,7 @@ def plot_g2_general(
                                     ax.semilogx(x, y, m, color=c, markersize=6)
                         else:
                             yerr = g2_err_dict[k][nlst][:, l_ind]
-                            if g2_labels is None:
+                            if g2_labels == None:
                                 ax.errorbar(x, y, yerr=yerr, fmt=m, color=c, markersize=6)
                             else:
                                 if nlst == 0:
@@ -5714,8 +5855,8 @@ def plot_g2_general(
                     x = taus_dict_[k]
                     if ki == 0:
                         ymin, ymax = min(y), max(y[1:])
-                    if g2_err_dict is None:
-                        if g2_labels is None:
+                    if g2_err_dict == None:
+                        if g2_labels == None:
                             ax.semilogx(x, y, m, color=c, markersize=6)
                         else:
                             ax.semilogx(x, y, m, color=c, markersize=6, label=g2_labels[ki])
@@ -5723,7 +5864,7 @@ def plot_g2_general(
                         yerr = g2_err_dict[k][:, l_ind]
                         # print(x.shape, y.shape, yerr.shape)
                         # print(yerr)
-                        if g2_labels is None:
+                        if g2_labels == None:
                             ax.errorbar(x, y, yerr=yerr, fmt=m, color=c, markersize=6)
                         else:
                             ax.errorbar(x, y, yerr=yerr, fmt=m, color=c, markersize=6, label=g2_labels[ki])
@@ -5731,7 +5872,7 @@ def plot_g2_general(
                     if l_ind == 0:
                         ax.legend(loc="best", fontsize=8, fancybox=True, framealpha=0.5)
 
-            if fit_res_ is not None:
+            if fit_res_ != None:
                 result1 = fit_res_[l_ind]
                 # print (result1.best_values)
 
@@ -5759,7 +5900,7 @@ def plot_g2_general(
                     # print(qrr)
                     rate = diff * qrr**2
                     flow = result1.best_values["flow_velocity"]
-                    if qval_dict_ is None:
+                    if qval_dict_ == None:
                         print("Please provide qval_dict, a dict with qr and ang (in unit of degrees).")
                     else:
                         pass
@@ -5824,7 +5965,7 @@ def plot_g2_general(
         else:
             fp = path + filename + "_%s_%s" % (mastp, s_ind)
 
-        if append_name is not "":
+        if append_name != "":
             fp = fp + append_name
         fps.append(fp + ".png")
         # if num_long_i <= 16:
@@ -5842,7 +5983,7 @@ def plot_g2_general(
             for fn, f in enumerate(fig):
                 f.set_tight_layout(True)
                 fp = path + filename + "_q_%s_%s" % (fn * 16, (fn + 1) * 16)
-                if append_name is not "":
+                if append_name != "":
                     fp = fp + append_name
                 fps.append(fp + ".png")
                 f.savefig(fp + ".png", dpi=f.dpi)
@@ -5851,7 +5992,7 @@ def plot_g2_general(
 
     if (num_short != 1) or (num_long_i > 16):
         outputfile = path + filename + ".png"
-        if append_name is not "":
+        if append_name != "":
             outputfile = path + filename + append_name + "__joint.png"
         else:
             outputfile = path + filename + "__joint.png"
@@ -5929,7 +6070,7 @@ def get_q_rate_fit_general(qval_dict, rate, geometry="saxs", weights=None, *argv
         y = np.array(rate)[ind_long_i]
         x = long_label[ind_long_i]
         # print(y,x)
-        if fit_range is not None:
+        if fit_range != None:
             y = y[fit_range[0] : fit_range[1]]
             x = x[fit_range[0] : fit_range[1]]
         # print (i, y,x)
@@ -6033,12 +6174,12 @@ def plot_q_rate_fit_general(
         if Nqz != 1:
             legend = ax.legend(loc="best")
 
-    if plot_index_range is not None:
+    if plot_index_range != None:
         d1, d2 = plot_index_range
         d2 = min(len(x) - 1, d2)
         ax.set_xlim((x**power)[d1], (x**power)[d2])
         ax.set_ylim(y[d1], y[d2])
-    if ylim is not None:
+    if ylim != None:
         ax.set_ylim(ylim)
 
     ax.set_ylabel("Relaxation rate " r"$\gamma$" "($s^{-1}$)")

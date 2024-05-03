@@ -1,10 +1,18 @@
-# from pyCHX.chx_generic_functions import get_short_long_labels_from_qval_dict
-# RUN_GUI = False
-# from pyCHX.chx_libs import markers
 import pandas as pds
 
 from pyCHX.chx_libs import colors, markers
 from pyCHX.chx_packages import *
+
+# from pyCHX.chx_generic_functions import get_short_long_labels_from_qval_dict
+# RUN_GUI = False
+# from pyCHX.chx_libs import markers
+
+
+# from IPython import get_ipython
+# ip = get_ipython()
+# ip.run_line_magic(
+#     "run", "/nsls2/data/chx/shared/CHX_Software/packages/environment_management/chx_analysis_setup.ipynb"
+# )
 
 
 def get_t_iqc_uids(uid_list, setup_pargs, slice_num=10, slice_width=1):
@@ -337,6 +345,7 @@ def plot_entries_from_uids(
             )
 
         elif key == "iq":
+
             x = total_res["q_saxs"]
             y = total_res["iq_saxs"]
             plot1D(
@@ -401,6 +410,7 @@ def get_iq_from_uids(uids, mask, setup_pargs):
     n = 0
     for k in list(uids.keys()):
         for uid in uids[k]:
+
             uidstr = "uid=%s" % uid
             sud = get_sid_filenames(db[uid])
             # print(sud)
@@ -1439,6 +1449,7 @@ def run_xpcs_xsvs_single(uid, run_pargs, md_cor=None, return_res=False, reverse=
 
         ############for SAXS and ANG_SAXS (Flow_SAXS)
         if scat_geometry == "saxs" or scat_geometry == "ang_saxs":
+
             # show_saxs_qmap( avg_img, setup_pargs, width=600, vmin=.1, vmax=np.max(avg_img*.1), logs=True,
             #   image_name= uidstr + '_img_avg',  save=True)
             # np.save(  data_dir + 'uid=%s--img-avg'%uid, avg_img)
@@ -1831,6 +1842,7 @@ def run_xpcs_xsvs_single(uid, run_pargs, md_cor=None, return_res=False, reverse=
         # For two-time
         data_pixel = None
         if run_two_time:
+
             data_pixel = Get_Pixel_Arrayc(FD, pixelist, norm=norm).get_data()
             t0 = time.time()
             g12b = auto_two_Arrayc(data_pixel, roi_mask, index=None)

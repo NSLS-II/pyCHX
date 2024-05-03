@@ -49,6 +49,7 @@ def add_one_line_string(c, s, top, left=30, fontsize=11):
 def add_image_string(
     c, imgf, data_dir, img_left, img_top, img_height, str1_left, str1_top, str1, str2_left, str2_top, return_=False
 ):
+
     image = data_dir + imgf
     if os.path.exists(image):
         im = Image.open(image)
@@ -77,7 +78,6 @@ def add_image_string(
 
 
 class create_pdf_report(object):
-
     """Aug 16, YG@CHX-NSLS-II
      Create a pdf report by giving data_dir, uid, out_dir
      data_dir: the input data directory, including all necessary images
@@ -283,6 +283,7 @@ class create_pdf_report(object):
         self.two_g2_file = "uid=%s_g2_two_g2.png" % uid_c12
 
         if self.report_type == "saxs":
+
             jfn = "uid=%s_g2_two_g2.png" % uid_c12
             self.two_g2_new_page = False
             if os.path.exists(data_dir + jfn):
@@ -931,6 +932,7 @@ class create_pdf_report(object):
         # add one_time caculation
         img_left, img_top = 1, top
         if self.g2_fit_new_page or self.g2_new_page:
+
             img_height = 550
             top = top - 250
             str2_left, str2_top = 80, top - 0
@@ -1184,6 +1186,7 @@ class create_pdf_report(object):
         imgf = self.two_g2_file
 
         if True:  # not self.two_g2_new_page:
+
             img_height = 300
             img_left, img_top = 100 - 70, top
             str1_left, str1_top, str1 = 210 - 70, top + 310, "compared g2"
@@ -1283,6 +1286,7 @@ class create_pdf_report(object):
             c.save()
 
     def report_dose(self, top=720, new_page=False):
+
         c = self.c
         uid = self.uid
         # add sub-title, Time-dependent plot
@@ -1729,6 +1733,7 @@ def make_pdf_report(
     return_class=False,
     res_h5_filename=None,
 ):
+
     if uid.startswith("uid=") or uid.startswith("Uid="):
         uid = uid[4:]
     c = create_pdf_report(
@@ -2033,6 +2038,7 @@ def export_xpcs_results_to_h5_old(filename, export_dir, export_dict):
                 k1 = export_dict[key]
                 v1 = hf.create_dataset(key, (1,), dtype="i")
                 for k2 in k1.keys():
+
                     v2 = hf.create_dataset(k1, (1,), dtype="i")
 
             elif key in ["g2_fit_paras", "g2b_fit_paras", "spec_km_pds", "spec_pds", "qr_1d_pds"]:

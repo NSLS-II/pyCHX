@@ -3,6 +3,7 @@ Aug 10, Developed by Y.G.@CHX
 yuzhang@bnl.gov
 This module is for parallel computation of time correlation
 """
+
 from __future__ import absolute_import, division, print_function
 
 import logging
