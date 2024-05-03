@@ -1,13 +1,14 @@
 import pandas as pds
 
-# from pyCHX.chx_generic_functions import get_short_long_labels_from_qval_dict
-# RUN_GUI = False
-# from pyCHX.chx_libs import markers
-from IPython import get_ipython
-
 from pyCHX.chx_libs import colors, markers
 from pyCHX.chx_packages import *
 
+# from pyCHX.chx_generic_functions import get_short_long_labels_from_qval_dict
+# RUN_GUI = False
+# from pyCHX.chx_libs import markers
+
+
+# from IPython import get_ipython
 # ip = get_ipython()
 # ip.run_line_magic(
 #     "run", "/nsls2/data/chx/shared/CHX_Software/packages/environment_management/chx_analysis_setup.ipynb"
