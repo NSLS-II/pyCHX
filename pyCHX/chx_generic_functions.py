@@ -895,7 +895,7 @@ def get_current_time():
     """get current time in a fomart of year/month/date/hour(24)/min/sec/,
     e.g. 2009-01-05 22:14:39
     """
-    loc_dt = datetime.datetime.now(pytz.timezone("US/Eastern"))
+    loc_dt = datetime.now(pytz.timezone("US/Eastern"))
     fmt = "%Y-%m-%d %H:%M:%S"
     return loc_dt.strftime(fmt)
 
@@ -4939,7 +4939,7 @@ def trans_tf_to_td(tf, dtype="dframe"):
         ind = tf.index
     else:
         ind = range(len(tf))
-    td = np.array([datetime.datetime.fromtimestamp(tf[i]) for i in ind])
+    td = np.array([datetime.fromtimestamp(tf[i]) for i in ind])
     return td
 
 
