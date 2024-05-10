@@ -1,5 +1,5 @@
 import copy
-import datetime
+from datetime import datetime
 from os import listdir
 from shutil import copyfile
 
@@ -4926,7 +4926,7 @@ def trans_tf_to_td(tf, dtype="dframe"):
     """July 02, 2015, Y.G.@CHX
     Translate epoch time to string
     """
-    import datetime
+    from datetime import datetime
 
     import numpy as np
     import pandas as pd
