@@ -3528,7 +3528,7 @@ def load_dask_data(uid, detector, mask_path_full, reverse=False, rot90=False):
     # load image data as dask-arry:
     dimg = hdr.xarray_dask()[md["detector"]][0]
     if reverse:
-        dimg = dask.array.flip(dimg, axis=(0, 1))
+        dimg = dask.array.flip(dimg, axis=(1, 1))
     if rot90:
         dimg = dask.array.rot90(dimg, axes=(1, 2))
     return dimg, img_md
