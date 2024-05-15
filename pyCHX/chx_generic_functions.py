@@ -3401,7 +3401,7 @@ def get_sid_filenames(hdr, verbose=False):
     else:
         if verbose:
             print('Found detector filename from "data_path" in metadata!')
-            success = True
+        success = True
 
     if not success:  # looking at path in metadata, but taking the date from the run start document
         data_path = start_doc["data path"][:-11] + strftime("%Y/%m/%d/", localtime(start_doc["time"]))
@@ -3416,7 +3416,7 @@ def get_sid_filenames(hdr, verbose=False):
         else:
             if verbose:
                 print("Found detector filename in %s" % data_path)
-                success = True
+            success = True
 
     if (
         not success
@@ -3433,7 +3433,7 @@ def get_sid_filenames(hdr, verbose=False):
         else:
             if verbose:
                 print("Found detector filename in %s" % data_path)
-                success = True
+            success = True
     return ret
 
 
