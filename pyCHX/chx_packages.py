@@ -242,6 +242,7 @@ from pyCHX.XPCS_SAXS import (
     get_seg_from_ring_mask,
     get_t_iq,
     get_t_iqc,
+    get_t_iqc_imstack,
     multi_uids_saxs_xpcs_analysis,
     plot_circular_average,
     plot_qIq_with_ROI,

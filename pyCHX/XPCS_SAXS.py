@@ -760,6 +760,80 @@ def get_t_iqc(FD, frame_edge, mask, pargs, nx=1500, plot_=False, save=False, sho
 
     return qp, np.array(iqs), q
 
+def get_t_iqc_imstack(imgs, frame_edge, mask, pargs, nx=1500, plot_=False, save=False, show_progress=True, *argv, **kwargs):
+    """
+    Get t-dependent Iq
+    
+    variant of get_t_iqc that takes an image stack like a dask array to calculate average images and then does the radial integration
+    variant by LW 05/162024
+
+    Parameters
+    ----------
+    imgs:  image stack like dask array
+    frame_edge: list, the ROI frame regions, e.g., [  [0,100], [200,400] ]
+    mask:  a image mask
+
+    nx : int, optional
+        number of bins in x
+        defaults is 1500 bins
+    plot_: a boolen type, if True, plot the time~one-D curve with qp as x-axis
+    Returns
+    ---------
+    qp: q in pixel
+    iq: intensity of circular average
+    q: q in real unit (A-1)
+
+    """
+
+    Nt = len(frame_edge)
+    iqs = list(np.zeros(Nt))
+    for i in range(Nt):
+        t1, t2 = frame_edge[i]
+        # print (t1,t2)
+        avg_img=np.average(imgs[t1:t2,:,:],axis=0)
+        qp, iqs[i], q = get_circular_average(avg_img, mask, pargs, nx=nx, plot_=False)
+
+    if plot_:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        for i in range(Nt):
+            t1, t2 = frame_edge[i]
+            ax.semilogy(q, iqs[i], label="frame: %s--%s" % (t1, t2))
+            # ax.set_xlabel("q in pixel")
+            ax.set_xlabel("Q " r"($\AA^{-1}$)")
+            ax.set_ylabel("I(q)")
+
+        if "xlim" in kwargs.keys():
+            ax.set_xlim(kwargs["xlim"])
+        if "ylim" in kwargs.keys():
+            ax.set_ylim(kwargs["ylim"])
+
+        ax.legend(
+            loc="best",
+        )
+
+        uid = pargs["uid"]
+        title = ax.set_title("uid= %s--t~I(q)" % uid)
+        title.set_y(1.01)
+        if save:
+            # dt =datetime.now()
+            # CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
+            path = pargs["path"]
+            uid = pargs["uid"]
+            # fp = path + 'uid= %s--Iq~t-'%uid + CurTime + '.png'
+            fp = path + "uid=%s--Iq-t-" % uid + ".png"
+            fig.savefig(fp, dpi=fig.dpi)
+
+            save_arrays(
+                np.vstack([q, np.array(iqs)]).T,
+                label=["q_A-1"] + ["Fram-%s-%s" % (t[0], t[1]) for t in frame_edge],
+                filename="uid=%s-q-Iqt.csv" % uid,
+                path=path,
+            )
+
+        # plt.show()
+
+    return qp, np.array(iqs), q
+
 
 def plot_t_iqc(q, iqs, frame_edge, pargs, save=True, return_fig=False, legend_size=None, *argv, **kwargs):
     """Plot t-dependent Iq
