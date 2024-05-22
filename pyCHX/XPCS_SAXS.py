@@ -760,10 +760,13 @@ def get_t_iqc(FD, frame_edge, mask, pargs, nx=1500, plot_=False, save=False, sho
 
     return qp, np.array(iqs), q
 
-def get_t_iqc_imstack(imgs, frame_edge, mask, pargs, nx=1500, plot_=False, save=False, show_progress=True, *argv, **kwargs):
+
+def get_t_iqc_imstack(
+    imgs, frame_edge, mask, pargs, nx=1500, plot_=False, save=False, show_progress=True, *argv, **kwargs
+):
     """
     Get t-dependent Iq
-    
+
     variant of get_t_iqc that takes an image stack like a dask array to calculate average images and then does the radial integration
     variant by LW 05/162024
 
@@ -790,7 +793,7 @@ def get_t_iqc_imstack(imgs, frame_edge, mask, pargs, nx=1500, plot_=False, save=
     for i in range(Nt):
         t1, t2 = frame_edge[i]
         # print (t1,t2)
-        avg_img=np.average(imgs[t1:t2,:,:],axis=0)
+        avg_img = np.average(imgs[t1:t2, :, :], axis=0)
         qp, iqs[i], q = get_circular_average(avg_img, mask, pargs, nx=nx, plot_=False)
 
     if plot_:

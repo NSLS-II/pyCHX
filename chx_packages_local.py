@@ -44,14 +44,14 @@ use_pims(db)  # use pims for importing eiger data, register_handler 'AD_EIGER2' 
 from chx_compress import (
     MultifileBNLCustom,
     combine_binary_files,
-    create_compress_header,
     compress_eigerdata,
+    create_compress_header,
+    get_eigerImage_per_file,
+    init_compress_eigerdata,
     para_compress_eigerdata,
     para_segment_compress_eigerdata,
-    segment_compress_eigerdata, 
     read_compressed_eigerdata,
-    init_compress_eigerdata,
-    get_eigerImage_per_file,
+    segment_compress_eigerdata,
 )
 
 # from pyCHX.chx_compress_analysis import (

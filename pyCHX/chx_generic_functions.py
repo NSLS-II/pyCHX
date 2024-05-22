@@ -3494,8 +3494,9 @@ def load_dask_data(uid, detector, mask_path_full, reverse=False, rot90=False):
     returns detector_images(dask-array), image_md
     LW 04/26/2024
     """
-    import dask
     import json
+
+    import dask
 
     hdr = db[uid]
     det = detector.split("_image")[0]
@@ -3520,7 +3521,7 @@ def load_dask_data(uid, detector, mask_path_full, reverse=False, rot90=False):
         got_pixel_mask = False
     # load pixel mask from static location
     if got_pixel_mask:
-        #json_open = open(_mask_path_ + "pixel_masks/pixel_mask_compression_%s.json" % detector.split("_")[0])
+        # json_open = open(_mask_path_ + "pixel_masks/pixel_mask_compression_%s.json" % detector.split("_")[0])
         json_open = open(mask_path_full + "pixel_mask_compression_%s.json" % detector.split("_")[0])
         mask_dict = json.load(json_open)
         img_md["pixel_mask"] = np.array(mask_dict["pixel_mask"])
