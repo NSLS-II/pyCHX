@@ -45,9 +45,13 @@ from chx_compress import (
     MultifileBNLCustom,
     combine_binary_files,
     create_compress_header,
+    compress_eigerdata,
     para_compress_eigerdata,
     para_segment_compress_eigerdata,
-    segment_compress_eigerdata,
+    segment_compress_eigerdata, 
+    read_compressed_eigerdata,
+    init_compress_eigerdata,
+    get_eigerImage_per_file,
 )
 
 # from pyCHX.chx_compress_analysis import (

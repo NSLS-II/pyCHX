@@ -32,13 +32,18 @@ from pyCHX.chx_libs import (
 use_pims(db)  # use pims for importing eiger data, register_handler 'AD_EIGER2' and 'AD_EIGER'
 
 from pyCHX.chx_compress import (
-    MultifileBNLCustom,
+   MultifileBNLCustom,
     combine_binary_files,
     create_compress_header,
+    compress_eigerdata,
     para_compress_eigerdata,
     para_segment_compress_eigerdata,
-    segment_compress_eigerdata,
+    segment_compress_eigerdata, 
+    read_compressed_eigerdata,
+    init_compress_eigerdata,
+    get_eigerImage_per_file,
 )
+
 from pyCHX.chx_compress_analysis import (
     Multifile,
     cal_each_ring_mean_intensityc,
