@@ -34,9 +34,13 @@ use_pims(db)  # use pims for importing eiger data, register_handler 'AD_EIGER2' 
 from pyCHX.chx_compress import (
     MultifileBNLCustom,
     combine_binary_files,
+    compress_eigerdata,
     create_compress_header,
+    get_eigerImage_per_file,
+    init_compress_eigerdata,
     para_compress_eigerdata,
     para_segment_compress_eigerdata,
+    read_compressed_eigerdata,
     segment_compress_eigerdata,
 )
 from pyCHX.chx_compress_analysis import (
@@ -242,6 +246,7 @@ from pyCHX.XPCS_SAXS import (
     get_seg_from_ring_mask,
     get_t_iq,
     get_t_iqc,
+    get_t_iqc_imstack,
     multi_uids_saxs_xpcs_analysis,
     plot_circular_average,
     plot_qIq_with_ROI,

@@ -3401,7 +3401,7 @@ def get_sid_filenames(hdr, verbose=False):
     else:
         if verbose:
             print('Found detector filename from "data_path" in metadata!')
-            success = True
+        success = True
 
     if not success:  # looking at path in metadata, but taking the date from the run start document
         data_path = start_doc["data path"][:-11] + strftime("%Y/%m/%d/", localtime(start_doc["time"]))
@@ -3416,7 +3416,7 @@ def get_sid_filenames(hdr, verbose=False):
         else:
             if verbose:
                 print("Found detector filename in %s" % data_path)
-                success = True
+            success = True
 
     if (
         not success
@@ -3433,7 +3433,7 @@ def get_sid_filenames(hdr, verbose=False):
         else:
             if verbose:
                 print("Found detector filename in %s" % data_path)
-                success = True
+            success = True
     return ret
 
 
@@ -3494,6 +3494,8 @@ def load_dask_data(uid, detector, mask_path_full, reverse=False, rot90=False):
     returns detector_images(dask-array), image_md
     LW 04/26/2024
     """
+    import json
+
     import dask
 
     hdr = db[uid]
@@ -3511,7 +3513,7 @@ def load_dask_data(uid, detector, mask_path_full, reverse=False, rot90=False):
     img_md = {}
     for k in list(img_md_dict.keys()):
         img_md[k] = hdr.config_data(det)["primary"][0]["%s_%s" % (det, img_md_dict[k])]
-    if md["detector"] in ["eiger4m_single_image", "eiger1m_single_image", "eiger500K_single_image"]:
+    if detector in ["eiger4m_single_image", "eiger1m_single_image", "eiger500K_single_image"]:
         img_md.update({"y_pixel_size": 7.5e-05, "x_pixel_size": 7.5e-05})
         got_pixel_mask = True
     else:
@@ -3519,16 +3521,17 @@ def load_dask_data(uid, detector, mask_path_full, reverse=False, rot90=False):
         got_pixel_mask = False
     # load pixel mask from static location
     if got_pixel_mask:
-        json_open = open(_mask_path_ + "pixel_masks/pixel_mask_compression_%s.json" % detector.split("_")[0])
+        # json_open = open(_mask_path_ + "pixel_masks/pixel_mask_compression_%s.json" % detector.split("_")[0])
+        json_open = open(mask_path_full + "pixel_mask_compression_%s.json" % detector.split("_")[0])
         mask_dict = json.load(json_open)
         img_md["pixel_mask"] = np.array(mask_dict["pixel_mask"])
         img_md["binary_mask"] = np.array(mask_dict["binary_mask"])
         del mask_dict
 
     # load image data as dask-arry:
-    dimg = hdr.xarray_dask()[md["detector"]][0]
+    dimg = hdr.xarray_dask()[detector][0]
     if reverse:
-        dimg = dask.array.flip(dimg, axis=(0, 1))
+        dimg = dask.array.flip(dimg, axis=(1, 1))
     if rot90:
         dimg = dask.array.rot90(dimg, axes=(1, 2))
     return dimg, img_md
