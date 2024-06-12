@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # pyCHX documentation build configuration file, created by
@@ -159,7 +159,7 @@ latex_elements = {
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
-#  author, documentclass [howto, manual, or own class]).
+# author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (
         master_doc,
@@ -190,7 +190,7 @@ man_pages = [
 
 # Grouping the document tree into Texinfo files. List of tuples
 # (source start file, target name, title, author,
-#  dir menu entry, description, category)
+# dir menu entry, description, category)
 texinfo_documents = [
     (
         master_doc,

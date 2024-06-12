@@ -360,8 +360,8 @@ def cal_c12p(
             lag_steps = res[0][1]
 
     print("G2 calculation DONE!")
-    del results
-    del res
+   
+   
     return c12, lag_steps[lag_steps < noframes]
 
 
@@ -609,7 +609,7 @@ def lazy_one_timep(
         g_max = min(g_max1, g_max2)
         g2 = s.G[:g_max] / (s.past_intensity[:g_max] * s.future_intensity[:g_max])
     # sys.stdout.write('#')
-    # del FD
+    #
     # sys.stdout.flush()
     # print (g2)
     # return results(g2, s.lag_steps[:g_max], s)
@@ -714,9 +714,9 @@ def cal_g2p(
     res = [results[k].get() for k in tqdm(list(sorted(results.keys())))]
     len_lag = 10**10
     for i in inputs:  # to get the smallest length of lag_step,
-        ##*****************************
-        ##Here could result in problem for significantly cut useful data if some Q have very short tau list
-        ##****************************
+        # *****************************
+        # Here could result in problem for significantly cut useful data if some Q have very short tau list
+        # ****************************
         if len_lag > len(res[i][1]):
             lag_steps = res[i][1]
             len_lag = len(lag_steps)
@@ -775,8 +775,8 @@ def cal_g2p(
             g2_P[:, nopr_[i] : nopr_[i + 1]] = s_Pall_qi
             g2_F[:, nopr_[i] : nopr_[i + 1]] = s_Fall_qi
 
-    del results
-    del res
+   
+   
     if cal_error:
         print("G2 with error bar calculation DONE!")
         return (
@@ -842,7 +842,7 @@ def auto_two_Arrayp(data_pixel, rois, index=None):
 
     # pool =  Pool(processes= len(inputs) )
     # results = [ apply_async( pool, _get_two_time_for_one_q, ( qlist[i],
-    #                                    data_pixel_qis[i], nopr, noframes ) ) for i in tqdm( inputs )  ]
+    # data_pixel_qis[i], nopr, noframes ) ) for i in tqdm( inputs )  ]
     # res = [r.get() for r in results]
 
     pool = Pool(processes=len(inputs))

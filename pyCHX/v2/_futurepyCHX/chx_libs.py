@@ -3,7 +3,7 @@ Dec 10, 2015 Developed by Y.G.@CHX
 yuzhang@bnl.gov
 This module is for the necessary packages for the XPCS analysis
 """
-## Import all the required packages for  Data Analysis
+# Import all the required packages for  Data Analysis
 from databroker import Broker
 from databroker.assets.path_only_handlers import RawHandler
 
@@ -40,9 +40,9 @@ import skbeam.core.roi as roi
 import skbeam.core.utils as utils
 
 # * scikit-beam - data analysis tools for X-ray science
-#    - https://github.com/scikit-beam/scikit-beam
+# - https://github.com/scikit-beam/scikit-beam
 # * xray-vision - plotting helper functions for X-ray science
-#    - https://github.com/Nikea/xray-vision
+# - https://github.com/Nikea/xray-vision
 import xray_vision
 import xray_vision.mpl_plotting as mpl_plot
 from lmfit import Model, Parameter, Parameters, minimize, report_fit
@@ -370,7 +370,7 @@ colors_ = itertools.cycle(colors)
 # colors_ = itertools.cycle(sorted_colors_ )
 markers_ = itertools.cycle(markers)
 # Custom colormaps
-################################################################################
+#
 # ROYGBVR but with Cyan-Blue instead of Blue
 color_list_cyclic_spectrum = [
     [1.0, 0.0, 0.0],

@@ -10,52 +10,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pds
 from numpy import (
-    apply_over_axes,
     arange,
-    arctan,
-    around,
-    array,
     digitize,
     dot,
-    exp,
     histogram,
-    histogramdd,
     hstack,
     hypot,
     indices,
     int_,
     intersect1d,
     linspace,
-    load,
-    log,
-    log10,
-    ma,
-    mean,
-    mgrid,
-    ones,
-    pi,
-    poly1d,
-    polyfit,
-    power,
-    ravel,
-    reshape,
     round,
     save,
-    shape,
-    sin,
-    sqrt,
-    std,
-    sum,
-    unique,
-    vstack,
     where,
     zeros,
     zeros_like,
 )
-from numpy.linalg import lstsq
 from tqdm import tqdm
 
-from pyCHX.chx_compress import Multifile, go_through_FD, pass_FD
 from pyCHX.chx_libs import multi_tau_lags
 
 
@@ -69,17 +41,17 @@ def get_timepixel_data(data_dir, filename, time_unit=1):
 
     """
     data = pds.read_csv(data_dir + filename)
-    #'#Col', ' #Row', ' #ToA',
+    # '#Col', ' #Row', ' #ToA',
     # return np.array( data['Col'] ), np.array(data['Row']), np.array(data['GlobalTimeFine']) #*6.1  #in ps
     if time_unit != 1:
         try:
             x, y, t = np.array(data["#Col"]), np.array(data["#Row"]), np.array(data["#ToA"]) * time_unit
-        except:
+        except Exception:
             x, y, t = np.array(data["#Col"]), np.array(data[" #Row"]), np.array(data[" #ToA"]) * time_unit
     else:
         try:
             x, y, t = np.array(data["#Col"]), np.array(data["#Row"]), np.array(data["#ToA"])
-        except:
+        except Exception:
             x, y, t = np.array(data["#Col"]), np.array(data[" #Row"]), np.array(data[" #ToA"])
     return x, y, t - t.min()  # * 25/4096.  #in ns
 
@@ -159,7 +131,7 @@ def get_FD_end_num(FD, maxend=1e10):
     for i in range(0, int(maxend)):
         try:
             FD.seekimg(i)
-        except:
+        except Exception:
             N = i
             break
     FD.seekimg(0)
@@ -278,8 +250,8 @@ def init_compress_timepix_data(pos, t, binstep, filename, mask=None, md=None, no
     # TODList: for different detector using different md structure, March 2, 2017,
 
     # 8d include,
-    #'bytes', 'nrows', 'ncols', (detsize)
-    #'rows_begin', 'rows_end', 'cols_begin', 'cols_end'  (roi)
+    # 'bytes', 'nrows', 'ncols', (detsize)
+    # 'rows_begin', 'rows_end', 'cols_begin', 'cols_end'  (roi)
     Header = struct.pack(
         "@16s8d7I916x",
         b"Version-COMPtpx1",
@@ -375,8 +347,8 @@ def init_compress_timepix_data_light_duty(
     # TODList: for different detector using different md structure, March 2, 2017,
 
     # 8d include,
-    #'bytes', 'nrows', 'ncols', (detsize)
-    #'rows_begin', 'rows_end', 'cols_begin', 'cols_end'  (roi)
+    # 'bytes', 'nrows', 'ncols', (detsize)
+    # 'rows_begin', 'rows_end', 'cols_begin', 'cols_end'  (roi)
     Header = struct.pack(
         "@16s8d7I916x",
         b"Version-COMPtpx1",
@@ -465,8 +437,8 @@ def compress_timepix_data_old(data_pixel, filename, rois=None, md=None, nobytes=
     # TODList: for different detector using different md structure, March 2, 2017,
 
     # 8d include,
-    #'bytes', 'nrows', 'ncols', (detsize)
-    #'rows_begin', 'rows_end', 'cols_begin', 'cols_end'  (roi)
+    # 'bytes', 'nrows', 'ncols', (detsize)
+    # 'rows_begin', 'rows_end', 'cols_begin', 'cols_end'  (roi)
     Header = struct.pack(
         "@16s8d7I916x",
         b"Version-COMPtpx1",
@@ -507,8 +479,8 @@ class Get_TimePixel_Arrayc(object):
         """
         indexable: a images sequences
         pixelist:  1-D array, interest pixel list
-        #flat_correction, normalized by flatfield
-        #norm, normalized by total intensity, like a incident beam intensity
+        # flat_correction, normalized by flatfield
+        # norm, normalized by total intensity, like a incident beam intensity
         """
         self.hitime = hitime
         self.tbins = tbins
@@ -611,7 +583,7 @@ def get_timepixel_avg_image(x, y, t, det_shape=[256, 256], delta_time=None):
 
 
     """
-    t0 = t.min()
+    t.min()
     tm = t.max()
 
     if delta_time is not None:
@@ -687,7 +659,7 @@ def get_timepixel_g2(oned_count):
     return np.correlate(oned_count, oned_count, mode="full")[-n:] / norm
 
 
-#########################################
+#
 T = True
 F = False
 
@@ -775,7 +747,7 @@ class xpcs(object):
         qlist[1::2] = round(qradi + (1 + qwidth) / 2)  # render odd value
         qlist[::2] = int_(qradi - qwidth / 2)  # render  even value
         qlist[1::2] = int_(qradi + (1 + qwidth) / 2)  # render odd value
-        if qlist_ != None:
+        if qlist_ is not None:
             qlist = qlist_
         return qlist, qradi
 
@@ -808,7 +780,7 @@ class xpcs(object):
         else:
             pass
         r = r.flatten()
-        noqrs = len(qlist)
+        len(qlist)
         qind = digitize(r, qlist)
         if qmask is None:
             w_ = where((qind) % 2)  # qind should be odd;print 'Yes'
@@ -823,9 +795,9 @@ class xpcs(object):
         nopr, bins = histogram(qind, bins=range(len(qradi) + 1))
         return qind, pixellist, nopr, nopixels
 
-    ###########################################################################
-    ########for one_time correlation function for xyt frames
-    ##################################################################
+    #
+    # for one_time correlation function for xyt frames
+    #
 
     def autocor_xytframe(self, n):
         """Do correlation for one xyt frame--with data name as n"""
@@ -891,7 +863,7 @@ class xpcs(object):
         plt.show()
 
 
-######################################################
+#
 
 if False:
     xp = xpcs()
@@ -902,6 +874,6 @@ if False:
         g2 = xp.autocor(fnum)
         filename = "g2_-%s-" % (fnum)
         save(RES_DIR + FOUT + filename, g2)
-        ##g2= load(RES_DIR + FOUT + filename +'.npy')
+        # g2= load(RES_DIR + FOUT + filename +'.npy')
         g2p = xp.g2_to_pds(dly, g2, tscale=20)
         xp.show(g2p, "g2_run_%s" % fnum)

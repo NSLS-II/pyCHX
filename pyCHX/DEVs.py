@@ -1,7 +1,6 @@
 # simple brute force multitau
 # from pyCHX.chx_generic_functions import average_array_withNan
 import numpy as np
-import skbeam.core.roi as roi
 from numpy.fft import fft, ifft
 from tqdm import tqdm
 
@@ -67,7 +66,7 @@ def plot_xy_with_fit(x, y, xf, out, xlim=[1e-3, 0.01], xlabel="q (" r"$\AA^{-1}$
     return ax
 
 
-#############For APD detector
+# For APD detector
 def get_pix_g2_fft(time_inten):
     """YG Dev@CHX 2018/12/4 get g2 for oneD intensity
         g2 = G/(P*F)
@@ -125,7 +124,7 @@ def get_pix_g2_PF(time_inten):
     return P, F
 
 
-###################
+#
 
 
 def get_ab_correlation(a, b):
@@ -198,9 +197,9 @@ def auto_correlation_fft_padding_zeros(a, axis=-1):
         Based on auto_cor(arr) = ifft(  fft( arr ) * fft(arr[::-1]) )
         In numpy form
                  auto_cor(arr) = ifft(
-                             fft( arr, n=2N-1, axis=axis ) ##padding enough zeros
-                                                           ## for axis
-                             * np.conjugate(               ## conju for reverse array
+                             fft( arr, n=2N-1, axis=axis ) #padding enough zeros
+                                                           # for axis
+                             * np.conjugate(               # conju for reverse array
                              fft(arr , n=2N-1, axis=axis) )
                              )  #do reverse fft
     Input:
@@ -238,9 +237,9 @@ def auto_correlation_fft(a, axis=-1):
         Based on auto_cor(arr) = ifft(  fft( arr ) * fft(arr[::-1]) )
         In numpy form
                  auto_cor(arr) = ifft(
-                             fft( arr, n=2N-1, axis=axis ) ##padding enough zeros
-                                                           ## for axis
-                             * np.conjugate(               ## conju for reverse array
+                             fft( arr, n=2N-1, axis=axis ) #padding enough zeros
+                                                           # for axis
+                             * np.conjugate(               # conju for reverse array
                              fft(arr , n=2N-1, axis=axis) )
                              )  #do reverse fft
     Input:
@@ -273,7 +272,7 @@ def multitau(Ipix, bind, lvl=12, nobuf=8):
             plot(tt[1:],g2[1:,i]) will plot each g2.
     """
     # if num_lev is None:
-    #    num_lev = int(np.log( noframes/(num_buf-1))/np.log(2) +1) +1
+    # num_lev = int(np.log( noframes/(num_buf-1))/np.log(2) +1) +1
     # print(nobuf,nolvl)
     nobins = bind.max() + 1
     nobufov2 = nobuf // 2
@@ -325,14 +324,14 @@ def average_array_withNan(array, axis=0, mask=None):
     Output:
         avg: averaged array along axis
     """
-    shape = array.shape
+    array.shape
     if mask is None:
         mask = np.isnan(array)
         # mask = np.ma.masked_invalid(array).mask
     array_ = np.ma.masked_array(array, mask=mask)
     try:
         sums = np.array(np.ma.sum(array_[:, :], axis=axis))
-    except:
+    except Exception:
         sums = np.array(np.ma.sum(array_[:], axis=axis))
 
     cts = np.sum(~mask, axis=axis)
@@ -399,8 +398,8 @@ def autocor_for_pix_time(pix_time_data, dly_dict, pixel_norm=None, frame_norm=No
             # IF_mask = mask_pix[tau: Nt,: ]
             # IPF_mask  = IP_mask | IF_mask
             # IPFm = average_array_withNan(IP*IF, axis = 0, )#mask= IPF_mask )
-            # IPm =  average_array_withNan(IP, axis = 0, )#   mask= IP_mask )
-            # IFm =  average_array_withNan(IF, axis = 0 , )#  mask= IF_mask )
+            # IPm =  average_array_withNan(IP, axis = 0, )# mask= IP_mask )
+            # IFm =  average_array_withNan(IF, axis = 0 , )# mask= IF_mask )
             G2[tau_ind] = average_array_withNan(
                 IP * IF,
                 axis=0,
@@ -415,8 +414,8 @@ def autocor_for_pix_time(pix_time_data, dly_dict, pixel_norm=None, frame_norm=No
             )  # IFm
             tau_ind += 1
     # for i in range(G2.shape[0]-1, 0, -1):
-    #    if np.isnan(G2[i,0]):
-    #        gmax = i
+    # if np.isnan(G2[i,0]):
+    # gmax = i
     gmax = tau_ind
     return G2[:gmax, :], Gp[:gmax, :], Gf[:gmax, :]
 
@@ -434,7 +433,7 @@ def autocor_xytframe(self, n):
     return crl / (IP * IF) * FN
 
 
-###################For Fit
+# For Fit
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -480,12 +479,12 @@ def _residuals(p, x, y, sigy, pall, adj, fun):
 def fitpr(chisq, a, sigmaa, title=None, lbl=None):
     """nicely print out results of a fit"""
     # get fitted results.
-    if lbl == None:
+    if lbl is None:
         lbl = []
         for i in xrange(a.size):
             lbl.append("A%(#)02d" % {"#": i})
     # print resuls of a fit.
-    if title != None:
+    if title is not None:
         print(title)
     print("   chisq=%(c).4f" % {"c": chisq})
     for i in range(a.size):
@@ -516,7 +515,7 @@ def Gaussian(x, p):
     return g
 
 
-###########For ellipse shaped sectors by users
+# For ellipse shaped sectors by users
 def elps_r(a, b, theta):
     """
     Returns the radius of an ellipse with semimajor/minor axes a/b

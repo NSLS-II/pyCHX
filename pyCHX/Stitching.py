@@ -1,13 +1,11 @@
-import os
 import re
-import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
 import PIL
 from scipy.signal import savgol_filter as sf
 
-from pyCHX.chx_generic_functions import plot1D, show_img
+from pyCHX.chx_generic_functions import plot1D
 from pyCHX.DataGonio import convert_Qmap
 
 
@@ -95,7 +93,7 @@ def Correct_Overlap_Images_Intensities(
 
      fig = plt.figure()# figsize=[2,8])
      for i in range(len(infiles)):
-         #print(i)
+         # print(i)
          ax = fig.add_subplot(1,8, i+1)
          d = process.load(  infiles[i]  )
          show_img( dataM[i], logs = True, show_colorbar= False,show_ticks =False,
@@ -180,14 +178,14 @@ def stitch_WAXS_in_Qspace(dataM, phis, calibration, dx=0, dy=22, dz=0, dq=0.015,
                 phi_offset=4.649, phi_start=1.0, phi_spacing=5.0,) for infile in infiles]     )  # For TWD data
 
     calibration = CalibrationGonio(wavelength_A=0.619920987) # 20.0 keV
-    #calibration.set_image_size( data.shape[1], data.shape[0] )
+    # calibration.set_image_size( data.shape[1], data.shape[0] )
     calibration.set_image_size(195, height=1475) # Pilatus300kW vertical
     calibration.set_pixel_size(pixel_size_um=172.0)
     calibration.set_beam_position(97.0, 1314.0)
     calibration.set_distance(0.275)
 
     Intensity_map, qxs, qzs = stitch_WAXS_in_Qspace( dataM, phis, calibration)
-    #Get center of the qmap
+    # Get center of the qmap
     bx,by = np.argmin( np.abs(qxs) ), np.argmin( np.abs(qzs) )
     print( bx, by )
 
@@ -214,7 +212,7 @@ def stitch_WAXS_in_Qspace(dataM, phis, calibration, dx=0, dy=22, dz=0, dq=0.015,
     # Intensity_mapN = np.zeros( (8, len(qzs), len(qxs)) )
     for i in range(len(phis)):
         dM = np.rot90(dataM[i].T)
-        D = dM.ravel()
+        dM.ravel()
         phi = phis[i]
         calibration.set_angles(det_phi_g=phi, det_theta_g=0.0, offset_x=dx, offset_y=dy, offset_z=dz)
         calibration.clear_maps()
@@ -321,7 +319,7 @@ def get_phi(filename, phi_offset=0, phi_start=4.5, phi_spacing=4.0, polarity=-1,
     return phi_c
 
 
-############For CHX beamline
+# For CHX beamline
 
 
 def get_qmap_qxyz_range(
@@ -418,14 +416,14 @@ def stitch_WAXS_in_Qspace_CHX(
                 phi_offset=4.649, phi_start=1.0, phi_spacing=5.0,) for infile in infiles]     )  # For TWD data
 
     calibration = CalibrationGonio(wavelength_A=0.619920987) # 20.0 keV
-    #calibration.set_image_size( data.shape[1], data.shape[0] )
+    # calibration.set_image_size( data.shape[1], data.shape[0] )
     calibration.set_image_size(195, height=1475) # Pilatus300kW vertical
     calibration.set_pixel_size(pixel_size_um=172.0)
     calibration.set_beam_position(97.0, 1314.0)
     calibration.set_distance(0.275)
 
     Intensity_map, qxs, qzs = stitch_WAXS_in_Qspace( dataM, phis, calibration)
-    #Get center of the qmap
+    # Get center of the qmap
     bx,by = np.argmin( np.abs(qxs) ), np.argmin( np.abs(qzs) )
     print( bx, by )
     """

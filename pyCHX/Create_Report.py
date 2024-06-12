@@ -20,18 +20,14 @@ def check_dict_keys(dicts, key):
 
 
 import os
-import sys
-from datetime import datetime
-from time import time
 
 import h5py
 import numpy as np
 import pandas as pds
 from PIL import Image
-from reportlab.lib.colors import black, blue, brown, green, pink, red, white
-from reportlab.lib.pagesizes import A4, letter
+from reportlab.lib.colors import black, blue, red
+from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.units import cm, inch, mm
 from reportlab.pdfgen import canvas
 
 from pyCHX.chx_generic_functions import pload_obj
@@ -57,8 +53,8 @@ def add_image_string(
         height = img_height
         width = height / ratio
         # if width>400:
-        #    width = 350
-        #    height = width*ratio
+        # width = 350
+        # height = width*ratio
         c.drawImage(image, img_left, img_top, width=width, height=height, mask=None)
 
         c.setFont("Helvetica", 16)
@@ -203,11 +199,11 @@ class create_pdf_report(object):
             else:
                 uid_OneTime = uid + "_fra_%s_%s" % (beg_OneTime, end_OneTime)
             if beg_TwoTime is None:
-                uid_TwoTime = uid + "_fra_%s_%s" % (beg, end)
+                uid + "_fra_%s_%s" % (beg, end)
             else:
-                uid_TwoTime = uid + "_fra_%s_%s" % (beg_TwoTime, end_TwoTime)
+                uid + "_fra_%s_%s" % (beg_TwoTime, end_TwoTime)
 
-        except:
+        except Exception:
             uid_ = uid
             uid_OneTime = uid
         if beg is None:
@@ -358,7 +354,7 @@ class create_pdf_report(object):
            ROI on average intensity image
            ROI on circular average
         """
-        uid = self.uid
+        self.uid
         c = self.c
         # add sub-title, static images
         c.setFillColor(black)
@@ -451,7 +447,7 @@ class create_pdf_report(object):
         md = self.md
         try:
             uid = md["uid"]
-        except:
+        except Exception:
             uid = self.uid
         # add sub-title, metadata
         c.setFont("Helvetica", 20)
@@ -489,25 +485,25 @@ class create_pdf_report(object):
 
         try:  # try exp time from detector
             exposuretime = md["count_time"]  # exposure time in sec
-        except:
+        except Exception:
             exposuretime = md["cam_acquire_time"]  # exposure time in sec
 
         try:  # try acq time from detector
             acquisition_period = md["frame_time"]
-        except:
+        except Exception:
             try:
                 acquisition_period = md["acquire period"]
-            except:
+            except Exception:
                 uid = md["uid"]
                 acquisition_period = float(db[uid]["start"]["acquire period"])
 
         s = []
-        s.append("UID: %s" % uid)  ###line 1, for uid
-        s.append("Sample: %s" % md["sample"])  ####line 2 sample
+        s.append("UID: %s" % uid)  # line 1, for uid
+        s.append("Sample: %s" % md["sample"])  # line 2 sample
         s.append(
             "Data Acquisition From: %s To: %s" % (md["start_time"], md["stop_time"])
-        )  ####line 3 Data Acquisition time
-        s.append("Measurement: %s" % md["Measurement"])  ####line 4 'Measurement
+        )  # line 3 Data Acquisition time
+        s.append("Measurement: %s" % md["Measurement"])  # line 4 'Measurement
 
         # print(  md['incident_wavelength'],  int(md['number of images']),              md['detector_distance'], md['feedback_x'], md['feedback_y'], md['shutter mode']  )
         # print(acquisition_period)
@@ -519,12 +515,12 @@ class create_pdf_report(object):
                 round(float(exposuretime) * 1000, 4),
                 round(float(acquisition_period) * 1000, 4),
             )
-        )  ####line 5 'lamda...
+        )  # line 5 'lamda...
 
         s.append(
             "Detector-Sample Distance: %s m| FeedBack Mode: x -> %s & y -> %s| Shutter Mode: %s"
             % (md["detector_distance"], md["feedback_x"], md["feedback_y"], md["shutter mode"])
-        )  ####line 6 'Detector-Sample Distance..
+        )  # line 6 'Detector-Sample Distance..
         if self.report_type == "saxs":
             s7 = "Beam Center: [%s, %s] (pixel)" % (md["beam_center_x"], md["beam_center_y"])
         elif self.report_type == "gi_saxs":
@@ -540,22 +536,22 @@ class create_pdf_report(object):
 
         s7 += " || " + "BadLen: %s" % len(md["bad_frame_list"])
         s7 += " || " + "Transmission: %s" % md["transmission"]
-        s.append(s7)  ####line 7 'Beam center...
+        s.append(s7)  # line 7 'Beam center...
         m = "Mask file: %s" % md["mask_file"] + " || " + "ROI mask file: %s" % md["roi_mask_file"]
-        # s.append(   'Mask file: %s'%md['mask_file'] )  ####line 8 mask filename
-        # s.append(    )  ####line 8 mask filename
+        # s.append(   'Mask file: %s'%md['mask_file'] )  #line 8 mask filename
+        # s.append(    )  #line 8 mask filename
         s.append(m)
 
         if self.res_h5_filename is not None:
             self.data_dir_ = self.data_dir + self.res_h5_filename
         else:
             self.data_dir_ = self.data_dir
-        s.append("Analysis Results Dir: %s" % self.data_dir_)  ####line 9 results folder
+        s.append("Analysis Results Dir: %s" % self.data_dir_)  # line 9 results folder
 
-        s.append("Metadata Dir: %s.csv-&.pkl" % self.metafile)  ####line 10 metadata folder
+        s.append("Metadata Dir: %s.csv-&.pkl" % self.metafile)  # line 10 metadata folder
         try:
-            s.append("Pipeline notebook: %s" % md["NOTEBOOK_FULL_PATH"])  ####line 11 notebook folder
-        except:
+            s.append("Pipeline notebook: %s" % md["NOTEBOOK_FULL_PATH"])  # line 11 notebook folder
+        except Exception:
             pass
         # print( 'here' )
         line = 1
@@ -578,7 +574,7 @@ class create_pdf_report(object):
 
         c = self.c
         c.setFont("Helvetica", 20)
-        uid = self.uid
+        self.uid
 
         ds = 220
         self.sub_title_num += 1
@@ -668,7 +664,7 @@ class create_pdf_report(object):
            ROI on average intensity image
            ROI on circular average
         """
-        uid = self.uid
+        self.uid
         c = self.c
         # add sub-title, static images
         c.setFillColor(black)
@@ -731,11 +727,10 @@ class create_pdf_report(object):
             mean intensity of each ROI as a function of time
         """
         c = self.c
-        uid = self.uid
+        self.uid
         # add sub-title, Time-dependent plot
         c.setFont("Helvetica", 20)
         top1 = top
-        ds = 20
         self.sub_title_num += 1
         c.drawString(10, top, "%s. Time Dependent Plot" % self.sub_title_num)  # add title
         c.setFont("Helvetica", 14)
@@ -765,7 +760,7 @@ class create_pdf_report(object):
         # plot iq~t
         if self.report_type == "saxs":
             imgf = self.Iq_t_file
-            image = self.data_dir + imgf
+            self.data_dir + imgf
 
             img_height = 140
             img_left, img_top = 350, top
@@ -846,11 +841,10 @@ class create_pdf_report(object):
         """create the oavs images report"""
 
         c = self.c
-        uid = self.uid
+        self.uid
         # add sub-title, One Time Correlation Function
         c.setFillColor(black)
         c.setFont("Helvetica", 20)
-        ds = 20
         self.sub_title_num += 1
         c.drawString(10, top, "%s. OAVS Images" % self.sub_title_num)  # add title
         c.setFont("Helvetica", 14)
@@ -906,11 +900,10 @@ class create_pdf_report(object):
         """
 
         c = self.c
-        uid = self.uid
+        self.uid
         # add sub-title, One Time Correlation Function
         c.setFillColor(black)
         c.setFont("Helvetica", 20)
-        ds = 20
         self.sub_title_num += 1
         c.drawString(10, top, "%s. One Time Correlation Function" % self.sub_title_num)  # add title
         c.setFont("Helvetica", 14)
@@ -1092,11 +1085,10 @@ class create_pdf_report(object):
             q-rate fit
         """
         c = self.c
-        uid = self.uid
+        self.uid
         # add sub-title, One Time Correlation Function
         c.setFillColor(black)
         c.setFont("Helvetica", 20)
-        ds = 20
         self.sub_title_num += 1
         c.drawString(10, top, "%s. One Time Correlation Function" % self.sub_title_num)  # add title
         c.setFont("Helvetica", 14)
@@ -1148,11 +1140,10 @@ class create_pdf_report(object):
             two one-time correlatoin function from multi-one-time and from diagonal two-time
         """
         c = self.c
-        uid = self.uid
+        self.uid
         # add sub-title, Time-dependent plot
         c.setFont("Helvetica", 20)
 
-        ds = 20
         self.sub_title_num += 1
         c.drawString(10, top, "%s. Two Time Correlation Function" % self.sub_title_num)  # add title
         c.setFont("Helvetica", 14)
@@ -1251,11 +1242,10 @@ class create_pdf_report(object):
         """
 
         c = self.c
-        uid = self.uid
+        self.uid
         # add sub-title, Time-dependent plot
         c.setFont("Helvetica", 20)
 
-        ds = 20
         self.sub_title_num += 1
         c.drawString(10, top, "%s. Four Time Correlation Function" % self.sub_title_num)  # add title
         c.setFont("Helvetica", 14)
@@ -1288,10 +1278,9 @@ class create_pdf_report(object):
     def report_dose(self, top=720, new_page=False):
 
         c = self.c
-        uid = self.uid
+        self.uid
         # add sub-title, Time-dependent plot
         c.setFont("Helvetica", 20)
-        ds = 20
         self.sub_title_num += 1
         c.drawString(10, top, "%s. Dose Analysis" % self.sub_title_num)  # add title
         c.setFont("Helvetica", 14)
@@ -1335,11 +1324,10 @@ class create_pdf_report(object):
             two one-time correlatoin function from multi-one-time and from diagonal two-time
         """
         c = self.c
-        uid = self.uid
+        self.uid
         # add sub-title, Time-dependent plot
         c.setFont("Helvetica", 20)
 
-        ds = 20
         self.sub_title_num += 1
         c.drawString(10, top, "%s. Flow One Time Analysis" % self.sub_title_num)  # add title
         c.setFont("Helvetica", 14)
@@ -1349,7 +1337,7 @@ class create_pdf_report(object):
         # add xsvs fit
 
         imgf = self.flow_g2v
-        image = self.data_dir + imgf
+        self.data_dir + imgf
 
         img_height = 300
         img_left, img_top = 80, top
@@ -1399,11 +1387,10 @@ class create_pdf_report(object):
             two one-time correlatoin function from multi-one-time and from diagonal two-time
         """
         c = self.c
-        uid = self.uid
+        self.uid
         # add sub-title, Time-dependent plot
         c.setFont("Helvetica", 20)
 
-        ds = 20
         self.sub_title_num += 1
         c.drawString(10, top, "%s. Flow One &Two Time Comparison" % self.sub_title_num)  # add title
         c.setFont("Helvetica", 14)
@@ -1414,7 +1401,7 @@ class create_pdf_report(object):
 
         if False:
             imgf = self.two_time
-            image = self.data_dir + imgf
+            self.data_dir + imgf
 
             img_height = 300
             img_left, img_top = 80, top
@@ -1484,11 +1471,10 @@ class create_pdf_report(object):
             two one-time correlatoin function from multi-one-time and from diagonal two-time
         """
         c = self.c
-        uid = self.uid
+        self.uid
         # add sub-title, Time-dependent plot
         c.setFont("Helvetica", 20)
 
-        ds = 20
         self.sub_title_num += 1
         c.drawString(10, top, "%s. Visibility Analysis" % self.sub_title_num)  # add title
         c.setFont("Helvetica", 14)
@@ -1571,8 +1557,8 @@ class create_pdf_report(object):
         c.save()
 
     def done(self):
-        out_dir = self.out_dir
-        uid = self.uid
+        self.out_dir
+        self.uid
 
         print()
         print("*" * 40)
@@ -1589,7 +1575,6 @@ def create_multi_pdf_reports_for_uids(uids, g2, data_dir, report_type="saxs", ap
     Save pdf report in data dir
     """
     for key in list(g2.keys()):
-        i = 1
         for sub_key in list(g2[key].keys()):
             uid_i = uids[key][sub_key]
             data_dir_ = os.path.join(data_dir, "%s/" % uid_i)
@@ -1627,7 +1612,6 @@ def create_one_pdf_reports_for_uids(uids, g2, data_dir, filename="all_in_one", r
     page = 1
 
     for key in list(g2.keys()):
-        i = 1
         for sub_key in list(g2[key].keys()):
             uid_i = uids[key][sub_key]
             data_dir_ = os.path.join(data_dir, "%s/" % uid_i)
@@ -1662,10 +1646,10 @@ def save_res_h5(full_uid, data_dir, save_two_time=False):
         for key in md.keys():
             try:
                 meta_data.attrs[key] = md[key]
-            except:
+            except Exception:
                 pass
 
-        shapes = md["avg_img"].shape
+        md["avg_img"].shape
         avg_h5 = hf.create_dataset("avg_img", data=md["avg_img"])
         mask_h5 = hf.create_dataset("mask", data=md["mask"])
         roi_h5 = hf.create_dataset("roi", data=md["ring_mask"])
@@ -1706,7 +1690,7 @@ def load_res_h5(full_uid, data_dir):
         g2b_h5 = np.array(hf.get("g2b"))
         taus2_h5 = np.array(hf.get("taus2"))
         if "g12b" in hf:
-            g12b_h5 = np.array(hf.get("g12b"))
+            np.array(hf.get("g12b"))
 
     if "g12b" in hf:
         return meta_data, avg_h5, mask_h5, roi_h5, g2_h5, taus_h5, g2b_h5, taus2_h5, g12b
@@ -1753,7 +1737,7 @@ def make_pdf_report(
     c.report_static(top=540, iq_fit=run_fit_form)
     c.report_ROI(top=290)
     page = 1
-    ##Page Two for plot OVAS images if oavs_report is True
+    # Page Two for plot OVAS images if oavs_report is True
     if oavs_report:
         c.new_page()
         c.report_header(page=2)
@@ -1821,8 +1805,8 @@ def make_pdf_report(
         return c
 
 
-######################################
-###Deal with saving dict to hdf5 file
+#
+# Deal with saving dict to hdf5 file
 def save_dict_to_hdf5(dic, filename):
     """
     ....
@@ -1870,7 +1854,7 @@ def recursively_save_dict_contents_to_group(h5file, path, dic):
         elif isinstance(item, np.ndarray):
             try:
                 h5file[path + key] = item
-            except:
+            except Exception:
                 item = np.array(item).astype("|S9")
                 h5file[path + key] = item
             if not np.array_equal(h5file[path + key].value, item):
@@ -1921,13 +1905,13 @@ def export_xpcs_results_to_h5(filename, export_dir, export_dict):
                 for key_ in md.keys():
                     try:
                         meta_data.attrs[str(key_)] = md[key_]
-                    except:
+                    except Exception:
                         pass
             elif key in dict_nest:
                 # print(key)
                 try:
                     recursively_save_dict_contents_to_group(hf, "/%s/" % key, export_dict[key])
-                except:
+                except Exception:
                     print("Can't export the key: %s in this dataset." % key)
 
             elif key in ["g2_fit_paras", "g2b_fit_paras", "spec_km_pds", "spec_pds", "qr_1d_pds"]:
@@ -1937,7 +1921,7 @@ def export_xpcs_results_to_h5(filename, export_dir, export_dict):
                         key=key,
                         mode="a",
                     )
-                except:
+                except Exception:
                     flag = True
             else:
                 data = hf.create_dataset(key, data=export_dict[key])
@@ -2004,7 +1988,7 @@ def extract_xpcs_results_from_h5_debug(filename, import_dir, onekey=None, exclud
             try:
                 with h5py.File(fp, "r") as hf:
                     extract_dict[onekey] = np.array(hf.get(onekey))
-            except:
+            except Exception:
                 print("The %s dosen't have this %s value" % (fp, onekey))
     return extract_dict
 
@@ -2032,7 +2016,7 @@ def export_xpcs_results_to_h5_old(filename, export_dir, export_dict):
                 for key_ in md.keys():
                     try:
                         meta_data.attrs[str(key_)] = md[key_]
-                    except:
+                    except Exception:
                         pass
             elif key in dict_nest:
                 k1 = export_dict[key]
@@ -2064,7 +2048,6 @@ def extract_xpcs_results_from_h5(filename, import_dir, onekey=None, exclude_keys
         extact_dict: dict, with keys as md, g2, g4 et.al.
     """
 
-    import numpy as np
     import pandas as pds
 
     extract_dict = {}
@@ -2122,7 +2105,7 @@ def extract_xpcs_results_from_h5(filename, import_dir, onekey=None, exclude_keys
                     else:
                         extract_dict[key] = hf.get(key)[:]  # np.array( hf.get( key  ))
                     # extract_dict[onekey] = hf.get( key  )[:] #np.array( hf.get( onekey  ))
-            except:
+            except Exception:
                 print("The %s dosen't have this %s value" % (fp, onekey))
     return extract_dict
 

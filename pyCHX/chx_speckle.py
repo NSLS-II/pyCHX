@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function
 import logging
 import time
 
-import six
 from skbeam.core import roi
 from skbeam.core.utils import bin_edges_to_centers, geometric_series
 
@@ -19,13 +18,10 @@ logger = logging.getLogger(__name__)
 import sys
 from datetime import datetime
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy as sp
 import scipy.stats as st
-from matplotlib.colors import LogNorm
-from scipy.optimize import leastsq, minimize
+from scipy.optimize import leastsq
 
 
 def xsvs(
@@ -151,7 +147,7 @@ def xsvs(
 
         try:
             noframes = len(images)
-        except:
+        except Exception:
             noframes = images.length
 
         # Num= { key: [0]* len(  dict_dly[key] ) for key in list(dict_dly.keys())  }
@@ -403,11 +399,10 @@ def get_bin_edges(num_times, num_rois, mean_roi, max_cts):
     return bin_edges, bin_centers, norm_bin_edges, norm_bin_centers
 
 
-#################
-##for fit
-###################
+#
+# for fit
+#
 
-from scipy import stats
 from scipy.special import gamma, gammaln
 
 
@@ -495,7 +490,7 @@ def nbinom_dist(bin_values, K, M):
     return nbinom
 
 
-#########poisson
+# poisson
 def poisson(x, K):
     """Poisson distribution function.
     K is  average photon counts
@@ -634,7 +629,6 @@ def fit_xsvs1(
 
     """
     from lmfit import Model
-    from scipy.interpolate import UnivariateSpline
 
     if func == "bn":
         mod = Model(nbinom_dist)
@@ -707,7 +701,7 @@ def fit_xsvs1(
             axes.set_xlabel("K/<K>")
             axes.set_ylabel("P(K)")
 
-            #  Using the best K and M values interpolate and get more values for fitting curve
+            # Using the best K and M values interpolate and get more values for fitting curve
             fitx_ = np.linspace(0, max(Knorm_bin_edges[j, i][:-1]), 1000)
             fitx = np.linspace(0, max(bin_edges[j, i][:-1]), 1000)
             if func == "bn":
@@ -846,7 +840,7 @@ def plot_xsvs_g2(g2, taus, res_pargs=None, *argv, **kwargs):
     # plt.show()
 
 
-###########################3
+# 3
 
 #
 
@@ -949,7 +943,7 @@ def get_xsvs_fit(spe_cts_all, K_mean, varyK=True, max_bins=None, qth=None, g2=No
                     full_output=1,
                 )
                 ML_val[i].append(abs(resultL[0][0]))
-                KL_val[i].append(K_mean[i] * 2**j)  #   resultL[0][0] )
+                KL_val[i].append(K_mean[i] * 2**j)  # resultL[0][0] )
 
             else:
                 # vary M and K
@@ -964,7 +958,7 @@ def get_xsvs_fit(spe_cts_all, K_mean, varyK=True, max_bins=None, qth=None, g2=No
                 )
 
                 ML_val[i].append(abs(resultL[0][1]))
-                KL_val[i].append(abs(resultL[0][0]))  #   resultL[0][0] )
+                KL_val[i].append(abs(resultL[0][0]))  # resultL[0][0] )
                 # print( j, m0, resultL[0][1], resultL[0][0], K_mean[i] * 2**j    )
             if j == 0:
                 K_.append(KL_val[i][0])
@@ -1115,7 +1109,6 @@ def plot_g2_contrast(contrast_factorL, g2, times, taus, q_ring_center=None, uid=
         range_ = range(qth, qth + 1)
     else:
         range_ = range(nq)
-    num_times = nt
     nr = len(range_)
     sx = int(round(np.sqrt(nr)))
     if nr % sx == 0:

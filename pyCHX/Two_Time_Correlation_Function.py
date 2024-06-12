@@ -1,31 +1,27 @@
-######################################################################################
-########Dec 16, 2015, Yugang Zhang, yuzhang@bnl.gov, CHX, NSLS-II, BNL################
-########Time correlation function, include one-time, two-time, four-time##############
-########Muli-tau method, array-operation method#######################################
-######################################################################################
+#
+# Dec 16, 2015, Yugang Zhang, yuzhang@bnl.gov, CHX, NSLS-II, BNL#
+# Time correlation function, include one-time, two-time, four-time#
+# Muli-tau method, array-operation method#
+#
 
 
-import itertools
-import sys
 import time
-from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
 import skbeam.core.roi as roi
 from matplotlib import gridspec
 from matplotlib.colors import LogNorm
-from modest_image import ModestImage, imshow
+from modest_image import imshow
 from tqdm import tqdm
 
 # from pyCHX.chx_libs import  colors_ as mcolors,  markers_ as markers
 from pyCHX.chx_libs import RUN_GUI, Figure
 from pyCHX.chx_libs import colors
 from pyCHX.chx_libs import colors as colors_array
-from pyCHX.chx_libs import lstyles
 from pyCHX.chx_libs import markers
 from pyCHX.chx_libs import markers as markers_array
-from pyCHX.chx_libs import markers_copy, mcolors, multi_tau_lags
+from pyCHX.chx_libs import multi_tau_lags
 
 
 def delays(num_lev=3, num_buf=4, time=1):
@@ -71,7 +67,7 @@ class Get_Pixel_Array(object):
         # self.shape = indexable.shape
         try:
             self.length = len(indexable)
-        except:
+        except Exception:
             self.length = indexable.length
 
     def get_data(self):
@@ -95,7 +91,7 @@ class Reverse_Coordinate(object):
         self.mask = mask
         try:
             self.shape = indexable.shape
-        except:
+        except Exception:
             # if
             self.shape = [len(indexable), indexable[0].shape[0], indexable[0].shape[1]]
         # self.shape = indexable.shape
@@ -239,8 +235,7 @@ def auto_two_Array(data, rois, data_pixel=None):
 
     noframes = data_pixel.shape[0]
     g12b = np.zeros([noframes, noframes, noqs])
-    Unitq = noqs / 10
-    proi = 0
+    noqs / 10
 
     for qi in tqdm(range(1, noqs + 1)):
         pixelist_qi = np.where(qind == qi)[0]
@@ -252,10 +247,10 @@ def auto_two_Array(data, rois, data_pixel=None):
 
         g12b[:, :, qi - 1] = np.dot(data_pixel_qi, data_pixel_qi.T) / sum1 / sum2 / nopr[qi - 1]
         # print ( proi, int( qi //( Unitq) ) )
-    #        if  int( qi //( Unitq) ) == proi:
-    #            sys.stdout.write("#")
-    #            sys.stdout.flush()
-    #            proi += 1
+    # if  int( qi //( Unitq) ) == proi:
+    # sys.stdout.write("#")
+    # sys.stdout.flush()
+    # proi += 1
 
     elapsed_time = time.time() - start_time
     print("Total time: %.2f min" % (elapsed_time / 60.0))
@@ -263,14 +258,14 @@ def auto_two_Array(data, rois, data_pixel=None):
     return g12b
 
 
-####################################
-##Derivation of Two time correlation
-#####################################
+#
+# Derivation of Two time correlation
+#
 
 
-#####################################
+#
 # get one-time @different age
-#####################################
+#
 
 
 def get_qedge2(qstart, qend, qwidth, noqs, return_int=False):
@@ -438,7 +433,7 @@ def get_aged_g2_from_g12q(g12q, age_edge, age_center=None, timeperframe=1, time_
     arr = rotate_g12q_to_rectangle(g12q)
     m, n = arr.shape  # m should be 2*n-1
     # age_edge, age_center = get_qedge( qstart=slice_start,qend= slice_end,
-    #                 qwidth = slice_width, noqs =slice_num  )
+    # qwidth = slice_width, noqs =slice_num  )
     # print(arr.shape)
     age_edge = np.int_(age_edge)
     if age_center is None:
@@ -592,7 +587,7 @@ def show_g12q_aged_g2(
 
     for i in range(len(age_center)):
         ps = linS1[1][i]
-        pe = linE1[0][i]
+        linE1[0][i]
         if ps >= N:
             s0 = ps - N
             s1 = N
@@ -605,7 +600,7 @@ def show_g12q_aged_g2(
         # else:e0=pe;e1=0
 
         ps = linS2[1][i]
-        pe = linE2[0][i]
+        linE2[0][i]
         if ps >= N:
             S0 = ps - N
             S1 = N
@@ -705,7 +700,7 @@ def plot_aged_g2(g2_aged, tau=None, timeperframe=1, ylim=None, xlim=None):
             ax.set_ylim(xlim)
 
 
-#####################################
+#
 # get fout-time
 
 
@@ -878,9 +873,9 @@ def histogram_taus(taus, hisbin=20, plot=True, timeperframe=1):
     return his
 
 
-#####################################
+#
 # get one-time
-#####################################
+#
 
 
 def get_one_time_from_two_time_old(g12, norms=None, nopr=None):
@@ -1000,7 +995,7 @@ def get_four_time_from_two_time(g12, g2=None, rois=None):
     return g4f12
 
 
-######
+#
 def make_g12_mask(badframes_list, g12_shape):
     """
     Dec 16, 2015, Y.G.@CHX
@@ -1210,7 +1205,7 @@ def show_C12(
     else:
         timeperframe = 1
 
-    if "timeoffset" in kwargs.keys():  ### added timeoffset here
+    if "timeoffset" in kwargs.keys():  # added timeoffset here
         timeoffset = kwargs["timeoffset"]
     else:
         timeoffset = 0
@@ -1253,7 +1248,7 @@ def show_C12(
         fig, ax = fig_ax
 
     # extent=[0, data.shape[0]*timeperframe, 0, data.shape[0]*timeperframe ]
-    extent = np.array([N1, N2, N1, N2]) * timeperframe + timeoffset  ### added timeoffset to extend
+    extent = np.array([N1, N2, N1, N2]) * timeperframe + timeoffset  # added timeoffset to extend
 
     if logs:
         im = imshow(

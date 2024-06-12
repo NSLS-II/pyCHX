@@ -67,8 +67,8 @@ def add_image_string(
         height = img_height
         width = height / ratio
         # if width>400:
-        #    width = 350
-        #    height = width*ratio
+        # width = 350
+        # height = width*ratio
         c.drawImage(image, img_left, img_top, width=width, height=height, mask=None)
 
         c.setFont("Helvetica", 16)
@@ -222,7 +222,7 @@ class create_pdf_report(object):
             else:
                 uid_TwoTime = uid + "_fra_%s_%s" % (beg_TwoTime, end_TwoTime)
 
-        except:
+        except Exception:
             uid_ = uid
             uid_OneTime = uid
         if beg is None:
@@ -475,7 +475,7 @@ class create_pdf_report(object):
         md = self.md
         try:
             uid = md["uid"]
-        except:
+        except Exception:
             uid = self.uid
         # add sub-title, metadata
         c.setFont("Helvetica", 20)
@@ -513,25 +513,25 @@ class create_pdf_report(object):
 
         try:  # try exp time from detector
             exposuretime = md["count_time"]  # exposure time in sec
-        except:
+        except Exception:
             exposuretime = md["cam_acquire_time"]  # exposure time in sec
 
         try:  # try acq time from detector
             acquisition_period = md["frame_time"]
-        except:
+        except Exception:
             try:
                 acquisition_period = md["acquire period"]
-            except:
+            except Exception:
                 uid = md["uid"]
                 acquisition_period = float(db[uid]["start"]["acquire period"])
 
         s = []
-        s.append("UID: %s" % uid)  ###line 1, for uid
-        s.append("Sample: %s" % md["sample"])  ####line 2 sample
+        s.append("UID: %s" % uid)  #line 1, for uid
+        s.append("Sample: %s" % md["sample"])  #line 2 sample
         s.append(
             "Data Acquisition From: %s To: %s" % (md["start_time"], md["stop_time"])
-        )  ####line 3 Data Acquisition time
-        s.append("Measurement: %s" % md["Measurement"])  ####line 4 'Measurement
+        )  #line 3 Data Acquisition time
+        s.append("Measurement: %s" % md["Measurement"])  #line 4 'Measurement
 
         # print(  md['incident_wavelength'],  int(md['number of images']),              md['detector_distance'], md['feedback_x'], md['feedback_y'], md['shutter mode']  )
         # print(acquisition_period)
@@ -543,7 +543,7 @@ class create_pdf_report(object):
                 round(float(exposuretime) * 1000, 4),
                 round(float(acquisition_period) * 1000, 4),
             )
-        )  ####line 5 'lamda...
+        )  #line 5 'lamda...
 
         s.append(
             "Detector-Sample Distance: %s m| FeedBack Mode: x -> %s & y -> %s| Shutter Mode: %s"
@@ -553,7 +553,7 @@ class create_pdf_report(object):
                 md["feedback_y"],
                 md["shutter mode"],
             )
-        )  ####line 6 'Detector-Sample Distance..
+        )  #line 6 'Detector-Sample Distance..
         if self.report_type == "saxs":
             s7 = "Beam Center: [%s, %s] (pixel)" % (
                 md["beam_center_x"],
@@ -575,22 +575,22 @@ class create_pdf_report(object):
 
         s7 += " || " + "BadLen: %s" % len(md["bad_frame_list"])
         s7 += " || " + "Transmission: %s" % md["transmission"]
-        s.append(s7)  ####line 7 'Beam center...
+        s.append(s7)  #line 7 'Beam center...
         m = "Mask file: %s" % md["mask_file"] + " || " + "ROI mask file: %s" % md["roi_mask_file"]
-        # s.append(   'Mask file: %s'%md['mask_file'] )  ####line 8 mask filename
-        # s.append(    )  ####line 8 mask filename
+        # s.append(   'Mask file: %s'%md['mask_file'] )  #line 8 mask filename
+        # s.append(    )  #line 8 mask filename
         s.append(m)
 
         if self.res_h5_filename is not None:
             self.data_dir_ = self.data_dir + self.res_h5_filename
         else:
             self.data_dir_ = self.data_dir
-        s.append("Analysis Results Dir: %s" % self.data_dir_)  ####line 9 results folder
+        s.append("Analysis Results Dir: %s" % self.data_dir_)  #line 9 results folder
 
-        s.append("Metadata Dir: %s.csv-&.pkl" % self.metafile)  ####line 10 metadata folder
+        s.append("Metadata Dir: %s.csv-&.pkl" % self.metafile)  #line 10 metadata folder
         try:
-            s.append("Pipeline notebook: %s" % md["NOTEBOOK_FULL_PATH"])  ####line 11 notebook folder
-        except:
+            s.append("Pipeline notebook: %s" % md["NOTEBOOK_FULL_PATH"])  #line 11 notebook folder
+        except Exception:
             pass
         # print( 'here' )
         line = 1
@@ -1812,7 +1812,7 @@ def save_res_h5(full_uid, data_dir, save_two_time=False):
         for key in md.keys():
             try:
                 meta_data.attrs[key] = md[key]
-            except:
+            except Exception:
                 pass
 
         shapes = md["avg_img"].shape
@@ -1912,7 +1912,7 @@ def make_pdf_report(
     c.report_static(top=540, iq_fit=run_fit_form)
     c.report_ROI(top=290)
     page = 1
-    ##Page Two for plot OVAS images if oavs_report is True
+    # Page Two for plot OVAS images if oavs_report is True
     if oavs_report:
         c.new_page()
         c.report_header(page=2)
@@ -1980,8 +1980,8 @@ def make_pdf_report(
         return c
 
 
-######################################
-###Deal with saving dict to hdf5 file
+#
+# Deal with saving dict to hdf5 file
 def save_dict_to_hdf5(dic, filename):
     """
     ....
@@ -2027,7 +2027,7 @@ def recursively_save_dict_contents_to_group(h5file, path, dic):
         elif isinstance(item, np.ndarray):
             try:
                 h5file[path + key] = item
-            except:
+            except Exception:
                 item = np.array(item).astype("|S9")
                 h5file[path + key] = item
             if not np.array_equal(h5file[path + key].value, item):
@@ -2078,13 +2078,13 @@ def export_xpcs_results_to_h5(filename, export_dir, export_dict):
                 for key_ in md.keys():
                     try:
                         meta_data.attrs[str(key_)] = md[key_]
-                    except:
+                    except Exception:
                         pass
             elif key in dict_nest:
                 # print(key)
                 try:
                     recursively_save_dict_contents_to_group(hf, "/%s/" % key, export_dict[key])
-                except:
+                except Exception:
                     print("Can't export the key: %s in this dataset." % key)
 
             elif key in [
@@ -2100,7 +2100,7 @@ def export_xpcs_results_to_h5(filename, export_dir, export_dict):
                         key=key,
                         mode="a",
                     )
-                except:
+                except Exception:
                     flag = True
             else:
                 data = hf.create_dataset(key, data=export_dict[key])
@@ -2185,7 +2185,7 @@ def extract_xpcs_results_from_h5_debug(filename, import_dir, onekey=None, exclud
             try:
                 with h5py.File(fp, "r") as hf:
                     extract_dict[onekey] = np.array(hf.get(onekey))
-            except:
+            except Exception:
                 print("The %s dosen't have this %s value" % (fp, onekey))
     return extract_dict
 
@@ -2213,7 +2213,7 @@ def export_xpcs_results_to_h5_old(filename, export_dir, export_dict):
                 for key_ in md.keys():
                     try:
                         meta_data.attrs[str(key_)] = md[key_]
-                    except:
+                    except Exception:
                         pass
             elif key in dict_nest:
                 k1 = export_dict[key]
@@ -2320,7 +2320,7 @@ def extract_xpcs_results_from_h5(filename, import_dir, onekey=None, exclude_keys
                     else:
                         extract_dict[key] = hf.get(key)[:]  # np.array( hf.get( key  ))
                     # extract_dict[onekey] = hf.get( key  )[:] #np.array( hf.get( onekey  ))
-            except:
+            except Exception:
                 print("The %s dosen't have this %s value" % (fp, onekey))
     return extract_dict
 

@@ -5,16 +5,16 @@ This module is for the static SAXS analysis, such as fit form factor
 """
 
 # import numpy as np
-from lmfit import Model, Parameter, Parameters, fit_report, minimize, report_fit
-from scipy.optimize import curve_fit, least_squares, leastsq
-from scipy.special import gamma, gammaln
+from lmfit import Model, Parameters, minimize
+from scipy.optimize import leastsq
+from scipy.special import gamma
 
 from pyCHX.chx_generic_functions import find_index, plot1D, show_img
 
 # import matplotlib as mpl
 # import matplotlib.pyplot as plt
 # from matplotlib.colors import LogNorm
-from pyCHX.chx_libs import *
+from pyCHX.chx_libs import ff, iq, np, plt, q, utils, y
 
 
 def mono_sphere_form_factor_intensity(x, radius, delta_rho=100, fit_func="G"):
@@ -120,10 +120,10 @@ def poly_sphere_form_factor_intensity_q2(
 def find_index_old(x, x0, tolerance=None):
     # find the position of P in a list (plist) with tolerance
 
-    N = len(x)
+    len(x)
     i = 0
     position = None
-    if tolerance == None:
+    if tolerance is None:
         tolerance = (x[1] - x[0]) / 2.0
     if x0 > max(x):
         position = len(x) - 1
@@ -471,7 +471,7 @@ def get_form_factor_fit2(
 
     # print(q4_bg)
     # resL = leastsq( fit_funcs, [ p ], args=( iq_, q_,  num_points, spread, fit_func, function ),
-    #                          full_output=1, ftol=1.49012e-38, xtol=1.49012e-10, factor=100)
+    # full_output=1, ftol=1.49012e-38, xtol=1.49012e-10, factor=100)
 
     # radius, sigma, delta_rho, background = np.abs(pfit)
     if not q4_bg:
@@ -513,7 +513,7 @@ def get_form_factor_fit2(
     for i in range(len(pfit)):
         try:
             error.append(np.absolute(pcov[i][i]) ** 0.5)
-        except:
+        except Exception:
             error.append(None)
     pfit_leastsq = pfit
     perr_leastsq = np.array(error)
@@ -603,13 +603,13 @@ def get_form_factor_fit(
     # fit_power = 0
     result = mod.fit(iq_ * q_**fit_power, pars, x=q_)  # , fit_func=fit_func )
     if function == "poly_sphere":
-        sigma = result.best_values["sigma"]
+        result.best_values["sigma"]
     elif function == "mono_sphere":
-        sigma = 0
-    r = result.best_values["radius"]
+        pass
+    result.best_values["radius"]
     # scale =  result.best_values['scale']
     # baseline = result.best_values['baseline']
-    delta_rho = result.best_values["delta_rho"]
+    result.best_values["delta_rho"]
     print(result.best_values)
     return result, q_
 
@@ -636,7 +636,7 @@ def plot_form_factor_with_fit(q, iq, q_, result, fit_power=0, res_pargs=None, re
     plt.title("uid= %s:--->" % uid + title_qr, fontsize=20, y=1.02)
 
     r = result.best_values["radius"]
-    delta_rho = result.best_values["delta_rho"]
+    result.best_values["delta_rho"]
     sigma = result.best_values["sigma"]
 
     ax.semilogy(q, iq, "ro", label="Form Factor")
@@ -920,7 +920,7 @@ def show_saxs_qmap(
     if w < minW:
         img_ = img[cx - w // 2 : cx + w // 2, cy + w // 2 : cy + w // 2]
     # elif w > maxW:
-    #    img_[ cx-w//2:cx+w//2, cy+w//2:cy+w//2 ] =
+    # img_[ cx-w//2:cx+w//2, cy+w//2:cy+w//2 ] =
 
     ROI = [max(0, center[0] - w), min(center[0] + w, lx), max(0, center[1] - w), min(ly, center[1] + w)]
     # print( ROI )
@@ -984,12 +984,12 @@ def show_saxs_qmap(
     return ax
 
 
-########################
-##Fit sphere by scipy.leastsq fit
+#
+# Fit sphere by scipy.leastsq fit
 
 
 def fit_sphere_form_factor_func(parameters, ydata, xdata, yerror=None, nonvariables=None):
-    """##Develop by YG at July 28, 2017 @CHX
+    """#Develop by YG at July 28, 2017 @CHX
     This function is for fitting form factor of polyderse spherical particles by using scipy.leastsq fit
 
     radius, sigma, delta_rho, background  = parameters
@@ -1015,7 +1015,7 @@ def fit_sphere_form_factor_by_leastsq(
     pq,
     fit_range=None,
 ):
-    """##Develop by YG at July 28, 2017 @CHX
+    """#Develop by YG at July 28, 2017 @CHX
     Fitting form factor of polyderse spherical particles by using scipy.leastsq fit
     Input:
         radius, sigma, delta_rho, background  = p0
@@ -1041,7 +1041,7 @@ def fit_sphere_form_factor_by_leastsq(
 
 
 def plot_fit_sphere_form_factor(q, pq, res, p0=None, xlim=None, ylim=None):
-    """##Develop by YG at July 28, 2017 @CHX"""
+    """#Develop by YG at July 28, 2017 @CHX"""
 
     if p0 is not None:
         radius, sigma, delta_rho, background = p0

@@ -86,7 +86,7 @@ def _one_time_process(
         past_img = buf[level, delay_no]
         future_img = buf[level, buf_no]
         # find the normalization that can work both for bad_images
-        #  and good_images
+        # and good_images
         ind = int(t_index - lev_len[:level].sum())
         normalize = img_per_level[level] - i - norm[level + 1][ind]
         # take out the past_ing and future_img created using bad images
@@ -176,7 +176,7 @@ def _one_time_process_error(
         past_img = buf[level, delay_no]
         future_img = buf[level, buf_no]
         # find the normalization that can work both for bad_images
-        #  and good_images
+        # and good_images
         ind = int(t_index - lev_len[:level].sum())
         normalize = img_per_level[level] - i - norm[level + 1][ind]
         # take out the past_ing and future_img created using bad images
@@ -186,13 +186,13 @@ def _one_time_process_error(
         else:
 
             # for w, arr in zip([past_img*future_img, past_img, future_img],
-            #                  [G, past_intensity_norm, future_intensity_norm,
-            #                  ]):
-            #    binned = np.bincount(label_array, weights=w)[1:]
-            #    #nonz = np.where(w)[0]
-            #    #binned = np.bincount(label_array[nonz], weights=w[nonz], minlength=maxqind+1 )[1:]
-            #    arr[t_index] += ((binned / num_pixels -
-            #                      arr[t_index]) / normalize)
+            # [G, past_intensity_norm, future_intensity_norm,
+            # ]):
+            # binned = np.bincount(label_array, weights=w)[1:]
+            # #nonz = np.where(w)[0]
+            # #binned = np.bincount(label_array[nonz], weights=w[nonz], minlength=maxqind+1 )[1:]
+            # arr[t_index] += ((binned / num_pixels -
+            # arr[t_index]) / normalize)
             for w, arr in zip(
                 [past_img * future_img, past_img, future_img],
                 [
@@ -867,7 +867,7 @@ def lazy_one_time_debug(
 
 def auto_corr_scat_factor(lags, beta, relaxation_rate, baseline=1):
     """
-    This model will provide normalized intensity-intensity time
+    This mo
     correlation data to be minimized.
     Parameters
     ----------
@@ -968,7 +968,7 @@ def lazy_two_time(
 ):
 
     # def lazy_two_time(labels, images, num_frames, num_bufs, num_levels=1,
-    #                  two_time_internal_state=None):
+    # two_time_internal_state=None):
     """Generator implementation of two-time correlation
     If you do not want multi-tau correlation, set num_levels to 1 and
     num_bufs to the number of images you wish to correlate
@@ -1179,7 +1179,7 @@ def _two_time_process(
     img_per_level[level] += 1
 
     # in multi-tau correlation other than first level all other levels
-    #  have to do the half of the correlation
+    # have to do the half of the correlation
     if level == 0:
         i_min = 0
     else:
@@ -1193,7 +1193,7 @@ def _two_time_process(
 
         # print( np.sum( past_img ), np.sum( future_img ))
 
-        #  get the matrix of correlation function without normalizations
+        # get the matrix of correlation function without normalizations
         tmp_binned = np.bincount(label_array, weights=past_img * future_img)[1:]
         # get the matrix of past intensity normalizations
         pi_binned = np.bincount(label_array, weights=past_img)[1:]
@@ -1394,7 +1394,7 @@ def cal_g2c(
             g_max = min(g_max1, g_max2)
             # print(g_max)
             # g2_ = (s.G[:g_max] / (s.past_intensity[:g_max] *
-            #                             s.future_intensity[:g_max]))
+            # s.future_intensity[:g_max]))
             g2[:g_max, qi - 1] = avgGi[:g_max] / (avgPi[:g_max] * avgFi[:g_max])
             g2_err[:g_max, qi - 1] = np.sqrt(
                 (1 / (avgFi[:g_max] * avgPi[:g_max])) ** 2 * devGi[:g_max] ** 2
@@ -1453,9 +1453,9 @@ class Get_Pixel_Arrayc_todo(object):
         if end is None:
             self.end = FD.end
         # if self.beg ==0:
-        #    self.length = self.end - self.beg
+        # self.length = self.end - self.beg
         # else:
-        #    self.length = self.end - self.beg + 1
+        # self.length = self.end - self.beg + 1
 
         self.length = self.end - self.beg
 
@@ -1504,18 +1504,18 @@ class Get_Pixel_Arrayc_todo(object):
             if self.mean_int_sets is not None:  # for each frame will normalize each ROI by it's averaged value
                 for j in range(noqs):
                     # if i ==100:
-                    #    if j==0:
-                    #        print( self.mean_int_sets[i][j] )
-                    #        print( qind_[ noprs[j]: noprs[j+1] ] )
+                    # if j==0:
+                    # print( self.mean_int_sets[i][j] )
+                    # print( qind_[ noprs[j]: noprs[j+1] ] )
                     Mean_Int_Qind[qind_[noprs[j] : noprs[j + 1]]] = self.mean_int_sets[i][j]
                 norm_Mean_Int_Qind = Mean_Int_Qind[pxlist]  # self.mean_int_set or Mean_Int_Qind[pxlist]
 
                 # if i==100:
-                #    print( i, Mean_Int_Qind[ self.qind== 11    ])
+                # print( i, Mean_Int_Qind[ self.qind== 11    ])
 
                 # print('Do norm_mean_int here')
                 # if i ==10:
-                #    print( norm_Mean_Int_Qind )
+                # print( norm_Mean_Int_Qind )
             else:
                 norm_Mean_Int_Qind = 1.0
             if self.imgsum is not None:
@@ -1529,7 +1529,7 @@ class Get_Pixel_Arrayc_todo(object):
 
             norms = norm_Mean_Int_Qind * norm_imgsum * norm_avgimg_roi
             # if i==100:
-            #    print(norm_Mean_Int_Qind[:100])
+            # print(norm_Mean_Int_Qind[:100])
             data_array[n][pxlist] = v[w] / norms
             n += 1
 
@@ -1562,9 +1562,9 @@ class Get_Pixel_Arrayc(object):
         if end is None:
             self.end = FD.end
         # if self.beg ==0:
-        #    self.length = self.end - self.beg
+        # self.length = self.end - self.beg
         # else:
-        #    self.length = self.end - self.beg + 1
+        # self.length = self.end - self.beg + 1
 
         self.length = self.end - self.beg
 
@@ -1608,18 +1608,18 @@ class Get_Pixel_Arrayc(object):
             if self.mean_int_sets is not None:  # for normalization of each averaged ROI of each frame
                 for j in range(noqs):
                     # if i ==100:
-                    #    if j==0:
-                    #        print( self.mean_int_sets[i][j] )
-                    #        print( qind_[ noprs[j]: noprs[j+1] ] )
+                    # if j==0:
+                    # print( self.mean_int_sets[i][j] )
+                    # print( qind_[ noprs[j]: noprs[j+1] ] )
                     Mean_Int_Qind[qind_[noprs[j] : noprs[j + 1]]] = self.mean_int_sets[i][j]
                 norm_Mean_Int_Qind = Mean_Int_Qind[pxlist]  # self.mean_int_set or Mean_Int_Qind[pxlist]
 
                 # if i==100:
-                #    print( i, Mean_Int_Qind[ self.qind== 11    ])
+                # print( i, Mean_Int_Qind[ self.qind== 11    ])
 
                 # print('Do norm_mean_int here')
                 # if i ==10:
-                #    print( norm_Mean_Int_Qind )
+                # print( norm_Mean_Int_Qind )
             else:
                 norm_Mean_Int_Qind = 1.0
             if self.imgsum is not None:
@@ -1638,7 +1638,7 @@ class Get_Pixel_Arrayc(object):
 
             norms = norm_Mean_Int_Qind * norm_imgsum * norm_avgimg_roi
             # if i==100:
-            #    print(norm_Mean_Int_Qind[:100])
+            # print(norm_Mean_Int_Qind[:100])
             data_array[n][pxlist] = v[w] / norms
             n += 1
 
@@ -1686,7 +1686,7 @@ def auto_two_Arrayc(data_pixel, rois, index=None):
     try:
         g12b = np.zeros([noframes, noframes, len(qlist)])
         DO = True
-    except:
+    except Exception:
         print(
             "The array is too large. The Sever can't handle such big array. Will calulate different Q sequencely"
         )
@@ -1753,7 +1753,7 @@ def auto_two_Arrayc_ExplicitNorm(data_pixel, rois, norm=None, index=None):
     try:
         g12b = np.zeros([noframes, noframes, len(qlist)])
         DO = True
-    except:
+    except Exception:
         print(
             "The array is too large. The Sever can't handle such big array. Will calulate different Q sequencely"
         )
@@ -1818,7 +1818,7 @@ def two_time_norm(data_pixel, rois, index=None):
     try:
         norm = np.zeros(len(qlist))
         DO = True
-    except:
+    except Exception:
         print(
             "The array is too large. The Sever can't handle such big array. Will calulate different Q sequencely"
         )
@@ -1860,7 +1860,7 @@ def check_normalization(frame_num, q_list, imgsa, data_pixel):
         plot1D(raw_data, ax=ax[0], legend="q=%s" % (q), m=markers[n], title="fra=%s_raw_data" % (frame_num))
 
         # plot1D( raw_data/mean_int_sets_[frame_num][q-1], ax=ax[1], legend='q=%s'%(q), m=markers[n],
-        #       xlabel='pixel',title='fra=%s_norm_data'%(frame_num))
+        # xlabel='pixel',title='fra=%s_norm_data'%(frame_num))
         # print( mean_int_sets_[frame_num][q-1] )
         plot1D(
             norm_data,

@@ -1,50 +1,21 @@
 from __future__ import absolute_import, division, print_function
 
 import logging
-import os
-import struct
-from collections import namedtuple
 
 import matplotlib.pyplot as plt
-from skbeam.core.roi import extract_label_indices
-from skbeam.core.utils import multi_tau_lags
 from tqdm import tqdm
 
 from pyCHX.chx_generic_functions import save_arrays
 
 # from pyCHX.chx_generic_functions import (get_circular_average)
 # from pyCHX.XPCS_SAXS import (get_circular_average)
-from pyCHX.chx_libs import (
-    RUN_GUI,
-    Figure,
-    LogNorm,
-    colors,
-    colors_,
-    datetime,
-    db,
-    getpass,
-    markers,
-    markers_,
-    np,
-    os,
-    roi,
-    time,
-)
+from pyCHX.chx_libs import RUN_GUI, Figure, colors, markers, np, roi
 
 logger = logging.getLogger(__name__)
 
 from modest_image import imshow
 
-from pyCHX.chx_compress import (
-    Multifile,
-    compress_eigerdata,
-    get_avg_imgc,
-    get_each_frame_intensityc,
-    init_compress_eigerdata,
-    mean_intensityc,
-    pass_FD,
-    read_compressed_eigerdata,
-)
+from pyCHX.chx_compress import get_avg_imgc, mean_intensityc
 from pyCHX.chx_generic_functions import find_bad_pixels_FD
 
 # from pyCHX.chx_compress import *
@@ -97,8 +68,7 @@ def get_time_edge_avg_img(FD, frame_edge, show_progress=True, apply_threshold=Fa
 def plot_imgs(imgs, image_name=None, *argv, **kwargs):
     # NOT WORKing NOW....
     N = len(imgs)
-    sx = np.ceil(np.sqrt(N))
-    pass
+    np.ceil(np.sqrt(N))
 
 
 def cal_waterfallc(
