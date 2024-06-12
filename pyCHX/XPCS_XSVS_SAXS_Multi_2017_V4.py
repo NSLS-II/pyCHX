@@ -1,8 +1,67 @@
 # python XPCS_XSVS_SAXS_Multi_2017_V4.py
 
 
-from pyCHX.chx_packages import *
-from pyCHX.chx_xpcs_xsvs_jupyter import run_xpcs_xsvs_single
+from pyCHX.chx_packages import (
+    Attachment,
+    center,
+    data_dir,
+    data_dir_average,
+    export_xpcs_results_to_h5,
+    extract_xpcs_results_from_h5,
+    find_uids,
+    get_averaged_data_from_multi_res,
+    get_contrast,
+    get_g2_fit_general,
+    get_his_std_from_pds,
+    get_q_rate_fit_general,
+    get_xsvs_fit,
+    getpass,
+    guids,
+    imgsa,
+    inc_x0,
+    load_mask,
+    make_pdf_report,
+    np,
+    os,
+    pdf_version,
+    pixel_mask,
+    plot1D,
+    plot_circular_average,
+    plot_each_ring_mean_intensityc,
+    plot_g2_contrast,
+    plot_g2_general,
+    plot_q_rate_fit_general,
+    plot_qIq_with_ROI,
+    plot_qr_1d_with_ROI,
+    plot_t_iqc,
+    plot_waterfallc,
+    plot_xsvs_fit,
+    psave_obj,
+    q_ring_center,
+    qr,
+    qr_1d_pds_label,
+    qth_interest,
+    qval_dict,
+    roi_mask,
+    run_time,
+    save_arrays,
+    save_dict_csv,
+    save_g2_fit_para_tocsv,
+    save_g2_general,
+    save_KM,
+    setup_pargs,
+    show_C12,
+    show_img,
+    show_qzr_roi,
+    show_ROI_on_image,
+    show_saxs_qmap,
+    ticks,
+    time,
+    timeperframe,
+    trans_data_to_pd,
+    uidstr,
+    update_olog_uid,
+)
 
 
 def XPCS_XSVS_SAXS_Multi(
@@ -13,8 +72,8 @@ def XPCS_XSVS_SAXS_Multi(
     uid_average="Au50_7p5PEGX1_vs_slow_120116",
 ):
     scat_geometry = run_pargs["scat_geometry"]
-    force_compress = run_pargs["force_compress"]
-    para_compress = run_pargs["para_compress"]
+    run_pargs["force_compress"]
+    run_pargs["para_compress"]
     run_fit_form = run_pargs["run_fit_form"]
     run_waterfall = run_pargs["run_waterfall"]
     run_t_ROI_Inten = run_pargs["run_t_ROI_Inten"]
@@ -24,24 +83,24 @@ def XPCS_XSVS_SAXS_Multi(
     run_two_time = run_pargs["run_two_time"]
     run_four_time = run_pargs["run_four_time"]
     run_xsvs = run_pargs["run_xsvs"]
-    ###############################################################
+    #
     if scat_geometry != "saxs":  # to be done for other types
         run_xsvs = False
-    ###############################################################
+    #
     att_pdf_report = run_pargs["att_pdf_report"]
-    show_plot = run_pargs["show_plot"]
-    CYCLE = run_pargs["CYCLE"]
+    run_pargs["show_plot"]
+    run_pargs["CYCLE"]
     mask_path = run_pargs["mask_path"]
     mask_name = run_pargs["mask_name"]
     good_start = run_pargs["good_start"]
-    use_imgsum_norm = run_pargs["use_imgsum_norm"]
+    run_pargs["use_imgsum_norm"]
 
     mask = load_mask(mask_path, mask_name, plot_=False, image_name="%s_mask" % mask_name, reverse=True)
     # mask *= pixel_mask
     mask[:, 2069] = 0  # False  #Concluded from the previous results
     # np.save(  data_dir + 'mask', mask)
     show_img(mask, image_name="%s_mask" % uid_average, save=True, path=data_dir)
-    mask_load = mask.copy()
+    mask.copy()
 
     username = getpass.getuser()
     data_dir0 = os.path.join("/XF11ID/analysis/", run_pargs["CYCLE"], username, "Results/")
@@ -58,9 +117,7 @@ def XPCS_XSVS_SAXS_Multi(
     print(uids)
     uid = uids[0]
 
-    data_dir_ = data_dir
-    uid_ = uid_average
-    ### For Load results
+    # For Load results
 
     multi_res = {}
     for uid, fuid in zip(guids, fuids):
@@ -485,7 +542,7 @@ def XPCS_XSVS_SAXS_Multi(
 
     export_xpcs_results_to_h5(uid + "_Res.h5", data_dir, export_dict=Exdt)
     # extract_dict = extract_xpcs_results_from_h5( filename = uid + '_Res.h5', import_dir = data_dir )
-    ## Create PDF report for each uid
+    # Create PDF report for each uid
     pdf_out_dir = data_dir
     pdf_filename = "XPCS_Analysis_Report_for_%s%s.pdf" % (uid_average, pdf_version)
     if run_xsvs:
@@ -505,7 +562,7 @@ def XPCS_XSVS_SAXS_Multi(
         run_xsvs,
         report_type=scat_geometry,
     )
-    ### Attach each g2 result to the corresponding olog entry
+    # Attach each g2 result to the corresponding olog entry
     if att_pdf_report:
         os.environ["HTTPS_PROXY"] = "https://proxy:8888"
         os.environ["no_proxy"] = "cs.nsls2.local,localhost,127.0.0.1"
@@ -513,7 +570,7 @@ def XPCS_XSVS_SAXS_Multi(
         atch = [Attachment(open(pname, "rb"))]
         try:
             update_olog_uid(uid=fuids[-1], text="Add XPCS Averaged Analysis PDF Report", attachments=atch)
-        except:
+        except Exception:
             print(
                 "I can't attach this PDF: %s due to a duplicated filename. Please give a different PDF file."
                 % pname
@@ -554,14 +611,14 @@ if False:
         mask_path="/XF11ID/analysis/2016_3/masks/",
         mask_name="Nov28_4M_SAXS_mask.npy",
         good_start=5,
-        #####################################for saxs
+        # for saxs
         uniformq=True,
         inner_radius=0.005,  # 0.005 for 50 nmAu/SiO2, 0.006, #for 10nm/coralpor
         outer_radius=0.04,  # 0.04 for 50 nmAu/SiO2, 0.05, #for 10nm/coralpor
         num_rings=12,
         gap_ring_number=6,
         number_rings=1,
-        ############################for gi_saxs
+        # for gi_saxs
         # inc_x0 = 1473,
         # inc_y0 = 372,
         # refl_x0 = 1473,

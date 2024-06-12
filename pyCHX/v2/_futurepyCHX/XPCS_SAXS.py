@@ -378,15 +378,15 @@ def circular_average(
         image_mask = np.ravel(image)
 
     # if nx is None: #make a one-pixel width q
-    #   nx = int( max_r - min_r)
+    # nx = int( max_r - min_r)
     # if min_x is None:
-    #    min_x= int( np.min( binr))
-    #    min_x_= int( np.min( binr)/(np.sqrt(pixel_size[1]*pixel_size[0] )))
+    # min_x= int( np.min( binr))
+    # min_x_= int( np.min( binr)/(np.sqrt(pixel_size[1]*pixel_size[0] )))
     # if max_x is None:
-    #    max_x = int( np.max(binr ))
-    #    max_x_ = int( np.max(binr)/(np.sqrt(pixel_size[1]*pixel_size[0] ))  )
+    # max_x = int( np.max(binr ))
+    # max_x_ = int( np.max(binr)/(np.sqrt(pixel_size[1]*pixel_size[0] ))  )
     # if nx is None:
-    #    nx = max_x_ - min_x_
+    # nx = max_x_ - min_x_
 
     # binr_ = np.int_( binr /(np.sqrt(pixel_size[1]*pixel_size[0] )) )
     binr_ = binr / (np.sqrt(pixel_size[1] * pixel_size[0]))
@@ -453,7 +453,7 @@ def get_circular_average(
         avg_img, center, threshold=0, nx=nx, pixel_size=(dpix, dpix), mask=mask, min_x=min_x, max_x=max_x
     )
     qp_ = qp * dpix
-    #  convert bin_centers from r [um] to two_theta and then to q [1/px] (reciprocal space)
+    # convert bin_centers from r [um] to two_theta and then to q [1/px] (reciprocal space)
     two_theta = utils.radius_to_twotheta(Ldet, qp_)
     q = utils.twotheta_to_q(two_theta, lambda_)
     if plot_:
@@ -1154,7 +1154,7 @@ def get_angular_mask(
     """
     mask: 2D-array
     inner_angle # the starting angle in unit of degree
-    outer_angle #  the ending angle in unit of degree
+    outer_angle # the ending angle in unit of degree
     width       # width of each angle, in degree, default is None, there is no gap between the neighbour angle ROI
     edges: default, None. otherwise, give a customized angle edges
     num_angles    # number of angles
@@ -1240,7 +1240,7 @@ def get_angular_mask_old(
     """
     mask: 2D-array
     inner_angle # the starting angle in unit of degree
-    outer_angle #  the ending angle in unit of degree
+    outer_angle # the ending angle in unit of degree
     width       # width of each angle, in degree, default is None, there is no gap between the neighbour angle ROI
     edges: default, None. otherwise, give a customized angle edges
     num_angles    # number of angles
@@ -1338,7 +1338,7 @@ def get_ring_mask(
     return_q_in_pixel=False,
 ):
     # def get_ring_mask(  mask, inner_radius= 0.0020, outer_radius = 0.009, width = 0.0002, num_rings = 12,
-    #                  edges=None, unit='pixel',pargs=None   ):
+    # edges=None, unit='pixel',pargs=None   ):
     """
     mask: 2D-array
     inner_radius #radius of the first ring
@@ -1366,11 +1366,11 @@ def get_ring_mask(
     # qc = np.int_( np.linspace( inner_radius,outer_radius, num_rings ) )
     # edges = np.zeros( [ len(qc), 2] )
     # if width%2:
-    #   edges[:,0],edges[:,1] = qc - width//2,  qc + width//2 +1
+    # edges[:,0],edges[:,1] = qc - width//2,  qc + width//2 +1
     # else:
-    #    edges[:,0],edges[:,1] = qc - width//2,  qc + width//2
+    # edges[:,0],edges[:,1] = qc - width//2,  qc + width//2
 
-    #  find the edges of the required rings
+    # find the edges of the required rings
     if edges is None:
         if num_rings != 1:
             spacing = (outer_radius - inner_radius - num_rings * width) / (num_rings - 1)  # spacing between rings
@@ -1700,9 +1700,9 @@ def plot_saxs_rad_ang_g2(g2, taus, res_pargs=None, master_angle_plot=False, retu
 
             # title_qa = '%.2f'%( ang_center[sn]) + r'$^\circ$' + '( %d )'%(i)
             # if num_qr==1:
-            #    title = 'uid= %s:--->'%uid + title_qr + '__' +  title_qa
+            # title = 'uid= %s:--->'%uid + title_qr + '__' +  title_qa
             # else:
-            #    title = title_qa
+            # title = title_qa
             title = title_qa
             ax.set_title(title, y=1.1, fontsize=12)
             y = g2[:, i]
@@ -1730,9 +1730,9 @@ def plot_saxs_rad_ang_g2(g2, taus, res_pargs=None, master_angle_plot=False, retu
         return fig
 
 
-############################################
-##a good func to fit g2 for all types of geogmetries
-############################################
+#
+# a good func to fit g2 for all types of geogmetries
+#
 
 
 def fit_saxs_rad_ang_g2(
@@ -1756,8 +1756,8 @@ def fit_saxs_rad_ang_g2(
         'streched_exponential': fit by a streched exponential function, defined as
                     beta * (np.exp(-2 * relaxation_rate * lags))**alpha + baseline
 
-    #fit_vibration:
-    #    if True, will fit the g2 by a dumped sin function due to beamline mechnical oscillation
+    # fit_vibration:
+    # if True, will fit the g2 by a dumped sin function due to beamline mechnical oscillation
 
     Returns
     -------
@@ -1801,14 +1801,14 @@ def fit_saxs_rad_ang_g2(
             print("Please give ang_center")
 
     num_rings = g2.shape[1]
-    beta = np.zeros(num_rings)  #  contrast factor
-    rate = np.zeros(num_rings)  #  relaxation rate
-    alpha = np.zeros(num_rings)  #  alpha
-    baseline = np.zeros(num_rings)  #  baseline
+    beta = np.zeros(num_rings)  # contrast factor
+    rate = np.zeros(num_rings)  # relaxation rate
+    alpha = np.zeros(num_rings)  # alpha
+    baseline = np.zeros(num_rings)  # baseline
     freq = np.zeros(num_rings)
 
     if function == "flow_para_function" or function == "flow_para":
-        flow = np.zeros(num_rings)  #  baseline
+        flow = np.zeros(num_rings)  # baseline
     if "fit_variables" in kwargs:
         additional_var = kwargs["fit_variables"]
         _vars = [k for k in list(additional_var.keys()) if additional_var[k] is False]
@@ -2116,7 +2116,7 @@ def multi_uids_saxs_flow_xpcs_analysis(
             try:
                 detector = get_detector(db[uid])
                 imgs = load_data(uid, detector, reverse=True)
-            except:
+            except Exception:
                 print("The %i--th uid: %s can not load data" % (i, uid))
                 imgs = 0
 
@@ -2166,7 +2166,7 @@ def multi_uids_saxs_flow_xpcs_analysis(
                     # md['sample']= 'PS205000-PMMA-207000-SMMA3'
                     print(md["Measurement"])
 
-                except:
+                except Exception:
                     md["Measurement"] = "Measurement"
                     md["sample"] = "sample"
 
@@ -2177,7 +2177,7 @@ def multi_uids_saxs_flow_xpcs_analysis(
                 acquisition_period = md["frame_time"]
                 timeperframe = acquisition_period  # for g2
                 # timeperframe = exposuretime#for visiblitly
-                # timeperframe = 2  ## manual overwrite!!!! we apparently writing the wrong metadata....
+                # timeperframe = 2  # manual overwrite!!!! we apparently writing the wrong metadata....
                 center = md["center"]
 
                 setup_pargs = dict(
@@ -2192,7 +2192,7 @@ def multi_uids_saxs_flow_xpcs_analysis(
 
                 md["avg_img"] = avg_img
                 # plot1D( y = imgsum[ np.array( [i for i in np.arange( len(imgsum)) if i not in bad_frame_list])],
-                #   title ='Uid= %s--imgsum'%uid, xlabel='Frame', ylabel='Total_Intensity', legend=''   )
+                # title ='Uid= %s--imgsum'%uid, xlabel='Frame', ylabel='Total_Intensity', legend=''   )
                 min_inten = 10
 
                 # good_start = np.where( np.array(imgsum) > min_inten )[0][0]
@@ -2209,7 +2209,7 @@ def multi_uids_saxs_flow_xpcs_analysis(
                 print("The good_end frame number is: %s " % good_end_)
 
                 norm = None
-                ###################
+                #
 
                 # Do correlaton here
                 for nconf, seg_mask in enumerate([seg_mask_v, seg_mask_p]):
@@ -2436,7 +2436,7 @@ def multi_uids_saxs_xpcs_analysis(
             try:
                 detector = get_detector(db[uid])
                 imgs = load_data(uid, detector, reverse=True)
-            except:
+            except Exception:
                 print("The %i--th uid: %s can not load data" % (i, uid))
                 imgs = 0
 
@@ -2485,7 +2485,7 @@ def multi_uids_saxs_xpcs_analysis(
                         # md['sample']= 'PS205000-PMMA-207000-SMMA3'
                         print(md["Measurement"])
 
-                    except:
+                    except Exception:
                         md["Measurement"] = "Measurement"
                         md["sample"] = "sample"
 
@@ -2496,7 +2496,7 @@ def multi_uids_saxs_xpcs_analysis(
                     acquisition_period = md["frame_time"]
                     timeperframe = acquisition_period  # for g2
                     # timeperframe = exposuretime#for visiblitly
-                    # timeperframe = 2  ## manual overwrite!!!! we apparently writing the wrong metadata....
+                    # timeperframe = 2  # manual overwrite!!!! we apparently writing the wrong metadata....
                     center = md["center"]
 
                     setup_pargs = dict(
@@ -2511,7 +2511,7 @@ def multi_uids_saxs_xpcs_analysis(
 
                     md["avg_img"] = avg_img
                     # plot1D( y = imgsum[ np.array( [i for i in np.arange( len(imgsum)) if i not in bad_frame_list])],
-                    #   title ='Uid= %s--imgsum'%uid, xlabel='Frame', ylabel='Total_Intensity', legend=''   )
+                    # title ='Uid= %s--imgsum'%uid, xlabel='Frame', ylabel='Total_Intensity', legend=''   )
                     min_inten = 10
 
                     # good_start = np.where( np.array(imgsum) > min_inten )[0][0]
@@ -2658,7 +2658,7 @@ def plot_mul_g2(g2s, md):
 
                 # print ( len_tau, len(y))
                 # ax.semilogx(taus[1:len_], y[1:len_], marker = '%s'%next(markers_), color='%s'%next(colors_),
-                #            markersize=6, label = '%s'%sid)
+                # markersize=6, label = '%s'%sid)
 
                 ax.semilogx(
                     taus[1:len_], y[1:len_], marker=markers[i], color=colors[i], markersize=6, label="%s" % sid

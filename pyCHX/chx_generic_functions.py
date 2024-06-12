@@ -1,23 +1,62 @@
 import copy
 import datetime
 from os import listdir
-from shutil import copyfile
 
 import matplotlib.cm as mcm
 import numpy as np
 import PIL
 import pytz
 import scipy
-from matplotlib import cm
 from modest_image import imshow
 from scipy.special import erf
-from skbeam.core.utils import angle_grid, radial_grid, radius_to_twotheta, twotheta_to_q
-from skimage.draw import disk, ellipse, line, line_aa, polygon
+from skbeam.core.utils import angle_grid, radial_grid, radius_to_twotheta
+from skimage.draw import disk, ellipse, polygon
 from skimage.filters import prewitt
 
 # from tqdm import *
-from pyCHX.chx_libs import *
-from pyCHX.chx_libs import colors, markers
+from pyCHX.chx_libs import (
+    RUN_GUI,
+    DataFrame,
+    Figure,
+    Image,
+    LogNorm,
+    Model,
+    _mask_path_,
+    center,
+    cmap_albula,
+    cmap_vge_hdr,
+    colors,
+    colors_,
+    combine_two_roi_mask,
+    corr,
+    db,
+    figsize,
+    get_angular_mask,
+    get_avg_imgc,
+    get_circular_average,
+    get_ring_mask,
+    getpass,
+    h5py,
+    json,
+    markers,
+    markers_,
+    md,
+    mpl_plot,
+    multi_tau_lags,
+    os,
+    pickle,
+    pims,
+    plt,
+    power,
+    roi,
+    scale_rgb,
+    time,
+    tqdm,
+    uid,
+    uids,
+    utils,
+    warnings,
+)
 
 markers = [
     "o",
@@ -47,7 +86,10 @@ markers = [
 markers = np.array(markers * 100)
 
 
-flatten_nestlist = lambda l: [item for sublist in l for item in sublist]
+def flatten_nestlist(l):
+    return [item for sublist in l for item in sublist]
+
+
 """a function to flatten a nest list
 e.g., flatten( [ ['sg','tt'],'ll' ]   )
 gives ['sg', 'tt', 'l', 'l']
@@ -111,7 +153,7 @@ def fit_one_peak_curve(x, y, fit_range=None):
     peak = LorentzianModel()
     background = LinearModel()
     model = peak + background
-    if fit_range != None:
+    if fit_range is not None:
         x1, x2 = fit_range
         xf = x[x1:x2]
         yf = y[x1:x2]
@@ -164,7 +206,7 @@ def plot_xy_with_fit(
     # txts = r'$\beta$' + r'$ = %.3f$'%(beta[i]) +  r'$ s^{-1}$'
     ax.text(x=0.02, y=0.1, s=txts, fontsize=14, transform=ax.transAxes)
     plt.tight_layout()
-    if filename != None:
+    if filename is not None:
         plt.savefig(filename)
     return ax
 
@@ -379,7 +421,7 @@ def get_SG_norm(FD, pixelist, bins=1, mask=None, window_size=11, order=5):
     Return:
         norm: shape as ( length of FD, length of pixelist )
     """
-    if mask == None:
+    if mask is None:
         mask = 1
     beg = FD.beg
     end = FD.end
@@ -459,7 +501,7 @@ def shift_mask(new_cen, new_mask, old_cen, old_roi_mask, limit_qnum=None):
     # qm = nopr>0
     for j, qv in enumerate(qu):
         nroi_mask[nroi_mask_ == qv] = j + 1
-    if limit_qnum != None:
+    if limit_qnum is not None:
         nroi_mask[nroi_mask > limit_qnum] = 0
     return nroi_mask
 
@@ -722,13 +764,13 @@ def plot_q_rate_general(
         if Nqz != 1:
             legend = ax.legend(loc="best")
 
-    if plot_index_range != None:
+    if plot_index_range is not None:
         d1, d2 = plot_index_range
         d2 = min(len(x) - 1, d2)
         ax.set_xlim((x**power)[d1], (x**power)[d2])
         ax.set_ylim(y[d1], y[d2])
 
-    if ylim != None:
+    if ylim is not None:
         ax.set_ylim(ylim)
 
     ax.set_ylabel("Relaxation rate " r"$\gamma$" "($s^{-1}$) (log)")
@@ -769,11 +811,11 @@ def plot_xy_x2(
         kwargs: could include xlim (in unit of index), ylim (in unit of real value)
 
     """
-    if fig_ax == None:
+    if fig_ax is None:
         fig, ax1 = plt.subplots()
     else:
         fig, ax1 = fig_ax
-    if pargs != None:
+    if pargs is not None:
         uid = pargs["uid"]
         path = pargs["path"]
     else:
@@ -802,7 +844,7 @@ def plot_xy_x2(
     lx1, lx2 = xlim
     ax1.set_xlim([x[lx1], x[lx2]])
     ax1.set_ylim(ylim)
-    if x2 != None:
+    if x2 is not None:
         ax2 = ax1.twiny()
         ax2.set_xlabel(xlabel2)
         ax2.set_ylabel(ylabel)
@@ -820,7 +862,7 @@ def save_oavs_tifs(uid, data_dir, brightness_scale=1, scalebar_size=100, scale=1
     tifs = list(db[uid].data("OAV_image"))[0]
     try:
         pixel_scalebar = np.ceil(scalebar_size / md["OAV resolution um_pixel"])
-    except:
+    except Exception:
         pixel_scalebar = None
         print("No OAVS resolution is available.")
 
@@ -834,7 +876,7 @@ def save_oavs_tifs(uid, data_dir, brightness_scale=1, scalebar_size=100, scale=1
         try:
             oav_period = h["descriptors"][d]["configuration"]["OAV"]["data"]["OAV_cam_acquire_period"]
             oav_expt = h["descriptors"][d]["configuration"]["OAV"]["data"]["OAV_cam_acquire_time"]
-        except:
+        except Exception:
             pass
     oav_times = []
     for i in range(len(oavs)):
@@ -846,8 +888,8 @@ def save_oavs_tifs(uid, data_dir, brightness_scale=1, scalebar_size=100, scale=1
         img = oavs[m]
         try:
             ind = np.flipud(img * scale)[:, :, 2] < threshold
-        except:
-            ind = np.flipud(img * scale) < threshold
+        except Exception:
+            np.flipud(img * scale) < threshold
         rgb_cont_img = np.copy(np.flipud(img))
         # rgb_cont_img[ind,0]=1000
         if brightness_scale != 1:
@@ -858,7 +900,7 @@ def save_oavs_tifs(uid, data_dir, brightness_scale=1, scalebar_size=100, scale=1
         cross = [685, 440, 50]  # definintion of direct beam: x, y, size
         plt.plot([cross[0] - cross[2] / 2, cross[0] + cross[2] / 2], [cross[1], cross[1]], "r-")
         plt.plot([cross[0], cross[0]], [cross[1] - cross[2] / 2, cross[1] + cross[2] / 2], "r-")
-        if pixel_scalebar != None:
+        if pixel_scalebar is not None:
             plt.plot([1100, 1100 + pixel_scalebar], [150, 150], "r-", Linewidth=5)  # scale bar.
             plt.text(1000, 50, text_string, fontsize=14, color="r")
         plt.text(600, 50, str(oav_times[m])[:5] + " [s]", fontsize=14, color="r")
@@ -996,7 +1038,7 @@ def lin2log_g2(lin_tau, lin_g2, num_points=False):
     lin_g2 = lin_g2[np.isfinite(lin_tau)]
     lin_tau = lin_tau[np.isfinite(lin_tau)]
     # print('from lin-to-log-g2_sampling: ',lin_tau)
-    if num_points == False:
+    if num_points is False:
         # automatically decide how many log-points (8/decade)
         dec = int(np.ceil((np.log10(lin_tau.max()) - np.log10(lin_tau.min())) * 8))
     else:
@@ -1061,7 +1103,6 @@ def delete_data(old_path, new_path="/tmp_data/data/"):
     new_path: the new path
     """
     import glob
-    import shutil
 
     # old_path = sud[2][0]
     # new_path = '/tmp_data/data/'
@@ -1086,11 +1127,11 @@ def show_tif_series(
 
     """
 
-    if center != None:
+    if center is not None:
         cy, cx = center
     # infs = sorted(sample_list)
     N = len(tif_series)
-    if Nx == None:
+    if Nx is None:
         sy = int(np.sqrt(N))
     else:
         sy = Nx
@@ -1138,16 +1179,16 @@ def ps(y, shift=0.5, replot=True, logplot="off", x=None):
 
 
     """
-    if x == None:
+    if x is None:
         x = np.arange(len(y))
     x = np.array(x)
     y = np.array(y)
 
     PEAK = x[np.argmax(y)]
-    PEAK_y = np.max(y)
+    np.max(y)
     COM = np.sum(x * y) / np.sum(y)
 
-    ### from Maksim: assume this is a peak profile:
+    # from Maksim: assume this is a peak profile:
     def is_positive(num):
         return True if num > 0 else False
 
@@ -1167,18 +1208,18 @@ def ps(y, shift=0.5, replot=True, logplot="off", x=None):
         ps.cen = CEN
         yf = ym
         # return {
-        #    'fwhm': abs(list_of_roots[-1] - list_of_roots[0]),
-        #    'x_range': list_of_roots,
+        # 'fwhm': abs(list_of_roots[-1] - list_of_roots[0]),
+        # 'x_range': list_of_roots,
         # }
     else:  # ok, maybe it's a step function..
         # print('no peak...trying step function...')
         ym = ym + shift
 
-        def err_func(x, x0, k=2, A=1, base=0):  #### erf fit from Yugang
+        def err_func(x, x0, k=2, A=1, base=0):  # erf fit from Yugang
             return base - A * erf(k * (x - x0))
 
         mod = Model(err_func)
-        ### estimate starting values:
+        # estimate starting values:
         x0 = np.mean(x)
         # k=0.1*(np.max(x)-np.min(x))
         pars = mod.make_params(x0=x0, k=2, A=1.0, base=0.0)
@@ -1196,7 +1237,7 @@ def ps(y, shift=0.5, replot=True, logplot="off", x=None):
         ps.fwhm = FWHM
 
     if replot:
-        ### re-plot results:
+        # re-plot results:
         if logplot == "on":
             fig, ax = plt.subplots()  # plt.figure()
             ax.semilogy([PEAK, PEAK], [np.min(y), np.max(y)], "k--", label="PEAK")
@@ -1224,7 +1265,7 @@ def ps(y, shift=0.5, replot=True, logplot="off", x=None):
             # plt.title('uid: '+str(uid)+' @ '+str(t)+'\nPEAK: '+str(PEAK_y)[:8]+' @ '+str(PEAK)[:8]+'   COM @ '+str(COM)[:8]+ '\n FWHM: '+str(FWHM)[:8]+' @ CEN: '+str(CEN)[:8],size=9)
             # plt.show()
 
-        ### assign values of interest as function attributes:
+        # assign values of interest as function attributes:
         ps.peak = PEAK
         ps.com = COM
     return ps.cen
@@ -1322,8 +1363,8 @@ def get_q_iq_using_dynamic_mask(FD, mask, setup_pargs, bin_number=1, threshold=1
        q_saxs:  q in A-1
     """
     beg = FD.beg
-    end = FD.end
-    shape = FD.rdframe(beg).shape
+    FD.end
+    FD.rdframe(beg).shape
     Nimg_ = FD.end - FD.beg
     # Nimg_ = 100
     Nimg = Nimg_ // bin_number
@@ -1397,14 +1438,14 @@ def average_array_withNan(array, axis=0, mask=None):
     Output:
         avg: averaged array along axis
     """
-    shape = array.shape
-    if mask == None:
+    array.shape
+    if mask is None:
         mask = np.isnan(array)
         # mask = np.ma.masked_invalid(array).mask
     array_ = np.ma.masked_array(array, mask=mask)
     try:
         sums = np.array(np.ma.sum(array_[:, :], axis=axis))
-    except:
+    except Exception:
         sums = np.array(np.ma.sum(array_[:], axis=axis))
 
     cts = np.sum(~mask, axis=axis)
@@ -1584,7 +1625,7 @@ def ls_dir2(inDir, string=None):
     from os import listdir
     from os.path import isfile, join
 
-    if string == None:
+    if string is None:
         tifs = np.array([f for f in listdir(inDir) if isfile(join(inDir, f))])
     else:
         tifs = np.array([f for f in listdir(inDir) if (isfile(join(inDir, f))) & (string in f)])
@@ -1602,7 +1643,7 @@ def re_filename(old_filename, new_filename, inDir=None, verbose=True):
             '/home/yuzhang/Analysis/Timepix/2017_3/Results/run17/run17_pos1/'
            )
     """
-    if inDir != None:
+    if inDir is not None:
         os.rename(inDir + old_filename, inDir + new_filename)
     else:
         os.rename(old_filename, new_filename)
@@ -1674,7 +1715,7 @@ def get_roi_nr(qdict, q, phi, q_nr=True, phi_nr=False, q_thresh=0, p_thresh=0, s
         qslist,
         phislist,
     ]  # -> this is the original
-    if silent == False:
+    if silent is False:
         print("list of available Qs:")
         print(qslist)
         print("list of available phis:")
@@ -1705,10 +1746,10 @@ def get_fit_by_two_linear(
             convinent fit class, gmfit2(x) gives yvale
 
     """
-    if xrange == None:
+    if xrange is None:
         x1, x2 = min(x), max(x)
     x1, x2 = xrange
-    if mid_xpoint2 == None:
+    if mid_xpoint2 is None:
         mid_xpoint2 = mid_xpoint1
     D1, gmfit1 = linear_fit(x, y, xrange=[x1, mid_xpoint1])
     D2, gmfit2 = linear_fit(x, y, xrange=[mid_xpoint2, x2])
@@ -1740,7 +1781,7 @@ def get_curve_turning_points(
 
 def plot_fit_two_linear_fit(x, y, gmfit1, gmfit2, ax=None):
     """YG Octo 16,2017 Plot data with two fitted linear func"""
-    if ax == None:
+    if ax is None:
         fig, ax = plt.subplots()
     plot1D(x=x, y=y, ax=ax, c="k", legend="data", m="o", ls="")  # logx=True, logy=True )
     plot1D(x=x, y=gmfit1(x), ax=ax, c="r", m="", ls="-", legend="fit1")
@@ -1752,7 +1793,7 @@ def linear_fit(x, y, xrange=None):
     """YG Octo 16,2017 copied from XPCS_SAXS
     a linear fit
     """
-    if xrange != None:
+    if xrange is not None:
         xmin, xmax = xrange
         x1, x2 = find_index(x, xmin, tolerance=None), find_index(x, xmax, tolerance=None)
         x_ = x[x1:x2]
@@ -1768,11 +1809,10 @@ def linear_fit(x, y, xrange=None):
 def find_index(x, x0, tolerance=None):
     """YG Octo 16,2017 copied from SAXS
     find index of x0 in x
-    #find the position of P in a list (plist) with tolerance
+    # find the position of P in a list (plist) with tolerance
     """
 
-    N = len(x)
-    i = 0
+    len(x)
     if x0 > max(x):
         position = len(x) - 1
     elif x0 < min(x):
@@ -1785,13 +1825,13 @@ def find_index(x, x0, tolerance=None):
 def find_index_old(x, x0, tolerance=None):
     """YG Octo 16,2017 copied from SAXS
     find index of x0 in x
-    #find the position of P in a list (plist) with tolerance
+    # find the position of P in a list (plist) with tolerance
     """
 
-    N = len(x)
+    len(x)
     i = 0
     position = None
-    if tolerance == None:
+    if tolerance is None:
         tolerance = (x[1] - x[0]) / 2.0
     if x0 > max(x):
         position = len(x) - 1
@@ -1896,7 +1936,7 @@ def sgolay2d(z, window_size, order, derivative=None):
     Z[-half_size:, :half_size] = band - np.abs(np.fliplr(Z[-half_size:, half_size + 1 : 2 * half_size + 1]) - band)
 
     # solve system and convolve
-    if derivative == None:
+    if derivative is None:
         m = np.linalg.pinv(A)[0].reshape((window_size, -1))
         return scipy.signal.fftconvolve(Z, m, mode="valid")
     elif derivative == "col":
@@ -1944,7 +1984,7 @@ def extract_data_from_file(
         Or giving start_row: int
         good_cols: list of integer, good index of cols
         lables: the label of the good_cols
-        #save: False, if True will save the data into a csv file with filename appending csv ??
+        # save: False, if True will save the data into a csv file with filename appending csv ??
     Return:
         a pds.dataframe
     Example:
@@ -1961,30 +2001,30 @@ def extract_data_from_file(
         p = fin.readlines()
         di = 1e20
         for i, line in enumerate(p):
-            if start_row != None:
+            if start_row is not None:
                 di = start_row
-            elif good_line_pattern != None:
+            elif good_line_pattern is not None:
                 if good_line_pattern in line:
                     di = i
             else:
                 di = 0
             if i == di + 1:
                 els = line.split()
-                if good_cols == None:
+                if good_cols is None:
                     data = np.array(els, dtype=float)
                 else:
                     data = np.array([els[j] for j in good_cols], dtype=float)
             elif i > di:
                 try:
                     els = line.split()
-                    if good_cols == None:
+                    if good_cols is None:
                         temp = np.array(els, dtype=float)
                     else:
                         temp = np.array([els[j] for j in good_cols], dtype=float)
                     data = np.vstack((data, temp))
-                except:
+                except Exception:
                     pass
-        if labels == None:
+        if labels is None:
             labels = np.arange(data.shape[1])
         df = pds.DataFrame(data, index=np.arange(data.shape[0]), columns=labels)
     return df
@@ -2012,9 +2052,9 @@ def get_print_uids(start_time, stop_time, return_all_info=False):
         date = time.ctime(hdrs[-i - 1]["start"]["time"])
         try:
             m = hdrs[-i - 1]["start"]["Measurement"]
-        except:
+        except Exception:
             m = ""
-        info = "%3d: uid = '%s' ##%s #%s: %s--  %s " % (i, uid, date, sid, m, fuid)
+        info = "%3d: uid = '%s' #%s #%s: %s--  %s " % (i, uid, date, sid, m, fuid)
         print(info)
         if return_all_info:
             all_info[n] = info
@@ -2081,7 +2121,7 @@ def create_ring_mask(shape, r1, r2, center, mask=None):
     m[rr, cc] = 1
     rr, cc = disk((center[1], center[0]), r1, shape=shape)
     m[rr, cc] = 0
-    if mask != None:
+    if mask is not None:
         m += mask
     return m
 
@@ -2156,7 +2196,7 @@ def validate_uid(uid):
         imgs = load_data(uid, md["detector"], reverse=True)
         print(imgs)
         return 1
-    except:
+    except Exception:
         print("Can't load this uid=%s!" % uid)
         return 0
 
@@ -2252,7 +2292,7 @@ def plot_g1(taus, g2, g2_fit_paras, qr=None, ylim=[0, 1], title=""):
     Plot one-time correlation, giving taus, g2, g2_fit"""
     noqs = g2.shape[1]
     fig, ax = plt.subplots()
-    if qr == None:
+    if qr is None:
         qr = np.arange(noqs)
     for i in range(noqs):
         b = g2_fit_paras["baseline"][i]
@@ -2304,7 +2344,7 @@ def filter_roi_mask(filter_dict, roi_mask, avg_img, filter_type="ylim"):
     return rm
 
 
-##
+#
 # Dev at March 31 for create Eiger chip mask
 def create_chip_edges_mask(det="1M"):
     """Create a chip edge mask for Eiger detector"""
@@ -2356,7 +2396,7 @@ def create_folder(base_folder, sub_folder):
     """
 
     data_dir0 = os.path.join(base_folder, sub_folder)
-    ##Or define data_dir here, e.g.,#data_dir = '/XF11ID/analysis/2016_2/rheadric/test/'
+    # Or define data_dir here, e.g.,#data_dir = '/XF11ID/analysis/2016_2/rheadric/test/'
     os.makedirs(data_dir0, exist_ok=True)
     print("Results from this analysis will be stashed in the directory %s" % data_dir0)
     return data_dir0
@@ -2372,20 +2412,20 @@ def create_user_folder(CYCLE, username=None, default_dir="/XF11ID/analysis/"):
         Created folder name
     """
     if username != "Default":
-        if username == None:
+        if username is None:
             username = getpass.getuser()
         data_dir0 = os.path.join(default_dir, CYCLE, username, "Results/")
     else:
         data_dir0 = os.path.join(default_dir, CYCLE + "/")
-    ##Or define data_dir here, e.g.,#data_dir = '/XF11ID/analysis/2016_2/rheadric/test/'
+    # Or define data_dir here, e.g.,#data_dir = '/XF11ID/analysis/2016_2/rheadric/test/'
     os.makedirs(data_dir0, exist_ok=True)
     print("Results from this analysis will be stashed in the directory %s" % data_dir0)
     return data_dir0
 
 
-##################################
-#########For dose analysis #######
-##################################
+#
+# For dose analysis #
+#
 def get_fra_num_by_dose(exp_dose, exp_time, att=1, dead_time=2):
     """
     Calculate the frame number to be correlated by giving a X-ray exposure dose
@@ -2445,7 +2485,7 @@ def get_series_g2_taus(fra_max_list, acq_time=1, max_fra_num=None, log_taus=True
     """
     tausd = {}
     for n in fra_max_list:
-        if max_fra_num != None:
+        if max_fra_num is not None:
             L = max_fra_num
         else:
             L = np.infty
@@ -2488,14 +2528,14 @@ def check_lost_metadata(md, Nimg=None, inc_x0=None, inc_y0=None, pixelsize=7.5 *
     dpix = md["x_pixel_size"] * 1000.0  # in mm, eiger 4m is 0.075 mm
     try:
         lambda_ = md["wavelength"]
-    except:
+    except Exception:
         lambda_ = md["incident_wavelength"]  # wavelegth of the X-rays in Angstroms
     try:
         Ldet = md["det_distance"]
         if Ldet <= 1000:
             Ldet *= 1000
             md["det_distance"] = Ldet
-    except:
+    except Exception:
         Ldet = md["detector_distance"]
         if Ldet <= 1000:
             Ldet *= 1000
@@ -2503,21 +2543,21 @@ def check_lost_metadata(md, Nimg=None, inc_x0=None, inc_y0=None, pixelsize=7.5 *
 
     try:  # try exp time from detector
         exposuretime = md["count_time"]  # exposure time in sec
-    except:
+    except Exception:
         exposuretime = md["cam_acquire_time"]  # exposure time in sec
     try:  # try acq time from detector
         acquisition_period = md["frame_time"]
-    except:
+    except Exception:
         try:
             acquisition_period = md["acquire period"]
-        except:
+        except Exception:
             uid = md["uid"]
             acquisition_period = float(db[uid]["start"]["acquire period"])
     timeperframe = acquisition_period
-    if inc_x0 != None:
+    if inc_x0 is not None:
         mdn["beam_center_x"] = inc_y0
         print("Beam_center_x has been changed to %s. (no change in raw metadata): " % inc_y0)
-    if inc_y0 != None:
+    if inc_y0 is not None:
         mdn["beam_center_y"] = inc_x0
         print("Beam_center_y has been changed to %s.  (no change in raw metadata): " % inc_x0)
     center = [int(mdn["beam_center_x"]), int(mdn["beam_center_y"])]  # beam center [y,x] for python image
@@ -2589,13 +2629,13 @@ def get_qval_dict(qr_center, qz_center=None, qval_dict=None, multi_qr_for_one_qz
 
     """
 
-    if qval_dict == None:
+    if qval_dict is None:
         qval_dict = {}
         maxN = 0
     else:
         maxN = np.max(list(qval_dict.keys())) + 1
 
-    if qz_center != None:
+    if qz_center is not None:
         if multi_qr_for_one_qz:
             if one_qz_multi_qr:
                 for qzind in range(len(qz_center)):
@@ -2668,7 +2708,7 @@ def check_bad_uids(uids, mask, img_choice_N=10, bad_uids_index=None):
     buids = []
     guids = list(uids)
     # print( guids )
-    if bad_uids_index == None:
+    if bad_uids_index is None:
         bad_uids_index = []
     for i, uid in enumerate(uids):
         # print( i, uid )
@@ -2702,7 +2742,7 @@ def find_uids(start_time, stop_time):
     hdrs = db(start_time=start_time, stop_time=stop_time)
     try:
         print("Totally %s uids are found." % (len(list(hdrs))))
-    except:
+    except Exception:
         pass
     sids = []
     uids = []
@@ -2724,7 +2764,7 @@ def ployfit(y, x=None, order=20):
     fit data (one-d array) by a ploynominal function
     return the fitted one-d array
     """
-    if x == None:
+    if x is None:
         x = range(len(y))
     pol = np.polyfit(x, y, order)
     return np.polyval(pol, x)
@@ -2749,9 +2789,9 @@ def check_bad_data_points(
          else: use the mean (a value) of imgsum and scale to get low and high threshold, it's good to remove bad frames/pixels on top of  flatten curve
 
     """
-    if good_start == None:
+    if good_start is None:
         good_start = 0
-    if good_end == None:
+    if good_end is None:
         good_end = len(data)
     bd1 = [i for i in range(0, good_start)]
     bd3 = [i for i in range(good_end, len(data))]
@@ -2809,7 +2849,7 @@ def check_bad_data_points(
             legend_size=legend_size,
         )
 
-        if path != None:
+        if path is not None:
             fp = path + "%s" % (uid) + "_find_bad_points" + ".png"
             plt.savefig(fp, dpi=fig.dpi)
     bd2 = list(np.where(np.abs(d - d.mean()) > scale * d.std())[0] + good_start)
@@ -2840,9 +2880,9 @@ def get_bad_frame_list(
          else: use the mean (a value) of imgsum and scale to get low and high threshold, it's good to remove bad frames/pixels on top of  flatten curve
 
     """
-    if good_start == None:
+    if good_start is None:
         good_start = 0
-    if good_end == None:
+    if good_end is None:
         good_end = len(imgsum)
     bd1 = [i for i in range(0, good_start)]
     bd3 = [i for i in range(good_end, len(imgsum))]
@@ -2900,7 +2940,7 @@ def get_bad_frame_list(
             legend_size=legend_size,
         )
 
-        if path != None:
+        if path is not None:
             fp = path + "%s" % (uid) + "_imgsum_analysis" + ".png"
             plt.savefig(fp, dpi=fig.dpi)
 
@@ -2956,12 +2996,12 @@ def print_dict(dicts, keys=None):
     print keys: values in a dicts
     if keys is None: print all the keys
     """
-    if keys == None:
+    if keys is None:
         keys = list(dicts.keys())
     for k in keys:
         try:
             print("%s--> %s" % (k, dicts[k]))
-        except:
+        except Exception:
             pass
 
 
@@ -3003,7 +3043,7 @@ def get_meta_data(uid, default_dec="eiger", *argv, **kwargs):
     md["suid"] = uid  # short uid
     try:
         md["filename"] = get_sid_filenames(header)[2][0]
-    except:
+    except Exception:
         md["filename"] = "N.A."
 
     devices = sorted(list(header.devices()))
@@ -3023,7 +3063,7 @@ def get_meta_data(uid, default_dec="eiger", *argv, **kwargs):
     # detector_names = sorted( header.start['detectors'] )
     detector_names = sorted(get_detectors(db[uid]))
     # if len(detector_names) > 1:
-    #    raise ValueError("More than one det. This would have unintented consequences.")
+    # raise ValueError("More than one det. This would have unintented consequences.")
     detector_name = detector_names[0]
     # md['detector'] = detector_name
     md["detector"] = get_detector(header)
@@ -3034,12 +3074,12 @@ def get_meta_data(uid, default_dec="eiger", *argv, **kwargs):
         md[newkey] = val
 
     # for k,v in ev['descriptor']['configuration'][dec]['data'].items():
-    #     md[ k[len(dec)+1:] ]= v
+    # md[ k[len(dec)+1:] ]= v
 
     try:
         md.update(header.start["plan_args"].items())
         md.pop("plan_args")
-    except:
+    except Exception:
         pass
     md.update(header.start.items())
 
@@ -3050,7 +3090,7 @@ def get_meta_data(uid, default_dec="eiger", *argv, **kwargs):
         if "primary" in header.v2:
             descriptor = header.v2["primary"].descriptors[0]
             md["img_shape"] = descriptor["data_keys"][md["detector"]]["shape"][:2][::-1]
-    except:
+    except Exception:
         if verbose:
             print("couldn't find image shape...skip!")
         else:
@@ -3059,7 +3099,7 @@ def get_meta_data(uid, default_dec="eiger", *argv, **kwargs):
 
     # for k, v in sorted(md.items()):
     # ...
-    #    print(f'{k}: {v}')
+    # print(f'{k}: {v}')
 
     return md
 
@@ -3103,7 +3143,7 @@ def get_max_countc(FD, labeled_array):
             (p, v) = FD.rdrawframe(i)
             w = np.where(timg[p])[0]
             max_inten = max(max_inten, np.max(v[w]))
-        except:
+        except Exception:
             pass
     return max_inten
 
@@ -3121,7 +3161,7 @@ def create_polygon_mask(image, xcorners, ycorners):
 
 
     """
-    from skimage.draw import disk, line, line_aa, polygon
+    from skimage.draw import polygon
 
     imy, imx = image.shape
     bst_mask = np.zeros_like(image, dtype=bool)
@@ -3144,7 +3184,7 @@ def create_rectangle_mask(image, xcorners, ycorners):
 
 
     """
-    from skimage.draw import disk, line, line_aa, polygon
+    from skimage.draw import polygon
 
     imy, imx = image.shape
     bst_mask = np.zeros_like(image, dtype=bool)
@@ -3199,7 +3239,7 @@ def create_wedge(image, center, radius, wcors, acute_angle=True):
     wcors: [ [x1,x2,x3...], [y1,y2,y3..]
 
     """
-    from skimage.draw import disk, line, line_aa, polygon
+    from skimage.draw import disk, polygon
 
     imy, imx = image.shape
     cy, cx = center
@@ -3236,12 +3276,12 @@ def create_cross_mask(
     Return:
     the cross mask
     """
-    from skimage.draw import disk, line, line_aa, polygon
+    from skimage.draw import disk, polygon
 
     imy, imx = image.shape
     cx, cy = center
     bst_mask = np.zeros_like(image, dtype=bool)
-    ###
+    #
     # for right part
     wy = wy_right
     x = np.array([cx, imx, imx, cx])
@@ -3249,7 +3289,7 @@ def create_cross_mask(
     rr, cc = polygon(y, x, shape=image.shape)
     bst_mask[rr, cc] = 1
 
-    ###
+    #
     # for left part
     wy = wy_left
     x = np.array([0, cx, cx, 0])
@@ -3257,7 +3297,7 @@ def create_cross_mask(
     rr, cc = polygon(y, x, shape=image.shape)
     bst_mask[rr, cc] = 1
 
-    ###
+    #
     # for up part
     wx = wx_up
     x = np.array([cx - wx, cx + wx, cx + wx, cx - wx])
@@ -3265,7 +3305,7 @@ def create_cross_mask(
     rr, cc = polygon(y, x, shape=image.shape)
     bst_mask[rr, cc] = 1
 
-    ###
+    #
     # for low part
     wx = wx_down
     x = np.array([cx - wx, cx + wx, cx + wx, cx - wx])
@@ -3325,14 +3365,14 @@ def export_scan_scalar(
     return datap
 
 
-#####
+#
 # load data by databroker
 
 
 def get_flatfield(uid, reverse=False):
     import h5py
 
-    detector = get_detector(db[uid])
+    get_detector(db[uid])
     sud = get_sid_filenames(db[uid])
     master_path = "%s_master.h5" % (sud[2][0])
     print(master_path)
@@ -3438,48 +3478,48 @@ def get_sid_filenames(hdr, verbose=False):
 
 
 # def get_sid_filenames(header):
-#     """YG. Dev Jan, 2016
-#     Get a bluesky scan_id, unique_id, filename by giveing uid
+# """YG. Dev Jan, 2016
+# Get a bluesky scan_id, unique_id, filename by giveing uid
 
-#     Parameters
-#     ----------
-#     header: a header of a bluesky scan, e.g. db[-1]
+# Parameters
+# ----------
+# header: a header of a bluesky scan, e.g. db[-1]
 
-#     Returns
-#     -------
-#     scan_id: integer
-#     unique_id: string, a full string of a uid
-#     filename: sring
+# Returns
+# -------
+# scan_id: integer
+# unique_id: string, a full string of a uid
+# filename: sring
 
-#     Usuage:
-#     sid,uid, filenames   = get_sid_filenames(db[uid])
+# Usuage:
+# sid,uid, filenames   = get_sid_filenames(db[uid])
 
-#     """
-#     from collections import defaultdict
-#     from glob import glob
-#     from pathlib import Path
+# """
+# from collections import defaultdict
+# from glob import glob
+# from pathlib import Path
 
-#     filepaths = []
-#     resources = {}  # uid: document
-#     datums = defaultdict(list)  # uid: List(document)
-#     for name, doc in header.documents():
-#         if name == "resource":
-#             resources[doc["uid"]] = doc
-#         elif name == "datum":
-#             datums[doc["resource"]].append(doc)
-#         elif name == "datum_page":
-#             for datum in event_model.unpack_datum_page(doc):
-#                 datums[datum["resource"]].append(datum)
-#     for resource_uid, resource in resources.items():
-#         file_prefix = Path(resource.get('root', '/'), resource["resource_path"])
-#         if 'eiger' not in resource['spec'].lower():
-#             continue
-#         for datum in datums[resource_uid]:
-#             dm_kw = datum["datum_kwargs"]
-#             seq_id = dm_kw['seq_id']
-#             new_filepaths = glob(f'{file_prefix!s}_{seq_id}*')
-#             filepaths.extend(new_filepaths)
-#     return header.start['scan_id'],  header.start['uid'], filepaths
+# filepaths = []
+# resources = {}  # uid: document
+# datums = defaultdict(list)  # uid: List(document)
+# for name, doc in header.documents():
+# if name == "resource":
+# resources[doc["uid"]] = doc
+# elif name == "datum":
+# datums[doc["resource"]].append(doc)
+# elif name == "datum_page":
+# for datum in event_model.unpack_datum_page(doc):
+# datums[datum["resource"]].append(datum)
+# for resource_uid, resource in resources.items():
+# file_prefix = Path(resource.get('root', '/'), resource["resource_path"])
+# if 'eiger' not in resource['spec'].lower():
+# continue
+# for datum in datums[resource_uid]:
+# dm_kw = datum["datum_kwargs"]
+# seq_id = dm_kw['seq_id']
+# new_filepaths = glob(f'{file_prefix!s}_{seq_id}*')
+# filepaths.extend(new_filepaths)
+# return header.start['scan_id'],  header.start['uid'], filepaths
 
 
 def load_dask_data(uid, detector, mask_path_full, reverse=False, rot90=False):
@@ -3523,7 +3563,6 @@ def load_dask_data(uid, detector, mask_path_full, reverse=False, rot90=False):
         mask_dict = json.load(json_open)
         img_md["pixel_mask"] = np.array(mask_dict["pixel_mask"])
         img_md["binary_mask"] = np.array(mask_dict["binary_mask"])
-        del mask_dict
 
     # load image data as dask-arry:
     dimg = hdr.xarray_dask()[md["detector"]][0]
@@ -3641,7 +3680,7 @@ def load_data2(uid, detector="eiger4m_single_image"):
         try:
             (ev,) = hdr.events(fields=[detector])
             flag = 0
-        except:
+        except Exception:
             flag += 1
             print("Trying again ...!")
 
@@ -3725,7 +3764,7 @@ def create_hot_pixel_mask(img, threshold, center=None, center_radius=300, outer_
 
     """
     bst_mask = np.ones_like(img, dtype=bool)
-    if center != None:
+    if center is not None:
         from skimage.draw import disk
 
         imy, imx = img.shape
@@ -3786,8 +3825,8 @@ def RemoveHot(img, threshold=1e7, plot_=True):
     return mask
 
 
-############
-###plot data
+#
+# plot data
 
 
 def show_img(
@@ -3839,7 +3878,7 @@ def show_img(
     -------
     None
     """
-    if ax == None:
+    if ax is None:
         if RUN_GUI:
             fig = Figure()
             ax = fig.add_subplot(111)
@@ -3848,7 +3887,7 @@ def show_img(
     else:
         fig, ax = ax
 
-    if center != None:
+    if center is not None:
         plot1D(center[1], center[0], ax=ax, c="b", m="o", legend="")
     if not logs:
         if not use_mat_imshow:
@@ -3886,13 +3925,13 @@ def show_img(
                 norm=LogNorm(vmin, vmax),
                 extent=extent,
             )
-    if label_array != None:
+    if label_array is not None:
         im2 = show_label_array(ax, label_array, alpha=alpha, cmap=cmap, interpolation=interpolation)
 
     ax.set_title(image_name)
-    if xlim != None:
+    if xlim is not None:
         ax.set_xlim(xlim)
-    if ylim != None:
+    if ylim is not None:
         ax.set_ylim(ylim)
 
     if not show_ticks:
@@ -3906,13 +3945,13 @@ def show_img(
         # mpl.rcParams['ytick.labelsize'] = tick_size
         # print(tick_size)
 
-    if ylabel != None:
+    if ylabel is not None:
         # ax.set_ylabel(ylabel)#, fontsize = 9)
         ax.set_ylabel(ylabel, fontsize=lab_fontsize)
-    if xlabel != None:
+    if xlabel is not None:
         ax.set_xlabel(xlabel, fontsize=lab_fontsize)
 
-    if aspect != None:
+    if aspect is not None:
         # aspect = image.shape[1]/float( image.shape[0] )
         ax.set_aspect(aspect)
     else:
@@ -3929,7 +3968,7 @@ def show_img(
             fp = path + "%s" % (file_name) + CurTime + "." + save_format
         else:
             fp = path + "%s" % (image_name) + "." + save_format
-        if dpi == None:
+        if dpi is None:
             dpi = fig.dpi
         plt.savefig(fp, dpi=dpi)
     # fig.set_tight_layout(tight)
@@ -3965,53 +4004,53 @@ def plot1D(
     -------
     None
     """
-    if ax == None:
+    if ax is None:
         if RUN_GUI:
             fig = Figure()
             ax = fig.add_subplot(111)
         else:
-            if figsize != None:
+            if figsize is not None:
                 fig, ax = plt.subplots(figsize=figsize)
             else:
                 fig, ax = plt.subplots()
 
-    if legend == None:
+    if legend is None:
         legend = " "
     try:
         logx = kwargs["logx"]
-    except:
+    except Exception:
         logx = False
     try:
         logy = kwargs["logy"]
-    except:
+    except Exception:
         logy = False
 
     try:
         logxy = kwargs["logxy"]
-    except:
+    except Exception:
         logxy = False
 
-    if logx == True and logy == True:
+    if logx and logy:
         logxy = True
 
     try:
         marker = kwargs["marker"]
-    except:
+    except Exception:
         try:
             marker = kwargs["m"]
-        except:
+        except Exception:
             marker = next(markers_)
     try:
         color = kwargs["color"]
-    except:
+    except Exception:
         try:
             color = kwargs["c"]
-        except:
+        except Exception:
             color = next(colors_)
 
-    if x == None:
+    if x is None:
         x = range(len(y))
-    if yerr == None:
+    if yerr is None:
         ax.plot(
             x,
             y,
@@ -4060,7 +4099,7 @@ def plot1D(
         title = "plot"
     ax.set_title(title)
     # ax.set_xlabel("$Log(q)$"r'($\AA^{-1}$)')
-    if (legend != "") and (legend != None):
+    if (legend != "") and (legend is not None):
         ax.legend(loc="best", fontsize=legend_size)
     if "save" in kwargs.keys():
         if kwargs["save"]:
@@ -4073,7 +4112,7 @@ def plot1D(
         return fig
 
 
-###
+#
 
 
 def check_shutter_open(data_series, min_inten=0, time_edge=[0, 10], plot_=False, *argv, **kwargs):
@@ -4150,7 +4189,7 @@ def get_each_frame_intensity(
 
 def create_time_slice(N, slice_num, slice_width, edges=None):
     """create a ROI time regions"""
-    if edges != None:
+    if edges is not None:
         time_edge = edges
     else:
         if slice_num == 1:
@@ -4203,14 +4242,14 @@ def show_label_array(ax, label_array, cmap=None, aspect=None, interpolation="nea
     img : AxesImage
         The artist added to the axes
     """
-    if cmap == None:
+    if cmap is None:
         cmap = "viridis"
     # print(cmap)
     _cmap = copy.copy((mcm.get_cmap(cmap)))
     _cmap.set_under("w", 0)
     vmin = max(0.5, kwargs.pop("vmin", 0.5))
     im = ax.imshow(label_array, cmap=cmap, interpolation=interpolation, vmin=vmin, **kwargs)
-    if aspect == None:
+    if aspect is None:
         ax.set_aspect(aspect="auto")
         # ax.set_aspect('equal')
     return im
@@ -4308,7 +4347,7 @@ def show_ROI_on_image(
     if RUN_GUI:
         fig = Figure(figsize=(8, 8))
         axes = fig.add_subplot(111)
-    elif fig_ax != None:
+    elif fig_ax is not None:
         fig, axes = fig_ax
     else:
         fig, axes = plt.subplots()  # plt.subplots(figsize=(8,8))
@@ -4337,7 +4376,7 @@ def show_ROI_on_image(
             origin="lower",
         )
     else:
-        edg = get_image_edge(ROI)
+        get_image_edge(ROI)
         image_ = get_image_with_roi(image, ROI, scale_factor=2)
         # fig, axes = plt.subplots( )
         show_img(
@@ -4350,8 +4389,8 @@ def show_ROI_on_image(
             cmap=cmap,
         )
 
-    if rect_reqion == None:
-        if center != None:
+    if rect_reqion is None:
+        if center is not None:
             x1, x2 = [center[1] - rwidth, center[1] + rwidth]
             y1, y2 = [center[0] - rwidth, center[0] + rwidth]
             axes.set_xlim([x1, x2])
@@ -4392,7 +4431,7 @@ def show_ROI_on_image(
 
 def crop_image(image, crop_mask):
     """Crop the non_zeros pixels of an image  to a new image"""
-    from skimage.util import crop, pad
+    from skimage.util import crop
 
     pxlst = np.where(crop_mask.ravel())[0]
     dims = crop_mask.shape
@@ -4414,7 +4453,7 @@ def crop_image(image, crop_mask):
 
 def get_avg_img(data_series, img_samp_index=None, sampling=100, plot_=False, save=False, *argv, **kwargs):
     """Get average imagef from a data_series by every sampling number to save time"""
-    if img_samp_index == None:
+    if img_samp_index is None:
         avg_img = np.average(data_series[::sampling], axis=0)
     else:
         avg_img = np.zeros_like(data_series[0])
@@ -4508,7 +4547,7 @@ def cal_g2(image_series, ring_mask, bad_image_process, bad_frame_list=None, good
         bad_img_list = np.array(bad_frame_list) - good_start
         new_imgs = mask_image.bad_to_nan_gen(image_series, bad_img_list)
 
-        if num_lev == None:
+        if num_lev is None:
             num_lev = int(np.log(noframes / (num_buf - 1)) / np.log(2) + 1) + 1
         print("In this g2 calculation, the buf and lev number are: %s--%s--" % (num_buf, num_lev))
         print("%s frames will be processed..." % (noframes))
@@ -4519,7 +4558,7 @@ def cal_g2(image_series, ring_mask, bad_image_process, bad_frame_list=None, good
 
     else:
 
-        if num_lev == None:
+        if num_lev is None:
             num_lev = int(np.log(noframes / (num_buf - 1)) / np.log(2) + 1) + 1
         print("In this g2 calculation, the buf and lev number are: %s--%s--" % (num_buf, num_lev))
         print("%s frames will be processed..." % (noframes))
@@ -4564,7 +4603,6 @@ def trans_data_to_pd(data, label=None, dtype="array"):
         a pandas.DataFrame
     """
     # lists a [ list1, list2...] all the list have the same length
-    import sys
 
     import pandas as pd
     from numpy import arange, array
@@ -4579,7 +4617,7 @@ def trans_data_to_pd(data, label=None, dtype="array"):
         print("Wrong data type! Now only support 'list' and 'array' tpye")
 
     index = arange(N)
-    if label == None:
+    if label is None:
         label = ["data%s" % i for i in range(M)]
     # print label
     df = pd.DataFrame(data, index=index, columns=label)
@@ -4610,7 +4648,7 @@ def save_lists(data, label=None, filename=None, path=None, return_res=False, ver
     df = trans_data_to_pd(d.T, label, "array")
     # dt =datetime.now()
     # CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
-    if filename == None:
+    if filename is None:
         filename = "data"
     filename = os.path.join(path, filename)  # +'.csv')
     df.to_csv(filename)
@@ -4669,7 +4707,7 @@ def save_arrays(data, label=None, dtype="array", filename=None, path=None, retur
     df = trans_data_to_pd(data, label, dtype)
     # dt =datetime.now()
     # CurTime = '%s%02d%02d-%02d%02d-' % (dt.year, dt.month, dt.day,dt.hour,dt.minute)
-    if filename == None:
+    if filename is None:
         filename = "data"
     filename_ = os.path.join(path, filename)  # +'.csv')
     df.to_csv(filename_)
@@ -4822,12 +4860,12 @@ def ring_edges(inner_radius, width, spacing=0, num_rings=None):
     try:
         iter(width)
         width_is_list = True
-    except:
+    except Exception:
         width_is_list = False
     try:
         iter(spacing)
         spacing_is_list = True
-    except:
+    except Exception:
         spacing_is_list = False
 
     # width_is_list = isinstance(width, collections.Iterable)
@@ -4835,7 +4873,7 @@ def ring_edges(inner_radius, width, spacing=0, num_rings=None):
     if width_is_list and spacing_is_list:
         if len(width) != len(spacing) + 1:
             raise ValueError("List of spacings must be one less than list " "of widths.")
-    if num_rings == None:
+    if num_rings is None:
         try:
             num_rings = len(width)
         except TypeError:
@@ -4858,7 +4896,7 @@ def ring_edges(inner_radius, width, spacing=0, num_rings=None):
     if not width_is_list:
         width = np.ones(num_rings) * width
 
-    if spacing == None:
+    if spacing is None:
         spacing = []
     else:
         if not spacing_is_list:
@@ -4907,13 +4945,13 @@ def get_non_uniform_edges(
         inner and outer radius for each ring
     """
 
-    if number_rings == None:
+    if number_rings is None:
         number_rings = 1
     edges = np.zeros([len(centers) * number_rings, 2])
 
     try:
         iter(width)
-    except:
+    except Exception:
         width = np.ones_like(centers) * width
     for i, c in enumerate(centers):
         edges[i * number_rings : (i + 1) * number_rings, :] = ring_edges(
@@ -4929,7 +4967,6 @@ def trans_tf_to_td(tf, dtype="dframe"):
     import datetime
 
     import numpy as np
-    import pandas as pd
 
     """translate time.float to time.date,
        td.type dframe: a dataframe
@@ -5084,7 +5121,7 @@ def save_g2_general(g2, taus, qr=None, qz=None, uid="uid", path=None, return_res
         return df
 
 
-###########
+#
 # *for g2 fit and plot
 
 
@@ -5122,7 +5159,7 @@ def flow_para_function(x, beta, relaxation_rate, flow_velocity, baseline=1):
 
 def flow_para_function_explicitq(x, beta, diffusion, flow_velocity, alpha=1, baseline=1, qr=1, q_ang=0):
     """Nov 9, 2017 Basically, make q vector to (qr, angle),
-    ###relaxation_rate is actually a diffusion rate
+    # relaxation_rate is actually a diffusion rate
     flow_velocity: q.v (q vector dot v vector = q*v*cos(angle) )
     Diffusion part: np.exp( -2*D q^2 *tau )
     q_ang: would be    np.radians( ang - 90 )
@@ -5392,7 +5429,7 @@ def get_g2_fit_general(
     fit_res = []
     model_data = []
     for i in range(num_rings):
-        if fit_range != None:
+        if fit_range is not None:
             y_ = g2[1:, i][fit_range[0] : fit_range[1]]
             lags_ = taus[1:][fit_range[0] : fit_range[1]]
         else:
@@ -5411,7 +5448,7 @@ def get_g2_fit_general(
             try:
                 if isinstance(_guess_val[k], (np.ndarray, list)):
                     pars[k].value = _guess_val[k][i]
-            except:
+            except Exception:
                 pass
 
         if True:
@@ -5431,7 +5468,7 @@ def get_g2_fit_general(
             # print(k, _guess_val[k]  )
             # pars[k].value = _guess_val[k][i]
         if function == "flow_para_function_explicitq" or function == "flow_para_qang":
-            if qval_dict == None:
+            if qval_dict is None:
                 print("Please provide qval_dict, a dict with qr and ang (in unit of degrees).")
             else:
 
@@ -5451,7 +5488,7 @@ def get_g2_fit_general(
                     pars["%s" % v].vary = False
 
                 # if i==20:
-                #    print(pars)
+                # print(pars)
         # print( pars  )
         result1 = mod.fit(y, pars, x=lags)
         # print(qval_dict[i][0], qval_dict[i][1],  y)
@@ -5553,9 +5590,9 @@ def get_short_long_labels_from_qval_dict(qval_dict, geometry="saxs"):
     )
 
 
-############################################
-##a good func to plot g2 for all types of geogmetries
-############################################
+#
+# a good func to plot g2 for all types of geogmetries
+#
 
 
 def plot_g2_general(
@@ -5636,7 +5673,7 @@ def plot_g2_general(
     if geometry == "saxs":
         if qphi_analysis:
             geometry = "ang_saxs"
-    if qth_interest != None:
+    if qth_interest is not None:
         if not isinstance(qth_interest, list):
             print("Please give a list for qth_interest")
         else:
@@ -5647,10 +5684,10 @@ def plot_g2_general(
             for k in list(g2_dict.keys()):
                 g2_dict_[k] = g2_dict[k][:, [i for i in qth_interest]]
             # for k in list(taus_dict.keys()):
-            #    taus_dict_[k] = taus_dict[k][:,[i for i in qth_interest]]
+            # taus_dict_[k] = taus_dict[k][:,[i for i in qth_interest]]
             taus_dict_ = taus_dict
             qval_dict_ = {k: qval_dict[k] for k in qth_interest}
-            if fit_res != None:
+            if fit_res is not None:
                 fit_res_ = [fit_res[k] for k in qth_interest]
             else:
                 fit_res_ = None
@@ -5680,8 +5717,8 @@ def plot_g2_general(
         ind_long_i = ind_long[s_ind]
         num_long_i = len(ind_long_i)
         # if show_average_ang_saxs:
-        #    if geometry=='ang_saxs':
-        #        num_long_i += 1
+        # if geometry=='ang_saxs':
+        # num_long_i += 1
         if RUN_GUI:
             fig = Figure(figsize=(10, 12))
         else:
@@ -5752,8 +5789,8 @@ def plot_g2_general(
         for i, l_ind in enumerate(ind_long_i):
             if num_long_i <= max_plotnum_fig:
                 # if  s_ind ==2:
-                #    print('Here')
-                #    print(i, l_ind, short_label[s_ind], long_label[l_ind], sx, sy, i+1 )
+                # print('Here')
+                # print(i, l_ind, short_label[s_ind], long_label[l_ind], sx, sy, i+1 )
                 ax = fig.add_subplot(sx, sy, i + 1)
                 if sx == 1:
                     if sy == 1:
@@ -5788,20 +5825,20 @@ def plot_g2_general(
                 ax.set_title(title_long + " (%s  )" % (1 + l_ind), y=1.05, fontsize=fontsize_sublabel)
                 # print( geometry )
                 # print( title_long )
-                if qth_interest != None:  # it might have a bug here, todolist!!!
+                if qth_interest is not None:  # it might have a bug here, todolist!!!
                     lab = sorted(list(qval_dict_.keys()))
                     # print( lab, l_ind)
                     ax.set_title(title_long + " (%s  )" % (lab[l_ind] + 1), y=1.05, fontsize=12)
             for ki, k in enumerate(list(g2_dict_.keys())):
                 if ki == 0:
                     c = "b"
-                    if fit_res == None:
+                    if fit_res is None:
                         m = "-o"
                     else:
                         m = "o"
                 elif ki == 1:
                     c = "r"
-                    if fit_res == None:
+                    if fit_res is None:
                         m = "s"
                     else:
                         m = "-"
@@ -5812,10 +5849,10 @@ def plot_g2_general(
                     c = colors[ki + 2]
                     m = "-%s" % markers[ki + 2]
                 try:
-                    dumy = g2_dict_[k].shape
+                    g2_dict_[k].shape
                     # print( 'here is the shape' )
                     islist = False
-                except:
+                except Exception:
                     islist_n = len(g2_dict_[k])
                     islist = True
                     # print( 'here is the list' )
@@ -5827,8 +5864,8 @@ def plot_g2_general(
                         x = taus_dict_[k][nlst]
                         if ki == 0:
                             ymin, ymax = min(y), max(y[1:])
-                        if g2_err_dict == None:
-                            if g2_labels == None:
+                        if g2_err_dict is None:
+                            if g2_labels is None:
                                 ax.semilogx(x, y, m, color=c, markersize=6)
                             else:
                                 # print('here ki ={} nlst = {}'.format( ki, nlst ))
@@ -5838,7 +5875,7 @@ def plot_g2_general(
                                     ax.semilogx(x, y, m, color=c, markersize=6)
                         else:
                             yerr = g2_err_dict[k][nlst][:, l_ind]
-                            if g2_labels == None:
+                            if g2_labels is None:
                                 ax.errorbar(x, y, yerr=yerr, fmt=m, color=c, markersize=6)
                             else:
                                 if nlst == 0:
@@ -5855,8 +5892,8 @@ def plot_g2_general(
                     x = taus_dict_[k]
                     if ki == 0:
                         ymin, ymax = min(y), max(y[1:])
-                    if g2_err_dict == None:
-                        if g2_labels == None:
+                    if g2_err_dict is None:
+                        if g2_labels is None:
                             ax.semilogx(x, y, m, color=c, markersize=6)
                         else:
                             ax.semilogx(x, y, m, color=c, markersize=6, label=g2_labels[ki])
@@ -5864,7 +5901,7 @@ def plot_g2_general(
                         yerr = g2_err_dict[k][:, l_ind]
                         # print(x.shape, y.shape, yerr.shape)
                         # print(yerr)
-                        if g2_labels == None:
+                        if g2_labels is None:
                             ax.errorbar(x, y, yerr=yerr, fmt=m, color=c, markersize=6)
                         else:
                             ax.errorbar(x, y, yerr=yerr, fmt=m, color=c, markersize=6, label=g2_labels[ki])
@@ -5872,7 +5909,7 @@ def plot_g2_general(
                     if l_ind == 0:
                         ax.legend(loc="best", fontsize=8, fancybox=True, framealpha=0.5)
 
-            if fit_res_ != None:
+            if fit_res_ is not None:
                 result1 = fit_res_[l_ind]
                 # print (result1.best_values)
 
@@ -5900,7 +5937,7 @@ def plot_g2_general(
                     # print(qrr)
                     rate = diff * qrr**2
                     flow = result1.best_values["flow_velocity"]
-                    if qval_dict_ == None:
+                    if qval_dict_ is None:
                         print("Please provide qval_dict, a dict with qr and ang (in unit of degrees).")
                     else:
                         pass
@@ -5954,7 +5991,7 @@ def plot_g2_general(
                 vmin, vmax = kwargs["vlim"]
                 try:
                     ax.set_ylim([ymin * vmin, ymax * vmax])
-                except:
+                except Exception:
                     pass
             else:
                 pass
@@ -5975,7 +6012,7 @@ def plot_g2_general(
             # print(fig)
             try:
                 plt.savefig(fp + ".png", dpi=fig.dpi)
-            except:
+            except Exception:
                 print("Can not save figure here.")
 
         else:
@@ -6059,7 +6096,6 @@ def get_q_rate_fit_general(qval_dict, rate, geometry="saxs", weights=None, *argv
         mastp,
     ) = get_short_long_labels_from_qval_dict(qval_dict, geometry=geometry)
 
-    Nqr = num_long
     Nqz = num_short
     D0 = np.zeros(Nqz)
     power = 2  # np.zeros( Nqz )
@@ -6070,7 +6106,7 @@ def get_q_rate_fit_general(qval_dict, rate, geometry="saxs", weights=None, *argv
         y = np.array(rate)[ind_long_i]
         x = long_label[ind_long_i]
         # print(y,x)
-        if fit_range != None:
+        if fit_range is not None:
             y = y[fit_range[0] : fit_range[1]]
             x = x[fit_range[0] : fit_range[1]]
         # print (i, y,x)
@@ -6174,12 +6210,12 @@ def plot_q_rate_fit_general(
         if Nqz != 1:
             legend = ax.legend(loc="best")
 
-    if plot_index_range != None:
+    if plot_index_range is not None:
         d1, d2 = plot_index_range
         d2 = min(len(x) - 1, d2)
         ax.set_xlim((x**power)[d1], (x**power)[d2])
         ax.set_ylim(y[d1], y[d2])
-    if ylim != None:
+    if ylim is not None:
         ax.set_ylim(ylim)
 
     ax.set_ylabel("Relaxation rate " r"$\gamma$" "($s^{-1}$)")
@@ -6274,7 +6310,7 @@ def outlier_mask(
                 upper_outlier_threshold = np.nanmin((out_l * pixel[0][0])[out_l * pixel[0][0] > ave_roi_int])
                 if verbose:
                     print("upper outlier threshold: %s" % upper_outlier_threshold)
-            except:
+            except Exception:
                 upper_outlier_threshold = False
                 if verbose:
                     print("no upper outlier threshold found")
@@ -6282,7 +6318,7 @@ def outlier_mask(
             ind2 = (out_l * pixel[0][0]) < ave_roi_int
             try:
                 lower_outlier_threshold = np.nanmax((out_l * pixel[0][0])[ind1 * ind2])
-            except:
+            except Exception:
                 lower_outlier_threshold = False
                 if verbose:
                     print("no lower outlier threshold found")
@@ -6290,7 +6326,7 @@ def outlier_mask(
             if verbose:
                 print("ROI #%s: no outliers detected" % rn)
 
-        ### MAKE SURE we don't REMOVE more than x percent of the pixels in the roi
+        # MAKE SURE we don't REMOVE more than x percent of the pixels in the roi
         outlier_fraction = np.sum(out_l) / len(pixel[0][0])
         if verbose:
             print("fraction of pixel values detected as outliers: %s" % np.round(outlier_fraction, 2))

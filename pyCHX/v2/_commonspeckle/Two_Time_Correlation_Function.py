@@ -1,8 +1,8 @@
-######################################################################################
-########Dec 16, 2015, Yugang Zhang, yuzhang@bnl.gov, CHX, NSLS-II, BNL################
-########Time correlation function, include one-time, two-time, four-time##############
-########Muli-tau method, array-operation method#######################################
-######################################################################################
+#
+# Dec 16, 2015, Yugang Zhang, yuzhang@bnl.gov, CHX, NSLS-II, BNL#
+# Time correlation function, include one-time, two-time, four-time#
+# Muli-tau method, array-operation method#
+#
 
 
 import itertools
@@ -71,7 +71,7 @@ class Get_Pixel_Array(object):
         # self.shape = indexable.shape
         try:
             self.length = len(indexable)
-        except:
+        except Exception:
             self.length = indexable.length
 
     def get_data(self):
@@ -95,7 +95,7 @@ class Reverse_Coordinate(object):
         self.mask = mask
         try:
             self.shape = indexable.shape
-        except:
+        except Exception:
             # if
             self.shape = [len(indexable), indexable[0].shape[0], indexable[0].shape[1]]
         # self.shape = indexable.shape
@@ -252,10 +252,10 @@ def auto_two_Array(data, rois, data_pixel=None):
 
         g12b[:, :, qi - 1] = np.dot(data_pixel_qi, data_pixel_qi.T) / sum1 / sum2 / nopr[qi - 1]
         # print ( proi, int( qi //( Unitq) ) )
-    #        if  int( qi //( Unitq) ) == proi:
-    #            sys.stdout.write("#")
-    #            sys.stdout.flush()
-    #            proi += 1
+    # if  int( qi //( Unitq) ) == proi:
+    # sys.stdout.write("#")
+    # sys.stdout.flush()
+    # proi += 1
 
     elapsed_time = time.time() - start_time
     print("Total time: %.2f min" % (elapsed_time / 60.0))
@@ -263,14 +263,14 @@ def auto_two_Array(data, rois, data_pixel=None):
     return g12b
 
 
-####################################
-##Derivation of Two time correlation
-#####################################
+#
+# Derivation of Two time correlation
+#
 
 
-#####################################
+#
 # get one-time @different age
-#####################################
+#
 
 
 def get_qedge2(qstart, qend, qwidth, noqs, return_int=False):
@@ -438,7 +438,7 @@ def get_aged_g2_from_g12q(g12q, age_edge, age_center=None, timeperframe=1, time_
     arr = rotate_g12q_to_rectangle(g12q)
     m, n = arr.shape  # m should be 2*n-1
     # age_edge, age_center = get_qedge( qstart=slice_start,qend= slice_end,
-    #                 qwidth = slice_width, noqs =slice_num  )
+    # qwidth = slice_width, noqs =slice_num  )
     # print(arr.shape)
     age_edge = np.int_(age_edge)
     if age_center is None:
@@ -739,7 +739,7 @@ def plot_aged_g2(g2_aged, tau=None, timeperframe=1, ylim=None, xlim=None):
             ax.set_ylim(xlim)
 
 
-#####################################
+#
 # get fout-time
 
 
@@ -924,9 +924,9 @@ def histogram_taus(taus, hisbin=20, plot=True, timeperframe=1):
     return his
 
 
-#####################################
+#
 # get one-time
-#####################################
+#
 
 
 def get_one_time_from_two_time_old(g12, norms=None, nopr=None):
@@ -1058,7 +1058,7 @@ def get_four_time_from_two_time(g12, g2=None, rois=None):
     return g4f12
 
 
-######
+#
 def make_g12_mask(badframes_list, g12_shape):
     """
     Dec 16, 2015, Y.G.@CHX
@@ -1275,7 +1275,7 @@ def show_C12(
     else:
         timeperframe = 1
 
-    if "timeoffset" in kwargs.keys():  ### added timeoffset here
+    if "timeoffset" in kwargs.keys():  # added timeoffset here
         timeoffset = kwargs["timeoffset"]
     else:
         timeoffset = 0
@@ -1318,7 +1318,7 @@ def show_C12(
         fig, ax = fig_ax
 
     # extent=[0, data.shape[0]*timeperframe, 0, data.shape[0]*timeperframe ]
-    extent = np.array([N1, N2, N1, N2]) * timeperframe + timeoffset  ### added timeoffset to extend
+    extent = np.array([N1, N2, N1, N2]) * timeperframe + timeoffset  # added timeoffset to extend
 
     if logs:
         im = imshow(

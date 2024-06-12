@@ -1,6 +1,6 @@
-################################
-######Movie_maker###############
-################################
+#
+# Movie_maker#
+#
 
 
 def read_imgs(inDir):
@@ -33,7 +33,7 @@ def select_regoin(
 
         try:
             img_[ys:ye, xs:xe] = True
-        except:
+        except Exception:
             img_[ys:ye, xs:xe, :] = True
         pixellist_ = np.where(img_.ravel())[0]
         # pixellist_ =  img_.ravel()
@@ -49,7 +49,7 @@ def select_regoin(
     else:
         try:
             imgx = img[ys:ye, xs:xe]
-        except:
+        except Exception:
             imgx = img[ys:ye, xs:xe, :]
 
     return imgx
@@ -89,7 +89,7 @@ def save_png_series(
     save png files
 
     """
-    if uid == None:
+    if uid is None:
         uid = "uid"
     num_frame = 0
     for img in imgs:
@@ -191,8 +191,8 @@ def movie_maker(
 
     Returns
     -------
-    #ani :
-    #    movie
+    # ani :
+    # movie
 
     """
 

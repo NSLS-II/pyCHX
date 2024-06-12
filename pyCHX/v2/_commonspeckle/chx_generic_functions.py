@@ -858,7 +858,7 @@ def save_oavs_tifs(uid, data_dir, brightness_scale=1, scalebar_size=100, scale=1
     tifs = list(db[uid].data("OAV_image"))[0]
     try:
         pixel_scalebar = np.ceil(scalebar_size / md["OAV resolution um_pixel"])
-    except:
+    except Exception:
         pixel_scalebar = None
         print("No OAVS resolution is available.")
 
@@ -882,7 +882,7 @@ def save_oavs_tifs(uid, data_dir, brightness_scale=1, scalebar_size=100, scale=1
         img = oavs[m]
         try:
             ind = np.flipud(img * scale)[:, :, 2] < threshold
-        except:
+        except Exception:
             ind = np.flipud(img * scale) < threshold
         rgb_cont_img = np.copy(np.flipud(img))
         # rgb_cont_img[ind,0]=1000
@@ -1212,7 +1212,7 @@ def ps(y, shift=0.5, replot=True, logplot="off", x=None):
     PEAK_y = np.max(y)
     COM = np.sum(x * y) / np.sum(y)
 
-    ### from Maksim: assume this is a peak profile:
+    # from Maksim: assume this is a peak profile:
     def is_positive(num):
         return True if num > 0 else False
 
@@ -1232,18 +1232,18 @@ def ps(y, shift=0.5, replot=True, logplot="off", x=None):
         ps.cen = CEN
         yf = ym
         # return {
-        #    'fwhm': abs(list_of_roots[-1] - list_of_roots[0]),
-        #    'x_range': list_of_roots,
+        # 'fwhm': abs(list_of_roots[-1] - list_of_roots[0]),
+        # 'x_range': list_of_roots,
         # }
     else:  # ok, maybe it's a step function..
         # print('no peak...trying step function...')
         ym = ym + shift
 
-        def err_func(x, x0, k=2, A=1, base=0):  #### erf fit from Yugang
+        def err_func(x, x0, k=2, A=1, base=0):  # erf fit from Yugang
             return base - A * erf(k * (x - x0))
 
         mod = Model(err_func)
-        ### estimate starting values:
+        # estimate starting values:
         x0 = np.mean(x)
         # k=0.1*(np.max(x)-np.min(x))
         pars = mod.make_params(x0=x0, k=2, A=1.0, base=0.0)
@@ -1261,7 +1261,7 @@ def ps(y, shift=0.5, replot=True, logplot="off", x=None):
         ps.fwhm = FWHM
 
     if replot:
-        ### re-plot results:
+        # re-plot results:
         if logplot == "on":
             fig, ax = plt.subplots()  # plt.figure()
             ax.semilogy([PEAK, PEAK], [np.min(y), np.max(y)], "k--", label="PEAK")
@@ -1289,7 +1289,7 @@ def ps(y, shift=0.5, replot=True, logplot="off", x=None):
             # plt.title('uid: '+str(uid)+' @ '+str(t)+'\nPEAK: '+str(PEAK_y)[:8]+' @ '+str(PEAK)[:8]+'   COM @ '+str(COM)[:8]+ '\n FWHM: '+str(FWHM)[:8]+' @ CEN: '+str(CEN)[:8],size=9)
             # plt.show()
 
-        ### assign values of interest as function attributes:
+        # assign values of interest as function attributes:
         ps.peak = PEAK
         ps.com = COM
     return ps.cen
@@ -1480,7 +1480,7 @@ def average_array_withNan(array, axis=0, mask=None):
     array_ = np.ma.masked_array(array, mask=mask)
     try:
         sums = np.array(np.ma.sum(array_[:, :], axis=axis))
-    except:
+    except Exception:
         sums = np.array(np.ma.sum(array_[:], axis=axis))
 
     cts = np.sum(~mask, axis=axis)
@@ -1863,7 +1863,7 @@ def linear_fit(x, y, xrange=None):
 def find_index(x, x0, tolerance=None):
     """YG Octo 16,2017 copied from SAXS
     find index of x0 in x
-    #find the position of P in a list (plist) with tolerance
+    # find the position of P in a list (plist) with tolerance
     """
 
     N = len(x)
@@ -1880,13 +1880,13 @@ def find_index(x, x0, tolerance=None):
 def find_index_old(x, x0, tolerance=None):
     """YG Octo 16,2017 copied from SAXS
     find index of x0 in x
-    #find the position of P in a list (plist) with tolerance
+    # find the position of P in a list (plist) with tolerance
     """
 
     N = len(x)
     i = 0
     position = None
-    if tolerance == None:
+    if tolerance is None:
         tolerance = (x[1] - x[0]) / 2.0
     if x0 > max(x):
         position = len(x) - 1
@@ -1991,7 +1991,7 @@ def sgolay2d(z, window_size, order, derivative=None):
     Z[-half_size:, :half_size] = band - np.abs(np.fliplr(Z[-half_size:, half_size + 1 : 2 * half_size + 1]) - band)
 
     # solve system and convolve
-    if derivative == None:
+    if derivative is None:
         m = np.linalg.pinv(A)[0].reshape((window_size, -1))
         return scipy.signal.fftconvolve(Z, m, mode="valid")
     elif derivative == "col":
@@ -2039,7 +2039,7 @@ def extract_data_from_file(
         Or giving start_row: int
         good_cols: list of integer, good index of cols
         lables: the label of the good_cols
-        #save: False, if True will save the data into a csv file with filename appending csv ??
+        # save: False, if True will save the data into a csv file with filename appending csv ??
     Return:
         a pds.dataframe
     Example:
@@ -2077,7 +2077,7 @@ def extract_data_from_file(
                     else:
                         temp = np.array([els[j] for j in good_cols], dtype=float)
                     data = np.vstack((data, temp))
-                except:
+                except Exception:
                     pass
         if labels is None:
             labels = np.arange(data.shape[1])
@@ -2107,9 +2107,9 @@ def get_print_uids(start_time, stop_time, return_all_info=False):
         date = time.ctime(hdrs[-i - 1]["start"]["time"])
         try:
             m = hdrs[-i - 1]["start"]["Measurement"]
-        except:
+        except Exception:
             m = ""
-        info = "%3d: uid = '%s' ##%s #%s: %s--  %s " % (i, uid, date, sid, m, fuid)
+        info = "%3d: uid = '%s' #%s #%s: %s--  %s " % (i, uid, date, sid, m, fuid)
         print(info)
         if return_all_info:
             all_info[n] = info
@@ -2251,7 +2251,7 @@ def validate_uid(uid):
         imgs = load_data(uid, md["detector"], reverse=True)
         print(imgs)
         return 1
-    except:
+    except Exception:
         print("Can't load this uid=%s!" % uid)
         return 0
 
@@ -2399,7 +2399,7 @@ def filter_roi_mask(filter_dict, roi_mask, avg_img, filter_type="ylim"):
     return rm
 
 
-##
+#
 # Dev at March 31 for create Eiger chip mask
 def create_chip_edges_mask(det="1M"):
     """Create a chip edge mask for Eiger detector"""
@@ -2451,7 +2451,7 @@ def create_folder(base_folder, sub_folder):
     """
 
     data_dir0 = os.path.join(base_folder, sub_folder)
-    ##Or define data_dir here, e.g.,#data_dir = '/XF11ID/analysis/2016_2/rheadric/test/'
+    # Or define data_dir here, e.g.,#data_dir = '/XF11ID/analysis/2016_2/rheadric/test/'
     os.makedirs(data_dir0, exist_ok=True)
     print("Results from this analysis will be stashed in the directory %s" % data_dir0)
     return data_dir0
@@ -2472,15 +2472,15 @@ def create_user_folder(CYCLE, username=None, default_dir="/XF11ID/analysis/"):
         data_dir0 = os.path.join(default_dir, CYCLE, username, "Results/")
     else:
         data_dir0 = os.path.join(default_dir, CYCLE + "/")
-    ##Or define data_dir here, e.g.,#data_dir = '/XF11ID/analysis/2016_2/rheadric/test/'
+    # Or define data_dir here, e.g.,#data_dir = '/XF11ID/analysis/2016_2/rheadric/test/'
     os.makedirs(data_dir0, exist_ok=True)
     print("Results from this analysis will be stashed in the directory %s" % data_dir0)
     return data_dir0
 
 
-##################################
-#########For dose analysis #######
-##################################
+#
+# For dose analysis #
+#
 def get_fra_num_by_dose(exp_dose, exp_time, att=1, dead_time=2):
     """
     Calculate the frame number to be correlated by giving a X-ray exposure dose
@@ -2583,14 +2583,14 @@ def check_lost_metadata(md, Nimg=None, inc_x0=None, inc_y0=None, pixelsize=7.5 *
     dpix = md["x_pixel_size"] * 1000.0  # in mm, eiger 4m is 0.075 mm
     try:
         lambda_ = md["wavelength"]
-    except:
+    except Exception:
         lambda_ = md["incident_wavelength"]  # wavelegth of the X-rays in Angstroms
     try:
         Ldet = md["det_distance"]
         if Ldet <= 1000:
             Ldet *= 1000
             md["det_distance"] = Ldet
-    except:
+    except Exception:
         Ldet = md["detector_distance"]
         if Ldet <= 1000:
             Ldet *= 1000
@@ -2598,14 +2598,14 @@ def check_lost_metadata(md, Nimg=None, inc_x0=None, inc_y0=None, pixelsize=7.5 *
 
     try:  # try exp time from detector
         exposuretime = md["count_time"]  # exposure time in sec
-    except:
+    except Exception:
         exposuretime = md["cam_acquire_time"]  # exposure time in sec
     try:  # try acq time from detector
         acquisition_period = md["frame_time"]
-    except:
+    except Exception:
         try:
             acquisition_period = md["acquire period"]
-        except:
+        except Exception:
             uid = md["uid"]
             acquisition_period = float(db[uid]["start"]["acquire period"])
     timeperframe = acquisition_period
@@ -2806,7 +2806,7 @@ def find_uids(start_time, stop_time):
     hdrs = db(start_time=start_time, stop_time=stop_time)
     try:
         print("Totally %s uids are found." % (len(list(hdrs))))
-    except:
+    except Exception:
         pass
     sids = []
     uids = []
@@ -3078,7 +3078,7 @@ def print_dict(dicts, keys=None):
     for k in keys:
         try:
             print("%s--> %s" % (k, dicts[k]))
-        except:
+        except Exception:
             pass
 
 
@@ -3120,7 +3120,7 @@ def get_meta_data(uid, default_dec="eiger", *argv, **kwargs):
     md["suid"] = uid  # short uid
     try:
         md["filename"] = get_sid_filenames(header)[2][0]
-    except:
+    except Exception:
         md["filename"] = "N.A."
 
     devices = sorted(list(header.devices()))
@@ -3140,7 +3140,7 @@ def get_meta_data(uid, default_dec="eiger", *argv, **kwargs):
     # detector_names = sorted( header.start['detectors'] )
     detector_names = sorted(get_detectors(db[uid]))
     # if len(detector_names) > 1:
-    #    raise ValueError("More than one det. This would have unintented consequences.")
+    # raise ValueError("More than one det. This would have unintented consequences.")
     detector_name = detector_names[0]
     # md['detector'] = detector_name
     md["detector"] = get_detector(header)
@@ -3151,12 +3151,12 @@ def get_meta_data(uid, default_dec="eiger", *argv, **kwargs):
         md[newkey] = val
 
     # for k,v in ev['descriptor']['configuration'][dec]['data'].items():
-    #     md[ k[len(dec)+1:] ]= v
+    # md[ k[len(dec)+1:] ]= v
 
     try:
         md.update(header.start["plan_args"].items())
         md.pop("plan_args")
-    except:
+    except Exception:
         pass
     md.update(header.start.items())
 
@@ -3165,7 +3165,7 @@ def get_meta_data(uid, default_dec="eiger", *argv, **kwargs):
     md["stop_time"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(header.stop["time"]))
     try:  # added: try to handle runs that don't contain image data
         md["img_shape"] = header["descriptors"][0]["data_keys"][md["detector"]]["shape"][:2][::-1]
-    except:
+    except Exception:
         if verbose:
             print("couldn't find image shape...skip!")
         else:
@@ -3174,7 +3174,7 @@ def get_meta_data(uid, default_dec="eiger", *argv, **kwargs):
 
     # for k, v in sorted(md.items()):
     # ...
-    #    print(f'{k}: {v}')
+    # print(f'{k}: {v}')
 
     return md
 
@@ -3223,7 +3223,7 @@ def get_max_countc(FD, labeled_array):
             (p, v) = FD.rdrawframe(i)
             w = np.where(timg[p])[0]
             max_inten = max(max_inten, np.max(v[w]))
-        except:
+        except Exception:
             pass
     return max_inten
 
@@ -3375,7 +3375,7 @@ def create_cross_mask(
     imy, imx = image.shape
     cx, cy = center
     bst_mask = np.zeros_like(image, dtype=bool)
-    ###
+    #
     # for right part
     wy = wy_right
     x = np.array([cx, imx, imx, cx])
@@ -3383,7 +3383,7 @@ def create_cross_mask(
     rr, cc = polygon(y, x)
     bst_mask[rr, cc] = 1
 
-    ###
+    #
     # for left part
     wy = wy_left
     x = np.array([0, cx, cx, 0])
@@ -3391,7 +3391,7 @@ def create_cross_mask(
     rr, cc = polygon(y, x)
     bst_mask[rr, cc] = 1
 
-    ###
+    #
     # for up part
     wx = wx_up
     x = np.array([cx - wx, cx + wx, cx + wx, cx - wx])
@@ -3399,7 +3399,7 @@ def create_cross_mask(
     rr, cc = polygon(y, x)
     bst_mask[rr, cc] = 1
 
-    ###
+    #
     # for low part
     wx = wx_down
     x = np.array([cx - wx, cx + wx, cx + wx, cx - wx])
@@ -3462,7 +3462,7 @@ def export_scan_scalar(
     return datap
 
 
-#####
+#
 # load data by databroker
 
 
@@ -3646,7 +3646,7 @@ def load_data2(uid, detector="eiger4m_single_image"):
         try:
             (ev,) = hdr.events(fields=[detector])
             flag = 0
-        except:
+        except Exception:
             flag += 1
             print("Trying again ...!")
 
@@ -3791,8 +3791,8 @@ def RemoveHot(img, threshold=1e7, plot_=True):
     return mask
 
 
-############
-###plot data
+#
+# plot data
 
 
 def show_img(
@@ -3995,34 +3995,34 @@ def plot1D(
         legend = " "
     try:
         logx = kwargs["logx"]
-    except:
+    except Exception:
         logx = False
     try:
         logy = kwargs["logy"]
-    except:
+    except Exception:
         logy = False
 
     try:
         logxy = kwargs["logxy"]
-    except:
+    except Exception:
         logxy = False
 
-    if logx == True and logy == True:
+    if logx and logy:
         logxy = True
 
     try:
         marker = kwargs["marker"]
-    except:
+    except Exception:
         try:
             marker = kwargs["m"]
-        except:
+        except Exception:
             marker = next(markers_)
     try:
         color = kwargs["color"]
-    except:
+    except Exception:
         try:
             color = kwargs["c"]
-        except:
+        except Exception:
             color = next(colors_)
 
     if x is None:
@@ -4076,7 +4076,7 @@ def plot1D(
         title = "plot"
     ax.set_title(title)
     # ax.set_xlabel("$Log(q)$"r'($\AA^{-1}$)')
-    if (legend != "") and (legend != None):
+    if (legend != "") and (legend is not None):
         ax.legend(loc="best", fontsize=legend_size)
     if "save" in kwargs.keys():
         if kwargs["save"]:
@@ -4089,7 +4089,7 @@ def plot1D(
         return fig
 
 
-###
+#
 
 
 def check_shutter_open(data_series, min_inten=0, time_edge=[0, 10], plot_=False, *argv, **kwargs):
@@ -5165,7 +5165,7 @@ def save_g2_general(g2, taus, qr=None, qz=None, uid="uid", path=None, return_res
         return df
 
 
-###########
+#
 # *for g2 fit and plot
 
 
@@ -5203,7 +5203,7 @@ def flow_para_function(x, beta, relaxation_rate, flow_velocity, baseline=1):
 
 def flow_para_function_explicitq(x, beta, diffusion, flow_velocity, alpha=1, baseline=1, qr=1, q_ang=0):
     """Nov 9, 2017 Basically, make q vector to (qr, angle),
-    ###relaxation_rate is actually a diffusion rate
+    # relaxation_rate is actually a diffusion rate
     flow_velocity: q.v (q vector dot v vector = q*v*cos(angle) )
     Diffusion part: np.exp( -2*D q^2 *tau )
     q_ang: would be    np.radians( ang - 90 )
@@ -5524,7 +5524,7 @@ def get_g2_fit_general(
             try:
                 if isinstance(_guess_val[k], (np.ndarray, list)):
                     pars[k].value = _guess_val[k][i]
-            except:
+            except Exception:
                 pass
 
         if True:
@@ -5563,7 +5563,7 @@ def get_g2_fit_general(
                     pars["%s" % v].vary = False
 
                 # if i==20:
-                #    print(pars)
+                # print(pars)
         # print( pars  )
         result1 = mod.fit(y, pars, x=lags)
         # print(qval_dict[i][0], qval_dict[i][1],  y)
@@ -5665,9 +5665,9 @@ def get_short_long_labels_from_qval_dict(qval_dict, geometry="saxs"):
     )
 
 
-############################################
-##a good func to plot g2 for all types of geogmetries
-############################################
+#
+# a good func to plot g2 for all types of geogmetries
+#
 
 
 def plot_g2_general(
@@ -5759,7 +5759,7 @@ def plot_g2_general(
             for k in list(g2_dict.keys()):
                 g2_dict_[k] = g2_dict[k][:, [i for i in qth_interest]]
             # for k in list(taus_dict.keys()):
-            #    taus_dict_[k] = taus_dict[k][:,[i for i in qth_interest]]
+            # taus_dict_[k] = taus_dict[k][:,[i for i in qth_interest]]
             taus_dict_ = taus_dict
             qval_dict_ = {k: qval_dict[k] for k in qth_interest}
             if fit_res is not None:
@@ -5797,8 +5797,8 @@ def plot_g2_general(
         ind_long_i = ind_long[s_ind]
         num_long_i = len(ind_long_i)
         # if show_average_ang_saxs:
-        #    if geometry=='ang_saxs':
-        #        num_long_i += 1
+        # if geometry=='ang_saxs':
+        # num_long_i += 1
         if RUN_GUI:
             fig = Figure(figsize=(10, 12))
         else:
@@ -5869,8 +5869,8 @@ def plot_g2_general(
         for i, l_ind in enumerate(ind_long_i):
             if num_long_i <= max_plotnum_fig:
                 # if  s_ind ==2:
-                #    print('Here')
-                #    print(i, l_ind, short_label[s_ind], long_label[l_ind], sx, sy, i+1 )
+                # print('Here')
+                # print(i, l_ind, short_label[s_ind], long_label[l_ind], sx, sy, i+1 )
                 ax = fig.add_subplot(sx, sy, i + 1)
                 if sx == 1:
                     if sy == 1:
@@ -5936,7 +5936,7 @@ def plot_g2_general(
                     dumy = g2_dict_[k].shape
                     # print( 'here is the shape' )
                     islist = False
-                except:
+                except Exception:
                     islist_n = len(g2_dict_[k])
                     islist = True
                     # print( 'here is the list' )
@@ -6121,7 +6121,7 @@ def plot_g2_general(
                 vmin, vmax = kwargs["vlim"]
                 try:
                     ax.set_ylim([ymin * vmin, ymax * vmax])
-                except:
+                except Exception:
                     pass
             else:
                 pass
@@ -6142,7 +6142,7 @@ def plot_g2_general(
             # print(fig)
             try:
                 plt.savefig(fp + ".png", dpi=fig.dpi)
-            except:
+            except Exception:
                 print("Can not save figure here.")
 
         else:

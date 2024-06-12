@@ -25,7 +25,7 @@ from pyCHX.v2._commonspeckle.chx_generic_functions import (  # common
 )
 
 # from pyCHX.v2._commonspeckle.chx_libs import (np, roi, time, datetime, os,  getpass, db,
-#                                      LogNorm, RUN_GUI) #common
+# LogNorm, RUN_GUI) #common
 from pyCHX.v2._commonspeckle.chx_libs import RUN_GUI, LogNorm, datetime, getpass, np, os, roi, time  # common
 
 # imports handler from CHX
@@ -51,7 +51,7 @@ def pass_FD(FD, n):
     # FD.rdframe(n)
     try:
         FD.seekimg(n)
-    except:
+    except Exception:
         pass
         return False
 
@@ -247,7 +247,7 @@ def read_compressed_eigerdata(
     else:
         try:
             mask, avg_img, imgsum, bad_frame_list_ = pkl.load(open(filename + ".pkl", "rb"))
-        except:
+        except Exception:
             CAL = True
     if CAL:
         FD = Multifile(filename, beg, end)
@@ -385,8 +385,8 @@ def para_compress_eigerdata(
         print("No bad frames are involved.")
     print("Combining the seperated compressed files together...")
     combine_compressed(filename, Nf, del_old=True)
-    del results
-    del res_
+   
+   
     if with_pickle:
         pkl.dump([mask, avg_img, imgsum, bad_frame_list], open(filename + ".pkl", "wb"))
     if copy_rawdata:
@@ -592,14 +592,14 @@ def segment_compress_eigerdata(
                 fp.write(struct.pack("@{}{}".format(dlen, "ih"[nobytes == 2]), *v))
             else:
                 fp.write(struct.pack("@{}{}".format(dlen, "dd"[nobytes == 2]), *v))  # n +=1
-        del p, v, img
+       
         fp.flush()
     fp.close()
     avg_img /= good_count
     bad_frame_list = (np.array(imgsum) > bad_pixel_threshold) | (np.array(imgsum) <= bad_pixel_low_threshold)
     sys.stdout.write("#")
     sys.stdout.flush()
-    # del  images, mask, avg_img, imgsum, bad_frame_list
+    #
     # print( 'Should release memory here')
     return mask, avg_img, imgsum, bad_frame_list
 
@@ -913,7 +913,7 @@ class Multifile:
         NOTE: At each record n, the file cursor points to record n+1
         """
         self.FID = open(filename, "rb")
-        #        self.FID.seek(0,os.SEEK_SET)
+        # self.FID.seek(0,os.SEEK_SET)
         self.filename = filename
         # br: bytes read
         br = self.FID.read(1024)
@@ -1397,8 +1397,8 @@ def mean_intensityc(FD, labeled_array, sampling=1, index=None, multi_cor=False):
         for i in inputs:
             mean_intensity[:, i] = res[i]
         print("ROI mean_intensit calculation is DONE!")
-        del results
-        del res
+       
+       
 
     mean_intensity /= norm
     return mean_intensity, index

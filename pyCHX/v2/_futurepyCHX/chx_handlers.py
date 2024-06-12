@@ -1,5 +1,5 @@
-###Copied from chxtools/chxtools/handlers.py
-###https://github.com/NSLS-II-CHX/chxtools/blob/master/chxtools/handlers.py
+# Copied from chxtools/chxtools/handlers.py
+# https://github.com/NSLS-II-CHX/chxtools/blob/master/chxtools/handlers.py
 
 
 # handler registration and database instantiation should be done

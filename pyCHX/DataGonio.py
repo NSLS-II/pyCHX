@@ -1,17 +1,10 @@
 # import sys
-import os
-import re  # Regular expressions
-import sys
 
-import matplotlib as mpl
 import numpy as np
 
 # from scipy.optimize import leastsq
 # import scipy.special
 import PIL  # Python Image Library (for opening PNG, etc.)
-import pylab as plt
-import skbeam.core.correlation as corr
-import skbeam.core.roi as roi
 import skbeam.core.utils as utils
 from skbeam.core.accumulators.binned_statistic import BinnedStatistic1D, BinnedStatistic2D
 
@@ -195,7 +188,7 @@ def convert_Qmap_old(img, qx_map, qy_map=None, bins=None, rangeq=None):
 
 
 # Mask
-################################################################################
+#
 class Mask(object):
     """Stores the matrix of pixels to be excluded from further analysis."""
 
@@ -264,11 +257,11 @@ class Mask(object):
         self.data = -1 * (self.data - 1)
 
     # End class Mask(object)
-    ########################################
+    #
 
 
 # Calibration
-################################################################################
+#
 class Calibration(object):
     """Stores aspects of the experimental setup; especially the calibration
     parameters for a particular detector. That is, the wavelength, detector
@@ -289,7 +282,7 @@ class Calibration(object):
         self.clear_maps()
 
     # Experimental parameters
-    ########################################
+    #
 
     def set_wavelength(self, wavelength_A):
         """Set the experimental x-ray wavelength (in Angstroms)."""
@@ -385,7 +378,7 @@ class Calibration(object):
         return self.q_per_pixel
 
     # Maps
-    ########################################
+    #
 
     def clear_maps(self):
         self.r_map_data = None
@@ -491,7 +484,7 @@ class Calibration(object):
         x = np.arange(self.width) - self.x0
         y = np.arange(self.height) - self.y0
         X, Y = np.meshgrid(x, y)
-        R = np.sqrt(X**2 + Y**2)
+        np.sqrt(X**2 + Y**2)
 
         # twotheta = np.arctan(self.r_map()*c) # radians
         theta_f = np.arctan2(X * c, 1)  # radians
@@ -507,11 +500,11 @@ class Calibration(object):
         )
 
     # End class Calibration(object)
-    ########################################
+    #
 
 
 # CalibrationGonio
-################################################################################
+#
 class CalibrationGonio(Calibration):
     """
     The geometric claculations used here are described:
@@ -520,7 +513,7 @@ class CalibrationGonio(Calibration):
     """
 
     # Experimental parameters
-    ########################################
+    #
 
     def set_angles(
         self, det_phi_g=0.0, det_theta_g=0.0, sam_phi=0, sam_chi=0, sam_theta=0, offset_x=0, offset_y=0, offset_z=0
@@ -604,7 +597,7 @@ class CalibrationGonio(Calibration):
         return self.distance_m / (width_mm / 1000.0)
 
     # Maps
-    ########################################
+    #
 
     def q_map(self):
         if self.q_map_data is None:
@@ -646,7 +639,7 @@ class CalibrationGonio(Calibration):
         )
         qz_c = -1 * k_over_Dprime * (d * np.sin(theta_g) + Y_c * np.cos(theta_g))
 
-        qr_c = np.sqrt(np.square(qx_c) + np.square(qy_c))
+        np.sqrt(np.square(qx_c) + np.square(qy_c))
         q_c = np.sqrt(np.square(qx_c) + np.square(qy_c) + np.square(qz_c))
 
         # Conversion factor for pixel coordinates
@@ -656,7 +649,7 @@ class CalibrationGonio(Calibration):
         x = np.arange(self.width) - self.x0
         y = np.arange(self.height) - self.y0
         X, Y = np.meshgrid(x, y)
-        R = np.sqrt(X**2 + Y**2)
+        np.sqrt(X**2 + Y**2)
 
         # twotheta = np.arctan(self.r_map()*c) # radians
         theta_f = np.arctan2(X * c, 1)  # radians
@@ -742,7 +735,7 @@ class CalibrationGonio(Calibration):
             x = np.arange(self.width) - self.x0
             y = np.arange(self.height) - self.y0
             X, Y = np.meshgrid(x, y)
-            R = np.sqrt(X**2 + Y**2)
+            np.sqrt(X**2 + Y**2)
 
             # twotheta = np.arctan(self.r_map()*c) # radians
             theta_f = np.arctan2(X * c, 1)  # radians

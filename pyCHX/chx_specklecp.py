@@ -8,31 +8,23 @@ This module will provide XSVS analysis tools
 from __future__ import absolute_import, division, print_function
 
 import logging
-import time
 
-import six
 from skbeam.core import roi
 from skbeam.core.utils import bin_edges_to_centers, geometric_series
 
 logger = logging.getLogger(__name__)
 
-import itertools
 import os
-import sys
 from datetime import datetime
 from multiprocessing import Pool
 
-import dill
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy as sp
 import scipy.stats as st
-from matplotlib.colors import LogNorm
-from scipy.optimize import leastsq, minimize
+from scipy.optimize import leastsq
 from tqdm import tqdm
 
-from pyCHX.chx_compress import apply_async, go_through_FD, map_async, pass_FD, run_dill_encoded
+from pyCHX.chx_compress import apply_async, pass_FD
 from pyCHX.chx_generic_functions import trans_data_to_pd
 
 
@@ -237,8 +229,7 @@ def xsvsp_single(
         )
 
     print("Histogram calculation DONE!")
-    del results
-    del res
+
     return bin_edges, prob_k, prob_k_std_dev, his_sum
 
 
@@ -555,7 +546,7 @@ def xsvsc_single(
                 processing = 0
             # print( level )
         # prob_k_std_dev = np.power((prob_k_pow -
-        #                       np.power(prob_k, 2)), .5)
+        # np.power(prob_k, 2)), .5)
 
     for i in range(num_times):
         for j in range(num_roi):
@@ -566,8 +557,8 @@ def xsvsc_single(
             prob_k[i, j] = prob_k[i, j] / his_sum[i, j]
 
     # for i in range(num_times):
-    #    if  isinstance(prob_k[i,0], float ) or isinstance(prob_k[i,0], int ):
-    #        pass
+    # if  isinstance(prob_k[i,0], float ) or isinstance(prob_k[i,0], int ):
+    # pass
 
     return bin_edges, prob_k, prob_k_std_dev, his_sum
 
@@ -609,9 +600,9 @@ def _process(
         track_bad_level[level] += 1
     # print (img_per_level,track_bad_level)
     u_labels = list(np.unique(labels))
-    ##############
-    ##To Do list here, change histogram to bincount
-    ##Change error bar calculation
+    #
+    # To Do list here, change histogram to bincount
+    # Change error bar calculation
     if not (np.isnan(data).any()):
         for j, label in enumerate(u_labels):
             roi_data = data[labels == label]
@@ -622,12 +613,12 @@ def _process(
             spe_hist = np.nan_to_num(spe_hist)
             # print( spe_hist.shape )
             # prob_k[level, j] += (spe_hist -
-            #                 prob_k[level, j])/( img_per_level[level] - track_bad_level[level] )
+            # prob_k[level, j])/( img_per_level[level] - track_bad_level[level] )
             # print(  prob_k[level, j] )
             prob_k[level, j] += spe_hist
             # print( spe_hist.shape, prob_k[level, j] )
             # prob_k_pow[level, j] += (np.power(spe_hist, 2) -
-            #                     prob_k_pow[level, j])/(img_per_level[level] - track_bad_level[level])
+            # prob_k_pow[level, j])/(img_per_level[level] - track_bad_level[level])
 
 
 def normalize_bin_edges(num_times, num_rois, mean_roi, max_cts):
@@ -871,15 +862,14 @@ def get_bin_edges(num_times, num_rois, mean_roi, max_cts):
     return bin_edges, bin_centers, norm_bin_edges, norm_bin_centers
 
 
-#################
-##for fit
-###################
+#
+# for fit
+#
 
-from scipy import stats
 from scipy.special import gamma, gammaln
 
-###########################3
-##Dev at Nov 18, 2016
+# 3
+# Dev at Nov 18, 2016
 #
 
 
@@ -929,8 +919,8 @@ def nbinomres(p, hist, x, hist_err=None, N=1):
     return err
 
 
-###########
-##Dev at Octo 12, 2017
+#
+# Dev at Octo 12, 2017
 
 
 def nbinom(p, x, mu):
@@ -1078,7 +1068,7 @@ def get_xsvs_fit(
                     full_output=1,
                 )
                 ML_val[i].append(abs(resultL[0][0]))
-                KL_val[i].append(kmean_guess)  #   resultL[0][0] )
+                KL_val[i].append(kmean_guess)  # resultL[0][0] )
             else:
                 # vary M and K
                 fit_func = nbinomlog
@@ -1093,7 +1083,7 @@ def get_xsvs_fit(
                 )
 
                 ML_val[i].append(abs(resultL[0][1]))
-                KL_val[i].append(abs(resultL[0][0]))  #   resultL[0][0] )
+                KL_val[i].append(abs(resultL[0][0]))  # resultL[0][0] )
                 # print( j, m0, resultL[0][1], resultL[0][0], K_mean[i] * 2**j    )
             if j == 0:
                 K_.append(KL_val[i][0])
@@ -1126,9 +1116,9 @@ def plot_xsvs_fit(
     """
 
     # if qth is None:
-    #    fig = plt.figure(figsize=(10,12))
+    # fig = plt.figure(figsize=(10,12))
     # else:
-    #    fig = plt.figure(figsize=(8,8))
+    # fig = plt.figure(figsize=(8,8))
 
     max_cts = spe_cts_all[0][0].shape[0] - 1
     num_times, num_rings = spe_cts_all.shape
@@ -1381,7 +1371,6 @@ def plot_g2_contrast(
         range_ = range(qth, qth + 1)
     else:
         range_ = range(nq)
-    num_times = nt
     nr = len(range_)
     sx = int(round(np.sqrt(nr)))
     if nr % sx == 0:
@@ -1491,7 +1480,7 @@ def get_xsvs_fit_old(spe_cts_all, K_mean, varyK=True, qth=None, max_bins=2, g2=N
                     full_output=1,
                 )
                 ML_val[i].append(abs(resultL[0][0]))
-                KL_val[i].append(K_mean[i] * 2**j)  #   resultL[0][0] )
+                KL_val[i].append(K_mean[i] * 2**j)  # resultL[0][0] )
 
             else:
                 # vary M and K
@@ -1506,13 +1495,13 @@ def get_xsvs_fit_old(spe_cts_all, K_mean, varyK=True, qth=None, max_bins=2, g2=N
                 )
 
                 ML_val[i].append(abs(resultL[0][1]))
-                KL_val[i].append(abs(resultL[0][0]))  #   resultL[0][0] )
+                KL_val[i].append(abs(resultL[0][0]))  # resultL[0][0] )
                 # print( j, m0, resultL[0][1], resultL[0][0], K_mean[i] * 2**j    )
             if j == 0:
                 K_.append(KL_val[i][0])
     # if max_bins==2:
-    #    ML_val = np.array( [ML_val[k][0] for k in sorted(list(ML_val.keys()))] )
-    #    KL_val = np.array( [KL_val[k][0] for k in sorted(list(KL_val.keys()))] )
+    # ML_val = np.array( [ML_val[k][0] for k in sorted(list(ML_val.keys()))] )
+    # KL_val = np.array( [KL_val[k][0] for k in sorted(list(KL_val.keys()))] )
 
     return ML_val, KL_val, np.array(K_)
 
@@ -1601,7 +1590,7 @@ def nbinom_dist(bin_values, K, M):
     return nbinom
 
 
-#########poisson
+# poisson
 def poisson(x, K):
     """Poisson distribution function.
     K is  average photon counts
@@ -1731,7 +1720,6 @@ def fit_xsvs1(
 
     """
     from lmfit import Model
-    from scipy.interpolate import UnivariateSpline
 
     if func == "bn":
         mod = Model(nbinom_dist)
@@ -1804,7 +1792,7 @@ def fit_xsvs1(
             axes.set_xlabel("K/<K>")
             axes.set_ylabel("P(K)")
 
-            #  Using the best K and M values interpolate and get more values for fitting curve
+            # Using the best K and M values interpolate and get more values for fitting curve
             fitx_ = np.linspace(0, max(Knorm_bin_edges[j, i][:-1]), 1000)
             fitx = np.linspace(0, max(bin_edges[j, i][:-1]), 1000)
             if func == "bn":
@@ -2009,7 +1997,7 @@ def get_xsvs_fit_old1(
                 )
 
                 ML_val[i].append(abs(resultL[0][0]))
-                KL_val[i].append(K_mean[i] * 2**j)  #   resultL[0][0] )
+                KL_val[i].append(K_mean[i] * 2**j)  # resultL[0][0] )
 
             else:
                 # vary M and K
@@ -2028,7 +2016,7 @@ def get_xsvs_fit_old1(
                 )
 
                 ML_val[i].append(abs(resultL[0][1]))
-                KL_val[i].append(abs(resultL[0][0]))  #   resultL[0][0] )
+                KL_val[i].append(abs(resultL[0][0]))  # resultL[0][0] )
                 # print( j, m0, resultL[0][1], resultL[0][0], K_mean[i] * 2**j    )
             if j == 0:
                 K_.append(KL_val[i][0])

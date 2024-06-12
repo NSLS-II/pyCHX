@@ -232,7 +232,7 @@ def convert_Qmap_old(img, qx_map, qy_map=None, bins=None, rangeq=None):
 
 
 # Mask
-################################################################################
+#
 class Mask(object):
     """Stores the matrix of pixels to be excluded from further analysis."""
 
@@ -301,11 +301,11 @@ class Mask(object):
         self.data = -1 * (self.data - 1)
 
     # End class Mask(object)
-    ########################################
+    #
 
 
 # Calibration
-################################################################################
+#
 class Calibration(object):
     """Stores aspects of the experimental setup; especially the calibration
     parameters for a particular detector. That is, the wavelength, detector
@@ -326,7 +326,7 @@ class Calibration(object):
         self.clear_maps()
 
     # Experimental parameters
-    ########################################
+    #
 
     def set_wavelength(self, wavelength_A):
         """Set the experimental x-ray wavelength (in Angstroms)."""
@@ -422,7 +422,7 @@ class Calibration(object):
         return self.q_per_pixel
 
     # Maps
-    ########################################
+    #
 
     def clear_maps(self):
         self.r_map_data = None
@@ -544,11 +544,11 @@ class Calibration(object):
         )
 
     # End class Calibration(object)
-    ########################################
+    #
 
 
 # CalibrationGonio
-################################################################################
+#
 class CalibrationGonio(Calibration):
     """
     The geometric claculations used here are described:
@@ -557,7 +557,7 @@ class CalibrationGonio(Calibration):
     """
 
     # Experimental parameters
-    ########################################
+    #
 
     def set_angles(
         self,
@@ -673,7 +673,7 @@ class CalibrationGonio(Calibration):
         return self.distance_m / (width_mm / 1000.0)
 
     # Maps
-    ########################################
+    #
 
     def q_map(self):
         if self.q_map_data is None:

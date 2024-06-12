@@ -1,27 +1,27 @@
-# ######################################################################
+# #
 # Developed at the NSLS-II, Brookhaven National Laboratory             #
 
-#                                                                      #
+# #
 # Copyright (c) 2014, Brookhaven Science Associates, Brookhaven        #
 # National Laboratory. All rights reserved.                            #
-#                                                                      #
+# #
 # Redistribution and use in source and binary forms, with or without   #
 # modification, are permitted provided that the following conditions   #
 # are met:                                                             #
-#                                                                      #
+# #
 # * Redistributions of source code must retain the above copyright     #
-#   notice, this list of conditions and the following disclaimer.      #
-#                                                                      #
+# notice, this list of conditions and the following disclaimer.      #
+# #
 # * Redistributions in binary form must reproduce the above copyright  #
-#   notice this list of conditions and the following disclaimer in     #
-#   the documentation and/or other materials provided with the         #
-#   distribution.                                                      #
-#                                                                      #
+# notice this list of conditions and the following disclaimer in     #
+# the documentation and/or other materials provided with the         #
+# distribution.                                                      #
+# #
 # * Neither the name of the Brookhaven Science Associates, Brookhaven  #
-#   National Laboratory nor the names of its contributors may be used  #
-#   to endorse or promote products derived from this software without  #
-#   specific prior written permission.                                 #
-#                                                                      #
+# National Laboratory nor the names of its contributors may be used  #
+# to endorse or promote products derived from this software without  #
+# specific prior written permission.                                 #
+# #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS  #
 # "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT    #
 # LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS    #
@@ -34,7 +34,7 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OTHERWISE) ARISING   #
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE   #
 # POSSIBILITY OF SUCH DAMAGE.                                          #
-########################################################################
+#
 
 """
 This module is for functions specific to time correlation
@@ -131,7 +131,7 @@ def _one_time_process(
         future_img = buf[level, buf_no]
 
         # find the normalization that can work both for bad_images
-        #  and good_images
+        # and good_images
         ind = int(t_index - lev_len[:level].sum())
         normalize = img_per_level[level] - i - norm[level + 1][ind]
 
@@ -672,7 +672,7 @@ def _two_time_process(
     img_per_level[level] += 1
 
     # in multi-tau correlation other than first level all other levels
-    #  have to do the half of the correlation
+    # have to do the half of the correlation
     if level == 0:
         i_min = 0
     else:
@@ -684,7 +684,7 @@ def _two_time_process(
         past_img = buf[level, delay_no]
         future_img = buf[level, buf_no]
 
-        #  get the matrix of correlation function without normalizations
+        # get the matrix of correlation function without normalizations
         tmp_binned = np.bincount(label_array, weights=past_img * future_img)[1:]
         # get the matrix of past intensity normalizations
         pi_binned = np.bincount(label_array, weights=past_img)[1:]
@@ -892,7 +892,7 @@ class CrossCorrelator:
     >> cimg = cc(img1)
     or, mask may m
     >> cc = CrossCorrelator(ids)
-    #(where ids is same shape as img1)
+    # (where ids is same shape as img1)
     >> cc1 = cc(img1)
     >> cc12 = cc(img1, img2)
     # if img2 shifts right of img1, point of maximum correlation is shifted

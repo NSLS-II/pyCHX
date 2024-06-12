@@ -1,8 +1,8 @@
 # Develop new version
 # Original from #/XF11ID/analysis/Analysis_Pipelines/Develop/chxanalys/chxanalys/chx_correlation.py
-# ######################################################################
+# #
 # Let's change from mask's to indices
-########################################################################
+#
 
 """
 This module is for functions specific to spatial correlation in order to tackle the motion of speckles
@@ -62,7 +62,7 @@ def direct_corss_cor(im1, im2):
                 elif j < 0:
                     d1 = im1[:j, :]
                     d2 = im2[-j:, :]
-                else:  ##j>0
+                else:  #j>0
                     d1 = im1[j:, :]
                     d2 = im2[:-j, :]
             elif i < 0:
@@ -72,7 +72,7 @@ def direct_corss_cor(im1, im2):
                 elif j < 0:
                     d1 = im1[:j, :i]
                     d2 = im2[-j:, -i:]
-                else:  ##j>0
+                else:  #j>0
                     d1 = im1[j:, :i]
                     d2 = im2[:-j, -i:]
             else:  # i>0:
@@ -82,7 +82,7 @@ def direct_corss_cor(im1, im2):
                 elif j < 0:
                     d1 = im1[:j, i:]
                     d2 = im2[-j:, :-i]
-                else:  ##j>0
+                else:  #j>0
                     d1 = im1[j:, i:]
                     d2 = im2[:-j, :-i]
             # print(i,j)
@@ -106,7 +106,7 @@ class CrossCorrelator2:
     >> cimg = cc(img1)
     or, mask may may be ids
     >> cc = CrossCorrelator(ids)
-    #(where ids is same shape as img1)
+    # (where ids is same shape as img1)
     >> cc1 = cc(img1)
     >> cc12 = cc(img1, img2)
     # if img2 shifts right of img1, point of maximum correlation is shifted
@@ -268,15 +268,15 @@ class CrossCorrelator2:
                 ccorr = _centered(ccorr, self.sizes[reg, :])
                 # print('here')
 
-                ###check here
+                # check here
                 if check_res:
                     if reg == 0:
                         self.norm = maskcor
                         self.ck = ccorr.copy()
-                        #    print(ccorr.max())
+                        # print(ccorr.max())
                         self.tmp = tmpimg
                         self.fs = fshape
-                    ###end the check
+                    # end the check
 
             # now handle the normalizations
             if "symavg" in normalization:
@@ -312,10 +312,10 @@ class CrossCorrelator2:
                     if check_res:
                         if reg == 0:
                             self.ckn = ccorr.copy()
-                    #    print('here')
-                    #    print( np.average(tmpimg[w]) )
-                    #    print(  maskcor[w] )
-                    #    print(  ccorr.max(), maskcor[w], np.average(tmpimg[w]), np.average(tmpimg2[w]) )
+                    # print('here')
+                    # print( np.average(tmpimg[w]) )
+                    # print(  maskcor[w] )
+                    # print(  ccorr.max(), maskcor[w], np.average(tmpimg[w]), np.average(tmpimg2[w]) )
             ccorrs.append(ccorr)
 
         if len(ccorrs) == 1:
@@ -333,9 +333,9 @@ def _centered(img, sz):
     return img
 
 
-##define a custmoized fftconvolve
+# define a custmoized fftconvolve
 
-########################################################################################
+#
 # modifided version from signaltools.py in scipy (Mark March 2017)
 # Author: Travis Oliphant
 # 1999 -- 2002
@@ -576,7 +576,7 @@ class CrossCorrelator1:
     >> cimg = cc(img1)
     or, mask may may be ids
     >> cc = CrossCorrelator(ids)
-    #(where ids is same shape as img1)
+    # (where ids is same shape as img1)
     >> cc1 = cc(img1)
     >> cc12 = cc(img1, img2)
     # if img2 shifts right of img1, point of maximum correlation is shifted
@@ -683,7 +683,7 @@ class CrossCorrelator1:
 
             maskcorr = _cross_corr1(submask)
             # quick fix for             #if self.wrap is False:
-            #    submask = _expand_image1(submask)finite numbers should be integer so
+            # submask = _expand_image1(submask)finite numbers should be integer so
             # choose some small value to threshold
             maskcorr *= maskcorr > 0.5
             self.maskcorrs.append(maskcorr)
@@ -781,7 +781,7 @@ class CrossCorrelator1:
         return ccorrs
 
 
-##for parallel
+# for parallel
 from multiprocessing import Pool
 
 import dill
@@ -837,7 +837,7 @@ def run_para_ccorr_sym(ccorr_sym, FD, nstart=0, nend=None, imgsum=None, img_norm
     for i in range(Nc):
         cc[i] = cc[i] / N
 
-    del results
-    del res
+   
+   
 
     return cc

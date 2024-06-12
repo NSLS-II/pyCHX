@@ -7,21 +7,50 @@ This module is for the SAXS XPCS analysis
 import os
 
 from pandas import DataFrame
-from scipy.special import erf
 
-from pyCHX.chx_compress_analysis import (
-    Multifile,
-    compress_eigerdata,
-    get_avg_imgc,
-    get_each_ring_mean_intensityc,
-    init_compress_eigerdata,
-    mean_intensityc,
-    read_compressed_eigerdata,
-)
-from pyCHX.chx_correlationc import Get_Pixel_Arrayc, auto_two_Arrayc, cal_g2c, get_pixelist_interp_iq
+from pyCHX.chx_compress_analysis import Multifile, compress_eigerdata, get_avg_imgc
+from pyCHX.chx_correlationc import cal_g2c, get_pixelist_interp_iq
 from pyCHX.chx_correlationp import cal_g2p
-from pyCHX.chx_generic_functions import *
-from pyCHX.chx_libs import RUN_GUI, Figure, colors, colors_, colors_copy, markers, markers_, markers_copy
+from pyCHX.chx_generic_functions import (
+    Model,
+    apply_mask,
+    cal_g2,
+    cmap_albula,
+    create_hot_pixel_mask,
+    datetime,
+    db,
+    fit_q_rate,
+    fit_saxs_g2,
+    flow_para_function,
+    get_avg_img,
+    get_detector,
+    get_each_frame_intensity,
+    get_g2_fit,
+    get_qval_dict,
+    lag_step_,
+    load_data,
+    make_axes_locatable,
+    np,
+    plot1D,
+    plot_g2,
+    plt,
+    psave_obj,
+    q_ring_center,
+    result,
+    roi,
+    save_arrays,
+    save_g2,
+    save_g2_fit_para_tocsv,
+    save_lists,
+    save_saxs_g2,
+    show_img,
+    show_label_array_on_image,
+    stretched_auto_corr_scat_factor,
+    stretched_auto_corr_scat_factor_with_vibration,
+    uid,
+    utils,
+)
+from pyCHX.chx_libs import RUN_GUI, Figure, colors, markers
 
 
 def get_iq_invariant(qt, iqst):
@@ -139,7 +168,7 @@ def get_delta_img(img, mask, setup_pargs, img_name="xx", plot=False):
 def combine_ring_anglar_mask(ring_mask, ang_mask):
     """combine ring and anglar mask"""
 
-    ring_max = ring_mask.max()
+    ring_mask.max()
     ang_mask_ = np.zeros(ang_mask.shape)
     ind = np.where(ang_mask != 0)
     ang_mask_[ind] = ang_mask[ind] + 1e9  # add some large number to qr
@@ -152,7 +181,7 @@ def combine_ring_anglar_mask(ring_mask, ang_mask):
 
     ura = np.unique(ring_ang)[1:]
     ur = np.unique(ring_mask)[1:]
-    ua = np.unique(ang_mask)[real_ang_lab]
+    np.unique(ang_mask)[real_ang_lab]
     # print( np.unique( ring_mask )[1:], np.unique( ang_mask )[1:], np.unique( ring_ang )[1:] )
 
     ring_ang_ = np.zeros_like(ring_ang)
@@ -237,7 +266,7 @@ def combine_two_roi_mask(ring_mask, ang_mask, pixel_num_thres=10):
 
     """
     rf = np.ravel(ring_mask)
-    af = np.ravel(ang_mask)
+    np.ravel(ang_mask)
     ruiq = np.unique(ring_mask)
     auiq = np.unique(ang_mask)
     maxa = np.max(auiq)
@@ -378,15 +407,15 @@ def circular_average(
         image_mask = np.ravel(image)
 
     # if nx is None: #make a one-pixel width q
-    #   nx = int( max_r - min_r)
+    # nx = int( max_r - min_r)
     # if min_x is None:
-    #    min_x= int( np.min( binr))
-    #    min_x_= int( np.min( binr)/(np.sqrt(pixel_size[1]*pixel_size[0] )))
+    # min_x= int( np.min( binr))
+    # min_x_= int( np.min( binr)/(np.sqrt(pixel_size[1]*pixel_size[0] )))
     # if max_x is None:
-    #    max_x = int( np.max(binr ))
-    #    max_x_ = int( np.max(binr)/(np.sqrt(pixel_size[1]*pixel_size[0] ))  )
+    # max_x = int( np.max(binr ))
+    # max_x_ = int( np.max(binr)/(np.sqrt(pixel_size[1]*pixel_size[0] ))  )
     # if nx is None:
-    #    nx = max_x_ - min_x_
+    # nx = max_x_ - min_x_
 
     # binr_ = np.int_( binr /(np.sqrt(pixel_size[1]*pixel_size[0] )) )
     binr_ = binr / (np.sqrt(pixel_size[1] * pixel_size[0]))
@@ -453,7 +482,7 @@ def get_circular_average(
         avg_img, center, threshold=0, nx=nx, pixel_size=(dpix, dpix), mask=mask, min_x=min_x, max_x=max_x
     )
     qp_ = qp * dpix
-    #  convert bin_centers from r [um] to two_theta and then to q [1/px] (reciprocal space)
+    # convert bin_centers from r [um] to two_theta and then to q [1/px] (reciprocal space)
     two_theta = utils.radius_to_twotheta(Ldet, qp_)
     q = utils.twotheta_to_q(two_theta, lambda_)
     if plot_:
@@ -477,7 +506,6 @@ def get_circular_average(
             ax1.set_xlabel("q (" r"$\AA^{-1}$)")
             ax1.set_ylabel("I(q)")
             title = ax1.set_title("uid= %s--Circular Average" % uid)
-            ax2 = None
         if "xlim" in kwargs.keys():
             ax1.set_xlim(kwargs["xlim"])
             x1, x2 = kwargs["xlim"]
@@ -523,7 +551,6 @@ def plot_circular_average(
         ax1.set_xlabel("q (" r"$\AA^{-1}$)")
         ax1.set_ylabel("I(q)")
         title = ax1.set_title("%s_Circular Average" % uid)
-        ax2 = None
     if "xlim" in kwargs.keys():
         xlim = kwargs["xlim"]
     else:
@@ -1154,7 +1181,7 @@ def get_angular_mask(
     """
     mask: 2D-array
     inner_angle # the starting angle in unit of degree
-    outer_angle #  the ending angle in unit of degree
+    outer_angle # the ending angle in unit of degree
     width       # width of each angle, in degree, default is None, there is no gap between the neighbour angle ROI
     edges: default, None. otherwise, give a customized angle edges
     num_angles    # number of angles
@@ -1240,7 +1267,7 @@ def get_angular_mask_old(
     """
     mask: 2D-array
     inner_angle # the starting angle in unit of degree
-    outer_angle #  the ending angle in unit of degree
+    outer_angle # the ending angle in unit of degree
     width       # width of each angle, in degree, default is None, there is no gap between the neighbour angle ROI
     edges: default, None. otherwise, give a customized angle edges
     num_angles    # number of angles
@@ -1338,7 +1365,7 @@ def get_ring_mask(
     return_q_in_pixel=False,
 ):
     # def get_ring_mask(  mask, inner_radius= 0.0020, outer_radius = 0.009, width = 0.0002, num_rings = 12,
-    #                  edges=None, unit='pixel',pargs=None   ):
+    # edges=None, unit='pixel',pargs=None   ):
     """
     mask: 2D-array
     inner_radius #radius of the first ring
@@ -1366,11 +1393,11 @@ def get_ring_mask(
     # qc = np.int_( np.linspace( inner_radius,outer_radius, num_rings ) )
     # edges = np.zeros( [ len(qc), 2] )
     # if width%2:
-    #   edges[:,0],edges[:,1] = qc - width//2,  qc + width//2 +1
+    # edges[:,0],edges[:,1] = qc - width//2,  qc + width//2 +1
     # else:
-    #    edges[:,0],edges[:,1] = qc - width//2,  qc + width//2
+    # edges[:,0],edges[:,1] = qc - width//2,  qc + width//2
 
-    #  find the edges of the required rings
+    # find the edges of the required rings
     if edges is None:
         if num_rings != 1:
             spacing = (outer_radius - inner_radius - num_rings * width) / (num_rings - 1)  # spacing between rings
@@ -1408,7 +1435,7 @@ def get_ring_mask(
 def get_ring_anglar_mask(ring_mask, ang_mask, q_ring_center, ang_center):
     """get   ring_anglar mask"""
 
-    ring_max = ring_mask.max()
+    ring_mask.max()
 
     ang_mask_ = np.zeros(ang_mask.shape)
     ind = np.where(ang_mask != 0)
@@ -1700,9 +1727,9 @@ def plot_saxs_rad_ang_g2(g2, taus, res_pargs=None, master_angle_plot=False, retu
 
             # title_qa = '%.2f'%( ang_center[sn]) + r'$^\circ$' + '( %d )'%(i)
             # if num_qr==1:
-            #    title = 'uid= %s:--->'%uid + title_qr + '__' +  title_qa
+            # title = 'uid= %s:--->'%uid + title_qr + '__' +  title_qa
             # else:
-            #    title = title_qa
+            # title = title_qa
             title = title_qa
             ax.set_title(title, y=1.1, fontsize=12)
             y = g2[:, i]
@@ -1730,9 +1757,9 @@ def plot_saxs_rad_ang_g2(g2, taus, res_pargs=None, master_angle_plot=False, retu
         return fig
 
 
-############################################
-##a good func to fit g2 for all types of geogmetries
-############################################
+#
+# a good func to fit g2 for all types of geogmetries
+#
 
 
 def fit_saxs_rad_ang_g2(
@@ -1756,8 +1783,8 @@ def fit_saxs_rad_ang_g2(
         'streched_exponential': fit by a streched exponential function, defined as
                     beta * (np.exp(-2 * relaxation_rate * lags))**alpha + baseline
 
-    #fit_vibration:
-    #    if True, will fit the g2 by a dumped sin function due to beamline mechnical oscillation
+    # fit_vibration:
+    # if True, will fit the g2 by a dumped sin function due to beamline mechnical oscillation
 
     Returns
     -------
@@ -1801,14 +1828,14 @@ def fit_saxs_rad_ang_g2(
             print("Please give ang_center")
 
     num_rings = g2.shape[1]
-    beta = np.zeros(num_rings)  #  contrast factor
-    rate = np.zeros(num_rings)  #  relaxation rate
-    alpha = np.zeros(num_rings)  #  alpha
-    baseline = np.zeros(num_rings)  #  baseline
+    beta = np.zeros(num_rings)  # contrast factor
+    rate = np.zeros(num_rings)  # relaxation rate
+    alpha = np.zeros(num_rings)  # alpha
+    baseline = np.zeros(num_rings)  # baseline
     freq = np.zeros(num_rings)
 
     if function == "flow_para_function" or function == "flow_para":
-        flow = np.zeros(num_rings)  #  baseline
+        flow = np.zeros(num_rings)  # baseline
     if "fit_variables" in kwargs:
         additional_var = kwargs["fit_variables"]
         _vars = [k for k in list(additional_var.keys()) if additional_var[k] is False]
@@ -2116,7 +2143,7 @@ def multi_uids_saxs_flow_xpcs_analysis(
             try:
                 detector = get_detector(db[uid])
                 imgs = load_data(uid, detector, reverse=True)
-            except:
+            except Exception:
                 print("The %i--th uid: %s can not load data" % (i, uid))
                 imgs = 0
 
@@ -2125,8 +2152,8 @@ def multi_uids_saxs_flow_xpcs_analysis(
 
             i += 1
             if imgs != 0:
-                imgsa = apply_mask(imgs, mask)
-                Nimg = len(imgs)
+                apply_mask(imgs, mask)
+                len(imgs)
                 md_ = imgs.md
                 useful_uids[run_seq + 1][i] = uid
                 g2s[run_seq + 1][i] = {}
@@ -2166,18 +2193,18 @@ def multi_uids_saxs_flow_xpcs_analysis(
                     # md['sample']= 'PS205000-PMMA-207000-SMMA3'
                     print(md["Measurement"])
 
-                except:
+                except Exception:
                     md["Measurement"] = "Measurement"
                     md["sample"] = "sample"
 
                 dpix = md["x_pixel_size"] * 1000.0  # in mm, eiger 4m is 0.075 mm
                 lambda_ = md["incident_wavelength"]  # wavelegth of the X-rays in Angstroms
                 Ldet = md["detector_distance"] * 1000  # detector to sample distance (mm)
-                exposuretime = md["count_time"]
+                md["count_time"]
                 acquisition_period = md["frame_time"]
                 timeperframe = acquisition_period  # for g2
                 # timeperframe = exposuretime#for visiblitly
-                # timeperframe = 2  ## manual overwrite!!!! we apparently writing the wrong metadata....
+                # timeperframe = 2  # manual overwrite!!!! we apparently writing the wrong metadata....
                 center = md["center"]
 
                 setup_pargs = dict(
@@ -2192,7 +2219,7 @@ def multi_uids_saxs_flow_xpcs_analysis(
 
                 md["avg_img"] = avg_img
                 # plot1D( y = imgsum[ np.array( [i for i in np.arange( len(imgsum)) if i not in bad_frame_list])],
-                #   title ='Uid= %s--imgsum'%uid, xlabel='Frame', ylabel='Total_Intensity', legend=''   )
+                # title ='Uid= %s--imgsum'%uid, xlabel='Frame', ylabel='Total_Intensity', legend=''   )
                 min_inten = 10
 
                 # good_start = np.where( np.array(imgsum) > min_inten )[0][0]
@@ -2209,7 +2236,7 @@ def multi_uids_saxs_flow_xpcs_analysis(
                 print("The good_end frame number is: %s " % good_end_)
 
                 norm = None
-                ###################
+                #
 
                 # Do correlaton here
                 for nconf, seg_mask in enumerate([seg_mask_v, seg_mask_p]):
@@ -2436,7 +2463,7 @@ def multi_uids_saxs_xpcs_analysis(
             try:
                 detector = get_detector(db[uid])
                 imgs = load_data(uid, detector, reverse=True)
-            except:
+            except Exception:
                 print("The %i--th uid: %s can not load data" % (i, uid))
                 imgs = 0
 
@@ -2446,7 +2473,7 @@ def multi_uids_saxs_xpcs_analysis(
             i += 1
             if imgs != 0:
                 imgsa = apply_mask(imgs, mask)
-                Nimg = len(imgs)
+                len(imgs)
                 md_ = imgs.md
                 useful_uids[run_seq + 1][i] = uid
                 if compress:
@@ -2485,18 +2512,18 @@ def multi_uids_saxs_xpcs_analysis(
                         # md['sample']= 'PS205000-PMMA-207000-SMMA3'
                         print(md["Measurement"])
 
-                    except:
+                    except Exception:
                         md["Measurement"] = "Measurement"
                         md["sample"] = "sample"
 
                     dpix = md["x_pixel_size"] * 1000.0  # in mm, eiger 4m is 0.075 mm
                     lambda_ = md["incident_wavelength"]  # wavelegth of the X-rays in Angstroms
                     Ldet = md["detector_distance"] * 1000  # detector to sample distance (mm)
-                    exposuretime = md["count_time"]
+                    md["count_time"]
                     acquisition_period = md["frame_time"]
                     timeperframe = acquisition_period  # for g2
                     # timeperframe = exposuretime#for visiblitly
-                    # timeperframe = 2  ## manual overwrite!!!! we apparently writing the wrong metadata....
+                    # timeperframe = 2  # manual overwrite!!!! we apparently writing the wrong metadata....
                     center = md["center"]
 
                     setup_pargs = dict(
@@ -2511,7 +2538,7 @@ def multi_uids_saxs_xpcs_analysis(
 
                     md["avg_img"] = avg_img
                     # plot1D( y = imgsum[ np.array( [i for i in np.arange( len(imgsum)) if i not in bad_frame_list])],
-                    #   title ='Uid= %s--imgsum'%uid, xlabel='Frame', ylabel='Total_Intensity', legend=''   )
+                    # title ='Uid= %s--imgsum'%uid, xlabel='Frame', ylabel='Total_Intensity', legend=''   )
                     min_inten = 10
 
                     # good_start = np.where( np.array(imgsum) > min_inten )[0][0]
@@ -2646,7 +2673,7 @@ def plot_mul_g2(g2s, md):
             i = 0
             for sub_seq in range(0, sub_num):
                 # print( run_seq, sub_seq )
-                uid = useful_uids[run_seq + 1][sub_seq + 1]
+                useful_uids[run_seq + 1][sub_seq + 1]
                 sid = sids[i]
                 if i == 0:
                     title = r"$Q_r= $" + "%.5f  " % (q_ring_center[sn]) + r"$\AA^{-1}$"
@@ -2658,7 +2685,7 @@ def plot_mul_g2(g2s, md):
 
                 # print ( len_tau, len(y))
                 # ax.semilogx(taus[1:len_], y[1:len_], marker = '%s'%next(markers_), color='%s'%next(colors_),
-                #            markersize=6, label = '%s'%sid)
+                # markersize=6, label = '%s'%sid)
 
                 ax.semilogx(
                     taus[1:len_], y[1:len_], marker=markers[i], color=colors[i], markersize=6, label="%s" % sid

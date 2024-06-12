@@ -1,11 +1,8 @@
-import gc
 import os
 import pickle as pkl
 import shutil
 import struct
 import sys
-from contextlib import closing
-from glob import iglob
 from multiprocessing import Pool
 
 import dill
@@ -14,7 +11,7 @@ import matplotlib.pyplot as plt
 # imports handler from CHX
 # this is where the decision is made whether or not to use dask
 # from chxtools.handlers import EigerImages, EigerHandler
-from eiger_io.fs_handler import EigerHandler, EigerImages
+from eiger_io.fs_handler import EigerImages
 from tqdm import tqdm
 
 from pyCHX.chx_generic_functions import (
@@ -28,7 +25,7 @@ from pyCHX.chx_generic_functions import (
     reverse_updown,
     rot90_clockwise,
 )
-from pyCHX.chx_libs import RUN_GUI, LogNorm, datetime, db, getpass, np, os, roi, time
+from pyCHX.chx_libs import RUN_GUI, LogNorm, db, np, os, roi, time
 
 
 def run_dill_encoded(what):
@@ -48,8 +45,7 @@ def pass_FD(FD, n):
     # FD.rdframe(n)
     try:
         FD.seekimg(n)
-    except:
-        pass
+    except Exception:
         return False
 
 
@@ -244,7 +240,7 @@ def read_compressed_eigerdata(
     else:
         try:
             mask, avg_img, imgsum, bad_frame_list_ = pkl.load(open(filename + ".pkl", "rb"))
-        except:
+        except Exception:
             CAL = True
     if CAL:
         FD = Multifile(filename, beg, end)
@@ -376,8 +372,7 @@ def para_compress_eigerdata(
         print("No bad frames are involved.")
     print("Combining the seperated compressed files together...")
     combine_compressed(filename, Nf, del_old=True)
-    del results
-    del res_
+
     if with_pickle:
         pkl.dump([mask, avg_img, imgsum, bad_frame_list], open(filename + ".pkl", "wb"))
     if copy_rawdata:
@@ -463,7 +458,7 @@ def para_segment_compress_eigerdata(
             inputs = range(num_max_para_process * nr, Nf)
         else:
             inputs = range(num_max_para_process * nr, num_max_para_process * (nr + 1))
-        fns = [filename + "_temp-%i.tmp" % i for i in inputs]
+        [filename + "_temp-%i.tmp" % i for i in inputs]
         # print( nr, inputs, )
         pool = Pool(processes=len(inputs))  # , maxtasksperchild=1000 )
         # print( inputs )
@@ -536,7 +531,7 @@ def segment_compress_eigerdata(
     Nimg_ = len(images)
     M, N = images[0].shape
     avg_img = np.zeros([M, N], dtype=np.float64)
-    Nopix = float(avg_img.size)
+    float(avg_img.size)
     n = 0
     good_count = 0
     # frac = 0.0
@@ -583,14 +578,14 @@ def segment_compress_eigerdata(
                 fp.write(struct.pack("@{}{}".format(dlen, "ih"[nobytes == 2]), *v))
             else:
                 fp.write(struct.pack("@{}{}".format(dlen, "dd"[nobytes == 2]), *v))  # n +=1
-        del p, v, img
+
         fp.flush()
     fp.close()
     avg_img /= good_count
     bad_frame_list = (np.array(imgsum) > bad_pixel_threshold) | (np.array(imgsum) <= bad_pixel_low_threshold)
     sys.stdout.write("#")
     sys.stdout.flush()
-    # del  images, mask, avg_img, imgsum, bad_frame_list
+    #
     # print( 'Should release memory here')
     return mask, avg_img, imgsum, bad_frame_list
 
@@ -904,7 +899,7 @@ class Multifile:
         NOTE: At each record n, the file cursor points to record n+1
         """
         self.FID = open(filename, "rb")
-        #        self.FID.seek(0,os.SEEK_SET)
+        # self.FID.seek(0,os.SEEK_SET)
         self.filename = filename
         # br: bytes read
         br = self.FID.read(1024)
@@ -1378,8 +1373,6 @@ def mean_intensityc(FD, labeled_array, sampling=1, index=None, multi_cor=False):
         for i in inputs:
             mean_intensity[:, i] = res[i]
         print("ROI mean_intensit calculation is DONE!")
-        del results
-        del res
 
     mean_intensity /= norm
     return mean_intensity, index

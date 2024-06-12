@@ -1,6 +1,6 @@
-################################
-######Movie_maker###############
-################################
+#
+# Movie_maker#
+#
 
 
 def read_imgs(inDir):
@@ -33,7 +33,7 @@ def select_regoin(
 
         try:
             img_[ys:ye, xs:xe] = True
-        except:
+        except Exception:
             img_[ys:ye, xs:xe, :] = True
         pixellist_ = np.where(img_.ravel())[0]
         # pixellist_ =  img_.ravel()
@@ -49,7 +49,7 @@ def select_regoin(
     else:
         try:
             imgx = img[ys:ye, xs:xe]
-        except:
+        except Exception:
             imgx = img[ys:ye, xs:xe, :]
 
     return imgx
@@ -59,7 +59,6 @@ def save_png_series(
     imgs, ROI=None, logs=True, outDir=None, uid=None, vmin=None, vmax=None, cmap="viridis", dpi=100
 ):
     import matplotlib.pyplot as plt
-    import numpy as np
     from matplotlib.colors import LogNorm
 
     """
@@ -81,7 +80,7 @@ def save_png_series(
     save png files
 
     """
-    if uid == None:
+    if uid is None:
         uid = "uid"
     num_frame = 0
     for img in imgs:
@@ -91,7 +90,6 @@ def save_png_series(
         ax.get_yaxis().set_visible(False)
         if ROI is None:
             i0 = img
-            asp = 1.0
         else:
             i0 = select_regoin(
                 img,
@@ -99,7 +97,7 @@ def save_png_series(
                 keep_shape=False,
             )
             xs, xe, ys, ye = ROI
-            asp = (ye - ys) / float(xe - xs)
+            (ye - ys) / float(xe - xs)
         ax.set_aspect("equal")
 
         if not logs:
@@ -135,7 +133,6 @@ def movie_maker(
 ):
     import matplotlib.animation as animation
     import matplotlib.pyplot as plt
-    import numpy as np
     from matplotlib.colors import LogNorm
 
     """
@@ -172,8 +169,8 @@ def movie_maker(
 
     Returns
     -------
-    #ani :
-    #    movie
+    # ani :
+    # movie
 
     """
 
@@ -185,7 +182,6 @@ def movie_maker(
 
     if ROI is None:
         i0 = imgs[0]
-        asp = 1.0
 
     else:
         i0 = select_regoin(
@@ -194,7 +190,7 @@ def movie_maker(
             keep_shape=False,
         )
         xs, xe, ys, ye = ROI
-        asp = (ye - ys) / float(xe - xs)
+        (ye - ys) / float(xe - xs)
 
     ax.set_aspect("equal")
     # print( cmap, vmin, vmax )

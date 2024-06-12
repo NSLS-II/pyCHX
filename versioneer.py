@@ -23,13 +23,13 @@ release should be as easy as recording a new tag in your version-control
 system, and maybe making new tarballs.
 
 
-## Quick Install
+# Quick Install
 
 * `pip install versioneer` to somewhere to your $PATH
 * add a `[versioneer]` section to your setup.cfg (see below)
 * run `versioneer install` in your source tree, commit the results
 
-## Version Identifiers
+# Version Identifiers
 
 Source trees come from a variety of places:
 
@@ -66,7 +66,7 @@ The version identifier is used for multiple purposes:
 * to allow the module to self-identify its version: `myproject.__version__`
 * to choose a name and prefix for a 'setup.py sdist' tarball
 
-## Theory of Operation
+# Theory of Operation
 
 Versioneer works by adding a special `_version.py` file into your source
 tree, where your `__init__.py` can import it. This `_version.py` knows how to
@@ -84,7 +84,7 @@ compute the version when invoked, and changes `setup.py build` and `setup.py
 sdist` to replace `_version.py` with a small static file that contains just
 the generated version data.
 
-## Installation
+# Installation
 
 First, decide on values for the following configuration variables:
 
@@ -185,7 +185,7 @@ To versioneer-enable your project:
   `versioneer install` will mark everything it touched for addition using
   `git add`. Don't forget to add `setup.py` and `setup.cfg` too.
 
-## Post-Installation Usage
+# Post-Installation Usage
 
 Once established, all uses of your tree from a VCS checkout should get the
 current version string. All generated tarballs should include an embedded
@@ -206,7 +206,7 @@ tarballs with `git archive`), the process is:
 Versioneer will report "0+untagged.NUMCOMMITS.gHASH" until your tree has at
 least one tag in its history.
 
-## Version-String Flavors
+# Version-String Flavors
 
 Code which uses Versioneer can learn about its version string at runtime by
 importing `_version` from your main `__init__.py` file and running the
@@ -248,7 +248,7 @@ version in `YOURPROJECT.__version__`:
     __version__ = get_versions()['version']
     del get_versions
 
-## Styles
+# Styles
 
 The setup.cfg `style=` configuration controls how the VCS information is
 rendered into a version string.
@@ -266,7 +266,7 @@ stripped tag, e.g. "0.11".
 Other styles are available. See details.md in the Versioneer source tree for
 descriptions.
 
-## Debugging
+# Debugging
 
 Versioneer tries to avoid fatal errors: if something goes wrong, it will tend
 to return a version of "0+unknown". To investigate the problem, run `setup.py
@@ -274,7 +274,7 @@ version`, which will run the version-lookup code in a verbose mode, and will
 display the full contents of `get_versions()` (including the `error` string,
 which may help identify what went wrong).
 
-## Updating Versioneer
+# Updating Versioneer
 
 To upgrade your project to a new release of Versioneer, do the following:
 
@@ -285,7 +285,7 @@ To upgrade your project to a new release of Versioneer, do the following:
   `SRC/_version.py`
 * commit any changed files
 
-### Upgrading to 0.15
+# Upgrading to 0.15
 
 Starting with this version, Versioneer is configured with a `[versioneer]`
 section in your `setup.cfg` file. Earlier versions required the `setup.py` to
@@ -298,7 +298,7 @@ In addition, the Versioneer package provides an executable named
 install`. In 0.14 and earlier, the executable was named
 `versioneer-installer` and was run without an argument.
 
-### Upgrading to 0.14
+# Upgrading to 0.14
 
 0.14 changes the format of the version string. 0.13 and earlier used
 hyphen-separated strings like "0.11-2-g1076c97-dirty". 0.14 and beyond use a
@@ -306,17 +306,17 @@ plus-separated "local version" section strings, with dot-separated
 components, like "0.11+2.g1076c97". PEP440-strict tools did not like the old
 format, but should be ok with the new one.
 
-### Upgrading from 0.11 to 0.12
+# Upgrading from 0.11 to 0.12
 
 Nothing special.
 
-### Upgrading from 0.10 to 0.11
+# Upgrading from 0.10 to 0.11
 
 You must add a `versioneer.VCS = "git"` to your `setup.py` before re-running
 `setup.py setup_versioneer`. This will enable the use of additional
 version-control systems (SVN, etc) in the future.
 
-## Future Directions
+# Future Directions
 
 This tool is designed to make it easily extended to other version-control
 systems: all VCS-specific components are in separate directories like
@@ -330,7 +330,7 @@ direction and include code from all supported VCS systems, reducing the
 number of intermediate scripts.
 
 
-## License
+# License
 
 To make Versioneer easier to embed, all its code is hereby released into the
 public domain. The `_version.py` that it creates is also in the public
@@ -1449,12 +1449,12 @@ def get_cmdclass():
     # we override "build_py" in both distutils and setuptools
     #
     # most invocation pathways end up running build_py:
-    #  distutils/build -> build_py
-    #  distutils/install -> distutils/build ->..
-    #  setuptools/bdist_wheel -> distutils/install ->..
-    #  setuptools/bdist_egg -> distutils/install_lib -> build_py
-    #  setuptools/install -> bdist_egg ->..
-    #  setuptools/develop -> ?
+    # distutils/build -> build_py
+    # distutils/install -> distutils/build ->..
+    # setuptools/bdist_wheel -> distutils/install ->..
+    # setuptools/bdist_egg -> distutils/install_lib -> build_py
+    # setuptools/install -> bdist_egg ->..
+    # setuptools/develop -> ?
 
     from distutils.command.build_py import build_py as _build_py
 
@@ -1562,12 +1562,12 @@ SAMPLE_CONFIG = """
 # resulting files.
 
 [versioneer]
-#VCS = git
-#style = pep440
-#versionfile_source =
-#versionfile_build =
-#tag_prefix =
-#parentdir_prefix =
+# VCS = git
+# style = pep440
+# versionfile_source =
+# versionfile_build =
+# tag_prefix =
+# parentdir_prefix =
 
 """
 

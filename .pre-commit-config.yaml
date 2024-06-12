@@ -12,6 +12,10 @@ repos:
     rev: 24.4.2
     hooks:
       - id: black
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.0.0
+    hooks:
+      - id: flake8
   - repo: https://github.com/pycqa/isort
     rev: 5.13.2
     hooks:
@@ -21,3 +25,8 @@ repos:
     rev: 0.7.1
     hooks:
       - id: nbstripout
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.2.1
+    hooks:
+    -   id: autoflake
+        args: [--in-place, --expand-star-imports, --remove-all-unused-imports, --ignore-init-module-imports, --remove-duplicate-keys, --remove-unused-variables, --remove-rhs-for-unused-variables]

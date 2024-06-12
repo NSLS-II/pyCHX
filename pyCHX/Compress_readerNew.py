@@ -82,7 +82,7 @@ class Multifile:
 
     def rdframe(self, n):
         # read header then image
-        hdr = self._read_header(n)
+        self._read_header(n)
         pos, vals = self._read_raw(n)
         img = np.zeros((self._rows * self._cols,))
         img[pos] = vals
@@ -90,12 +90,12 @@ class Multifile:
 
     def rdrawframe(self, n):
         # read header then image
-        hdr = self._read_header(n)
+        self._read_header(n)
         return self._read_raw(n)
 
     def rdchunk(self):
         """read the next chunk"""
-        header = self._fd.read(1024)
+        self._fd.read(1024)
 
     def index(self):
         """Index the file by reading all frame_indexes.

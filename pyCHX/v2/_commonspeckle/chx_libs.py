@@ -31,13 +31,13 @@ import skbeam.core.utils as utils
 # from chxtools.handlers import EigerHandler
 # from eiger_io.fs_handler import EigerHandler #common
 # from databroker.assets.path_only_handlers import RawHandler #common
-## Import all the required packages for  Data Analysis
+# Import all the required packages for  Data Analysis
 # from databroker import Broker #common
 # db = Broker.named('chx') #common
 # * scikit-beam - data analysis tools for X-ray science
-#    - https://github.com/scikit-beam/scikit-beam
+# - https://github.com/scikit-beam/scikit-beam
 # * xray-vision - plotting helper functions for X-ray science
-#    - https://github.com/Nikea/xray-vision
+# - https://github.com/Nikea/xray-vision
 import xray_vision
 import xray_vision.mpl_plotting as mpl_plot
 from IPython.core.magics.display import Javascript
@@ -368,7 +368,7 @@ colors_ = itertools.cycle(colors)
 # colors_ = itertools.cycle(sorted_colors_ )
 markers_ = itertools.cycle(markers)
 # Custom colormaps
-################################################################################
+#
 # ROYGBVR but with Cyan-Blue instead of Blue
 color_list_cyclic_spectrum = [
     [1.0, 0.0, 0.0],

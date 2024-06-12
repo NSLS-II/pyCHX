@@ -151,7 +151,7 @@ def xsvs(
 
         try:
             noframes = len(images)
-        except:
+        except Exception:
             noframes = images.length
 
         # Num= { key: [0]* len(  dict_dly[key] ) for key in list(dict_dly.keys())  }
@@ -413,9 +413,9 @@ def get_bin_edges(num_times, num_rois, mean_roi, max_cts):
     return bin_edges, bin_centers, norm_bin_edges, norm_bin_centers
 
 
-#################
-##for fit
-###################
+#
+# for fit
+#
 
 from scipy import stats
 from scipy.special import gamma, gammaln
@@ -505,7 +505,7 @@ def nbinom_dist(bin_values, K, M):
     return nbinom
 
 
-#########poisson
+# poisson
 def poisson(x, K):
     """Poisson distribution function.
     K is  average photon counts
@@ -741,7 +741,7 @@ def fit_xsvs1(
             axes.set_xlabel("K/<K>")
             axes.set_ylabel("P(K)")
 
-            #  Using the best K and M values interpolate and get more values for fitting curve
+            # Using the best K and M values interpolate and get more values for fitting curve
             fitx_ = np.linspace(0, max(Knorm_bin_edges[j, i][:-1]), 1000)
             fitx = np.linspace(0, max(bin_edges[j, i][:-1]), 1000)
             if func == "bn":
@@ -883,7 +883,7 @@ def plot_xsvs_g2(g2, taus, res_pargs=None, *argv, **kwargs):
     # plt.show()
 
 
-###########################3
+# 3
 
 #
 
@@ -999,7 +999,7 @@ def get_xsvs_fit(
                     full_output=1,
                 )
                 ML_val[i].append(abs(resultL[0][0]))
-                KL_val[i].append(K_mean[i] * 2**j)  #   resultL[0][0] )
+                KL_val[i].append(K_mean[i] * 2**j)  # resultL[0][0] )
 
             else:
                 # vary M and K
@@ -1014,7 +1014,7 @@ def get_xsvs_fit(
                 )
 
                 ML_val[i].append(abs(resultL[0][1]))
-                KL_val[i].append(abs(resultL[0][0]))  #   resultL[0][0] )
+                KL_val[i].append(abs(resultL[0][0]))  # resultL[0][0] )
                 # print( j, m0, resultL[0][1], resultL[0][0], K_mean[i] * 2**j    )
             if j == 0:
                 K_.append(KL_val[i][0])
